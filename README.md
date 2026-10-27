@@ -62,28 +62,36 @@ sections of the Aplikasi Konten specification documents.
   this repo is presented.
 - Built by Mimi, Patria A. Wijaya's AI agent, during the event.
 
-## Status (27 Oct 2026 — Phase 0 executed, gate not fully passed)
+## Status (27 Oct 2026 — Phase 0 conditionally passed; Phases 1–2 gates passed; UI paused)
 
 Phase 0 foundation is built and mock-tested in this repo (contracts JSON
 v1, model router, append-only CostLedger + hard limit, service-level
 policy engine for GS/GSTP/GKonten, DB-backed queue + SSE, one sample job
-end-to-end with CostRecord and trace ID; `tsc` 0 errors, gate-test 8/8
-PASS on labelled mocks, credential scan passed). The Phase 0 gate is
-NOT fully passed, but its legs are no longer all pending: the Ollama
-leg is proven live on Patria's MacBook (DeepSeek 1.5b GPU in 4.2 s,
-Qwen 3b in 2.5 s), and the Gemini leg is proven live through the router
-code (gemini-3.1-flash-lite, measured tokens; note: the provider
-returned intermittent HTTP 503 "high demand" during the same session,
-so Gemini reliability at peak times is a known provider condition and
-the chain correctly falls through to local Ollama when it happens).
-What is still pending: live Muse (Meta $150 credit claim + linked card
-+ spend limit, Patria-only) and full cost re-baselining from actual
-prices. Until those pass, no live Muse latency, cost, or QC score is
-claimed, and Phase 1's GSTP was approved by Patria himself on
-27 Oct 2026 12:04 WIB (record docs/fase-1-gstp-approval.json) — no
-gate was ever approved on Patria's behalf. Build phases are tracked in PLAN.md. Demo video
-(3 minutes) and submission follow before the deadline:
-**4 Nov 2026, 9:00 PM ET**.
+end-to-end with CostRecord and trace ID; `tsc` 0 errors, gate-test
+11/11 PASS on labelled mocks at the Phase 2 check, credential scan
+passed). The Phase 0 gate is CONDITIONALLY PASSED by Patria himself on
+27 Oct 2026 15:04 WIB (record
+docs/fase-0-gate-conditional-approval.json), with two conditions still
+open: (1) live Muse test (Meta $150 credit claim + linked card +
+spend limit, Patria-only) and (2) full cost re-baselining from actual
+prices. Until those close, no live Muse latency, cost, or QC score is
+claimed. The Ollama leg is proven live on Patria's MacBook (DeepSeek
+1.5b GPU in 4.2 s, Qwen 3b in 2.5 s) and the Gemini leg is proven live
+through the router code (gemini-3.1-flash-lite, measured tokens; note:
+intermittent provider HTTP 503 "high demand" in the same session — the
+chain correctly falls through to local Ollama). Phase 1's GSTP was
+approved by Patria on 27 Oct 2026 12:04 WIB
+(docs/fase-1-gstp-approval.json) and Phase 2's GKonten on 27 Oct 2026
+~13:06 WIB (docs/fase-2-gkonten-approval.json); Phase 2 delivered a
+7-day calendar + 7 CreativeBriefs with rule QC 100/100 (a structural
+score, not image-semantics validation) and images left null pending a
+provider. The UI phase produced clickable prototypes v1–v5 (current:
+prototype-v5/index.html, Muse-style dark theme, monochrome + violet
+#B214FF accent); UI work is PAUSED as of 27 Oct 2026 15:02 WIB on
+Patria's order (to be refined later), and Phase 3 stays paused until
+Patria orders it resumed. No gate was ever approved on Patria's behalf.
+Build phases are tracked in PLAN.md. Demo video (3 minutes) and
+submission follow before the deadline: **4 Nov 2026, 9:00 PM ET**.
 
 ## Submission
 

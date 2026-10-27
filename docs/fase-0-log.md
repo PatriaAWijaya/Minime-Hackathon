@@ -614,3 +614,17 @@ dokumen lama yang dipakai.
   Verifikasi ulang: tidak ada lagi referensi ke elemen yang
   sudah dihapus (emojiPanel/chatTitle/detailTitle/addAgentSel/
   waMicBtn/waSendBtn = 0), kedua blok JS lolos node --check.
+
+- 27 Okt sore (perintah Patria "Update README/PLAN di log"):
+  README.md + PLAN.md dibawa ke status terkini. Temuan: draf
+  README-new/PLAN-new (09:19, folder
+  your_files/addendum-router-minime-hackathon) SUDAH terserap dan
+  terlampaui oleh update-update berikutnya (kanon router +
+  fallback Qwen + ?key= + catatan GPU 7b sudah ada di kedua file)
+  — jadi draf itu TIDAK dipakai mentah-mentah (me-revert akan
+  menghapus konten Fase 1/2 dan UI). Yang diperbarui: README
+  Status → Fase 0 lolos bersyarat 15:04 WIB + Fase 1/2 lolos +
+  UI v5 + UI stop; PLAN Fase 0 → lolos bersyarat, Fase 1 header
+  → GSTP approved, Fase 2 → executed + GKonten approved +
+  catatan QC/gambar null, Fase UI → v4 + v5 + UI stop, Stack →
+  prototipe klik ada, aplikasi sungguhan belum dibangun.
