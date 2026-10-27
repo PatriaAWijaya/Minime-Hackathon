@@ -497,3 +497,25 @@ dokumen lama yang dipakai.
   gerbang — lampiran hanya punya 3 kolom (To do/Doing/Done);
   bila Patria mau persis 3 kolom, gerbang harus dipindah ke
   tempat lain dan itu perlu diputuskan dulu.
+
+- 27 Okt sore (perintah Patria "Untuk UI Graph gunakan seperti
+  lampiran"): GRAPH v5 DIGANTI gaya kanvas n8n dari lampiran
+  (masih di file prototype-v5/index.html yang sama). Kanvas
+  berlatar grid titik gelap; node: Trigger "Arahan Pengguna"
+  (⚡, seperti trigger form di lampiran) → "Prime Agent"
+  (🤖, seperti node AI Agent/Tools Agent) → decision "GSTP
+  lolos?" (seperti "Is manager?" — cabang true ke Distribusi,
+  false ke Revisi, masing-masing berlabel di kurvanya); di bawah
+  Prime Agent ada 4 sub-node MELINGKAR yang terhubung garis
+  PUTUS-PUTUS melengkung seperti lampiran (Chat Model
+  Meta→Gemini→Ollama, Memory PostgreSQL, Tool: Media, Tool:
+  Postiz). Semua koneksi berupa kurva bezier berpanah (bukan
+  garis lurus) dengan port bulat di ujungnya; node output punya
+  tombol ＋ seperti lampiran untuk menambah node baru (simulasi:
+  node "Node Baru" muncul di kanan + koneksinya); form tambah
+  koneksi tetap ada; tombol "Jalankan Simulasi Alur" menyorot
+  node berurutan Trigger → Prime → GSTP → Distribusi. Node
+  tetap bisa diseret dan kurva dihitung ulang dari posisi node
+  nyata. Verifikasi: kedua blok JS lolos node --check, tanpa
+  referensi eksternal. Status: MENUNGGU REVISI Patria dari
+  prototype v5 (dengan Graph gaya n8n).

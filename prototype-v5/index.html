@@ -104,6 +104,18 @@
   .kb-cardfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; color: #a1a1a1; font-size: 13px; }
   .addlist { border: 2px dashed #3a3a3a; border-radius: 8px; padding: 10px; min-height: 120px; display: flex; align-items: flex-start; justify-content: center; }
   .addlist .btn { width: 100%; }
+
+  .n8n-canvas { position: relative; background: #0a0a0a; background-image: radial-gradient(#3a3a3a 1px, transparent 1px); background-size: 22px 22px; border: 1px solid #262626; border-radius: 8px; height: 480px; overflow: hidden; }
+  .n8n-canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .n8n-node { position: absolute; background: #1f1f1f; border: 1.5px solid #9ca3af; border-radius: 10px; padding: 10px 12px; cursor: grab; user-select: none; color: #ececec; z-index: 2; }
+  .n8n-node.prime { border-color: #8b5cf6; }
+  .n8n-node.decision { border-color: #22c55e; }
+  .n8n-node.trigger { border-color: #f87171; }
+  .n8n-node .nname { font-weight: 700; font-size: 14px; }
+  .n8n-node .nsub { font-size: 12px; color: #a1a1a1; }
+  .n8n-node.circle { width: 118px; height: 118px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .n8n-node.exec { box-shadow: 0 0 0 3px #facc15; border-color: #facc15; }
+  .n8n-plus { position: absolute; right: -30px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border: 1px solid #6b7280; background: #262626; color: #ececec; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; z-index: 3; }
 </style>
 </head>
 <body>
@@ -191,18 +203,19 @@
       <div class="scroll"><div id="kanbanBox"></div></div>
     </div>
     <div class="view" id="view-graph">
-      <div class="colhead"><h2>Graph — Koneksi Antar Agen</h2><p>Seret node untuk mengatur kanvas. Klik node untuk detail. Tambah koneksi lewat form di bawah.</p></div>
+      <div class="colhead"><h2>Graph — Alur Agen (gaya n8n)</h2><p>Kanvas titik gelap. Seret node untuk mengatur alur — kurva ikut bergerak. Klik node untuk detail, tombol ＋ di node output untuk menambah node, atau jalankan simulasi alurnya.</p>
+      <button class="btn btn-primary" onclick="runGraphSim()">▶ Jalankan Simulasi Alur</button></div>
       <div class="scroll">
-        <div class="graphbox" id="graphBox"><svg id="graphEdges"></svg><div id="graphNodes"></div></div>
-        <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-top:12px">
+        <div class="n8n-canvas" id="graphBox"><svg id="graphEdges"></svg><div id="graphNodes"></div></div>
+        <div style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:8px;padding:12px;margin-top:12px">
           <h3 style="margin:0 0 6px" id="gnodeInfo">Klik sebuah node untuk melihat detailnya.</h3>
-          <p id="gnodeDetail" style="color:#555;margin:0">Detail agen dan aliran koneksinya akan tampil di sini.</p>
+          <p id="gnodeDetail" style="color:#a1a1a1;margin:0">Detail node dan aliran koneksinya akan tampil di sini.</p>
         </div>
         <label>Tambah koneksi</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <select id="gFrom" style="flex:1"></select>
           <select id="gTo" style="flex:1"></select>
-          <input type="text" id="gLabel" placeholder="Label aliran, mis. Referensi visual" style="flex:1">
+          <input type="text" id="gLabel" placeholder="Label aliran, mis. true / false / referensi visual" style="flex:1">
           <button class="btn btn-primary" onclick="addGraphEdge()">+ Tambah</button>
         </div>
         <ul id="graphList"></ul>
@@ -511,81 +524,196 @@
     renderKanban();
   }
 
-  /* ---------- Graph (drag node + tambah edge) ---------- */
+  /* ---------- Graph gaya n8n: trigger + agent + decision + sub-node ---------- */
   var GNODES = {
-    prime: { name: "Prime Agent", desc: "Orkestrasi + gerbang manusia.", x: 50, y: 10, prime: true },
-    riset: { name: "Riset", desc: "Harness: riset-pasar, behaviour-digital, spending-digital.", x: 10, y: 45 },
-    strategi: { name: "Strategi", desc: "Harness: positioning-stp, pak-bi-branding.", x: 28, y: 45 },
-    kreatif: { name: "Kreatif", desc: "Harness: copywriting-hook-cta, brief-text-free.", x: 46, y: 45 },
-    media: { name: "Media", desc: "Harness: image-text-free, carousel-slide, reels-pendek, talking-head-avatar.", x: 64, y: 45 },
-    distribusi: { name: "Distribusi", desc: "Harness: postiz-draft-only.", x: 82, y: 45 }
+    trigger: { name: "Arahan Pengguna", sub: "Trigger • chat pengguna", icon: "⚡", x: 3, y: 32, w: 175, kind: "trigger", desc: "Titik awal alur: arahan pengguna masuk dari chat dan memicu Prime Agent." },
+    prime: { name: "Prime Agent", sub: "Orkestrasi & kurasi", icon: "🤖", x: 30, y: 32, w: 195, kind: "prime", desc: "Agen utama: memecah arahan, memanggil agen, dan mengkurasi semua hasil sebelum final." },
+    gate: { name: "GSTP lolos?", sub: "Gerbang manusia", icon: "◈", x: 57, y: 32, w: 150, kind: "decision", desc: "Decision seperti 'Is manager?' di lampiran: true → distribusi, false → revisi. Keputusan selalu oleh pengguna, bukan model." },
+    dist: { name: "Distribusi", sub: "draf Postiz", icon: "▸", x: 82, y: 10, w: 155, kind: "output", desc: "Cabang true: hasil yang lolos GKonten disiapkan sebagai DRAF Postiz (bukan terbit live)." },
+    revisi: { name: "Revisi", sub: "kembali ke Kreatif", icon: "↩", x: 82, y: 56, w: 155, kind: "output", desc: "Cabang false: tugas kembali ke agen pemiliknya dengan catatan revisi pengguna." },
+    model: { name: "Chat Model", sub: "Meta → Gemini → Ollama", icon: "AI", x: 27, y: 70, kind: "circle", desc: "Sub-node model Prime Agent (garis putus-putus): rantai Meta → Gemini → Ollama lokal." },
+    memory: { name: "Memory", sub: "PostgreSQL • riwayat", icon: "DB", x: 41, y: 70, kind: "circle", desc: "Sub-node memori Prime Agent (garis putus-putus): riwayat chat dan konteks proyek." },
+    toolmedia: { name: "Tool: Media", sub: "image • carousel • reels", icon: "▷", x: 55, y: 70, kind: "circle", desc: "Sub-node tool Prime Agent (garis putus-putus): produksi media via agen Media." },
+    toolpostiz: { name: "Tool: Postiz", sub: "draf saja", icon: "P", x: 69, y: 70, kind: "circle", desc: "Sub-node tool Prime Agent (garis putus-putus): draf distribusi, tanpa terbit live di slice ini." }
   };
   var GEDGES = [
-    { f: "prime", t: "riset", l: "Tugaskan riset" }, { f: "riset", t: "strategi", l: "Riset → STP" },
-    { f: "strategi", t: "kreatif", l: "STP → brief" }, { f: "kreatif", t: "media", l: "Brief → media" },
-    { f: "media", t: "distribusi", l: "GKonten → draf" }
+    { f: "trigger", t: "prime", l: "" },
+    { f: "prime", t: "gate", l: "" },
+    { f: "gate", t: "dist", l: "true" },
+    { f: "gate", t: "revisi", l: "false" },
+    { f: "prime", t: "model", l: "", dashed: true },
+    { f: "prime", t: "memory", l: "", dashed: true },
+    { f: "prime", t: "toolmedia", l: "", dashed: true },
+    { f: "prime", t: "toolpostiz", l: "", dashed: true }
   ];
-  var dragNode = null, dragMoved = false, dragStart = null;
-  function renderGraph() {
-    var svg = document.getElementById("graphEdges");
-    svg.innerHTML = ""; svg.setAttribute("viewBox", "0 0 100 100"); svg.setAttribute("preserveAspectRatio", "none");
-    var NS = "http://www.w3.org/2000/svg";
-    GEDGES.forEach(function (e) {
-      var a = GNODES[e.f], b = GNODES[e.t];
-      var line = document.createElementNS(NS, "line");
-      line.setAttribute("x1", a.x); line.setAttribute("y1", a.y + 6);
-      line.setAttribute("x2", b.x); line.setAttribute("y2", b.y + 6);
-      line.setAttribute("stroke", "#2563eb"); line.setAttribute("stroke-width", "0.7");
-      svg.appendChild(line);
+  var dragNode = null, dragMoved = false, dragStart = null, grabDX = 0, grabDY = 0, graphRunning = false;
+  function nodeRects() {
+    var box = document.getElementById("graphBox").getBoundingClientRect();
+    var out = {};
+    Object.keys(GNODES).forEach(function (k) {
+      var el = document.querySelector('[data-nkey="' + k + '"]');
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      out[k] = { l: (r.left - box.left) / box.width * 100, r: (r.right - box.left) / box.width * 100,
+                 t: (r.top - box.top) / box.height * 100, b: (r.bottom - box.top) / box.height * 100,
+                 cx: (r.left + r.width / 2 - box.left) / box.width * 100, cy: (r.top + r.height / 2 - box.top) / box.height * 100 };
     });
+    return out;
+  }
+  function curvePath(x1, y1, x2, y2) {
+    var dx = x2 - x1, dy = y2 - y1;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      return "M " + x1 + " " + y1 + " C " + (x1 + dx * 0.5) + " " + y1 + ", " + (x2 - dx * 0.5) + " " + y2 + ", " + x2 + " " + y2;
+    }
+    return "M " + x1 + " " + y1 + " C " + x1 + " " + (y1 + dy * 0.5) + ", " + x2 + " " + (y2 - dy * 0.5) + ", " + x2 + " " + y2;
+  }
+  function renderGraph() {
     var wrap = document.getElementById("graphNodes");
     wrap.innerHTML = "";
     Object.keys(GNODES).forEach(function (k) {
       var nd = GNODES[k];
       var el = document.createElement("div");
-      el.className = "gnode" + (nd.prime ? " prime" : "");
-      el.style.left = "calc(" + nd.x + "% - 62px)";
-      el.style.top = nd.y + "%";
-      el.textContent = nd.name;
+      el.className = "n8n-node " + nd.kind;
+      el.setAttribute("data-nkey", k);
+      if (nd.kind === "circle") {
+        el.style.left = "calc(" + nd.x + "% - 59px)";
+        el.style.top = nd.y + "%";
+      } else {
+        el.style.left = nd.x + "%";
+        el.style.top = nd.y + "%";
+        el.style.width = nd.w + "px";
+      }
+      el.innerHTML = "<div class='nname'>" + nd.icon + " " + nd.name + "</div><div class='nsub'>" + nd.sub + "</div>";
+      if (nd.kind === "output") {
+        var plus = document.createElement("div");
+        plus.className = "n8n-plus"; plus.textContent = "+"; plus.title = "Tambah node setelah ini";
+        plus.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+        plus.addEventListener("click", function (e) { e.stopPropagation(); addNodeAfter(k); });
+        el.appendChild(plus);
+      }
       el.addEventListener("mousedown", function (e) {
-        dragNode = k; dragMoved = false; dragStart = { x: e.clientX, y: e.clientY };
+        dragNode = k; dragMoved = false;
+        var box = document.getElementById("graphBox").getBoundingClientRect();
+        var r = el.getBoundingClientRect();
+        grabDX = (e.clientX - r.left) / box.width * 100;
+        grabDY = (e.clientY - r.top) / box.height * 100;
+        dragStart = { x: e.clientX, y: e.clientY };
         e.preventDefault();
       });
       el.addEventListener("click", function () {
         if (dragMoved) return;
-        var outs = GEDGES.filter(function (e) { return e.f === k; }).map(function (e) { return GNODES[e.t].name + " (" + e.l + ")"; }).join(", ") || "tidak ada";
-        var ins = GEDGES.filter(function (e) { return e.t === k; }).map(function (e) { return GNODES[e.f].name + " (" + e.l + ")"; }).join(", ") || "tidak ada";
+        var outs = GEDGES.filter(function (e) { return e.f === k; }).map(function (e) { return GNODES[e.t].name + (e.l ? " (" + e.l + ")" : ""); }).join(", ") || "tidak ada";
+        var ins = GEDGES.filter(function (e) { return e.t === k; }).map(function (e) { return GNODES[e.f].name + (e.l ? " (" + e.l + ")" : ""); }).join(", ") || "tidak ada";
         document.getElementById("gnodeInfo").textContent = nd.name;
         document.getElementById("gnodeDetail").textContent = nd.desc + " Keluar: " + outs + ". Masuk: " + ins + ".";
       });
       wrap.appendChild(el);
     });
-    document.getElementById("graphList").innerHTML = GEDGES.map(function (e) { return "<li>" + GNODES[e.f].name + " → " + GNODES[e.t].name + " — " + e.l + "</li>"; }).join("");
+    var rects = nodeRects();
+    var svg = document.getElementById("graphEdges");
+    svg.innerHTML = ""; svg.setAttribute("viewBox", "0 0 100 100"); svg.setAttribute("preserveAspectRatio", "none");
+    var NS = "http://www.w3.org/2000/svg";
+    var defs = document.createElementNS(NS, "defs");
+    var marker = document.createElementNS(NS, "marker");
+    marker.setAttribute("id", "arr"); marker.setAttribute("markerWidth", "6"); marker.setAttribute("markerHeight", "6");
+    marker.setAttribute("refX", "5"); marker.setAttribute("refY", "3"); marker.setAttribute("orient", "auto");
+    var tri = document.createElementNS(NS, "path");
+    tri.setAttribute("d", "M0,0 L6,3 L0,6 Z"); tri.setAttribute("fill", "#9ca3af");
+    marker.appendChild(tri); defs.appendChild(marker); svg.appendChild(defs);
+    GEDGES.forEach(function (e) {
+      var a = rects[e.f], b = rects[e.t];
+      if (!a || !b) return;
+      var x1, y1, x2, y2;
+      if (GNODES[e.t].kind === "circle") { x1 = a.cx; y1 = a.b; x2 = b.cx; y2 = b.t; }
+      else { x1 = a.r; y1 = a.cy; x2 = b.l; y2 = b.cy; }
+      var path = document.createElementNS(NS, "path");
+      path.setAttribute("d", curvePath(x1, y1, x2, y2));
+      path.setAttribute("fill", "none"); path.setAttribute("stroke", "#9ca3af"); path.setAttribute("stroke-width", "0.35");
+      path.setAttribute("marker-end", "url(#arr)");
+      if (e.dashed) path.setAttribute("stroke-dasharray", "1.2 1.2");
+      svg.appendChild(path);
+      [ [x1, y1], [x2, y2] ].forEach(function (pt) {
+        var c = document.createElementNS(NS, "circle");
+        c.setAttribute("cx", pt[0]); c.setAttribute("cy", pt[1]); c.setAttribute("r", "1.1");
+        c.setAttribute("fill", "#6b7280"); c.setAttribute("stroke", "#0e0e0e"); c.setAttribute("stroke-width", "0.3");
+        svg.appendChild(c);
+      });
+      if (e.l) {
+        var t = document.createElementNS(NS, "text");
+        t.setAttribute("x", (x1 + x2) / 2); t.setAttribute("y", (y1 + y2) / 2 - 1.5);
+        t.setAttribute("fill", "#a1a1a1"); t.setAttribute("font-size", "3"); t.setAttribute("text-anchor", "middle");
+        t.textContent = e.l;
+        svg.appendChild(t);
+      }
+    });
+    document.getElementById("graphList").innerHTML = GEDGES.map(function (e) {
+      return "<li>" + GNODES[e.f].name + " → " + GNODES[e.t].name + (e.l ? " — " + e.l : "") + (e.dashed ? " (putus-putus)" : "") + "</li>";
+    }).join("");
   }
   document.addEventListener("mousemove", function (e) {
     if (!dragNode) return;
     var box = document.getElementById("graphBox").getBoundingClientRect();
     if (dragStart && Math.abs(e.clientX - dragStart.x) + Math.abs(e.clientY - dragStart.y) > 5) dragMoved = true;
-    var nx = ((e.clientX - box.left) / box.width) * 100;
-    var ny = ((e.clientY - box.top) / box.height) * 100;
-    GNODES[dragNode].x = Math.max(2, Math.min(92, nx));
-    GNODES[dragNode].y = Math.max(2, Math.min(80, ny));
+    var nx = (e.clientX - box.left) / box.width * 100 - grabDX;
+    var ny = (e.clientY - box.top) / box.height * 100 - grabDY;
+    GNODES[dragNode].x = Math.max(1, Math.min(90, nx));
+    GNODES[dragNode].y = Math.max(1, Math.min(84, ny));
     renderGraph();
   });
   document.addEventListener("mouseup", function () { dragNode = null; });
-  var gf = document.getElementById("gFrom"), gt = document.getElementById("gTo");
-  Object.keys(GNODES).forEach(function (k) {
-    var o1 = document.createElement("option"); o1.value = k; o1.textContent = GNODES[k].name; gf.appendChild(o1);
-    var o2 = document.createElement("option"); o2.value = k; o2.textContent = GNODES[k].name; gt.appendChild(o2);
-  });
+  function buildEdgeOptions() {
+    var gf = document.getElementById("gFrom"), gt = document.getElementById("gTo");
+    gf.innerHTML = ""; gt.innerHTML = "";
+    Object.keys(GNODES).forEach(function (k) {
+      var o1 = document.createElement("option"); o1.value = k; o1.textContent = GNODES[k].name; gf.appendChild(o1);
+      var o2 = document.createElement("option"); o2.value = k; o2.textContent = GNODES[k].name; gt.appendChild(o2);
+    });
+  }
+  buildEdgeOptions();
   function addGraphEdge() {
-    var f = gf.value, t = gt.value, label = document.getElementById("gLabel").value.trim() || "Koneksi baru";
+    var f = document.getElementById("gFrom").value, t = document.getElementById("gTo").value;
+    var label = document.getElementById("gLabel").value.trim() || "";
     if (f === t) { alert("Sumber dan tujuan tidak boleh sama."); return; }
     GEDGES.push({ f: f, t: t, l: label });
     renderGraph();
     var n = document.getElementById("graphNotice");
     n.style.display = "block";
-    n.textContent = "Simulasi: koneksi " + GNODES[f].name + " → " + GNODES[t].name + " (" + label + ") ditambahkan (tampilan saja).";
+    n.textContent = "Simulasi: koneksi " + GNODES[f].name + " → " + GNODES[t].name + (label ? " (" + label + ")" : "") + " ditambahkan (tampilan saja).";
+  }
+  var nodeCounter = 0;
+  function addNodeAfter(key) {
+    nodeCounter++;
+    var src = GNODES[key];
+    var nk = "baru" + nodeCounter;
+    GNODES[nk] = { name: "Node Baru " + nodeCounter, sub: "simulasi", icon: "＋", x: Math.min(90, src.x + 14), y: src.y, w: 150, kind: "output", desc: "Node baru dari tombol ＋ (simulasi) — di aplikasi sungguhan, node ini bisa diisi agen/tool lain." };
+    GEDGES.push({ f: key, t: nk, l: "" });
+    buildEdgeOptions();
+    renderGraph();
+    var n = document.getElementById("graphNotice");
+    n.style.display = "block";
+    n.textContent = "Simulasi: node baru ditambahkan setelah " + src.name + " (tampilan saja).";
+  }
+  function runGraphSim() {
+    if (graphRunning) return;
+    graphRunning = true;
+    var seq = ["trigger", "prime", "gate", "dist"];
+    var i = 0;
+    var n = document.getElementById("graphNotice");
+    n.style.display = "block";
+    n.textContent = "Simulasi berjalan: Trigger → Prime Agent → GSTP → Distribusi (draf)…";
+    function step() {
+      document.querySelectorAll(".n8n-node").forEach(function (el) { el.classList.remove("exec"); });
+      if (i >= seq.length) {
+        graphRunning = false;
+        n.textContent = "Simulasi selesai: alur berjalan Trigger → Prime Agent → GSTP (true) → Distribusi (draf). Gerbang sungguhan tetap menunggu keputusanmu — simulasi ini tidak menyetujui apa pun.";
+        return;
+      }
+      var el = document.querySelector('[data-nkey="' + seq[i] + '"]');
+      if (el) el.classList.add("exec");
+      i++;
+      setTimeout(step, 700);
+    }
+    step();
   }
 
   /* ---------- Library ---------- */
