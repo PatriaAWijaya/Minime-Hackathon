@@ -973,3 +973,43 @@ dokumen lama yang dipakai.
   gate compiler tahap ini; type-check komponen masuk
   B2 bersama komponen nyata). node_modules/ + dist/
   terabaikan git dengan benar (status hanya 6 item baru).
+
+  WIRING — B2 MIGRASI + PARITY LOLOS (27 Okt sore):
+  Migrasi mekanis prototype-v5/index.html (103.597 byte)
+  ke Svelte via skrip /tmp/migrate-v5.py (BUKAN tulis
+  ulang dari memori): <style> -> app.css verbatim
+  (18.991 byte); markup body -> App.svelte (38.323
+  byte, 58 handler statis dikonversi ke binding Svelte
+  onclick=/onchange=/oninput=, this -> e.currentTarget);
+  2 blok <script> -> lib/v5logic.js (49.084 byte):
+  61 deklarasi function di-export, 19 var di level
+  modul, 23 pernyataan eksekusi dipindah ke initV5()
+  dalam urutan asli (dijalankan onMount), diakhiri
+  expose semua 90 nama ke window (markup hasil
+  innerHTML runtime butuh global seperti aslinya).
+  Dua jebakan ditangkap skrip sebelum sempat jadi bug:
+  (1) deklarasi function berawalan komentar section
+  (showView, switchProject, +1) sempat tak terdeteksi
+  export; (2) nama di dalam string handler ('CTA (',
+  'Hook (', ...) sempat dikira pemanggilan fungsi —
+  keduanya diperbaiki (strip komentar/string).
+  PNG brand -> app/public/ (disalin verbatim ke dist).
+  vite build LOLOS (111 modul, 2,35 dtk; JS 104 KB,
+  CSS 16 KB; bundle tanpa import/export/import.meta).
+  Peringatan build HANYA a11y (54x: div klik tanpa
+  keyboard handler + label tanpa kontrol) — non-blocking,
+  semantik sama persis dengan HTML v5, bukan error.
+  PARITY jsdom 16/16 LOLOS pada dist: home awal
+  (no-nav false, kolom flex, resizer block), init
+  (chatBox 7 anak, agentList 11 anak), klik Kanban
+  (no-nav true, kolom none), klik Graph (tetap
+  hidden), klik Home (pulih penuh), 0 script error.
+  Catatan rig: skrip dist (module, deferred) harus
+  dipindah ke akhir body saat dijalankan sebagai
+  classic script di jsdom — artefak rig saja, bukan
+  bug aplikasi (di Tauri, module deferral menjamin
+  #app sudah ada). frontendDist dialihkan dari
+  ../../prototype-v5/build ke ../dist; rebuild
+  MacBook rantai v3 (pull -> npm install -> vite
+  build -> tauri build -> bunuh proses lama -> open
+  -> pgrep) dimulai; hasil menyusul.

@@ -22,6 +22,10 @@
   (svelte 5.57.3, vite 6.4.5; mount terverifikasi di dist,
   base './' OK). frontendDist masih prototype-v5/build
   sampai B2 (menghindari regresi live-test).
+- B2 (27 Okt sore): migrasi mekanis v5 -> Svelte LENGKAP
+  (App.svelte + app.css + lib/v5logic.js, logika tidak
+  diubah; parity jsdom 16/16 lolos). frontendDist kini
+  ../dist; rebuild MacBook rantai v3 berjalan.
 
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
