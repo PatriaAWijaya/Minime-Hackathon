@@ -628,3 +628,14 @@ dokumen lama yang dipakai.
   → GSTP approved, Fase 2 → executed + GKonten approved +
   catatan QC/gambar null, Fase UI → v4 + v5 + UI stop, Stack →
   prototipe klik ada, aplikasi sungguhan belum dibangun.
+
+- KOREKSI 27 Okt sore (transparansi log): commit sebelumnya
+  (lokal 8d8b9b4 ↔ remote 23890e2) HANYA memuat README + log —
+  skrip edit PLAN berhenti pada satu pola teks yang tidak cocok
+  ("Clickable prototype v3" ternyata satu baris dengan "Spec:
+  docs/ui-main-layout.md." di depannya), sehingga PLAN tidak
+  tertulis dan tidak ikut commit, walau pesan commit menyebut
+  README/PLAN. Commit ini melengkapi separuh PLAN yang tertunda
+  (Fase 0 bersyarat, Fase 1 GSTP, Fase 2 executed + GKonten,
+  v4/v5 + UI stop, Stack) — tidak ada riwayat yang ditulis ulang,
+  koreksi dicatat di sini apa adanya.

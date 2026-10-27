@@ -21,21 +21,23 @@ copied from the main Minime repository.
 
 ## Phases — 27 Oct to 2 Nov 2026 (build plan; pace updated 27 Oct: 2 phases/day attempted)
 
-- **Phase 0 — Foundation, Tue 27 Oct: EXECUTED, gate NOT fully passed.**
+- **Phase 0 — Foundation, Tue 27 Oct: EXECUTED, gate CONDITIONALLY PASSED 27 Oct 15:04 WIB (Patria).**
   Repo contracts (JSON v1), model router, append-only CostLedger +
   hard limit, service-level policy engine for gates GS/GSTP/GKonten,
   DB-backed queue + SSE progress, one sample job end-to-end with
   CostRecord and trace ID, zero credentials in repo — all built and
   mock-tested (see `docs/fase-0-log.md` and `docs/fase-0-gate-results.md`).
-  Gate NOT passed: live verification of all three router paths on one
-  test brand and cost re-baselining are pending. Since the morning
+  Gate CONDITIONALLY PASSED by Patria 27 Oct 2026 15:04 WIB (record
+  docs/fase-0-gate-conditional-approval.json): the two remaining
+  conditions are live Muse verification and full cost re-baselining
+  (both pending, see below). Since the morning
   report, the Ollama leg is proven live (DeepSeek 1.5b GPU 4.2 s,
   Qwen 3b 2.5 s) and the Gemini leg is proven live through the router
   code (with intermittent provider HTTP 503 "high demand" in the same
   session). Still pending: live Muse (Meta credit claim + card +
   spend limit, Patria-only) and full cost re-baselining. No live Muse
   metric is claimed until those tests pass.
-- **Phase 1 — Decisions, Tue 27 Oct (draft EXECUTED live, awaiting GSTP):**
+- **Phase 1 — Decisions, Tue 27 Oct (EXECUTED live; GSTP APPROVED 27 Oct 12:04 WIB):**
   Intake → Research → Business Strategy → STP, stopping at GS/GSTP
   gates. No production before GSTP approval; exactly one Approved STP
   active per product. Executed 27 Oct siang via Gemini (v1: 1.551 tokens), then deepened
@@ -48,11 +50,17 @@ copied from the main Minime repository.
   GSTP APPROVED by Patria 27 Oct 2026 12:04 WIB (record:
   docs/fase-1-gstp-approval.json) — Fase 2 is now unblocked by the
   gate. GS (Strategy) was not separately recorded as approved.
-- **Phase 2 — Image production, Wed 28 Oct (morning, 2/day pace):**
-  7-day calendar from the approved STP, CreativeBrief JSON per item,
-  text-free image generation, deterministic template overlay (so
-  typography is correct), QC, then GKonten per item (Approve /
-  text-only edit via cheap recompose / Regenerate / Reject with reason).
+- **Phase 2 — Calendar + CreativeBriefs, Tue 27 Oct siang: EXECUTED live, GKonten APPROVED ~13:06 WIB.**
+  7-day calendar from the approved STP + 7 CreativeBriefs (live Gemini,
+  3.604 tokens), QC rule score 100/100 for all 7 items (a structural
+  score — it does not validate image semantics; two production notes
+  were accepted in the approval record: item-03's visual prompt depicts
+  a QR code, which in production must be a real deterministic overlay,
+  and item-01 carries a video/transition nuance but is a static-image
+  brief). Images left null with imageStatus pending-provider (provider
+  = Muse Image provisional, price pending Meta activation). Output
+  docs/fase-2-output.json; approval docs/fase-2-gkonten-approval.json.
+  The draft file was not edited (approvals are append-only).
 - **Phase UI — Application UI draft, added Tue 27 Oct AFTER GKonten (NEW PHASE, Patria's order):**
   Draft-first UI for user interaction (docs/ui-draft.md): 7 screens
   (Projects → Intake → Research & Strategy → STP/GSTP → 7-day
@@ -81,8 +89,28 @@ copied from the main Minime repository.
   curated by Prime) + Detail panel (customize agent condition +
   skills); resizable column widths + independent scrollbars.
   Spec: docs/ui-main-layout.md. Clickable prototype v3:
-  prototype-v3/index.html (dummy, simulated). Awaiting Patria's
-  revision of the v3 main layout.
+  prototype-v3/index.html (dummy, simulated). v3 was superseded by v4,
+  then v5 (below); revisions are deferred under the 27 Oct 15:02 UI stop.
+  INTERACTIVE v4 (27 Oct siang, Patria: 'lanjut buat prototipe, kita
+  akan revisi dari situ'): prototype-v4/index.html — v3 layout with
+  working in-browser interactions (project switch, Kanban drag, graph
+  drag + add edge, media filters, carousel slides, talking-head script
+  edit, timeline playhead, library actions).
+  PROTOTYPE v5 (27 Oct sore, attachment-driven):
+  prototype-v5/index.html — Muse-style dark UI with 6 rail icons
+  processed from attachments (white line-art, 128px data URIs; Media
+  Studio & Settings SVG fallbacks), Kanban styled like the attachment,
+  n8n-style graph canvas, WhatsApp-style composer then replaced by an
+  attachment-style single pill, attachment-style agent list (Local top
+  bar, + icon only), attachment-style main UI (centered 'Today 2:31
+  PM' header, dark bubbles without avatars, attachment-style Detail
+  panel: Name/Title/Instructions/Brain/Knows/Does), monochrome theme
+  with single violet accent #B214FF. A verification audit found and
+  fixed one stale reference (emojiPanel in waToggleAttach). UI STOP
+  27 Oct 15:02 WIB (Patria: 'sementara UI kita cukupkan, UI akan kita
+  sempurnakan nanti') — no further UI work until Patria orders
+  refinement; the UI design gate itself is therefore still formally
+  unapproved, with revisions deferred.
   v1 doc is kept as history only.
   Phase 3 is PAUSED until Patria orders it to resume after the UI
   draft decision.
@@ -129,5 +157,6 @@ copied from the main Minime repository.
 
 TypeScript, NestJS on the Fastify adapter, SQLite (Node `node:sqlite`)
 for the job queue, JSONL CostLedger. No Express, no LangGraph in V1.
-A thin dashboard/UI, if built, is a later phase and is not claimed
-before it exists.
+Clickable UI prototypes v1–v5 exist (dummy/simulated,
+prototype-v5/index.html current); the real installable app is NOT
+built yet — that is post-design-approval work.
