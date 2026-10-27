@@ -885,3 +885,20 @@ dokumen lama yang dipakai.
   bekerja; tampilan "masih tampil" di layar Patria berasal
   dari salinan build LAMA (tab/lampiran sebelum perbaikan
   nav) yang belum dimuat ulang — bukan bug baru.
+
+  BUILD APP — TAHAP A DIMULAI (Patria 27 Okt sore "setuju,
+  lakukan"): protokol build dulu (app/AGENTS.md, status.md,
+  rule.md, TODO.md, PLAN.md — prompt + status + rule + TODO
+  + PLAN sesuai protokol), lalu scaffold shell Tauri
+  (app/src-tauri: Cargo.toml, build.rs, main.rs tanpa
+  unwrap/expect, tauri.conf.json, capabilities/default.json,
+  .gitignore target/+node_modules). Keputusan: productName
+  MiniMe, identifier com.minime.hackathon, window main
+  1280x800, frontendDist ../../prototype-v5/build (sumber
+  tunggal, tanpa duplikat 209 KB), CSP eksplisit untuk
+  inline script/style + data: + IPC, bundle target app
+  (debug .app; .dmg menyusul bila diminta). Svelte 5
+  DIKUNCI sebagai framework, mount-nya Tahap B. Validasi
+  di VM: JSON parse OK, frontendDist ter-resolve, scan
+  lolos. Kompilasi Rust TIDAK bisa divalidasi di VM (tanpa
+  Rust) — validasi itu menjadi tugas build MacBook.

@@ -1,0 +1,4 @@
+# Tauri build output (regenerated on the MacBook, never committed)
+target/
+# Node modules (Tahap B: Svelte + Vite)
+node_modules/

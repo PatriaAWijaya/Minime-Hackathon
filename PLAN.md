@@ -202,3 +202,11 @@ for the job queue, JSONL CostLedger. No Express, no LangGraph in V1.
 Clickable UI prototypes v1–v5 exist (dummy/simulated,
 prototype-v5/index.html current); the real installable app is NOT
 built yet — that is post-design-approval work.
+
+  BUILD APP (Patria 27 Okt sore, "setuju, lakukan"): Tauri 2 +
+  Svelte 5 DIKUNCI sebagai stack app. Tahap A = shell Tauri +
+  UI v5 statis sebagai frontend (tanpa deps Node, tanpa mount
+  Svelte — sengaja, supaya cepat live test); Svelte mount +
+  komponen penuh = Tahap B. Build jalan di MacBook (VM ini
+  tanpa Rust); setelah build selesai → uji konsistensi →
+  full wiring Tahap B. Detail: app/AGENTS.md, app/PLAN.md.
