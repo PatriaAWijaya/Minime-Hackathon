@@ -26,17 +26,26 @@ sections of the Aplikasi Konten specification documents.
 - **Primary: Muse via the Meta Model API** — first route for every agent
   (Orchestrator, Research, Strategy, STP, Creative, Distribution, Leads &
   CRM, Outreach, Finance).
-- **Fallback 1: Gemini via the Google API** — used when Muse is unavailable.
-  Gemini is not a local model and is not run via Ollama.
-- **Fallback 2 (local): DeepSeek via Ollama** — an open-weight DeepSeek
-  model running locally on the user's machine via Ollama
-  (127.0.0.1:11434). This is the only local agent in the chain. Marginal
-  cost is near zero; quality is below the cloud models, and that is
-  reported honestly, never claimed as equal.
+- **Fallback 1: Gemini via the Google API** (`gemini-3.1-flash-lite`) —
+  used when Muse is unavailable. Gemini is not a local model and is not
+  run via Ollama. Its key is sent as a `?key=` query parameter (the
+  placement the Secure Vault surrogate mechanism supports; header
+  placement was tried and is not compatible with it).
+- **Fallback 2 (local): DeepSeek via Ollama** (`deepseek-r1:1.5b`) — an
+  open-weight DeepSeek model running locally on the user's machine via
+  Ollama (127.0.0.1:11434). Marginal cost is near zero; quality is
+  below the cloud models, and that is reported honestly, never claimed
+  as equal. The larger `deepseek-r1:7b` is installed on the same
+  machine but fails GPU inference there (Metal out-of-memory on an
+  8 GB M1), so it is NOT the default.
+- **Fallback 3 (local): Qwen via Ollama** (`qwen2.5:3b`) — tried only if
+  the DeepSeek local model fails. Also local and free.
 - **QC rule (unchanged):** QC must use a different model family from the
-  maker. Maker Muse → QC Gemini; if Gemini is down → QC DeepSeek local.
-  Pass threshold: score ≥ 75 and zero hard violations, max 2 revision
-  rounds, then escalation to a human.
+  maker. Maker Muse → QC Gemini; maker Gemini → QC Meta; maker DeepSeek
+  or Qwen → QC Gemini. Pass threshold: score ≥ 75 and zero hard
+  violations, max 2 revision rounds, then escalation to a human.
+  (In the Phase 0 sample, QC is deterministic scoring with those
+  families, not yet a live LLM QC call — that is Phase 5 harness work.)
 - **Costs:** earlier cost figures based on Maverick/Flash/Sonnet are
   suspended as official figures until the Phase 0 gate re-baselines them
   from actual Muse/Gemini prices and CostLedger measurements. Until then,
@@ -60,14 +69,20 @@ v1, model router, append-only CostLedger + hard limit, service-level
 policy engine for GS/GSTP/GKonten, DB-backed queue + SSE, one sample job
 end-to-end with CostRecord and trace ID; `tsc` 0 errors, gate-test 8/8
 PASS on labelled mocks, credential scan passed). The Phase 0 gate is
-NOT fully passed: live tests of the three router paths and cost
-re-baselining are pending Patria-only prerequisites (Meta Model API
-$150 credit claim + linked card + spend limit, Gemini key via
-environment, Ollama + DeepSeek on Patria's MacBook). Until those live
-tests pass, no live latency, cost, or QC score is claimed, and Phase 1
-is draft preparation only — no gate is approved on Patria's behalf.
-Build phases are tracked in PLAN.md. Demo video (3 minutes) and
-submission follow before the deadline: **4 Nov 2026, 9:00 PM ET**.
+NOT fully passed, but its legs are no longer all pending: the Ollama
+leg is proven live on Patria's MacBook (DeepSeek 1.5b GPU in 4.2 s,
+Qwen 3b in 2.5 s), and the Gemini leg is proven live through the router
+code (gemini-3.1-flash-lite, measured tokens; note: the provider
+returned intermittent HTTP 503 "high demand" during the same session,
+so Gemini reliability at peak times is a known provider condition and
+the chain correctly falls through to local Ollama when it happens).
+What is still pending: live Muse (Meta $150 credit claim + linked card
++ spend limit, Patria-only) and full cost re-baselining from actual
+prices. Until those pass, no live Muse latency, cost, or QC score is
+claimed, and Phase 1 is draft preparation only — no gate is approved
+on Patria's behalf. Build phases are tracked in PLAN.md. Demo video
+(3 minutes) and submission follow before the deadline:
+**4 Nov 2026, 9:00 PM ET**.
 
 ## Submission
 

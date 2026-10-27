@@ -7,10 +7,15 @@ copied from the main Minime repository.
 ## Model router (27 Oct 2026, Addendum Kanon Router)
 
 - Primary: Muse via the Meta Model API, for every agent.
-- Fallback 1: Gemini via the Google API (not via Ollama).
-- Fallback 2 (local): DeepSeek via Ollama (127.0.0.1:11434).
-- QC: different model family from the maker (Muse → Gemini; Gemini down →
-  DeepSeek local). Pass: score ≥ 75, zero hard violations, max 2 revisions.
+- Fallback 1: Gemini via the Google API (`gemini-3.1-flash-lite`, not via
+  Ollama; key sent as `?key=` query parameter).
+- Fallback 2 (local): DeepSeek via Ollama (`deepseek-r1:1.5b`,
+  127.0.0.1:11434; the 7b variant fails GPU inference on the 8 GB M1).
+- Fallback 3 (local): Qwen via Ollama (`qwen2.5:3b`), only if the
+  DeepSeek local model fails.
+- QC: different model family from the maker (Muse → Gemini; Gemini →
+  Meta; DeepSeek/Qwen → Gemini). Pass: score ≥ 75, zero hard
+  violations, max 2 revisions.
 - Costs based on Maverick/Flash/Sonnet are suspended until the Phase 0
   gate re-baselines them from actual prices and CostLedger measurements.
 
@@ -23,10 +28,13 @@ copied from the main Minime repository.
   CostRecord and trace ID, zero credentials in repo — all built and
   mock-tested (see `docs/fase-0-log.md` and `docs/fase-0-gate-results.md`).
   Gate NOT passed: live verification of all three router paths on one
-  test brand and cost re-baselining are pending Patria-only
-  prerequisites (Meta credit claim + card + spend limit, Gemini key,
-  Ollama + DeepSeek on Patria's MacBook). No live metric is claimed
-  until those tests pass.
+  test brand and cost re-baselining are pending. Since the morning
+  report, the Ollama leg is proven live (DeepSeek 1.5b GPU 4.2 s,
+  Qwen 3b 2.5 s) and the Gemini leg is proven live through the router
+  code (with intermittent provider HTTP 503 "high demand" in the same
+  session). Still pending: live Muse (Meta credit claim + card +
+  spend limit, Patria-only) and full cost re-baselining. No live Muse
+  metric is claimed until those tests pass.
 - **Phase 1 — Decisions, Tue 27 Oct (draft) / gate after live tests:**
   Intake → Research → Business Strategy → STP, stopping at GS/GSTP
   gates. No production before GSTP approval; exactly one Approved STP

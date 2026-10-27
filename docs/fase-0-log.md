@@ -226,3 +226,36 @@ dokumen lama yang dipakai.
   (TEST-BRAND-001, tanpa approval GS/GSTP atas nama Patria).
   Tetap terblokir Patria-only: klaim/kartu/Spend Limit Meta, harga
   Muse Image, keputusan final brand/provider/Postiz, GSTP.
+
+- 27 Okt siang (perintah Patria "perbaiki semua error/backlog yang bisa
+  diperbaiki sampai berhasil; yang lain pending dan catat dalam log"):
+  SWEEP. Yang BERHASIL diperbaiki: (1) Auth Gemini di kode router —
+  akar masalah terbukti (header x-goog-api-key tidak kompatibel dengan
+  surrogate Secure Vault), perbaikan: kunci dikirim lewat ?key=
+  (didukung Google API untuk key asli maupun surrogate); verifikasi:
+  fetch Node lewat proxy runtime menukar surrogate -> status 200,
+  jawaban benar; callGemini lewat kode router LOLOS (13+7 token,
+  11,2 detik); rantai fallback meta -> gemini LOLOS sekali
+  (fallbackFrom meta). (2) README/PLAN diperbarui ke rantai nyata
+  (Muse -> Gemini 3.1-flash-lite -> DeepSeek 1.5b -> Qwen 3b, QC per
+  keluarga, status gerbang terkini). (3) Audit ulang: tsc 0 error,
+  gate-test 8/8 PASS, scan PASS, sample job mock draft-only PASS.
+  Yang TIDAK bisa diperbaiki dari sini dan dicatat pending: (a) Tes
+  live Muse — menunggu klaim/kartu/Spend Limit Meta (Patria-only).
+  (b) Re-baseline biaya penuh — menunggu harga Muse aktual; parsial
+  Ollama Rp0 + Gemini terukur sudah ada. (c) Harga Muse Image —
+  menunggu Meta aktif. (d) Verifikasi API Postiz — instans tidak
+  berjalan; percobaan cek config via SSH GAGAL di tengah sweep karena
+  MacBook tiba-tiba tidak menjawab tunnel lagi (SSH "Connection
+  closed by UNKNOWN port 65535", curl tunnel ke Ollama 000; VM
+  Tailscale tetap Connected) — kemungkinan MacBook tidur/offline
+  setelah idle; perlu dibangunkan dari sisi MacBook, bukan dari VM.
+  (e) Flakiness Gemini: provider mengembalikan HTTP 503 "high
+  demand" berulang pada sesi yang sama — kondisi provider, bukan
+  bug kode; rantai merespons benar dengan jatuh ke Ollama lokal.
+  Batasan yang sengaja TIDAK diubah dalam sweep ini: QC sample tetap
+  scoring deterministik (LLM QC live adalah pekerjaan harness Fase 5,
+  bukan perbaikan Fase 0); tidak ada retry 503 di router (fallback
+  ke Ollama sudah menjadi respons yang benar); Postiz TIDAK
+  dipaksakan start (butuh Docker + sumber daya MacBook 8 GB yang
+  sudah ketat; start adalah langkah Fase 3).

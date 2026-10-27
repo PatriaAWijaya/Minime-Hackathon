@@ -111,8 +111,13 @@ export class ModelRouter {
       throw new LiveUnavailableError('gemini', 'GEMINI_API_KEY is not set');
     }
     const started = Date.now();
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.cfg.geminiModel)}:generateContent`;
-    const data = (await postJson(url, { 'x-goog-api-key': this.cfg.geminiApiKey }, { contents: [{ parts: [{ text: prompt }] }] })) as {
+    // Key via ?key= query param (not a header): this is how Google's
+    // generateContent API accepts keys, and it is also the placement
+    // the Secure Vault surrogate mechanism supports (the surrogate is
+    // swapped for the real key on approved egress). Header placement
+    // was tried and is NOT compatible with that mechanism.
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.cfg.geminiModel)}:generateContent?key=${encodeURIComponent(this.cfg.geminiApiKey)}`;
+    const data = (await postJson(url, {}, { contents: [{ parts: [{ text: prompt }] }] })) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
       usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
     };
