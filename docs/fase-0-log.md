@@ -604,3 +604,13 @@ dokumen lama yang dipakai.
   (biru/hijau/merah/kuning). Status: MENUNGGU REVISI Patria
   dari prototype v5 (dengan UI utama gaya lampiran + tema
   violet).
+
+- 27 Okt sore (verifikasi "pastikan prototipe update"): audit
+  file menemukan 1 referensi basi yang lolos — waToggleAttach
+  masih memanggil emojiPanel yang sudah dihapus saat composer
+  diganti gaya lampiran, sehingga klik tombol ＋ akan error
+  (null.classList) dan menu lampiran gagal terbuka. DIPERBAIKI:
+  baris basi dihapus, klik ＋ kini hanya toggle attachMenu.
+  Verifikasi ulang: tidak ada lagi referensi ke elemen yang
+  sudah dihapus (emojiPanel/chatTitle/detailTitle/addAgentSel/
+  waMicBtn/waSendBtn = 0), kedua blok JS lolos node --check.
