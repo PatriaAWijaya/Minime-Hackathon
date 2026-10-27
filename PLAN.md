@@ -16,7 +16,7 @@ copied from the main Minime repository.
 - QC: different model family from the maker (Muse → Gemini; Gemini →
   Meta; DeepSeek/Qwen → Gemini). Pass: score ≥ 75, zero hard
   violations, max 2 revisions.
-- Costs based on Maverick/Flash/Sonnet are suspended until the Phase 0
+- Costs based on superseded models are suspended until the Phase 0
   gate re-baselines them from actual prices and CostLedger measurements.
 
 ## Phases — 27 Oct to 2 Nov 2026 (build plan; pace updated 27 Oct: 2 phases/day attempted)
@@ -127,6 +127,10 @@ copied from the main Minime repository.
   timeline multi-track + ruler, klik klip memilih inspector) dengan
   kode sendiri — bukan copy/vendoring kode Diffusion; build
   diperbarui ke 199 KB, verifikasi sama.
+  VIDEO EDITOR LENGKAP 27 Oct sore: view baru 'Video Editor' di v5
+  (panel aset + preview + inspector + timeline 4 track + transport,
+  klik klip/aset, edit nama klip) — UI dulu, engine menyusul
+  (daftar di docs/video-editor-engines.md).
   v1 doc is kept as history only.
   Phase 3 is PAUSED until Patria orders it to resume after the UI
   draft decision.

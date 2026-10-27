@@ -761,3 +761,24 @@ dokumen lama yang dipakai.
   TIDAK dipakai (di luar MPL, all rights reserved).
   Build single-file diperbarui (199 KB). Syarat permanen
   (uji 1 klip vertikal + encoder headless) TIDAK berubah.
+
+  UI — VIDEO EDITOR LENGKAP + EVALUASI ENGINE (27 Okt sore,
+  perintah Patria "abaikan keputusan tadi siang; cek jujur
+  bisa bangun dengan engine kita?"): audit: repo hackathon
+  TIDAK punya engine media sama sekali (grep src: hanya
+  string "video pendek" di prompt, bukan engine); yang ada
+  sebagai tool: FFmpeg/ffprobe CLI (paket install Minime,
+  belum di-wire), HyperFrames (HTML→MP4, bukan timeline
+  footage), Minime v2 assemble_video_ai dkk (repo lama —
+  referensi pola saja, TIDAK di-copy). VONIS: belum bisa
+  lengkap → UI dibangun dulu: view baru 'Video Editor' di
+  v5 (rail ikon film fallback; panel aset + preview 16:9 +
+  inspector + timeline 4 track + transport + zoom/efek;
+  klik klip/aset, edit nama klip, playhead + timecode;
+  tombol Ekspor jujur menyatakan engine belum ada).
+  Daftar engine di docs/video-editor-engines.md (10 item).
+  DESKRIPSI GIT (perintah 16:07): nama model di luar 3
+  tier utama (Meta, Gemini, Ollama lokal) dihapus dari
+  README + PLAN (frasa Maverick/Flash/Sonnet → "superseded
+  models"); package.json sudah bersih; log histori
+  (fase-0-log) TIDAK diubah — itu catatan, bukan deskripsi.

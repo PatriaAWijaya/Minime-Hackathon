@@ -46,7 +46,7 @@ sections of the Aplikasi Konten specification documents.
   violations, max 2 revision rounds, then escalation to a human.
   (In the Phase 0 sample, QC is deterministic scoring with those
   families, not yet a live LLM QC call — that is Phase 5 harness work.)
-- **Costs:** earlier cost figures based on Maverick/Flash/Sonnet are
+- **Costs:** earlier cost figures based on superseded models are
   suspended as official figures until the Phase 0 gate re-baselines them
   from actual Muse/Gemini prices and CostLedger measurements. Until then,
   only costs actually measured in CostLedger may be reported.
@@ -97,7 +97,12 @@ stays #B214FF. Single-file build: prototype-v5/build/minime-v5.html
 (27 Oct sore, logo + icon inlined, verified against the source).
 Video editor Media Studio rebuilt 27 Oct sore in Diffusion Studio's
 layout (preview + inspector + toolbar + multi-track timeline, click
-a clip to select it) with our own code, not Diffusion's code. Phase 3 was ordered resumed
+a clip to select it) with our own code, not Diffusion's code. Full
+Video Editor view added 27 Oct sore (assets + preview + inspector +
+4-track timeline + transport, own code, click-only); engines still
+missing, listed in docs/video-editor-engines.md. Project description
+cleaned 27 Oct sore to the 3 main model tiers only (Meta, Gemini,
+local Ollama): non-trio model names removed from README/PLAN. Phase 3 was ordered resumed
 27 Oct 2026 15:09 WIB and executed the same afternoon: 7 carousels
 x 3 slides (QC 100/100, images null pending-provider) with all 7
 Postiz drafts pushed as DRAFT only 27 Oct ~15:35 WIB (HTTP 201
