@@ -18,6 +18,10 @@
   klik sudah teruji di mesin DOM (jsdom, lolos) dan proses
   app hidup; konfirmasi visual jendela + klik di tangan
   Patria (satu-satunya yang tidak bisa diverifikasi remote).
+- B1 (27 Okt sore): scaffold Svelte 5 + Vite lolos build
+  (svelte 5.57.3, vite 6.4.5; mount terverifikasi di dist,
+  base './' OK). frontendDist masih prototype-v5/build
+  sampai B2 (menghindari regresi live-test).
 
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,

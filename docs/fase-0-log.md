@@ -953,3 +953,23 @@ dokumen lama yang dipakai.
   Home->Kanban->Home di MacBook (verifikasi remote
   hanya sampai bundle + proses hidup). Berikutnya:
   wiring Tahap B (B1 scaffold Svelte + mount).
+
+  WIRING — B1 SELESAI (27 Okt sore): scaffold Svelte 5 +
+  Vite di app/ (package.json, vite.config.ts, index.html,
+  src/main.ts, src/App.svelte minimal, vite-env.d.ts,
+  tsconfig.json; package-lock.json ikut di-commit).
+  Resolusi: svelte 5.57.3, vite 6.4.5, plugin 5.1.1 (npm
+  install 40 paket). vite build LOLOS (109 modul, 1,34
+  detik; dist: index.html 0,39 KB + JS 31,39 KB + CSS
+  0,42 KB; string "Svelte mounted" + aksen pastel ada di
+  output). base './' TERBUKTI: dist/index.html memakai
+  ./assets/... (bukan absolut) — syarat WebView Tauri.
+  Keputusan: frontendDist BELUM dialihkan ke app/dist
+  di B1 — mengalihkannya sekarang akan mengganti UI
+  live-test (v5 lengkap) dengan halaman mount minimal,
+  itu regresi; pengalihan + rebuild MacBook menjadi
+  bagian verifikasi B2 (setelah migrasi komponen).
+  svelte-check TIDAK dipasang di B1 (vite build adalah
+  gate compiler tahap ini; type-check komponen masuk
+  B2 bersama komponen nyata). node_modules/ + dist/
+  terabaikan git dengan benar (status hanya 6 item baru).

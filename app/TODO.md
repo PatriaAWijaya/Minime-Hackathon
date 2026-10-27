@@ -22,7 +22,9 @@
   (kolom rule) di MacBook
 
 ## Tahap B — full wiring (after the audit, gated sub-phases)
-- [ ] B1: Svelte 5 scaffold + Vite (`base: './'`) + mount
+- [x] B1: Svelte 5 scaffold + Vite (`base: './'`) + mount
+  (vite build lolos 1,34 dtk, dist JS 31 KB, base './'
+  terverifikasi; frontendDist switch di B2)
 - [ ] B2: Migrate v5 views into Svelte components (parity check vs v5)
 - [ ] B3: Frontend ↔ backend API (chat via router, gates, approvals)
 - [ ] B4: Kanban/Planner data from backend (no more hardcoded cards)
