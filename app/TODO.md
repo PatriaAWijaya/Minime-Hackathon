@@ -37,7 +37,7 @@
 - [x] B5: Postiz drafts from the app (draft-only, unchanged rule)
   (composer Planner -> draf nyata via /api/public/v1;
   rig B5 15/15 lolos; uji live MacBook menunggu kunci Patria;
-  rebuild MacBook rantai v6 berjalan)
+  rebuild MacBook v6 sukses, app jalan PID 24427)
 - [ ] B6: Full wiring audit (zero-error gate) + log + push
 
 ## Parked (Patria's call)

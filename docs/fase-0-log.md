@@ -1180,3 +1180,8 @@ dokumen lama yang dipakai.
   MacBook terverifikasi UP (postiz/postgres/redis).
   Berikutnya: rebuild MacBook rantai v6; lalu B6
   (audit full wiring).
+
+  WIRING — B5 LIVE DI MACBOOK (27 Okt sore, rantai v6):
+  Pull lolos bersih; vite 367ms, 1 bundle; proses
+  lama PID 24065 dibunuh, proses BARU PID 24427 hidup
+  dari bundle B5. Berikutnya: B6 (audit full wiring).
