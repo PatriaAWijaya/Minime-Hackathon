@@ -101,6 +101,10 @@ async function main() {
   clean('data/cost-ledger.jsonl');
   const fase1 = await runFase1({ allowMock: true, dataDir: 'data' });
   assert.strictEqual((fase1.stp as { status: string }).status, 'draft', 'Fase 1 STP must be draft, never approved by code');
+  const fase1Research = fase1.research as Record<string, unknown>;
+  for (const field of ['behaviourDigital', 'paparanMedia', 'jenisKonten', 'caraTransaksi', 'touchPoints', 'painPoints', 'spendingBulanan', 'spendingDigital']) {
+    assert.ok(Array.isArray(fase1Research[field]) && (fase1Research[field] as unknown[]).length > 0, `Fase 1 research must include ${field}`);
+  }
   assert.deepStrictEqual(fase1.approvals, [], 'Fase 1 must record no approval on Patria behalf');
   assert.strictEqual(fase1.productionBlocked, true, 'production must be blocked without GSTP');
   assert.strictEqual(fase1.mock, true, 'Fase 1 test run is mock — must be reported as mock');

@@ -115,9 +115,58 @@ export async function runFase1(opts: Fase1Options): Promise<Record<string, unkno
   if (researchErrors.length) throw new Error(`Research invalid: ${researchErrors.join('; ')}`);
   queue.setStatus(job.id, 'running', null, 'research');
 
+  // Behaviour research (deepening, Patria 27 Okt siang): because this
+  // brand will be targeted mostly digitally, the STP must rest on
+  // observed digital behaviour, not demographics alone. This step is
+  // mandatory in the research output and covers, in qualitative terms
+  // only (no invented hours, percentages, URLs, or citations):
+  // - behaviourDigital: daily digital routine, including long
+  //   on-screen duration (lama durasi on screen) as a qualitative
+  //   trait to be verified, not a measured number;
+  // - paparanMedia: types of media exposure they actually encounter;
+  // - jenisKonten: types of content they consume and respond to;
+  // - caraTransaksi: ways they actually pay/order today;
+  // - touchPoints: the full journey from discovery to repeat/share;
+  // - painPoints: each pain point paired with how this brand solves it;
+  // - spendingBulanan: monthly spending behaviour for this category
+  //   (frequency x price sensitivity, in qualitative terms — exact
+  //   amounts are hypotheses to verify, never stated as measured data);
+  // - spendingDigital: spending through digital payments (methods,
+  //   habits, barriers) as a consideration for digital targeting.
+  const behaviourCall = await modelStep(
+    'BehaviourResearch',
+    `Kamu agen Behaviour Research untuk brand fiksi uji: ${brief.productName}. Audiens: ${brief.audience}. Masalah: ${brief.problem}. Tawaran: ${brief.offer}. Riset draf: ${research.facts.join(' | ')}. Brand ini akan banyak ditargetkan SECARA DIGITAL, jadi STP harus bertumpu pada behaviour, bukan hanya demografi. Berikan riset behaviour DRAF dalam format JSON saja, tanpa teks lain: {"behaviourDigital": ["..."], "paparanMedia": ["..."], "jenisKonten": ["..."], "caraTransaksi": ["..."], "touchPoints": ["..."], "painPoints": ["..."], "spendingBulanan": ["..."], "spendingDigital": ["..."]}. Aturan keras: JANGAN mengarang angka jam, persentase, statistik, nominal pasti, URL, atau kutipan — semua deskripsi harus kualitatif dan ditandai sebagai draf yang perlu verifikasi lapangan (survei/wawancara). Bila menyebut nominal, hanya boleh sebagai HIPOTESIS yang dirujuk ke harga tawaran yang sudah diketahui (Rp15.000 per cup) dan harus ditulis "hipotesis, perlu verifikasi". Isi yang wajib muncul: (1) behaviourDigital — rutinitas digital harian termasuk durasi on-screen yang PANJANG sebagai sifat kualitatif (mis. ponsel hampir selalu di tangan sepanjang hari, cek ponsel berulang) tanpa angka jam; (2) paparanMedia — jenis paparan media yang mereka temui sehari-hari (mis. reels, status WhatsApp, feed, video pendek, rekomendasi teman); (3) jenisKonten — jenis konten yang mereka konsumsi dan respons (hiburan, edukasi singkat, promo, review, dll); (4) caraTransaksi — cara mereka memesan dan membayar saat ini (chat, QRIS, e-wallet, tunai, dll sebagai jenis, bukan angka); (5) touchPoints — urutan titik sentuh dari menemukan brand sampai repeat/share/komplain; (6) painPoints — setiap pain point ditulis bersama solusi yang bisa diberikan brand ini, format: "Pain di [touch point]: ... -> diselesaikan dengan ..."; (7) spendingBulanan — pola spending bulanan untuk kategori ini: frekuensi beli yang berulang membuat pengeluaran kecil per transaksi terakumulasi menjadi signifikan per bulan, sensitivitas harga, dan trade-off yang mereka buat (mis. mengurangi frekuensi vs pindah ke opsi lebih murah) — semuanya kualitatif, tanpa total nominal yang diklaim sebagai data; (8) spendingDigital — spending melalui pembayaran digital: metode yang dipakai, kebiasaan (mis. lebih mudah mengeluarkan uang kecil lewat dompet digital karena tidak terasa seperti tunai), dan hambatan (saldo, biaya, sinyal, kepercayaan). Berikan 4-6 butir per bidang.`,
+  );
+  const behaviourJson = (opts.allowMock || behaviourCall.mock
+    ? {
+        behaviourDigital: ['[mock] behaviour digital uji'],
+        paparanMedia: ['[mock] paparan media uji'],
+        jenisKonten: ['[mock] jenis konten uji'],
+        caraTransaksi: ['[mock] cara transaksi uji'],
+        touchPoints: ['[mock] touch point uji'],
+        painPoints: ['[mock] pain point uji -> diselesaikan dengan [mock] solusi uji'],
+        spendingBulanan: ['[mock] spending bulanan uji'],
+        spendingDigital: ['[mock] spending digital uji'],
+      }
+    : extractJson(behaviourCall.text)) as Record<string, unknown>;
+  const behaviour = {
+    behaviourDigital: asStringArray(behaviourJson.behaviourDigital),
+    paparanMedia: asStringArray(behaviourJson.paparanMedia),
+    jenisKonten: asStringArray(behaviourJson.jenisKonten),
+    caraTransaksi: asStringArray(behaviourJson.caraTransaksi),
+    touchPoints: asStringArray(behaviourJson.touchPoints),
+    painPoints: asStringArray(behaviourJson.painPoints),
+    spendingBulanan: asStringArray(behaviourJson.spendingBulanan),
+    spendingDigital: asStringArray(behaviourJson.spendingDigital),
+  };
+  // Merge behaviour into the research record (extra fields are allowed
+  // by the Research contract, which only checks its required fields).
+  Object.assign(research, behaviour);
+  queue.setStatus(job.id, 'running', null, 'behaviour');
+
   const strategyCall = await modelStep(
     'Strategy',
-    `Kamu agen Strategy untuk brand fiksi uji: ${brief.productName}. Audiens: ${brief.audience}. Masalah: ${brief.problem}. Tawaran: ${brief.offer}. Riset draf (belum terverifikasi): ${research.facts.join(' | ')}. Tugasmu: berikan strategi DRAF dalam format JSON saja, tanpa teks lain: {"positioning": "satu kalimat positioning", "pillars": ["pilar 1", "pilar 2", "pilar 3"]}. Positioning harus satu janji utama untuk satu audiens utama.`,
+    `Kamu agen Strategy untuk brand fiksi uji: ${brief.productName}. Audiens: ${brief.audience}. Masalah: ${brief.problem}. Tawaran: ${brief.offer}. Riset draf (belum terverifikasi): ${research.facts.join(' | ')}. Behaviour digital draf: ${behaviour.behaviourDigital.join(' | ')}. Paparan media: ${behaviour.paparanMedia.join(' | ')}. Jenis konten yang direspons: ${behaviour.jenisKonten.join(' | ')}. Cara transaksi saat ini: ${behaviour.caraTransaksi.join(' | ')}. Pain point + solusi: ${behaviour.painPoints.join(' | ')}. Tugasmu: berikan strategi DRAF dalam format JSON saja, tanpa teks lain: {"positioning": "satu kalimat positioning", "pillars": ["pilar 1", "pilar 2", "pilar 3"]}. Positioning harus satu janji utama untuk satu audiens utama, dan minimal satu pilar harus menjawab behaviour digital (targeting digital) dan satu pilar harus menjawab pain point terbesar.`,
   );
   const strategyJson = (opts.allowMock || strategyCall.mock
     ? { positioning: '[mock] positioning uji', pillars: ['[mock] pilar uji'] }
@@ -136,7 +185,7 @@ export async function runFase1(opts: Fase1Options): Promise<Record<string, unkno
 
   const stpCall = await modelStep(
     'STP',
-    `Kamu agen STP untuk brand fiksi uji: ${brief.productName}. Positioning draf: ${strategy.positioning}. Pilar: ${strategy.pillars.join(', ')}. Tugasmu: berikan STP DRAF dalam format JSON saja, tanpa teks lain: {"segment": "...", "targeting": "...", "positioning": "..."}. Segment harus spesifik (bukan "semua orang"), targeting satu segmen utama, positioning satu kalimat yang bisa diuji.`,
+    `Kamu agen STP untuk brand fiksi uji: ${brief.productName}. Positioning draf: ${strategy.positioning}. Pilar: ${strategy.pillars.join(', ')}. Behaviour digital draf: ${behaviour.behaviourDigital.join(' | ')}. Touch points: ${behaviour.touchPoints.join(' | ')}. Cara transaksi: ${behaviour.caraTransaksi.join(' | ')}. Spending bulanan draf: ${behaviour.spendingBulanan.join(' | ')}. Spending digital draf: ${behaviour.spendingDigital.join(' | ')}. Tugasmu: berikan STP DRAF dalam format JSON saja, tanpa teks lain: {"segment": "...", "targeting": "...", "positioning": "..."}. Segment harus spesifik (bukan "semua orang") dan mencakup behaviour digital serta pola spendingnya, targeting satu segmen utama DENGAN jalur digital utamanya (platform/touch point mana yang dipakai untuk menjangkau mereka) dan pertimbangan spendingnya (harga per transaksi vs akumulasi bulanan, pembayaran digital), positioning satu kalimat yang bisa diuji.`,
   );
   const stpJson = (opts.allowMock || stpCall.mock
     ? { segment: '[mock] segmen uji', targeting: '[mock] targeting uji', positioning: '[mock] positioning uji' }
@@ -177,6 +226,7 @@ export async function runFase1(opts: Fase1Options): Promise<Record<string, unkno
     ledger: ledger.summary(),
     modelCalls: {
       research: { provider: researchCall.provider, model: researchCall.model, mock: researchCall.mock },
+      behaviour: { provider: behaviourCall.provider, model: behaviourCall.model, mock: behaviourCall.mock },
       strategy: { provider: strategyCall.provider, model: strategyCall.model, mock: strategyCall.mock },
       stp: { provider: stpCall.provider, model: stpCall.model, mock: stpCall.mock },
     },

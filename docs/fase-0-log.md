@@ -293,3 +293,28 @@ dokumen lama yang dipakai.
   token belum di-baseline, costUsd null). Uji gerbang jadi 10 grup
   (baru: pelaporan Rupiah — konversi, format, kejujuran null-rate).
   Dokumen: docs/biaya-rupiah.md.
+
+- 27 Okt siang (perintah Patria, dua susulan ke Fase 1): RISET STP
+  DIPERDALAM menjadi v2 — masih DRAF, belum GSTP. Tambahan wajib di
+  riset (src/fase1.ts, langkah BehaviourResearch): behaviour digital,
+  durasi on-screen PANJANG (kualitatif, tanpa angka jam), paparan
+  media, jenis konten, cara transaksi, touch points lengkap
+  (penemuan -> eksplorasi -> transaksi -> konsumsi ->
+  loyalitas/advokasi), pain point masing-masing dipasangkan dengan
+  solusi brand, spending bulanan (akumulasi transaksi kecil,
+  sensitivitas harga, trade-off frekuensi), dan spending digital
+  (QRIS/e-wallet, persepsi uang digital lebih ringan, cashback
+  sebagai pendorong loyalitas, friction sinyal/saldo). Verifikasi
+  output live v2 (4 panggilan Gemini non-mock): 8 bidang behaviour
+  terisi (4-5 butir tiap bidang), scan karangan BERSIH — tanpa URL,
+  tanpa persentase, tanpa angka jam. STP v2: segmen mahasiswa/pekerja
+  muda Surabaya 18-28 dengan intensitas ponsel tinggi dan sensitif
+  harga namun loyal pada QRIS; targeting via WhatsApp Business +
+  video pendek (Reels/TikTok) mengarah ke chat + promo e-wallet/QRIS;
+  positioning es kopi susu harian paling praktis via WhatsApp +
+  QRIS tanpa hambatan. Tetap: STP status draft, approvals KOSONG,
+  produksi diblokir. Catatan kejujuran: summary ledger di file
+  output menggabungkan file ledger bersama (termasuk record mock
+  uji), bukan hanya run ini; yang relevan untuk run v2 adalah 4
+  panggilan live pada traceId-nya, cost null (harga belum
+  di-baseline, jadi IDR-nya juga null — bukan tebakan).

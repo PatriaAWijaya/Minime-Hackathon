@@ -1,10 +1,11 @@
 {
-  "traceId": "trace-fase1-1793076152605",
+  "traceId": "trace-fase1-1793077341157",
   "productId": "TEST-BRAND-001",
-  "jobId": "job-1793076144370-9483",
+  "jobId": "job-1793077338506-8041",
   "stages": [
     "brief",
     "research",
+    "behaviour",
     "strategy",
     "done"
   ],
@@ -20,51 +21,109 @@
     "version": "1",
     "productId": "TEST-BRAND-001",
     "facts": [
-      "Target audiens di Surabaya memiliki preferensi tinggi terhadap minuman berbasis susu yang manis dan creamy untuk konsumsi harian.",
-      "Terdapat kesenjangan pasar antara kopi kafe kelas menengah ke atas yang mahal dengan warung kopi tradisional yang kurang memiliki standarisasi kualitas.",
-      "Pemesanan melalui aplikasi chat (WhatsApp) merupakan metode transaksi yang dominan dan dianggap praktis oleh demografi mahasiswa serta pekerja muda di Surabaya.",
-      "Faktor kecepatan penyajian menjadi penentu utama loyalitas pelanggan di segmen harga kopi Rp15.000.",
-      "Kebersihan tempat dan konsistensi rasa menjadi pain point utama saat pelanggan beralih dari warung kopi konvensional ke opsi yang lebih modern."
+      "Target audiens di Surabaya memiliki preferensi tinggi terhadap produk minuman dengan titik harga di bawah Rp20.000 untuk konsumsi harian (Draf: perlu validasi harga pasar kompetitor lokal).",
+      "Mahasiswa dan pekerja muda di Surabaya cenderung mencari aksesibilitas pemesanan melalui aplikasi pesan singkat dibandingkan harus mengunduh aplikasi khusus (Draf: perlu observasi perilaku transaksi).",
+      "Terdapat kesenjangan persepsi antara kenyamanan warung kopi tradisional dan standar higienitas yang diinginkan segmen pekerja muda (Draf: perlu survei persepsi kebersihan).",
+      "Konsistensi rasa menjadi alasan utama pelanggan beralih dari kedai kopi independen ke jaringan yang lebih terstandarisasi (Draf: perlu verifikasi loyalitas pelanggan).",
+      "Kecepatan penyajian menjadi faktor penentu utama bagi pekerja muda yang memiliki mobilitas tinggi di pagi hari (Draf: perlu observasi waktu tunggu rata-rata)."
     ],
     "assumptions": [
-      "Target audiens bersedia mengabaikan fasilitas 'tempat duduk yang nyaman' (dine-in) demi mendapatkan harga yang lebih terjangkau dan aksesibilitas cepat.",
-      "Harga Rp15.000 berada pada rentang 'psikologis' yang memungkinkan pembelian berulang (daily consumption) bagi mahasiswa dan pekerja muda tanpa merasa terbebani secara finansial.",
-      "Pelanggan lebih memilih proses pemesanan lewat chat daripada harus mengunduh aplikasi khusus yang memakan ruang penyimpanan ponsel.",
+      "Konsumen bersedia mengabaikan kurangnya area duduk (dine-in) demi mendapatkan harga yang lebih murah dengan kualitas rasa yang stabil.",
+      "Layanan pemesanan via chat dianggap lebih personal dan memudahkan bagi audiens target dibandingkan sistem antrean fisik.",
+      "Adanya kejenuhan terhadap kopi susu kekinian yang terlalu mahal sehingga konsumen mencari alternatif ekonomis yang tetap terlihat modern.",
       "DRAF model — semua fakta di atas belum terverifikasi manusia dan tidak boleh dikutip sebagai data resmi sebelum GSTP."
     ],
     "sources": [
-      "Observasi lapangan di area kampus dan pusat perkantoran Surabaya terkait pola konsumsi kopi harian.",
-      "Wawancara mendalam dengan pelanggan potensial mengenai batasan harga maksimal untuk konsumsi kopi rutin.",
-      "Survei preferensi metode pemesanan (chat vs aplikasi pihak ketiga) di antara pengguna aktif kopi susu kekinian."
+      "Wawancara mendalam dengan kelompok mahasiswa dan pekerja muda Surabaya mengenai kebiasaan belanja kopi harian.",
+      "Observasi lapangan (mystery shopping) pada kedai kopi kompetitor di radius kampus dan perkantoran untuk membandingkan harga dan kecepatan pelayanan.",
+      "Survei perilaku pelanggan terkait preferensi kanal pemesanan (chat vs aplikasi vs kasir fisik)."
+    ],
+    "behaviourDigital": [
+      "Ponsel hampir selalu dalam genggaman sepanjang hari dengan intensitas pengecekan notifikasi yang tinggi sebagai rutinitas multitasking.",
+      "Ketergantungan tinggi pada platform pesan instan sebagai hub utama komunikasi, baik untuk urusan akademis, pekerjaan, maupun sosial.",
+      "Durasi on-screen yang panjang terutama untuk konsumsi media berbasis video pendek di sela-sela aktivitas harian.",
+      "Pola konsumsi informasi yang bersifat reaktif dan cepat, lebih menyukai konten yang langsung ke inti tanpa narasi panjang."
+    ],
+    "paparanMedia": [
+      "Video pendek di platform media sosial yang menampilkan gaya hidup urban dan rekomendasi kuliner lokal.",
+      "Status WhatsApp dari lingkaran pertemanan atau rekan kerja yang sering menjadi referensi produk harian.",
+      "Konten rekomendasi berbasis lokasi yang muncul di linimasa media sosial (algoritma berbasis kedekatan geografis di Surabaya).",
+      "Influencer mikro lokal yang memiliki pengaruh pada pilihan gaya hidup dan konsumsi mahasiswa/pekerja muda."
+    ],
+    "jenisKonten": [
+      "Konten visual yang menekankan kemudahan akses (pesan cepat) dan konsistensi kualitas produk.",
+      "Konten ulasan jujur atau testimoni singkat dari rekan sebaya mengenai pengalaman rasa dan kecepatan layanan.",
+      "Promo bundling atau penawaran menarik yang menekankan pada nilai ekonomis (hipotesis, perlu verifikasi).",
+      "Konten edukasi ringan atau hiburan singkat yang relevan dengan keresahan pekerja muda dan mahasiswa di Surabaya."
+    ],
+    "caraTransaksi": [
+      "Pemesanan melalui aplikasi pesan singkat (WhatsApp) karena dianggap paling intuitif dan meminimalisir hambatan instalasi aplikasi baru.",
+      "Pembayaran menggunakan metode nontunai melalui QRIS yang terintegrasi dengan berbagai dompet digital populer.",
+      "Preferensi terhadap proses transaksi yang tidak memerlukan langkah verifikasi berbelit-belit.",
+      "Ketergantungan pada dompet digital yang memungkinkan pembayaran cepat tanpa perlu menyiapkan uang tunai fisik."
+    ],
+    "touchPoints": [
+      "Penemuan: Melihat promosi di status WhatsApp atau media sosial teman atau akun komunitas lokal.",
+      "Eksplorasi: Menghubungi akun melalui chat untuk menanyakan menu dan ketersediaan, serta melihat respons cepat admin.",
+      "Transaksi: Melakukan pemesanan via chat dan menyelesaikan pembayaran melalui QRIS/e-wallet.",
+      "Konsumsi: Menerima produk yang cepat dengan rasa konsisten sesuai standar yang diharapkan.",
+      "Loyalitas/Advokasi: Membagikan pengalaman di media sosial atau merekomendasikan melalui chat kepada teman jika puas."
+    ],
+    "painPoints": [
+      "Pain di harga: Rasa kopi kafe terlalu mahal untuk harian -> diselesaikan dengan tawaran harga terjangkau (hipotesis, perlu verifikasi).",
+      "Pain di kualitas: Ketidakkonsistenan rasa di warkop tradisional -> diselesaikan dengan standarisasi produk TEST Kopi.",
+      "Pain di higienitas: Keraguan akan kebersihan warkop -> diselesaikan dengan citra brand yang bersih dan terstandar.",
+      "Pain di waktu: Antrean panjang di pagi hari -> diselesaikan dengan sistem pesan chat yang mempercepat proses pengambilan/delivery.",
+      "Pain di akses: Kerumitan aplikasi pihak ketiga -> diselesaikan dengan kemudahan pemesanan langsung melalui chat."
+    ],
+    "spendingBulanan": [
+      "Pola beli yang repetitif membuat nominal kecil per transaksi (hipotesis, perlu verifikasi) menjadi akumulasi pengeluaran yang signifikan.",
+      "Sensitivitas harga yang sangat tinggi, di mana selisih harga sedikit saja memicu perbandingan antar brand.",
+      "Terdapat perilaku trade-off: mengurangi frekuensi membeli kopi jika pengeluaran bulanan terasa membengkak.",
+      "Pergeseran dari kafe premium ke opsi lebih ekonomis untuk menjaga keberlangsungan konsumsi kopi harian."
+    ],
+    "spendingDigital": [
+      "Penggunaan dompet digital yang intens karena persepsi psikologis bahwa uang digital lebih 'ringan' dikeluarkan dibanding tunai.",
+      "Ketergantungan pada promosi atau cashback dari e-wallet sebagai pendorong utama loyalitas pada metode pembayaran tertentu.",
+      "Hambatan teknis seperti kegagalan transaksi akibat sinyal atau saldo tidak mencukupi sering menjadi penghenti transaksi (friction point).",
+      "Kepercayaan terhadap keamanan pembayaran nontunai sudah tinggi, namun tetap memprioritaskan kemudahan dan kecepatan proses QRIS."
     ]
   },
   "strategy": {
     "version": "1",
     "productId": "TEST-BRAND-001",
-    "positioning": "TEST Kopi Surabaya adalah solusi es kopi susu creamy yang konsisten, higienis, dan cepat untuk mahasiswa serta pekerja muda Surabaya yang membutuhkan asupan kopi harian terjangkau dengan kemudahan pesan via WhatsApp.",
+    "positioning": "TEST Kopi menjadi solusi es kopi susu harian yang konsisten, higienis, dan terjangkau bagi mahasiswa serta pekerja muda Surabaya melalui akses pemesanan instan via WhatsApp yang anti-ribet.",
     "pillars": [
-      "Konsistensi Rasa & Higienitas Premium: Menjamin standar kualitas kafe modern di setiap cup untuk mengatasi keraguan terhadap kebersihan warung kopi tradisional.",
-      "Efisiensi Layanan via Chat: Mengutamakan kecepatan penyajian melalui alur pemesanan praktis lewat WhatsApp yang sesuai dengan pola konsumsi cepat audiens urban.",
-      "Value for Money Harian: Menawarkan pengalaman kopi susu yang creamy dan memuaskan dengan harga Rp15.000 agar dapat dinikmati setiap hari tanpa menguras dompet."
+      "Digital Convenience: Memanfaatkan ekosistem WhatsApp sebagai hub utama untuk pemesanan cepat dan transaksi QRIS yang seamless tanpa perlu instalasi aplikasi tambahan.",
+      "Quality Consistency: Menjamin standar higienitas dan rasa kopi yang konsisten di setiap cup untuk menepis keraguan kualitas pada warkop tradisional.",
+      "Urban Efficiency: Menyediakan layanan 'pesan-ambil' yang responsif dan cepat untuk menjawab kebutuhan mobilitas tinggi pagi hari pelanggan di Surabaya."
     ]
   },
   "stp": {
     "version": "1",
     "productId": "TEST-BRAND-001",
-    "segment": "Mahasiswa dan pekerja muda di Surabaya (usia 18-30 tahun) yang memiliki mobilitas tinggi, aktif menggunakan WhatsApp, mencari kopi susu creamy untuk konsumsi harian (daily ritual), serta menaruh perhatian besar pada standar higienitas dan efisiensi waktu.",
-    "targeting": "Mahasiswa dan pekerja muda di area kampus atau pusat perkantoran Surabaya yang memprioritaskan kepraktisan pemesanan via WhatsApp dan mencari kopi susu berkualitas kafe dengan harga terjangkau (di bawah Rp20.000).",
-    "positioning": "TEST Kopi Surabaya adalah solusi es kopi susu creamy harian yang konsisten, higienis, dan ekonomis, yang dapat dipesan secara instan melalui WhatsApp untuk mendukung produktivitas kaum urban Surabaya.",
+    "segment": "Mahasiswa dan pekerja muda di Surabaya (usia 18-28 tahun) yang memiliki intensitas penggunaan ponsel tinggi, sangat bergantung pada WhatsApp untuk aktivitas harian, memiliki gaya hidup urban dengan mobilitas tinggi, serta menunjukkan pola konsumsi 'budget-conscious' yang sensitif terhadap harga namun loyal pada metode pembayaran digital (QRIS) demi efisiensi.",
+    "targeting": "Fokus pada audiens 'Urban Hustlers' di area kampus dan pusat perkantoran Surabaya dengan strategi akuisisi melalui WhatsApp Business dan konten video pendek (Reels/TikTok) yang mengarahkan langsung ke chat, serta memanfaatkan skema promosi e-wallet/QRIS untuk menjaga retensi di tengah perilaku konsumen yang sangat sensitif terhadap selisih harga.",
+    "positioning": "TEST Kopi adalah penyedia es kopi susu harian paling praktis di Surabaya yang menjamin konsistensi rasa dan higienitas melalui akses pemesanan WhatsApp yang instan dan pembayaran QRIS tanpa hambatan bagi gaya hidup sibuk Anda.",
     "status": "draft"
   },
   "approvals": [],
   "productionBlocked": true,
   "ledger": {
-    "records": 6,
+    "records": 8,
     "totalUsd": 0,
-    "mockRecords": 3
+    "totalIdr": null,
+    "usdIdrRate": null,
+    "hardLimitIdr": null,
+    "mockRecords": 4
   },
   "modelCalls": {
     "research": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "mock": false
+    },
+    "behaviour": {
       "provider": "gemini",
       "model": "gemini-3.1-flash-lite",
       "mock": false
