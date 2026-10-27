@@ -45,8 +45,9 @@ copied from the main Minime repository.
   transaction methods, touch points, pain points + solutions, and
   monthly + digital-payment spending. STP status draft, approvals
   empty, production blocked — output in docs/fase-1-output.json. Gates are NOT approved on Patria's behalf;
-  Fase 2 may not start until Patria approves, revises, or rejects
-  this STP.
+  GSTP APPROVED by Patria 27 Oct 2026 12:04 WIB (record:
+  docs/fase-1-gstp-approval.json) — Fase 2 is now unblocked by the
+  gate. GS (Strategy) was not separately recorded as approved.
 - **Phase 2 — Image production, Wed 28 Oct (morning, 2/day pace):**
   7-day calendar from the approved STP, CreativeBrief JSON per item,
   text-free image generation, deterministic template overlay (so

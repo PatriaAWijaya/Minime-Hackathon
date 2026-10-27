@@ -318,3 +318,14 @@ dokumen lama yang dipakai.
   uji), bukan hanya run ini; yang relevan untuk run v2 adalah 4
   panggilan live pada traceId-nya, cost null (harga belum
   di-baseline, jadi IDR-nya juga null — bukan tebakan).
+
+- 27 Okt 12:04 WIB (keputusan Patria, via opsi GSTP): STP v2 LOLOS
+  GSTP. Record approval baru di docs/fase-1-gstp-approval.json:
+  gate GSTP, produk TEST-BRAND-001, decision approved, approver
+  Patria A. Wijaya, STP sumber trace-fase1-1793077341157. File draf
+  docs/fase-1-output.json TIDAK diubah (STP di sana tetap 'draft'
+  sebagai bukti draf); yang approved adalah salinan di record.
+  GS (Strategy) tidak dicatat sebagai approved — hanya GSTP yang
+  disetujui eksplisit. Konsekuensi: Fase 2 tidak lagi diblokir
+  gerbang (requireProductionAllowed hanya membutuhkan GSTP), tetapi
+  Fase 2 BELUM dimulai — menunggu perintah Patria berikutnya.

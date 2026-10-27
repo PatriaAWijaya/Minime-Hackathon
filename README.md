@@ -79,8 +79,9 @@ the chain correctly falls through to local Ollama when it happens).
 What is still pending: live Muse (Meta $150 credit claim + linked card
 + spend limit, Patria-only) and full cost re-baselining from actual
 prices. Until those pass, no live Muse latency, cost, or QC score is
-claimed, and Phase 1 is draft preparation only — no gate is approved
-on Patria's behalf. Build phases are tracked in PLAN.md. Demo video
+claimed, and Phase 1's GSTP was approved by Patria himself on
+27 Oct 2026 12:04 WIB (record docs/fase-1-gstp-approval.json) — no
+gate was ever approved on Patria's behalf. Build phases are tracked in PLAN.md. Demo video
 (3 minutes) and submission follow before the deadline:
 **4 Nov 2026, 9:00 PM ET**.
 

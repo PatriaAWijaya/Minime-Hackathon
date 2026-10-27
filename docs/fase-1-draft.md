@@ -2,7 +2,7 @@
 
 Status: DRAF, 27 Okt 2026. BUKAN persetujuan. UPDATE siang: draf ini
 SUDAH DIEKSEKUSI LIVE lewat src/fase1.ts; output terverifikasi ada di
-docs/fase-1-output.json dan statusnya MENUNGGU GSTP Patria. Tetap tidak
+docs/fase-1-output.json dan statusnya MENUNGGU GSTP Patria — UPDATE 27 Okt 12:04 WIB: GSTP LOLOS (record docs/fase-1-gstp-approval.json). Fase 2 tidak lagi diblokir gerbang, tetapi belum dimulai. Tetap tidak
 ada approval GS maupun GSTP atas nama Patria di sini, dan tidak ada
 produksi yang boleh
 jalan dari draf ini sampai GSTP disetujui Patria sendiri.
