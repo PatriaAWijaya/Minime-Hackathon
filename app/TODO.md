@@ -57,6 +57,9 @@
 - [x] Video engine Tier 1 (perintah Patria 20:40) + audit detail (perintah Patria 20:49) + log + push
   (semua gerbang hijau; rebuild MacBook rantai v14 sukses, app jalan PID 30714;
   bukti live klik Render menunggu Patria; Tier 2-3 antre berikutnya)
+- [x] Tier 2 (1/3): probe + asset library + log + push
+  (video_probe + video_asset_hash + panel Aset; rebuild MacBook rantai v15 sukses, app jalan PID 31841;
+  bukti live klik panel Aset menunggu Patria; Tier 2 (2/3) + (3/3) antre berikutnya)
 
 ## Parked (Patria's call)
 - [ ] `.dmg` distribution build
