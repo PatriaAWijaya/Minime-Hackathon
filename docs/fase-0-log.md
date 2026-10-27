@@ -150,3 +150,30 @@ dokumen lama yang dipakai.
   untuk repo ini. Instalasi GitHub App TIDAK lagi menjadi blocker untuk
   push Fase 0 — tetapi tetap dicatat sebagai opsi bila jalur ini
   sewaktu-waktu gagal.
+
+
+## Pembaruan 27 Okt 09:48 WIB — default Gemini diperbaiki + fallback Meta→Gemini dikunci
+
+- Uji live Gemini lewat kredensial tersimpan: smoke test PASS (model
+  gemini-3.1-flash-lite). Gemini key Patria AKTIF dan bisa dipakai.
+- Temuan model: gemini-2.5-flash (default provisional Fase 0) sudah
+  TIDAK tersedia untuk pengguna baru (HTTP 404 dari Google); gemini-3.8-flash
+  saat diuji mengembalikan 503 (permintaan tinggi, sementara). Default
+  router diubah dari gemini-2.5-flash menjadi gemini-3.1-flash-lite
+  (yang terbukti PASS) di src/router.ts dan .env.example.
+- Keputusan Patria 27 Okt 09:48: bila Meta belum tersedia, fallback
+  default adalah Gemini. Rantai router sudah Meta → Gemini → Ollama;
+  dengan Meta belum aktif, Gemini menjadi jalur efektif utama sampai
+  klaim/kartu Meta selesai. Tidak ada perubahan pada aturan QC
+  (pembuat Gemini → QC Meta bila Meta tersedia, bila tidak → DeepSeek
+  lokal bila tersedia; bila keduanya tidak tersedia, QC live tertunda
+  dan tidak diklaim).
+- Meta: link klaim kredit $150 ada (email Cerebral Valley 26 Okt
+  18:26), tetapi belum ada bukti key/kredit aktif di akun Patria dan
+  tidak ada login tersimpan untuk meta.ai/dev.meta.ai — jadi Meta
+  dicatat BELUM ADA (aktif).
+- Ollama/DeepSeek: riwayat MacBook menunjukkan deepseek-r1:7b pernah
+  terinstal; verifikasi live dari VM ini pada 27 Okt 09:48 GAGAL karena
+  SSH ke MacBook ditolak jaringan (Operation not permitted), bukan
+  karena terbukti tidak terinstal. Instal ulang dari VM tidak bisa
+  dijalankan sampai MacBook bisa dijangkau lagi.
