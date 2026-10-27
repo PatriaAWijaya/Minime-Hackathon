@@ -177,3 +177,17 @@ dokumen lama yang dipakai.
   SSH ke MacBook ditolak jaringan (Operation not permitted), bukan
   karena terbukti tidak terinstal. Instal ulang dari VM tidak bisa
   dijalankan sampai MacBook bisa dijangkau lagi.
+
+- 27 Okt ~11:10 WIB (keputusan Patria, opsi yang dipilihnya): jalur lokal
+  DeepSeek diubah ke varian ringan deepseek-r1:1.5b. Latar: deepseek-r1:7b
+  terbukti gagal inferensi GPU di MacBook M1 8 GB Patria (log server:
+  Insufficient Memory Metal, runner panic; restart tidak memperbaiki;
+  CPU-only berhasil tapi 79 detik untuk jawaban singkat). deepseek-r1:1.5b
+  ditarik via SSH (1,1 GB, sukses, terdaftar di ollama list) dan tes live
+  GPU BERHASIL: jawaban benar "2+2=4" dalam total 4,2 detik (load 1,0 detik,
+  eval 2,9 detik untuk 112 token, ~39 token/detik, 100% GPU, 2,0 GB).
+  Default router diubah dari 'deepseek-r1' (tanpa tag, ambigu) menjadi
+  'deepseek-r1:1.5b' di src/router.ts dan .env.example — PROVISIONAL, bisa
+  di-override lewat env OLLAMA_MODEL. Kualitas 1.5b di bawah 7b dan di bawah
+  model cloud; dicatat jujur, tidak diklaim setara. deepseek-r1:7b tetap
+  terinstal di MacBook, hanya tidak lagi menjadi default router.

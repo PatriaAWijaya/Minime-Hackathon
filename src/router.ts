@@ -33,7 +33,7 @@ export function routerConfigFromEnv(env: NodeJS.ProcessEnv): RouterConfig {
     geminiApiKey: env.GEMINI_API_KEY || null,
     geminiModel: env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
     ollamaBaseUrl: env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
-    ollamaModel: env.OLLAMA_MODEL || 'deepseek-r1',
+    ollamaModel: env.OLLAMA_MODEL || 'deepseek-r1:1.5b',
   };
 }
 
