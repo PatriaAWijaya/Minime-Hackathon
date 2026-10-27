@@ -3,7 +3,6 @@
   import { initV5, setSendChatImpl, addGraphEdge, doSearch, filterAgents, mediaTab, primeCurate, quickChat, refreshBackendData, renderAgents, renderDetail, renderKanban, renderMedia, renderPlanner, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
-  import { applyGateStatus } from "./lib/gates.js";
   import { createPostizDraftFromComposer } from "./lib/postiz.js";
   import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
@@ -22,8 +21,6 @@
     renderPlanner();
     renderMedia();
     renderDetail();
-    document.querySelectorAll('.gate-status').forEach((n) => n.remove());
-    applyGateStatus();
     vsRefreshVoiceUI();
     updateKeyStatus();
   }
@@ -31,7 +28,6 @@
   onMount(() => {
     initV5();
     setSendChatImpl(sendChatReal);
-    applyGateStatus();
     vsRenderStatus();
     updateKeyStatus();
   });
@@ -480,9 +476,6 @@
       <div class="colhead"><h2>{t('view.planner.title', lang)}</h2><p>{t('settings.cost.mode', lang)} <span class="badge b-ok">{t('word.drafsaja', lang)}</span>{t('planner.media.note', lang)}</p></div>
       <div class="scroll">
         <table><thead><tr><th>{t('word.item', lang)}</th><th>{t('word.channel', lang)}</th><th>{t('planner.header.date', lang)}</th><th>{t('word.status', lang)}</th><th>{t('planner.header.postiz', lang)}</th></tr></thead><tbody id="plannerBody"></tbody></table>
-        <div class="notice">{t('planner.notice', lang)}</div>
-        <h3>{t('planner.composer.title', lang)}</h3>
-        <p>{t('planner.composer.note', lang)}</p>
         <p><textarea id="postizText" placeholder={t('planner.composer.ph', lang)} rows="3" style="width:100%"></textarea></p>
         <button class="btn btn-primary" onclick={() => { createPostizDraftFromComposer() }}>{t('planner.composer.btn', lang)}</button>
         <div class="notice" id="postizNotice" style="display:none"></div>
