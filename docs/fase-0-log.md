@@ -1094,3 +1094,39 @@ dokumen lama yang dipakai.
   (pastikan ollama serve jalan); kunci Gemini/Meta
   diisi sekali di Settings bila mau jalur cloud.
   Berikutnya: B4 (Kanban/Planner dari data backend).
+
+  WIRING — B4 KANBAN/PLANNER DATA NYATA (27 Okt sore):
+  Kanban TEST Kopi + Planner tidak lagi dummy: keduanya
+  diturunkan dari artefak lari nyata via modul baru
+  app/src/lib/backend-data.ts (impor JSON langsung):
+  Fase-1 (stages done), Fase-2 (kalender 7 + brief 7),
+  Fase-3 (carousel 7, slide 21, QC per slide), record
+  draf Postiz (7 postId + tanggal), dan gates.ts
+  (GSTP/GKonten lolos, GBatch belum). Kolom dihitung
+  dari aturan, bukan ditulis tangan: STP/Kalender
+  lolos gerbang -> Selesai; carousel QC semua lolos
+  -> Selesai (gagal QC -> Revisi); gambar pending-
+  provider -> Antrian (belum mulai, bukan Dikerjakan);
+  draf Postiz tercipta -> Selesai; terbit -> Butuh
+  Approval (menunggu GBatch). Hasil: Selesai 5,
+  Antrian 1, Butuh Approval 1, Dikerjakan 0, Revisi 0.
+  Kartu dummy keluar dari kanon ikut terhapus:
+  "Carousel + Reels" dan "Talking Head promo" (video
+  BUKAN MVP). Planner 7 baris nyata (tema per hari,
+  channel Instagram Branding, Marketing & AI, tanggal
+  draf, status DRAF, kolom baru postId lengkap).
+  Tanggal draf dirender persis seperti record (UTC,
+  tanpa konversi diam-diam ke WIB). Kejujuran kecil
+  lain: cardComments() tidak lagi mengarang angka
+  dari panjang judul — kini 0 (belum ada backend
+  komentar). Yang TIDAK diubah B4 (dicatat jujur):
+  proyek TEST Produk Digital tetap dummy (tidak ada
+  artefak untuknya); drag/"Maju"/"Add task" tetap
+  session-only tanpa persistensi; data ini snapshot
+  build-time — lari Fase baru tidak me-refresh app
+  sampai build berikutnya; dummy chat/media view lain
+  masih dummy (di luar cakupan B4). Verifikasi:
+  parity 16/16 lolos ulang; rig B4 28/28 lolos
+  (kartu, kolom, baris, postId, tanggal, tidak ada
+  dummy di kedua view). Berikutnya: rebuild MacBook
+  rantai v5; lalu B5 (draf Postiz dari app).

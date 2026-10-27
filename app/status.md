@@ -30,6 +30,9 @@
   frontend (delegate hook di sendChat; kunci di
   localStorage; gate status + guard GBatch). Parity +
   rig B3 lolos; tes live Gemini lolos; rantai v4 berjalan.
+- B4 (27 Okt sore): Kanban TEST Kopi + Planner dari
+  artefak nyata (Fase 1–3 + record Postiz; rig B4
+  28/28 lolos). Rantai v5 berjalan.
 
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,

@@ -31,7 +31,9 @@
 - [x] B3: Frontend ↔ backend API (chat via router, gates, approvals)
   (router di-bundle ke frontend; parity + rig B3 lolos;
   tes live Gemini lolos; rebuild MacBook v4 sukses, app jalan PID 23734)
-- [ ] B4: Kanban/Planner data from backend (no more hardcoded cards)
+- [x] B4: Kanban/Planner data from backend (no more hardcoded cards)
+  (diturunkan dari artefak Fase 1–3 + record Postiz;
+  rig B4 28/28 lolos; rebuild MacBook rantai v5 berjalan)
 - [ ] B5: Postiz drafts from the app (draft-only, unchanged rule)
 - [ ] B6: Full wiring audit (zero-error gate) + log + push
 

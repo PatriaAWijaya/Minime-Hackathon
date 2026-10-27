@@ -5,6 +5,10 @@
 // every top-level name on window, as the original page had them
 // as globals (runtime-generated innerHTML handlers need this).
 
+// B4: Kanban (TEST Kopi) + Planner now come from real artifacts via
+// backend-data.js; the dummy literals below were replaced, not kept.
+import { KOPI_KANBAN, PLANNER_REAL } from './backend-data.js';
+
 /* ---------- Agen ---------- */
 export function renderAgents() {
     var html = "", rowNo = -1;
@@ -162,7 +166,7 @@ export function agentKeyByName(n) {
     return "prime";
   }
 
-export function cardComments(card) { return (card.t.length % 4) + 1; }
+export function cardComments(card) { return 0; } // B4: no comment backend yet — never fabricate a count
 
 export function colName(ci) { return ci < KCOLS.length ? KCOLS[ci] : extraCols[ci - KCOLS.length]; }
 
@@ -465,7 +469,7 @@ export function mediaToPlanner(idx) {
 
 export function renderPlanner() {
     document.getElementById("plannerBody").innerHTML = PLANNER.map(function (p) {
-      return "<tr><td>" + p.item + "</td><td>" + p.ch + "</td><td>" + p.when + "</td><td><span class='badge b-wait'>" + p.st + "</span></td></tr>";
+      return "<tr><td>" + p.item + "</td><td>" + p.ch + "</td><td>" + p.when + "</td><td><span class='badge b-wait'>" + p.st + "</span></td><td><small>" + p.postId + "</small></td></tr>";
     }).join("");
   }
 
@@ -630,12 +634,7 @@ var PROJECTS = {
       { who: "prime", name: "Prime Agent", color: "#FFD1DC", text: "Kurasi Prime: STP di atas sudah saya periksa — segmen dan targetingnya konsisten dengan riset behaviour dan spending. Saya rekomendasikan untuk disetujui di gerbang GSTP, tetapi keputusan tetap di tanganmu.", curation: true },
       { who: "kreatif", name: "Kreatif", color: "#5b5b5b", text: "Kalender 7 hari + 7 brief selesai (setelah GSTP). Tema mencakup kenyamanan digital, konsistensi kualitas, dan efisiensi urban; semua CTA mengarah ke WA/QRIS." },
       { who: "media", name: "Media", color: "#5b5b5b", text: "Gambar Hari 1–7 masih menunggu provider (Meta Image belum aktif). Saya tidak membuat gambar palsu — statusnya pending-provider sampai generator aktif atau fallback Canva dipakai." }
-    ], kanban: [
-      { t: "Riset pasar & behaviour", a: "Riset", c: 4 }, { t: "STP v2", a: "Strategi", c: 4 },
-      { t: "Kalender 7 hari", a: "Kreatif", c: 4 }, { t: "Gambar Hari 1–7", a: "Media", c: 1 },
-      { t: "Carousel + Reels", a: "Media", c: 0 }, { t: "Talking Head promo", a: "Media", c: 0 },
-      { t: "Draf Postiz", a: "Distribusi", c: 0 }
-    ]},
+    ], kanban: KOPI_KANBAN },
     produk: { name: "TEST Produk Digital", agents: [
       { key: "prime", status: "Aktif", task: "Mengkurasi brief produk" },
       { key: "riset", status: "Mengerjakan", task: "Riset pengguna aplikasi kopi" },
@@ -708,11 +707,7 @@ var MEDIA = [
     { type: "talking", title: "Talking Head — Kenapa QRIS?", status: "Draf", desc: "Avatar + naskah edukasi QRIS. Placeholder dummy.", script: "Dompet ketinggalan bukan masalah — bayar pakai QRIS, scan langsung beres." }
   ];
 
-var PLANNER = [
-    { item: "Gambar Hari 1 — Kemudahan Pesan via WA", ch: "Instagram / Postiz", when: "28 Okt, 11:30 WIB", st: "DRAF Postiz" },
-    { item: "Carousel Hari 3 — Efisiensi QRIS", ch: "Instagram / Postiz", when: "29 Okt, 19:00 WIB", st: "DRAF Postiz" },
-    { item: "Reels Hari 1", ch: "TikTok / Meta", when: "30 Okt, 12:00 WIB", st: "Kandidat (belum GKonten video)" }
-  ];
+var PLANNER = PLANNER_REAL;
 
 var playTimer = null;
 

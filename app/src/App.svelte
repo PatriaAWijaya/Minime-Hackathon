@@ -12,7 +12,7 @@
   });
 </script>
 
-<div class="banner"><b>MiniMe — PROTOTYPE v5 — UI UTAMA GAYA MUSE, MONOCHROME + AKSEN PINK PASTEL #FFD1DC, DATA DUMMY TEST.</b> Tema monochrome gelap dengan aksen pink pastel #FFD1DC; susunan panel semirip lampiran (rail ikon + list agen + chat + panel Detail agen; list agen + Detail hanya tampil di window Home, window lain memakai lebar penuh). 6 ikon rail berasal dari dokumen lampiran (Home, Search, Kanban, Graph, Library, Planner); Media Studio, Video Editor &amp; Settings memakai fallback gaya garis karena tidak ada ikon lampiran untuk ketiganya. Semua interaksi dari v4 dipertahankan, tetapi <b>masih simulasi di browser — tidak menyimpan approval sungguhan dan media adalah placeholder dummy.</b></div>
+<div class="banner"><b>MiniMe — PROTOTYPE v5 — UI UTAMA GAYA MUSE, MONOCHROME + AKSEN PINK PASTEL #FFD1DC.</b> Tema monochrome gelap dengan aksen pink pastel #FFD1DC; susunan panel semirip lampiran (rail ikon + list agen + chat + panel Detail agen; list agen + Detail hanya tampil di window Home, window lain memakai lebar penuh). 6 ikon rail berasal dari dokumen lampiran (Home, Search, Kanban, Graph, Library, Planner); Media Studio, Video Editor &amp; Settings memakai fallback gaya garis karena tidak ada ikon lampiran untuk ketiganya. Semua interaksi dari v4 dipertahankan. Kanban TEST Kopi & Planner kini memakai data nyata (Fase 2/3 + 7 draf Postiz, per 27 Okt 2026); chat/agents/media masih simulasi di browser — media adalah placeholder dummy.</div>
 <div class="app">
   <div class="sidebar">
     <img class="appmark" src="minime-icon.png" alt="MiniMe">
@@ -238,8 +238,8 @@
     <div class="view" id="view-planner">
       <div class="colhead"><h2>Planner — Auto Post (Meta &amp; Postiz)</h2><p>Mode default: <span class="badge b-ok">DRAF saja</span>. "Siapkan untuk Post" dari Media Studio menambahkan baris draf di sini.</p></div>
       <div class="scroll">
-        <table><thead><tr><th>Item</th><th>Channel</th><th>Jadwal (simulasi)</th><th>Status</th></tr></thead><tbody id="plannerBody"></tbody></table>
-        <div class="notice">Item yang belum lolos GKonten tidak muncul sebagai jadwal aktif — hanya sebagai kandidat. Tidak ada tombol terbit live di slice ini.</div>
+        <table><thead><tr><th>Item</th><th>Channel</th><th>Tanggal draf</th><th>Status</th><th>Draf Postiz</th></tr></thead><tbody id="plannerBody"></tbody></table>
+        <div class="notice">Data di bawah adalah 7 draf Postiz nyata (dibuat 27 Okt 2026 15:35 WIB, mode DRAF saja, belum terjadwal kirim — menunggu GBatch). Tanggal draf sesuai record (UTC). Tidak ada tombol terbit live di slice ini.</div>
       </div>
     </div>
     <div class="view" id="view-settings">
