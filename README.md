@@ -93,7 +93,8 @@ Patria's order ('perbaiki UI'): v5 theme fix applied the same evening
 decided 27 Oct 15:54 WIB: MiniMe; logo + icon from Patria's attachments
 (prototype-v5/assets/minime-logo.png + minime-icon.png), used as favicon,
 rail app mark, and agent-column header; brand pink kept as-is, UI accent
-stays #B214FF. Phase 3 was ordered resumed
+stays #B214FF. Single-file build: prototype-v5/build/minime-v5.html
+(27 Oct sore, logo + icon inlined, verified against the source). Phase 3 was ordered resumed
 27 Oct 2026 15:09 WIB and executed the same afternoon: 7 carousels
 x 3 slides (QC 100/100, images null pending-provider) with all 7
 Postiz drafts pushed as DRAFT only 27 Oct ~15:35 WIB (HTTP 201

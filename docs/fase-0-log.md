@@ -725,3 +725,15 @@ dokumen lama yang dipakai.
   diubah ke MiniMe. Keduanya dipakai apa adanya (pink brand
   dipertahankan); aksen UI tetap violet #B214FF. Verifikasi:
   3 referensi aset di index.html, JS 2 blok lolos node --check.
+
+  UI — BUILD PROTOTIPE (27 Okt sore, perintah Patria "build
+  prototipe"): single-file build prototype-v5/build/minime-v5.html
+  (195 KB) dari prototype-v5/index.html + assets/; logo + icon
+  di-inline sebagai data URI sehingga satu file bisa dibuka
+  langsung tanpa folder assets. Verifikasi: 0 referensi
+  assets/ tersisa, 9 data URI (6 ikon rail + favicon + appmark
+  + logo), diff vs sumber hanya 3 baris aset, JS lolos
+  node --check. Catatan: build ini tetap prototipe klik
+  DUMMY (bukan app Tauri) — belum ada backend, approval
+  tidak tersimpan sungguhan. Folder dist/ dihindari karena
+  di-ignore gitignore; dipakai build/ agar bisa di-commit.

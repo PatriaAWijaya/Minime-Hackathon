@@ -119,6 +119,9 @@ copied from the main Minime repository.
   square icon from Patria's attachments (prototype-v5/assets/),
   used as favicon + rail app mark + agent-column header; brand pink
   kept as-is, UI accent stays #B214FF.
+  BUILD 27 Oct sore: single-file build prototype-v5/build/minime-v5.html
+  (195 KB, logo + icon inlined as data URIs; verified byte-identical
+  to index.html except the 3 asset references, JS lolos node --check).
   v1 doc is kept as history only.
   Phase 3 is PAUSED until Patria orders it to resume after the UI
   draft decision.
