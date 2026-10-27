@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aplikasi Konten v4 — Prototype Interaktif (DUMMY TEST)</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 15px; color: #1a1a1a; background: #f4f4f4; }
+  .banner { background: #fff3cd; border-bottom: 2px solid #e6a817; padding: 8px 16px; font-size: 13px; }
+  .banner b { color: #7a5b00; }
+  .app { display: flex; height: calc(100vh - 35px); }
+  .sidebar { width: 64px; flex-shrink: 0; background: #1f2937; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 4px; }
+  .sidebar button { position: relative; width: 46px; height: 46px; border: none; border-radius: 10px; background: transparent; color: #d1d5db; font-size: 22px; cursor: pointer; }
+  .sidebar button:hover, .sidebar button.active { background: #374151; color: #fff; }
+  .sidebar button .tip { display: none; position: absolute; left: 56px; top: 8px; background: #111827; color: #fff; font-size: 13px; padding: 6px 10px; border-radius: 6px; white-space: nowrap; z-index: 50; }
+  .sidebar button:hover .tip { display: block; }
+  .sidebar .spacer { flex: 1; }
+  .col { display: flex; flex-direction: column; min-height: 0; background: #fff; }
+  .colhead { padding: 14px 14px 10px; border-bottom: 1px solid #ddd; flex-shrink: 0; }
+  .colhead h2 { font-size: 17px; margin: 0 0 4px; }
+  .colhead p { margin: 0; color: #555; font-size: 13px; }
+  .scroll { overflow-y: auto; flex: 1; min-height: 0; padding: 12px 14px; }
+  .scroll::-webkit-scrollbar { width: 10px; }
+  .scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
+  .resizer { width: 6px; flex-shrink: 0; background: #ddd; cursor: col-resize; }
+  .resizer:hover { background: #93c5fd; }
+  #agentCol { width: 260px; flex-shrink: 0; border-right: 1px solid #ddd; }
+  #chatCol { flex: 1; min-width: 0; }
+  #detailCol { width: 300px; flex-shrink: 0; border-left: 1px solid #ddd; }
+  .group { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #555; margin: 14px 0 6px; }
+  .group:first-child { margin-top: 0; }
+  .agent { display: flex; gap: 10px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+  .agent:hover { border-color: #2563eb; }
+  .agent.sel { border-color: #2563eb; background: #eff6ff; }
+  .agent.off { opacity: 0.55; }
+  .agent.curproj { border-left: 4px solid #2563eb; }
+  .av { width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; }
+  .agent .meta { flex: 1; min-width: 0; font-size: 14px; line-height: 1.45; }
+  .agent .meta small { color: #555; }
+  .toggle { font-size: 12px; padding: 5px 8px; border-radius: 5px; border: 1px solid #bbb; background: #fff; cursor: pointer; align-self: flex-start; }
+  .msg { display: flex; gap: 10px; margin-bottom: 14px; }
+  .msg .body { flex: 1; min-width: 0; }
+  .msg .who { font-size: 13px; font-weight: 700; }
+  .msg .bubble { background: #f3f4f6; border-radius: 10px; padding: 10px 12px; line-height: 1.6; margin-top: 4px; }
+  .msg.prime .bubble { background: #f5f3ff; border: 1px solid #ddd6fe; }
+  .msg.curation .bubble { background: #fef3c7; border: 1px solid #fde68a; }
+  .msg.user { flex-direction: row-reverse; text-align: right; }
+  .msg.user .bubble { background: #dbeafe; text-align: left; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .b-ok { background: #d1fae5; color: #065f46; }
+  .b-wait { background: #fef3c7; color: #92400e; }
+  .b-idle { background: #e5e7eb; color: #374151; }
+  .b-no { background: #fee2e2; color: #991b1b; }
+  .composer { border-top: 1px solid #ddd; padding: 12px 14px; flex-shrink: 0; background: #fff; }
+  .composer textarea { width: 100%; padding: 11px 12px; font-size: 15px; border: 1px solid #bbb; border-radius: 8px; font-family: inherit; min-height: 56px; }
+  .btn { padding: 11px 18px; min-height: 44px; font-size: 15px; border-radius: 6px; border: 1px solid #bbb; background: #fff; cursor: pointer; margin: 8px 8px 0 0; }
+  .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 600; }
+  .btn-sm { padding: 6px 10px; font-size: 13px; min-height: 0; }
+  .chip { display: inline-block; padding: 7px 11px; border: 1px solid #93c5fd; background: #eff6ff; border-radius: 20px; font-size: 13px; cursor: pointer; margin: 0 6px 6px 0; }
+  .notice { background: #eff6ff; border: 1px solid #93c5fd; border-radius: 6px; padding: 11px 13px; margin-top: 12px; font-size: 14px; line-height: 1.5; }
+  .view { display: none; }
+  .view.active { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+  .kanban { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .kcol { background: #f3f4f6; border-radius: 8px; padding: 10px; min-height: 120px; }
+  .kcol.over { outline: 2px dashed #2563eb; }
+  .kcol h4 { font-size: 12px; text-transform: uppercase; margin: 0 0 8px; }
+  .kcard { background: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 9px; margin-bottom: 8px; font-size: 13px; line-height: 1.5; cursor: grab; }
+  .graphbox { position: relative; background: #fff; border: 1px solid #ddd; border-radius: 8px; height: 340px; overflow: hidden; }
+  .graphbox svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .gnode { position: absolute; width: 124px; text-align: center; background: #fff; border: 2px solid #2563eb; border-radius: 10px; padding: 8px 6px; font-size: 13px; cursor: grab; user-select: none; }
+  .gnode.prime { border-color: #7c3aed; background: #f5f3ff; font-weight: 700; }
+  .gnode.sel { box-shadow: 0 0 0 4px #fde68a; }
+  table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #ddd; }
+  .filters button { padding: 10px 16px; font-size: 14px; border-radius: 20px; border: 1px solid #bbb; background: #fff; cursor: pointer; margin: 0 6px 8px 0; }
+  .filters button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .mediagrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .mediacard { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+  .ph { background: #e5e7eb; border: 2px dashed #9ca3af; border-radius: 6px; min-height: 120px; display: flex; align-items: center; justify-content: center; text-align: center; color: #4b5563; padding: 10px; font-size: 13px; }
+  .ph.tall { min-height: 190px; }
+  .timeline { background: #1f2937; border-radius: 8px; padding: 12px; color: #fff; position: relative; overflow: hidden; }
+  .track { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+  .track .tlabel { width: 70px; flex-shrink: 0; color: #d1d5db; }
+  .track .bar { height: 26px; border-radius: 5px; display: flex; align-items: center; padding: 0 8px; font-size: 12px; color: #fff; }
+  .playhead { position: absolute; top: 0; bottom: 0; width: 3px; background: #facc15; }
+  label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
+  input[type=text], select, textarea { width: 100%; padding: 10px 11px; font-size: 14px; border: 1px solid #bbb; border-radius: 6px; font-family: inherit; }
+  .skillrow { display: flex; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+  @media (max-width: 900px) { #detailCol { display: none; } #agentCol { width: 200px; } .kanban { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="banner"><b>PROTOTYPE v4 — PROTOTYPE INTERAKTIF, DATA DUMMY TEST.</b> Lanjutan dari v3: interaksi antar view sudah jalan (ganti proyek, seret kartu Kanban, geser node Graph, slide Carousel, edit naskah, playhead Timeline, aksi Library → Chat/Kanban/Planner). Semua ini <b>masih simulasi di browser — tidak menyimpan approval sungguhan, tidak menggerakkan agen sungguhan, dan media adalah placeholder dummy, bukan hasil generate.</b></div>
+<div class="app">
+  <div class="sidebar">
+    <button data-view="home" class="active">⌂<span class="tip">Home — kembali ke UI utama</span></button>
+    <button data-view="search">🔍<span class="tip">Search — cari tugas / kata kunci</span></button>
+    <button data-view="kanban">▦<span class="tip">Kanban — semua proses tugas</span></button>
+    <button data-view="graph">🕸<span class="tip">Graph — node koneksi antar agen</span></button>
+    <button data-view="library">▤<span class="tip">Library — output akhir agen</span></button>
+    <button data-view="media">🎬<span class="tip">Media Studio — suara, image, reels, video</span></button>
+    <button data-view="planner">🗓<span class="tip">Planner — auto post Meta &amp; Postiz</span></button>
+    <div class="spacer"></div>
+    <button data-view="settings">⚙<span class="tip">Settings — semua pengaturan aplikasi</span></button>
+  </div>
+
+  <div class="col" id="agentCol">
+    <div class="colhead"><h2>Agen Aktif</h2><p>Proyek aktif bisa diganti dari chat. Prime selalu aktif.</p></div>
+    <div class="scroll" id="agentList"></div>
+    <div style="border-top:1px solid #ddd;padding:12px 14px;flex-shrink:0">
+      <label style="margin-top:0">Tambah agen ke proyek aktif</label>
+      <select id="addAgentSel"></select>
+      <button class="btn btn-primary" style="width:100%" onclick="addAgent()">+ Tambah Agen</button>
+      <div class="notice" id="addNotice" style="display:none"></div>
+    </div>
+  </div>
+  <div class="resizer" id="resizeAgent"></div>
+
+  <div class="col" id="chatCol">
+    <div class="view active" id="view-home">
+      <div class="colhead"><h2 id="chatTitle">Chat — TEST Kopi Surabaya</h2>
+        <p>Grup chat proyek aktif. Semua hasil dikurasi Prime Agent sebelum final.</p>
+        <label style="margin-top:8px">Proyek aktif
+          <select id="projectSel" onchange="switchProject(this.value)" style="margin-top:4px">
+            <option value="kopi">TEST Kopi Surabaya</option>
+            <option value="produk">TEST Produk Digital</option>
+          </select>
+        </label>
+      </div>
+      <div class="scroll" id="chatBox"></div>
+      <div class="composer">
+        <span class="chip" onclick="quickChat('Riset kompetitor kopi susu kekinian di Surabaya, lalu buatkan carousel-nya.')">Riset kompetitor + carousel</span>
+        <span class="chip" onclick="quickChat('Buatkan talking head untuk promo bundling.')">Talking head promo</span>
+        <textarea id="chatInput" placeholder="Tulis arahan atau pesan untuk grup ini…"></textarea>
+        <button class="btn btn-primary" onclick="sendChat()">Kirim</button>
+        <button class="btn" onclick="primeCurate()">Kurasi Prime (simulasi)</button>
+      </div>
+    </div>
+    <div class="view" id="view-search">
+      <div class="colhead"><h2>Search</h2><p>Cari di chat proyek aktif.</p></div>
+      <div class="scroll">
+        <input type="text" id="searchInput" placeholder="Ketik kata kunci… mis. QRIS, STP, carousel" oninput="doSearch()">
+        <p id="searchCount" style="color:#555"></p>
+        <div id="searchResults"></div>
+      </div>
+    </div>
+    <div class="view" id="view-kanban">
+      <div class="colhead"><h2>Kanban — Proyek Aktif</h2><p>Seret kartu antar kolom, atau pakai tombol Maju. Perubahan di sini hanya di prototype.</p></div>
+      <div class="scroll"><div class="kanban" id="kanbanBox"></div></div>
+    </div>
+    <div class="view" id="view-graph">
+      <div class="colhead"><h2>Graph — Koneksi Antar Agen</h2><p>Seret node untuk mengatur kanvas. Klik node untuk detail. Tambah koneksi lewat form di bawah.</p></div>
+      <div class="scroll">
+        <div class="graphbox" id="graphBox"><svg id="graphEdges"></svg><div id="graphNodes"></div></div>
+        <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-top:12px">
+          <h3 style="margin:0 0 6px" id="gnodeInfo">Klik sebuah node untuk melihat detailnya.</h3>
+          <p id="gnodeDetail" style="color:#555;margin:0">Detail agen dan aliran koneksinya akan tampil di sini.</p>
+        </div>
+        <label>Tambah koneksi</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="gFrom" style="flex:1"></select>
+          <select id="gTo" style="flex:1"></select>
+          <input type="text" id="gLabel" placeholder="Label aliran, mis. Referensi visual" style="flex:1">
+          <button class="btn btn-primary" onclick="addGraphEdge()">+ Tambah</button>
+        </div>
+        <ul id="graphList"></ul>
+        <div class="notice" id="graphNotice" style="display:none"></div>
+      </div>
+    </div>
+    <div class="view" id="view-library">
+      <div class="colhead"><h2>Library — Output Akhir Agen</h2><p>"Gunakan" mengirim pesan Prime ke chat. "Perbaiki Lanjut" membuat kartu Revisi di Kanban + pesan di chat.</p></div>
+      <div class="scroll">
+        <table><tbody id="libBody"></tbody></table>
+        <div class="notice" id="libNotice" style="display:none"></div>
+      </div>
+    </div>
+    <div class="view" id="view-media">
+      <div class="colhead"><h2>Media Studio</h2><p>Suara (Voice Studio), Image &amp; Reels, video Reels + Talking Head + timeline. Fallback Canva siaga bila Meta &amp; Gemini gagal.</p></div>
+      <div class="scroll">
+        <div class="notice" style="margin-top:0">Status generator (simulasi): Meta Image — <b>belum aktif</b> • Gemini Image — <b>siaga</b> • <b>Canva Fallback: SIAGA</b> (hasil Canva berlabel "via Canva (fallback)", image-only).</div>
+        <div class="filters">
+          <button class="active" data-filter="semua">Semua</button>
+          <button data-filter="gambar">Gambar</button>
+          <button data-filter="carousel">Carousel</button>
+          <button data-filter="reels">Reels</button>
+          <button data-filter="talking">Talking Head</button>
+        </div>
+        <div class="mediagrid" id="mediaGrid"></div>
+        <div class="notice" id="mediaNotice" style="display:none"></div>
+        <h3>Video — Timeline Editor (Talking Head Promo Bundling)</h3>
+        <div class="timeline" id="timeline">
+          <div class="playhead" id="playhead" style="left:0%"></div>
+          <div style="color:#d1d5db;font-size:13px;margin-bottom:8px">Durasi 00:30 (simulasi) — tekan Putar untuk menggerakkan playhead</div>
+          <div class="track"><span class="tlabel">Video</span><div class="bar" style="background:#2563eb;width:27%">Hook (0–8 dtk)</div><div class="bar" style="background:#7c3aed;width:47%">Isi (8–22 dtk)</div><div class="bar" style="background:#059669;width:26%">CTA</div></div>
+          <div class="track"><span class="tlabel">Audio</span><div class="bar" style="background:#ea580c;width:80%">Voice-over promo bundling</div></div>
+          <div class="track"><span class="tlabel">Teks</span><div class="bar" style="background:#db2777;width:30%">Overlay: TEST Kopi — Rp15.000</div><div class="bar" style="background:#0891b2;width:30%">Overlay: Pesan via WA</div></div>
+        </div>
+        <button class="btn btn-primary" onclick="playTimeline()">▶ Putar Playhead (simulasi)</button>
+      </div>
+    </div>
+    <div class="view" id="view-planner">
+      <div class="colhead"><h2>Planner — Auto Post (Meta &amp; Postiz)</h2><p>Mode default: <span class="badge b-ok">DRAF saja</span>. "Siapkan untuk Post" dari Media Studio menambahkan baris draf di sini.</p></div>
+      <div class="scroll">
+        <table><thead><tr><th>Item</th><th>Channel</th><th>Jadwal (simulasi)</th><th>Status</th></tr></thead><tbody id="plannerBody"></tbody></table>
+        <div class="notice">Item yang belum lolos GKonten tidak muncul sebagai jadwal aktif — hanya sebagai kandidat. Tidak ada tombol terbit live di slice ini.</div>
+      </div>
+    </div>
+    <div class="view" id="view-settings">
+      <div class="colhead"><h2>Settings — Pengaturan Aplikasi</h2><p>Global, bukan per proyek. Perubahan di prototype hanya simulasi.</p></div>
+      <div class="scroll">
+        <h3>Koneksi &amp; Provider</h3>
+        <p><label><input type="checkbox" checked> Meta Model API (Muse) — utama</label><label><input type="checkbox" checked> Gemini — fallback 1</label><label><input type="checkbox" checked> Ollama lokal — fallback 2/3</label><label><input type="checkbox" checked> Canva Fallback untuk Image (bila Meta &amp; Gemini gagal)</label><label><input type="checkbox"> Voice Studio (127.0.0.1:3900)</label></p>
+        <h3>Gerbang &amp; Distribusi</h3>
+        <p><label><input type="checkbox" checked> Distribusi default DRAF saja</label><label><input type="checkbox"> Auto post batch terjadwal (butuh persetujuan awal tiap batch)</label></p>
+        <h3>Biaya &amp; Tampilan</h3>
+        <p><label><input type="checkbox" checked> Tampilkan biaya dalam Rupiah dulu</label><label>Kurs USD→IDR (referensi): <input type="text" value="18137" style="width:120px"></label></p>
+        <button class="btn btn-primary" onclick="showSetNotice()">Simpan Pengaturan (simulasi)</button>
+        <div class="notice" id="setNotice" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+  <div class="resizer" id="resizeDetail"></div>
+
+  <div class="col" id="detailCol">
+    <div class="colhead"><h2 id="detailTitle">Detail — Prime Agent</h2><p id="detailSub">Klik agen di kolom Agen atau avatar di chat untuk melihat detailnya.</p></div>
+    <div class="scroll" id="detailBody"></div>
+  </div>
+</div>
+<script>
+  var AGENTS = {
+    prime: { name: "Prime Agent", color: "#6d28d9", role: "Personal Assistant — orkestrasi & kurasi", goal: "Memastikan setiap arahan menjadi tugas yang jelas, didelegasikan ke agen yang tepat, dan hasilnya dikurasi sebelum final.", skills: ["Orkestrasi delegasi", "Kurasi hasil agen", "Penegakan gerbang GSTP/GKonten/GBatch"], model: "Meta (Muse) → Gemini → Ollama", always: true },
+    riset: { name: "Riset", color: "#2563eb", role: "Riset pasar & audiens", goal: "Riset pasar, behaviour digital, dan pola spending yang terverifikasi — tanpa mengarang angka/URL.", skills: ["riset-pasar", "behaviour-digital", "spending-digital", "verifikasi-fakta"], model: "Gemini (fallback dari Meta)", always: false },
+    strategi: { name: "Strategi", color: "#059669", role: "Positioning & STP", goal: "Mengubah riset menjadi positioning, pilar, dan STP yang spesifik dan bisa diuji.", skills: ["positioning-stp", "pak-bi-branding", "segmentasi-spending"], model: "Gemini (fallback dari Meta)", always: false },
+    kreatif: { name: "Kreatif", color: "#ea580c", role: "Naskah & Brief", goal: "Kalender, hook, CTA, dan CreativeBrief text-free yang siap diproduksi Media.", skills: ["copywriting-hook-cta", "brief-text-free", "overlay-template"], model: "Gemini (fallback dari Meta)", always: false },
+    media: { name: "Media", color: "#db2777", role: "Produksi media", goal: "Gambar, carousel, reels, dan talking head yang lolos QC dan siap untuk post (setelah GKonten).", skills: ["image-text-free", "carousel-slide", "reels-pendek", "talking-head-avatar"], model: "Meta Image (menunggu aktif) → Gemini → Canva fallback", always: false },
+    distribusi: { name: "Distribusi", color: "#0891b2", role: "Draf distribusi", goal: "Draf Postiz per channel tanpa pernah terbit live di slice ini.", skills: ["postiz-draft-only", "status-channel"], model: "Postiz (DRAF saja)", always: false },
+    produk: { name: "Produk Digital", color: "#65a30d", role: "Brief produk digital", goal: "Brief, struktur fitur MVP, dan riset pengguna dari arahan produk.", skills: ["brief-produk", "riset-pengguna", "fitur-mvp"], model: "Gemini (fallback dari Meta)", always: false }
+  };
+  var PROJECTS = {
+    kopi: { name: "TEST Kopi Surabaya", agents: [
+      { key: "prime", status: "Aktif", task: "Mengkurasi hasil tim" },
+      { key: "riset", status: "Selesai", task: "Riset behaviour + spending" },
+      { key: "strategi", status: "Selesai", task: "STP v2 (GSTP lolos)" },
+      { key: "kreatif", status: "Selesai", task: "Kalender 7 hari + brief" },
+      { key: "media", status: "Menunggu provider", task: "Gambar Hari 1–7" },
+      { key: "distribusi", status: "Idle", task: "—" }
+    ], chat: [
+      { who: "user", name: "Kamu", color: "#374151", text: "Riset pasar es kopi Surabaya untuk mahasiswa, lalu buatkan konten 7 hari beserta gambarnya." },
+      { who: "prime", name: "Prime Agent", color: "#6d28d9", text: "Siap. Saya pecah jadi: Riset → Strategi (STP, menunggu GSTP darimu) → Kreatif (kalender + brief) → Media (gambar) → Distribusi (draf Postiz). Saya tugaskan Riset sekarang." },
+      { who: "riset", name: "Riset", color: "#2563eb", text: "Riset selesai: audiens mahasiswa/pekerja muda Surabaya, behaviour digital tinggi (on-screen panjang, video pendek), spending sensitif harga, transaksi dominan via WhatsApp + QRIS." },
+      { who: "strategi", name: "Strategi", color: "#059669", text: "STP draf: segmen mahasiswa/pekerja muda 18–28, targeting Urban Hustlers via WhatsApp Business + Reels/TikTok, positioning es kopi susu harian paling praktis via WA + QRIS. Menunggu GSTP." },
+      { who: "prime", name: "Prime Agent", color: "#6d28d9", text: "Kurasi Prime: STP di atas sudah saya periksa — segmen dan targetingnya konsisten dengan riset behaviour dan spending. Saya rekomendasikan untuk disetujui di gerbang GSTP, tetapi keputusan tetap di tanganmu.", curation: true },
+      { who: "kreatif", name: "Kreatif", color: "#ea580c", text: "Kalender 7 hari + 7 brief selesai (setelah GSTP). Tema mencakup kenyamanan digital, konsistensi kualitas, dan efisiensi urban; semua CTA mengarah ke WA/QRIS." },
+      { who: "media", name: "Media", color: "#db2777", text: "Gambar Hari 1–7 masih menunggu provider (Meta Image belum aktif). Saya tidak membuat gambar palsu — statusnya pending-provider sampai generator aktif atau fallback Canva dipakai." }
+    ], kanban: [
+      { t: "Riset pasar & behaviour", a: "Riset", c: 4 }, { t: "STP v2", a: "Strategi", c: 4 },
+      { t: "Kalender 7 hari", a: "Kreatif", c: 4 }, { t: "Gambar Hari 1–7", a: "Media", c: 1 },
+      { t: "Carousel + Reels", a: "Media", c: 0 }, { t: "Talking Head promo", a: "Media", c: 0 },
+      { t: "Draf Postiz", a: "Distribusi", c: 0 }
+    ]},
+    produk: { name: "TEST Produk Digital", agents: [
+      { key: "prime", status: "Aktif", task: "Mengkurasi brief produk" },
+      { key: "riset", status: "Mengerjakan", task: "Riset pengguna aplikasi kopi" },
+      { key: "produk", status: "Mengerjakan", task: "Struktur fitur MVP" }
+    ], chat: [
+      { who: "user", name: "Kamu", color: "#374151", text: "Buatkan brief produk digital untuk aplikasi pemesanan kopi via WhatsApp." },
+      { who: "prime", name: "Prime Agent", color: "#6d28d9", text: "Siap. Saya tugaskan Riset untuk riset pengguna, lalu Produk Digital menyusun brief dan struktur fitur MVP." },
+      { who: "riset", name: "Riset", color: "#2563eb", text: "Riset pengguna berjalan: pemesanan via chat sudah jadi kebiasaan, hambatan utamanya antre dan pembayaran tunai (simulasi)." }
+    ], kanban: [
+      { t: "Riset pengguna aplikasi kopi", a: "Riset", c: 1 },
+      { t: "Struktur fitur MVP", a: "Produk Digital", c: 1 },
+      { t: "Brief produk (draf)", a: "Produk Digital", c: 0 }
+    ]}
+  };
+  var currentProj = "kopi", selectedAgent = "prime", mediaFilter = "semua";
+  var KCOLS = ["Antrian", "Dikerjakan", "Butuh Approval", "Revisi", "Selesai"];
+
+  /* ---------- Agen ---------- */
+  function renderAgents() {
+    var html = "";
+    Object.keys(PROJECTS).forEach(function (pid) {
+      var proj = PROJECTS[pid];
+      html += '<div class="group">' + proj.name + (pid === currentProj ? ' • PROYEK AKTIF' : '') + '</div>';
+      proj.agents.forEach(function (a, i) {
+        var ag = AGENTS[a.key], off = a.status === "Nonaktif";
+        html += '<div class="agent ' + (selectedAgent === a.key && pid === currentProj ? 'sel' : '') + (off ? ' off' : '') + (pid === currentProj ? ' curproj' : '') + '" onclick="selectAgent(\'' + a.key + '\',\'' + pid + '\')">'
+          + '<div class="av" style="background:' + ag.color + '">' + ag.name.charAt(0) + '</div>'
+          + '<div class="meta"><b>' + ag.name + '</b> <span class="badge ' + (off ? 'b-no' : 'b-ok') + '">' + a.status + '</span><br><small>' + a.task + '</small></div>'
+          + (ag.always ? '' : '<button class="toggle" onclick="event.stopPropagation();toggleAgent(' + i + ',\'' + pid + '\')">' + (off ? 'Aktifkan' : 'Nonaktifkan') + '</button>')
+          + '</div>';
+      });
+    });
+    document.getElementById("agentList").innerHTML = html;
+    var sel = document.getElementById("addAgentSel");
+    if (!sel.dataset.filled) {
+      Object.keys(AGENTS).forEach(function (k) {
+        if (k === "prime") return;
+        var o = document.createElement("option"); o.value = k; o.textContent = AGENTS[k].name + " — " + AGENTS[k].role; sel.appendChild(o);
+      });
+      sel.dataset.filled = "1";
+    }
+  }
+  function toggleAgent(idx, pid) {
+    var a = PROJECTS[pid].agents[idx];
+    a.status = a.status === "Nonaktif" ? "Idle" : "Nonaktif";
+    renderAgents(); renderDetail();
+  }
+  function addAgent() {
+    var key = document.getElementById("addAgentSel").value;
+    var proj = PROJECTS[currentProj];
+    var n = document.getElementById("addNotice"); n.style.display = "block";
+    if (proj.agents.some(function (a) { return a.key === key; })) {
+      n.textContent = "Simulasi: agen " + AGENTS[key].name + " sudah ada di proyek ini (satu agen bisa muncul di beberapa proyek, tapi tidak dua kali di proyek yang sama).";
+      return;
+    }
+    proj.agents.push({ key: key, status: "Idle", task: "Baru ditambahkan (simulasi)" });
+    renderAgents();
+    n.textContent = "Simulasi: agen " + AGENTS[key].name + " ditambahkan ke " + proj.name + ".";
+  }
+  function selectAgent(key, pid) {
+    selectedAgent = key;
+    if (pid) currentProj = pid;
+    document.getElementById("projectSel").value = currentProj;
+    renderAgents(); renderDetail(); renderChat(); renderKanban();
+    document.getElementById("chatTitle").textContent = "Chat — " + PROJECTS[currentProj].name;
+  }
+  function renderDetail() {
+    var ag = AGENTS[selectedAgent], proj = PROJECTS[currentProj];
+    document.getElementById("detailTitle").textContent = "Detail — " + ag.name;
+    document.getElementById("detailSub").textContent = "Proyek: " + proj.name + " • " + ag.role + (ag.always ? " • Selalu aktif." : "");
+    var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox" checked> <span>' + s + '</span></div>'; }).join("");
+    document.getElementById("detailBody").innerHTML =
+      '<p><b>Goal:</b><br>' + ag.goal + '</p><p><b>Model / provider:</b><br>' + ag.model + '</p>'
+      + '<h3 style="font-size:15px">Harness skill (kustomisasi — simulasi)</h3>' + skills
+      + '<label>Catatan / goal tambahan</label><textarea placeholder="Penyesuaian goal untuk proyek ' + proj.name + '…"></textarea>'
+      + '<button class="btn btn-primary" onclick="saveDetail()">Simpan Kustomisasi (simulasi)</button>'
+      + '<div class="notice" id="detailNotice" style="display:none"></div>'
+      + '<p style="font-size:13px;color:#555">Gerbang (GSTP/GKonten/GBatch) tidak bisa dimatikan dari panel ini.</p>';
+  }
+  function saveDetail() {
+    var n = document.getElementById("detailNotice");
+    if (n) { n.style.display = "block"; n.textContent = "Simulasi: kustomisasi " + AGENTS[selectedAgent].name + " tersimpan untuk proyek ini (tampilan saja)."; }
+  }
+
+  /* ---------- Proyek & Chat ---------- */
+  function switchProject(pid) {
+    currentProj = pid;
+    document.getElementById("chatTitle").textContent = "Chat — " + PROJECTS[pid].name;
+    renderAgents(); renderChat(); renderKanban(); renderDetail();
+  }
+  function renderChat() {
+    var box = document.getElementById("chatBox");
+    box.innerHTML = "";
+    PROJECTS[currentProj].chat.forEach(function (m) {
+      var div = document.createElement("div");
+      div.className = "msg " + (m.who === "user" ? "user" : (m.curation ? "curation" : (m.who === "prime" ? "prime" : "")));
+      div.innerHTML = '<div class="av" style="background:' + m.color + '">' + m.name.charAt(0) + '</div>'
+        + '<div class="body"><div class="who">' + m.name + (m.curation ? ' — <span class="badge b-wait">KURASI PRIME</span>' : '') + '</div><div class="bubble">' + m.text + '</div></div>';
+      box.appendChild(div);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+  function postChat(who, name, color, text, curation) {
+    PROJECTS[currentProj].chat.push({ who: who, name: name, color: color, text: text, curation: !!curation });
+    renderChat();
+  }
+  function quickChat(text) { document.getElementById("chatInput").value = text; sendChat(); }
+  function sendChat() {
+    var input = document.getElementById("chatInput");
+    var text = input.value.trim();
+    if (!text) return;
+    postChat("user", "Kamu", "#374151", text.replace(/</g, "&lt;"));
+    input.value = "";
+    var saved = text;
+    setTimeout(function () {
+      postChat("prime", "Prime Agent", "#6d28d9", "Diterima. Saya pecah arahanmu dan tugaskan agen yang dibutuhkan — hasilnya muncul di chat ini dan kartunya di Kanban (simulasi).");
+    }, 700);
+    setTimeout(function () {
+      var low = saved.toLowerCase();
+      var agent = "Riset", color = "#2563eb", reply = "Saya mulai risetnya dari behaviour digital dan spending audiens (simulasi).";
+      if (low.indexOf("gambar") !== -1 || low.indexOf("carousel") !== -1 || low.indexOf("reels") !== -1 || low.indexOf("talking") !== -1) { agent = "Media"; color = "#db2777"; reply = "Saya siapkan medianya — gambar/carousel/reels/talking head tampil di Media Studio setelah lolos GKonten (simulasi)."; }
+      else if (low.indexOf("produk") !== -1) { agent = "Produk Digital"; color = "#65a30d"; reply = "Saya susun brief produk dan struktur fitur MVP-nya (simulasi)."; }
+      postChat("x", agent, color, reply);
+    }, 1500);
+  }
+  function primeCurate() {
+    postChat("prime", "Prime Agent", "#6d28d9", "Kurasi Prime (simulasi): semua hasil agen di atas sudah saya periksa konsistensinya terhadap STP dan riset. Yang masih menunggu keputusanmu: gerbang GKonten untuk media dan gerbang distribusi untuk draf Postiz.", true);
+  }
+  function doSearch() {
+    var q = document.getElementById("searchInput").value.trim().toLowerCase();
+    var results = document.getElementById("searchResults");
+    if (!q) { results.innerHTML = ""; document.getElementById("searchCount").textContent = ""; return; }
+    var hits = PROJECTS[currentProj].chat.filter(function (m) { return m.text.toLowerCase().indexOf(q) !== -1 || m.name.toLowerCase().indexOf(q) !== -1; });
+    document.getElementById("searchCount").textContent = hits.length + " hasil untuk '" + q + "' di chat " + PROJECTS[currentProj].name + " (simulasi).";
+    results.innerHTML = hits.map(function (m) { return '<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:8px"><b>' + m.name + ':</b> ' + m.text + '</div>'; }).join("") || "<p>Tidak ada hasil.</p>";
+  }
+
+  /* ---------- Kanban (drag & drop) ---------- */
+  var dragCard = null;
+  function renderKanban() {
+    var wrap = document.getElementById("kanbanBox");
+    wrap.innerHTML = "";
+    KCOLS.forEach(function (col, ci) {
+      var div = document.createElement("div"); div.className = "kcol";
+      div.innerHTML = "<h4>" + col + "</h4>";
+      div.addEventListener("dragover", function (e) { e.preventDefault(); div.classList.add("over"); });
+      div.addEventListener("dragleave", function () { div.classList.remove("over"); });
+      div.addEventListener("drop", function (e) {
+        e.preventDefault(); div.classList.remove("over");
+        if (dragCard !== null) { PROJECTS[currentProj].kanban[dragCard].c = ci; dragCard = null; renderKanban(); }
+      });
+      PROJECTS[currentProj].kanban.forEach(function (card, i) {
+        if (card.c !== ci) return;
+        var k = document.createElement("div"); k.className = "kcard"; k.draggable = true;
+        k.innerHTML = "<b>" + card.t + "</b><br><small>Agen: " + card.a + "</small>";
+        k.addEventListener("dragstart", function () { dragCard = i; });
+        if (ci < 4) {
+          var b = document.createElement("button"); b.className = "btn btn-sm"; b.textContent = "Maju →";
+          b.addEventListener("click", function () { card.c = ci + 1; renderKanban(); });
+          k.appendChild(document.createElement("br")); k.appendChild(b);
+        }
+        div.appendChild(k);
+      });
+      wrap.appendChild(div);
+    });
+  }
+
+  /* ---------- Graph (drag node + tambah edge) ---------- */
+  var GNODES = {
+    prime: { name: "Prime Agent", desc: "Orkestrasi + gerbang manusia.", x: 50, y: 10, prime: true },
+    riset: { name: "Riset", desc: "Harness: riset-pasar, behaviour-digital, spending-digital.", x: 10, y: 45 },
+    strategi: { name: "Strategi", desc: "Harness: positioning-stp, pak-bi-branding.", x: 28, y: 45 },
+    kreatif: { name: "Kreatif", desc: "Harness: copywriting-hook-cta, brief-text-free.", x: 46, y: 45 },
+    media: { name: "Media", desc: "Harness: image-text-free, carousel-slide, reels-pendek, talking-head-avatar.", x: 64, y: 45 },
+    distribusi: { name: "Distribusi", desc: "Harness: postiz-draft-only.", x: 82, y: 45 }
+  };
+  var GEDGES = [
+    { f: "prime", t: "riset", l: "Tugaskan riset" }, { f: "riset", t: "strategi", l: "Riset → STP" },
+    { f: "strategi", t: "kreatif", l: "STP → brief" }, { f: "kreatif", t: "media", l: "Brief → media" },
+    { f: "media", t: "distribusi", l: "GKonten → draf" }
+  ];
+  var dragNode = null, dragMoved = false, dragStart = null;
+  function renderGraph() {
+    var svg = document.getElementById("graphEdges");
+    svg.innerHTML = ""; svg.setAttribute("viewBox", "0 0 100 100"); svg.setAttribute("preserveAspectRatio", "none");
+    var NS = "http://www.w3.org/2000/svg";
+    GEDGES.forEach(function (e) {
+      var a = GNODES[e.f], b = GNODES[e.t];
+      var line = document.createElementNS(NS, "line");
+      line.setAttribute("x1", a.x); line.setAttribute("y1", a.y + 6);
+      line.setAttribute("x2", b.x); line.setAttribute("y2", b.y + 6);
+      line.setAttribute("stroke", "#2563eb"); line.setAttribute("stroke-width", "0.7");
+      svg.appendChild(line);
+    });
+    var wrap = document.getElementById("graphNodes");
+    wrap.innerHTML = "";
+    Object.keys(GNODES).forEach(function (k) {
+      var nd = GNODES[k];
+      var el = document.createElement("div");
+      el.className = "gnode" + (nd.prime ? " prime" : "");
+      el.style.left = "calc(" + nd.x + "% - 62px)";
+      el.style.top = nd.y + "%";
+      el.textContent = nd.name;
+      el.addEventListener("mousedown", function (e) {
+        dragNode = k; dragMoved = false; dragStart = { x: e.clientX, y: e.clientY };
+        e.preventDefault();
+      });
+      el.addEventListener("click", function () {
+        if (dragMoved) return;
+        var outs = GEDGES.filter(function (e) { return e.f === k; }).map(function (e) { return GNODES[e.t].name + " (" + e.l + ")"; }).join(", ") || "tidak ada";
+        var ins = GEDGES.filter(function (e) { return e.t === k; }).map(function (e) { return GNODES[e.f].name + " (" + e.l + ")"; }).join(", ") || "tidak ada";
+        document.getElementById("gnodeInfo").textContent = nd.name;
+        document.getElementById("gnodeDetail").textContent = nd.desc + " Keluar: " + outs + ". Masuk: " + ins + ".";
+      });
+      wrap.appendChild(el);
+    });
+    document.getElementById("graphList").innerHTML = GEDGES.map(function (e) { return "<li>" + GNODES[e.f].name + " → " + GNODES[e.t].name + " — " + e.l + "</li>"; }).join("");
+  }
+  document.addEventListener("mousemove", function (e) {
+    if (!dragNode) return;
+    var box = document.getElementById("graphBox").getBoundingClientRect();
+    if (dragStart && Math.abs(e.clientX - dragStart.x) + Math.abs(e.clientY - dragStart.y) > 5) dragMoved = true;
+    var nx = ((e.clientX - box.left) / box.width) * 100;
+    var ny = ((e.clientY - box.top) / box.height) * 100;
+    GNODES[dragNode].x = Math.max(2, Math.min(92, nx));
+    GNODES[dragNode].y = Math.max(2, Math.min(80, ny));
+    renderGraph();
+  });
+  document.addEventListener("mouseup", function () { dragNode = null; });
+  var gf = document.getElementById("gFrom"), gt = document.getElementById("gTo");
+  Object.keys(GNODES).forEach(function (k) {
+    var o1 = document.createElement("option"); o1.value = k; o1.textContent = GNODES[k].name; gf.appendChild(o1);
+    var o2 = document.createElement("option"); o2.value = k; o2.textContent = GNODES[k].name; gt.appendChild(o2);
+  });
+  function addGraphEdge() {
+    var f = gf.value, t = gt.value, label = document.getElementById("gLabel").value.trim() || "Koneksi baru";
+    if (f === t) { alert("Sumber dan tujuan tidak boleh sama."); return; }
+    GEDGES.push({ f: f, t: t, l: label });
+    renderGraph();
+    var n = document.getElementById("graphNotice");
+    n.style.display = "block";
+    n.textContent = "Simulasi: koneksi " + GNODES[f].name + " → " + GNODES[t].name + " (" + label + ") ditambahkan (tampilan saja).";
+  }
+
+  /* ---------- Library ---------- */
+  var LIB = [
+    { o: "STP v2 — TEST Kopi Surabaya", a: "Strategi", s: "Disetujui (GSTP)", badge: "b-ok" },
+    { o: "Riset behaviour digital + spending", a: "Riset", s: "Disetujui", badge: "b-ok" },
+    { o: "Kalender 7 hari + 7 brief", a: "Kreatif", s: "Disetujui (GKonten)", badge: "b-ok" },
+    { o: "Gambar Hari 1–7 (menunggu provider)", a: "Media", s: "Menunggu provider", badge: "b-wait" },
+    { o: "Brief produk digital (draf)", a: "Produk Digital", s: "DRAF", badge: "b-idle" }
+  ];
+  function renderLib() {
+    document.getElementById("libBody").innerHTML = "<tr><th>Output</th><th>Agen</th><th>Status</th><th>Aksi</th></tr>" + LIB.map(function (item, i) {
+      return "<tr><td>" + item.o + "</td><td>" + item.a + "</td><td><span class='badge " + item.badge + "'>" + item.s + "</span></td>"
+        + "<td><button class='btn btn-sm' onclick='libUse(" + i + ")'>Gunakan</button><button class='btn btn-sm' onclick='libSave(" + i + ")'>Simpan</button><button class='btn btn-sm' onclick='libRevise(" + i + ")'>Perbaiki Lanjut</button></td></tr>";
+    }).join("");
+  }
+  function libUse(i) {
+    showView("home");
+    postChat("prime", "Prime Agent", "#6d28d9", "Output '" + LIB[i].o + "' digunakan sebagai bahan tahap berikutnya di " + PROJECTS[currentProj].name + " (simulasi).", true);
+    var n = document.getElementById("libNotice"); n.style.display = "block";
+    n.textContent = "Simulasi: pesan Prime Agent terkirim ke chat proyek aktif.";
+  }
+  function libSave(i) {
+    var n = document.getElementById("libNotice"); n.style.display = "block";
+    n.textContent = "Simulasi: '" + LIB[i].o + "' ditandai tersimpan (tampilan saja).";
+  }
+  function libRevise(i) {
+    PROJECTS[currentProj].kanban.push({ t: "Revisi: " + LIB[i].o, a: LIB[i].a, c: 3 });
+    renderKanban();
+    showView("home");
+    postChat("prime", "Prime Agent", "#6d28d9", "Perbaikan dibuka untuk '" + LIB[i].o + "' — kartunya masuk kolom Revisi di Kanban, menunggu catatanmu (simulasi).", true);
+  }
+
+  /* ---------- Media Studio ---------- */
+  var MEDIA = [
+    { type: "gambar", title: "Gambar Hari 1 — Kemudahan Pesan via WA", status: "Siap untuk Post", desc: "Gambar statis text-free. Placeholder dummy — bukan hasil generate." },
+    { type: "gambar", title: "Gambar Hari 4 — Higienitas Kopi Harian", status: "Menunggu provider", desc: "Placeholder dummy — bukan hasil generate." },
+    { type: "carousel", title: "Carousel Hari 3 — Efisiensi QRIS", status: "Siap untuk Post", desc: "Slide hook → isi → CTA. Tombol geser slide di bawah (simulasi).", slides: ["Hook: Dompet ketinggalan?", "Isi: Scan QRIS, beres.", "CTA: Pesan via WA"], cur: 0 },
+    { type: "carousel", title: "Carousel Hari 5 — Promo Bundling Hemat", status: "Menunggu GKonten", desc: "Slide hook → bundling → CTA. Placeholder dummy.", slides: ["Hook: Ngopi hemat tiap hari", "Isi: Bundling hemat", "CTA: Cek promo di WA"], cur: 0 },
+    { type: "reels", title: "Reels Hari 1 — Capek antre kopi? (9:16)", status: "Siap untuk Post", desc: "Video pendek vertikal. Placeholder dummy — bukan video sungguhan." },
+    { type: "talking", title: "Talking Head — Promo Bundling", status: "Menunggu GKonten", desc: "Avatar + naskah. Edit naskah di bawah, lalu Simpan (simulasi).", script: "Ngopi enak tiap hari tanpa bikin saldo menipis — cek promo bundling TEST Kopi di chat WA kita!" },
+    { type: "talking", title: "Talking Head — Kenapa QRIS?", status: "Draf", desc: "Avatar + naskah edukasi QRIS. Placeholder dummy.", script: "Dompet ketinggalan bukan masalah — bayar pakai QRIS, scan langsung beres." }
+  ];
+  var PLANNER = [
+    { item: "Gambar Hari 1 — Kemudahan Pesan via WA", ch: "Instagram / Postiz", when: "28 Okt, 11:30 WIB", st: "DRAF Postiz" },
+    { item: "Carousel Hari 3 — Efisiensi QRIS", ch: "Instagram / Postiz", when: "29 Okt, 19:00 WIB", st: "DRAF Postiz" },
+    { item: "Reels Hari 1", ch: "TikTok / Meta", when: "30 Okt, 12:00 WIB", st: "Kandidat (belum GKonten video)" }
+  ];
+  function mediaBadge(s) { return s === "Siap untuk Post" ? "b-ok" : (s === "Menunggu GKonten" || s === "Menunggu provider" ? "b-wait" : "b-idle"); }
+  function renderMedia() {
+    var grid = document.getElementById("mediaGrid");
+    grid.innerHTML = "";
+    MEDIA.filter(function (m) { return mediaFilter === "semua" || m.type === mediaFilter; }).forEach(function (m) {
+      var idx = MEDIA.indexOf(m);
+      var card = document.createElement("div"); card.className = "mediacard";
+      var visual = "";
+      if (m.type === "gambar") visual = '<div class="ph">Placeholder gambar dummy<br><small>Bukan hasil generate</small></div>';
+      if (m.type === "carousel") visual = '<div class="ph">Placeholder carousel dummy<br><b>' + m.slides[m.cur] + '</b><br><small>Slide ' + (m.cur + 1) + ' dari ' + m.slides.length + '</small></div>'
+        + '<button class="btn btn-sm" onclick="carSlide(' + idx + ',-1)">← Slide</button><button class="btn btn-sm" onclick="carSlide(' + idx + ',1)">Slide →</button>';
+      if (m.type === "reels") visual = '<div class="ph tall"><div><div style="font-size:42px">▶</div>Placeholder reels dummy<br><small>9:16 — bukan video sungguhan</small></div></div>';
+      if (m.type === "talking") visual = '<div class="ph"><div>Avatar dummy<br><small>Talking head — bukan video sungguhan</small></div></div>'
+        + '<label>Naskah (bisa diedit)</label><textarea id="script' + idx + '">' + m.script + '</textarea><button class="btn btn-sm" onclick="saveScript(' + idx + ')">Simpan Naskah (simulasi)</button>';
+      card.innerHTML = "<span class='badge " + mediaBadge(m.status) + "'>" + m.status + "</span> <span class='badge b-idle'>" + m.type + "</span><h3 style='margin-top:10px;font-size:15px'>" + m.title + "</h3>" + visual + "<p style='font-size:14px;color:#555'>" + m.desc + "</p>"
+        + "<button class='btn btn-sm' onclick='mediaToPlanner(" + idx + ")'>Siapkan untuk Post → Planner</button>";
+      grid.appendChild(card);
+    });
+  }
+  function carSlide(idx, dir) {
+    var m = MEDIA[idx];
+    m.cur = (m.cur + dir + m.slides.length) % m.slides.length;
+    renderMedia();
+  }
+  function saveScript(idx) {
+    var v = document.getElementById("script" + idx).value;
+    MEDIA[idx].script = v;
+    var n = document.getElementById("mediaNotice"); n.style.display = "block";
+    n.textContent = "Simulasi: naskah '" + MEDIA[idx].title + "' diperbarui (tampilan saja). Render ulang sungguhan adalah pekerjaan build.";
+  }
+  function mediaToPlanner(idx) {
+    var m = MEDIA[idx];
+    m.status = "Siap untuk Post";
+    PLANNER.push({ item: m.title, ch: "Instagram / Postiz", when: "31 Okt, 11:30 WIB", st: "DRAF Postiz" });
+    renderMedia(); renderPlanner();
+    var n = document.getElementById("mediaNotice"); n.style.display = "block";
+    n.textContent = "Simulasi: '" + m.title + "' ditandai Siap untuk Post dan ditambahkan sebagai DRAF di Planner (bukan terbit).";
+  }
+  function renderPlanner() {
+    document.getElementById("plannerBody").innerHTML = PLANNER.map(function (p) {
+      return "<tr><td>" + p.item + "</td><td>" + p.ch + "</td><td>" + p.when + "</td><td><span class='badge b-wait'>" + p.st + "</span></td></tr>";
+    }).join("");
+  }
+  document.querySelectorAll("[data-filter]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("[data-filter]").forEach(function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      mediaFilter = b.getAttribute("data-filter");
+      renderMedia();
+    });
+  });
+  var playTimer = null;
+  function playTimeline() {
+    if (playTimer) clearInterval(playTimer);
+    var p = 0, el = document.getElementById("playhead");
+    playTimer = setInterval(function () {
+      p += 2;
+      if (p >= 100) { clearInterval(playTimer); playTimer = null; }
+      el.style.left = p + "%";
+    }, 120);
+  }
+
+  /* ---------- Sidebar, resizer, init ---------- */
+  function showView(id) {
+    document.querySelectorAll(".sidebar button").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-view") === id); });
+    document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
+    document.getElementById("view-" + id).classList.add("active");
+  }
+  document.querySelectorAll(".sidebar button").forEach(function (b) {
+    b.addEventListener("click", function () { showView(b.getAttribute("data-view")); });
+  });
+  function showSetNotice() {
+    var n = document.getElementById("setNotice");
+    n.style.display = "block"; n.textContent = "Simulasi: pengaturan tersimpan (tampilan saja).";
+  }
+  function makeResizer(handleId, colId, minW, maxW) {
+    var handle = document.getElementById(handleId), col = document.getElementById(colId);
+    var startX = 0, startW = 0, dragging = false;
+    handle.addEventListener("mousedown", function (e) {
+      dragging = true; startX = e.clientX; startW = col.getBoundingClientRect().width;
+      e.preventDefault();
+    });
+    document.addEventListener("mousemove", function (e) {
+      if (!dragging) return;
+      var dx = e.clientX - startX;
+      var w = handleId === "resizeAgent" ? startW + dx : startW - dx;
+      w = Math.max(minW, Math.min(maxW, w));
+      col.style.width = w + "px";
+    });
+    document.addEventListener("mouseup", function () { dragging = false; });
+  }
+  makeResizer("resizeAgent", "agentCol", 180, 420);
+  makeResizer("resizeDetail", "detailCol", 220, 420);
+  renderAgents(); renderDetail(); renderChat(); renderKanban(); renderGraph(); renderLib(); renderMedia(); renderPlanner();
+</script>
+</body>
+</html>

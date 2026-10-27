@@ -441,3 +441,24 @@ dokumen lama yang dipakai.
   Verifikasi: 8 tombol sidebar = 8 view, Riset muncul di 2 proyek,
   JS lolos node --check, tanpa referensi eksternal. Status:
   MENUNGGU REVISI Patria atas layout utama v3.
+
+- 27 Okt siang (perintah Patria "lanjut buat prototipe, kita akan
+  revisi dari situ"): PROTOTYPE INTERAKTIF v4, lanjutan dari v3
+  (bukan scaffold aplikasi — revisi tetap dilakukan dari
+  prototype klik). File prototype-v4/index.html (satu file
+  mandiri, tanpa dependensi eksternal, layout 4 kolom v3
+  dipertahankan). Yang BARU dan bisa dicoba langsung: ganti proyek
+  aktif (TEST Kopi ↔ TEST Produk Digital) dengan riwayat chat,
+  agen, dan Kanban per proyek; kartu Kanban bisa DISERET antar
+  kolom (selain tombol Maju); node Graph bisa DISERET untuk
+  mengatur kanvas + tambah koneksi via form; filter Media Studio
+  (Gambar/Carousel/Reels/Talking Head); tombol geser slide
+  Carousel; edit + simpan naskah Talking Head; tombol Putar yang
+  menggerakkan playhead Timeline; aksi Library yang saling
+  terhubung (Gunakan → pesan Prime di chat; Perbaiki Lanjut →
+  kartu Revisi di Kanban + pesan Prime); tombol Siapkan untuk
+  Post di Media Studio → baris DRAF baru di Planner + status
+  media menjadi Siap untuk Post. Verifikasi: semua fitur di atas
+  ada di kode, JS lolos node --check, tanpa referensi eksternal.
+  Status: MENUNGGU REVISI Patria dari prototype v4 (v3 tetap
+  tersimpan sebagai versi sebelumnya).
