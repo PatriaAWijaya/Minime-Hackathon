@@ -191,3 +191,18 @@ dokumen lama yang dipakai.
   di-override lewat env OLLAMA_MODEL. Kualitas 1.5b di bawah 7b dan di bawah
   model cloud; dicatat jujur, tidak diklaim setara. deepseek-r1:7b tetap
   terinstal di MacBook, hanya tidak lagi menjadi default router.
+
+- 27 Okt ~11:16 WIB (keputusan Patria): qwen2.5:3b ditambahkan sebagai
+  fallback lokal KEDUA setelah deepseek-r1:1.5b. Rantai lokal kini:
+  deepseek-r1:1.5b -> qwen2.5:3b (keduanya lokal, gratis Rp0). Perubahan:
+  RouterConfig + env OLLAMA_FALLBACK_MODEL (default qwen2.5:3b),
+  callOllama mencoba primer dulu, baru fallback bila primer gagal, dan
+  hanya melempar LiveUnavailableError bila keduanya gagal (pesan memuat
+  kedua kegagalan); family 'qwen' ditambahkan ke CostRecord dan QC
+  (pembuat qwen -> QC Gemini, keluarga berbeda). Verifikasi: tsc 0 error,
+  gate-test 8/8 PASS, scan PASS, plus uji mock-server: primer gagal (HTTP
+  500) -> hasil model qwen2.5:3b, family qwen, fallbackFrom
+  deepseek-r1:1.5b, cost 0; keduanya gagal -> LiveUnavailableError.
+  Kedua model sudah terbukti live terpisah di MacBook (1.5b GPU 4,2 detik;
+  qwen2.5:3b 2,5 detik), jadi rantai ini berdiri di atas bukti live,
+  bukan sekadar struktur.

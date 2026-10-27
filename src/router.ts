@@ -4,6 +4,8 @@
  *   1. Muse via Meta Model API (primary, ALL agents)
  *   2. Gemini via Google API (fallback 1; also QC for Muse output)
  *   3. DeepSeek via Ollama, local (fallback 2)
+ *   3b. Qwen via Ollama, local (fallback 3 — only if the DeepSeek
+ *       Ollama model fails; both local models are free, Rp0 marginal)
  * Every call returns a CallResult with a CostRecord. A call that was
  * served by the mock provider is flagged mock=true and cost=null, so it
  * can never be mistaken for a measured live call. Live providers are
@@ -23,6 +25,7 @@ export interface RouterConfig {
   geminiModel: string;
   ollamaBaseUrl: string;
   ollamaModel: string;
+  ollamaFallbackModel: string;
 }
 
 export function routerConfigFromEnv(env: NodeJS.ProcessEnv): RouterConfig {
@@ -34,6 +37,7 @@ export function routerConfigFromEnv(env: NodeJS.ProcessEnv): RouterConfig {
     geminiModel: env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
     ollamaBaseUrl: env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
     ollamaModel: env.OLLAMA_MODEL || 'deepseek-r1:1.5b',
+    ollamaFallbackModel: env.OLLAMA_FALLBACK_MODEL || 'qwen2.5:3b',
   };
 }
 
@@ -47,7 +51,7 @@ export class LiveUnavailableError extends Error {
 export interface CallResult {
   text: string;
   provider: ProviderId;
-  family: 'meta' | 'gemini' | 'deepseek' | 'mock';
+  family: 'meta' | 'gemini' | 'deepseek' | 'qwen' | 'mock';
   model: string;
   latencyMs: number;
   mock: boolean;
@@ -116,21 +120,50 @@ export class ModelRouter {
     return { text, provider: 'gemini', family: 'gemini', model: this.cfg.geminiModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: data.usageMetadata?.promptTokenCount ?? null, completionTokens: data.usageMetadata?.candidatesTokenCount ?? null, costUsd: null };
   }
 
-  async callOllama(prompt: string): Promise<CallResult> {
+  private ollamaFamilyFor(model: string): 'deepseek' | 'qwen' {
+    return model.startsWith('qwen') ? 'qwen' : 'deepseek';
+  }
+
+  private async callOllamaModel(prompt: string, model: string): Promise<CallResult> {
     const started = Date.now();
     let data: unknown;
     try {
       data = await postJson(
         `${this.cfg.ollamaBaseUrl.replace(/\/$/, '')}/api/chat`,
         {},
-        { model: this.cfg.ollamaModel, messages: [{ role: 'user', content: prompt }], stream: false },
+        { model, messages: [{ role: 'user', content: prompt }], stream: false },
         15000,
       );
     } catch (e) {
       throw new LiveUnavailableError('ollama', e instanceof Error ? e.message : String(e));
     }
     const d = data as { message?: { content?: string }; prompt_eval_count?: number; eval_count?: number };
-    return { text: d.message?.content ?? '', provider: 'ollama', family: 'deepseek', model: this.cfg.ollamaModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: d.prompt_eval_count ?? null, completionTokens: d.eval_count ?? null, costUsd: 0 };
+    return { text: d.message?.content ?? '', provider: 'ollama', family: this.ollamaFamilyFor(model), model, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: d.prompt_eval_count ?? null, completionTokens: d.eval_count ?? null, costUsd: 0 };
+  }
+
+  /**
+   * Local Ollama chain: primary model first, then the fallback model
+   * (qwen2.5:3b by default) only if the primary fails. Both are local
+   * and free. Throws LiveUnavailableError only if both fail.
+   */
+  async callOllama(prompt: string): Promise<CallResult> {
+    try {
+      return await this.callOllamaModel(prompt, this.cfg.ollamaModel);
+    } catch (primaryError) {
+      if (this.cfg.ollamaFallbackModel === this.cfg.ollamaModel) {
+        throw primaryError;
+      }
+      try {
+        const r = await this.callOllamaModel(prompt, this.cfg.ollamaFallbackModel);
+        r.fallbackFrom = this.cfg.ollamaModel;
+        return r;
+      } catch (fallbackError) {
+        throw new LiveUnavailableError(
+          'ollama',
+          `primary ${this.cfg.ollamaModel} failed (${primaryError instanceof Error ? primaryError.message : String(primaryError)}); fallback ${this.cfg.ollamaFallbackModel} failed (${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)})`,
+        );
+      }
+    }
   }
 
   /** Mock provider — clearly labelled, for structure tests only. */
@@ -186,7 +219,7 @@ export class ModelRouter {
   }
 
   /** QC family rule: QC must come from a different family than the maker. */
-  qcProviderFor(makerFamily: 'meta' | 'gemini' | 'deepseek' | 'mock'): ProviderId {
+  qcProviderFor(makerFamily: 'meta' | 'gemini' | 'deepseek' | 'qwen' | 'mock'): ProviderId {
     if (makerFamily === 'meta') return 'gemini';
     if (makerFamily === 'gemini') return 'meta';
     return 'gemini';

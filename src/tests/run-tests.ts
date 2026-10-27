@@ -72,6 +72,10 @@ async function main() {
   assert.strictEqual(mock.mock, true);
   assert.strictEqual(router.qcProviderFor('meta'), 'gemini');
   assert.strictEqual(router.qcProviderFor('gemini'), 'meta');
+  assert.strictEqual(router.qcProviderFor('qwen'), 'gemini');
+  assert.strictEqual(router.qcProviderFor('deepseek'), 'gemini');
+  assert.strictEqual(routerConfigFromEnv({}).ollamaModel, 'deepseek-r1:1.5b');
+  assert.strictEqual(routerConfigFromEnv({}).ollamaFallbackModel, 'qwen2.5:3b');
   ok('router live-unavailable fails visibly; mock labelled; QC cross-family mapping correct');
 
   // Ollama reachability (VM): must fail visibly, not be claimed live.
