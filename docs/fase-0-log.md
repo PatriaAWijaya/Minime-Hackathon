@@ -1318,3 +1318,9 @@ dokumen lama yang dipakai.
   tetap di bawah saat window di-resize) tidak bisa
   dibuktikan jsdom (tanpa rendering) — menunggu
   konfirmasi mata Patria di MacBook.
+
+  SCROLLBAR LIVE DI MACBOOK (27 Okt sore, rantai v9):
+  Pull lolos bersih; vite 378ms, 1 bundle; proses lama
+  PID 25268 dibunuh, proses BARU PID 25603 hidup dari
+  bundle scrollbar. Konfirmasi visual (resize + scroll
+  per kolom + composer di bawah) menunggu mata Patria.

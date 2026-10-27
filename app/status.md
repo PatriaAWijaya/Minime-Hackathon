@@ -48,7 +48,7 @@
   19:12): rantai tinggi diperbaiki di #app (file baru
   layout-scroll.css, app.css tetap verbatim); window
   tak lagi scroll, tiap kolom scroll sendiri, composer
-  menempel bawah. Rantai v9 berjalan.
+  menempel bawah. Rantai v9 sukses, app jalan PID 25603.
 
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
