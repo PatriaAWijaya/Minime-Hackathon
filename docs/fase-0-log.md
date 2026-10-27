@@ -462,3 +462,38 @@ dokumen lama yang dipakai.
   ada di kode, JS lolos node --check, tanpa referensi eksternal.
   Status: MENUNGGU REVISI Patria dari prototype v4 (v3 tetap
   tersimpan sebagai versi sebelumnya).
+
+- 27 Okt sore (perintah Patria "UI nya buat semirip mungkin dengan
+  Muse, icon di sidebar gunakan dokumen terlampir" + "UI kanban
+  buat seperti lampiran"): PROTOTYPE v5. Tema gelap ala Muse
+  (latar #0e0e0e, panel #171717/#1e1e1e, rail #0a0a0a, teks
+  terang) dengan susunan panel mirip screenshot Muse: rail ikon
+  + panel nav (Search, Main chat, list agen/proyek) + chat utama
+  + panel kanan profil (avatar Prime Agent, "Connected" hijau,
+  daftar "Today" dari Kanban proyek aktif) + detail skill.
+  6 ikon rail DIPROSES dari dokumen lampiran Patria menjadi
+  line-art putih transparan 128px yang tertanam sebagai data URI
+  di file (tetap satu file mandiri): Home = house, Search =
+  magnifier (pola garis latarnya dibersihkan), Kanban = papan 3
+  kolom (ikon yang awalnya tampak hitam pekat karena line-art
+  hitam di latar transparan), Graph = 3 node terhubung, Library
+  = layers, Planner = notebook + play. Media Studio & Settings
+  memakai fallback SVG gaya garis karena tidak ada ikon lampiran
+  untuk keduanya. View Kanban dibuat semirip lampiran dashboard:
+  header judul proyek + bintang + avatar stack agen + tombol
+  tambah, tab Kanban/Table/List (ketiganya menampilkan tugas
+  yang sama), Filter agen, kolom dengan jumlah kartu, kartu dark
+  dengan bar warna atas per kolom (abu/biru/kuning/merah/hijau),
+  avatar agen + jumlah komentar, tombol "Add task" per kolom,
+  dan kolom dashed "Add another list" yang benar-benar menambah
+  kolom baru (simulasi). Interaksi v4 dipertahankan penuh
+  (ganti proyek, drag kartu/node, filter media, slide carousel,
+  edit naskah, playhead, aksi Library/Planner). Verifikasi: 8
+  tombol rail, 6 data URI PNG + 2 fallback SVG, kedua blok JS
+  lolos node --check, tanpa referensi eksternal. Status:
+  MENUNGGU REVISI Patria dari prototype v5. Catatan jujur: 5
+  kolom Kanban dipertahankan (Antrian/Dikerjakan/Butuh Approval/
+  Revisi/Selesai) karena kolom Butuh Approval & Revisi adalah
+  gerbang — lampiran hanya punya 3 kolom (To do/Doing/Done);
+  bila Patria mau persis 3 kolom, gerbang harus dipindah ke
+  tempat lain dan itu perlu diputuskan dulu.
