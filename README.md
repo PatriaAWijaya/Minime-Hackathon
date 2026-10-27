@@ -88,8 +88,11 @@ score, not image-semantics validation) and images left null pending a
 provider. The UI phase produced clickable prototypes v1–v5 (current:
 prototype-v5/index.html, Muse-style dark theme, monochrome + violet
 #B214FF accent); UI work is PAUSED as of 27 Oct 2026 15:02 WIB on
-Patria's order (to be refined later), and Phase 3 stays paused until
-Patria orders it resumed. No gate was ever approved on Patria's behalf.
+Patria's order (to be refined later). Phase 3 was ordered resumed
+27 Oct 2026 15:09 WIB and executed the same afternoon: 7 carousels
+x 3 slides (QC 100/100, images null pending-provider) with Postiz
+drafts saved pending-postiz (the pos_ API key is not yet in the
+MacBook Keychain; nothing published). No gate was ever approved on Patria's behalf.
 Build phases are tracked in PLAN.md. Demo video (3 minutes) and
 submission follow before the deadline: **4 Nov 2026, 9:00 PM ET**.
 
