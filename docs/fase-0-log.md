@@ -737,3 +737,27 @@ dokumen lama yang dipakai.
   DUMMY (bukan app Tauri) — belum ada backend, approval
   tidak tersimpan sungguhan. Folder dist/ dihindari karena
   di-ignore gitignore; dipakai build/ agar bisa di-commit.
+
+  UI — VIDEO EDITOR GAYA DIFFUSION (27 Okt sore, perintah
+  Patria "pelajari UI diffusionstudio/editor, cek bisa dipakai
+  di video editor, build ulang"): repo dipelajari langsung
+  (clone shallow + README): v0.216.0, MPL-2.0, 3.411 stars,
+  monorepo Solid+Vite (apps/web) + Electron (apps/desktop) +
+  CLI diffusion (MCP client) + runtime headless + encoder
+  (mediabunny). Layout editor: title bar + sidebar kiri
+  (aset/proyek/agent-chat) + canvas preview + sidebar kanan
+  Inspector 264px + timeline bawah multi-track (resizable).
+  Pola agen: probe → transcribe → check → capture → render
+  lewat MCP/CLI; komposisi = kode JSX (stage/scene/klip),
+  @inspect jadi kontrol live. VONIS: bisa dipakai sebagai
+  alat eksternal via MCP/CLI (pola PROVISIONAL yang sudah
+  diputuskan); UI-nya TIDAK dibundle (Solid ≠ Svelte,
+  Electron ≠ Tauri, dan vendoring kode Diffusion melanggar
+  aturan Indie NEW WORK ONLY). Yang dibangun ulang =
+  seksi video editor prototipe v5 dengan pola layout itu,
+  kode sendiri: toolbar (Potong/Teks/Subtitle/Transisi/
+  Suara, dummy) + preview 16:9 + inspector + ruler +
+  timeline 3 track klik-pilih klip. Brand assets Diffusion
+  TIDAK dipakai (di luar MPL, all rights reserved).
+  Build single-file diperbarui (199 KB). Syarat permanen
+  (uji 1 klip vertikal + encoder headless) TIDAK berubah.

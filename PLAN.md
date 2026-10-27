@@ -122,6 +122,11 @@ copied from the main Minime repository.
   BUILD 27 Oct sore: single-file build prototype-v5/build/minime-v5.html
   (195 KB, logo + icon inlined as data URIs; verified byte-identical
   to index.html except the 3 asset references, JS lolos node --check).
+  VIDEO EDITOR 27 Oct sore: seksi video editor Media Studio dibangun
+  ulang gaya Diffusion Studio (preview 16:9 + inspector + toolbar +
+  timeline multi-track + ruler, klik klip memilih inspector) dengan
+  kode sendiri — bukan copy/vendoring kode Diffusion; build
+  diperbarui ke 199 KB, verifikasi sama.
   v1 doc is kept as history only.
   Phase 3 is PAUSED until Patria orders it to resume after the UI
   draft decision.

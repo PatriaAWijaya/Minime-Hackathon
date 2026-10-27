@@ -95,6 +95,17 @@
   .track .tlabel { width: 70px; flex-shrink: 0; color: #d1d5db; }
   .track .bar { height: 26px; border-radius: 5px; display: flex; align-items: center; padding: 0 8px; font-size: 12px; color: #fff; }
   .playhead { position: absolute; top: 0; bottom: 0; width: 3px; background: #B214FF; }
+  .ve-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+  .ve-wrap { display: flex; gap: 12px; margin-bottom: 12px; }
+  .ve-preview { flex: 1; min-width: 0; }
+  .ve-canvas { background: #0a0a0a; border-radius: 8px; aspect-ratio: 16 / 9; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #fff; text-align: center; }
+  .ve-timecode { display: flex; gap: 8px; color: #a1a1a1; font-size: 13px; margin-top: 6px; }
+  .ve-inspector { width: 220px; flex-shrink: 0; background: #1e1e1e; border-radius: 8px; padding: 12px; color: #fff; }
+  .ve-inspector label { display: block; color: #a1a1a1; font-size: 12px; margin-top: 8px; }
+  .ve-field { font-size: 14px; margin-top: 2px; }
+  .ve-ruler { display: flex; justify-content: space-between; color: #737373; font-size: 12px; margin-bottom: 8px; padding-left: 78px; }
+  .track .bar.ve-clip { cursor: pointer; }
+  .track .bar.ve-clip.selected { outline: 2px solid #B214FF; outline-offset: -2px; }
   label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
   input[type=text], select, textarea { width: 100%; padding: 10px 11px; font-size: 14px; border: 1px solid #3a3a3a; border-radius: 6px; font-family: inherit; background: #262626; color: #ececec; }
   .skillrow { display: flex; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #262626; font-size: 14px; }
@@ -307,7 +318,7 @@
       </div>
     </div>
     <div class="view" id="view-media">
-      <div class="colhead"><h2>Media Studio</h2><p>Suara (Voice Studio), Image &amp; Reels, video Reels + Talking Head + timeline. Fallback Canva siaga bila Meta &amp; Gemini gagal.</p></div>
+      <div class="colhead"><h2>Media Studio</h2><p>Suara (Voice Studio), Image &amp; Reels, Video Editor gaya Diffusion (preview + inspector + timeline multi-track, simulasi klik). Fallback Canva siaga bila Meta &amp; Gemini gagal.</p></div>
       <div class="scroll">
         <div class="notice" style="margin-top:0">Status generator (simulasi): Meta Image — <b>belum aktif</b> • Gemini Image — <b>siaga</b> • <b>Canva Fallback: SIAGA</b> (hasil Canva berlabel "via Canva (fallback)", image-only).</div>
         <div class="filters">
@@ -319,13 +330,37 @@
         </div>
         <div class="mediagrid" id="mediaGrid"></div>
         <div class="notice" id="mediaNotice" style="display:none"></div>
-        <h3>Video — Timeline Editor (Talking Head Promo Bundling)</h3>
+        <h3>Video Editor — gaya Diffusion Studio (layout dipelajari, kode sendiri)</h3>
+        <div class="notice" style="margin-top:0">Pola Diffusion: alat eksternal via MCP/CLI (PROVISIONAL, bukan bundle UI) — agen memanggil <b>probe → transcribe → check → capture → render</b>. Uji 1 klip 15–30 detik vertikal masih tertunda; semua di bawah ini simulasi klik, bukan render sungguhan.</div>
+        <div class="ve-toolbar">
+          <button class="btn btn-sm" onclick="veTool('Potong')">✂ Potong</button>
+          <button class="btn btn-sm" onclick="veTool('Tambah Teks')">T Tambah Teks</button>
+          <button class="btn btn-sm" onclick="veTool('Subtitle')">Subtitle</button>
+          <button class="btn btn-sm" onclick="veTool('Transisi')">Transisi</button>
+          <button class="btn btn-sm" onclick="veTool('Suara')">Suara</button>
+          <span id="veToolNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
+        </div>
+        <div class="ve-wrap">
+          <div class="ve-preview">
+            <div class="ve-canvas"><div style="font-size:42px">▶</div><div id="vePreviewLabel">Preview: Hook (0–8 dtk)</div><small>Canvas dummy 16:9 — bukan video sungguhan</small></div>
+            <div class="ve-timecode"><span>00:00:00</span><span>/ 00:00:30</span><span style="margin-left:auto">16:9 • dummy</span></div>
+          </div>
+          <div class="ve-inspector">
+            <h4 style="margin:0 0 8px">Inspector — klip terpilih</h4>
+            <label>Nama</label><div id="veClipName" class="ve-field">Hook (0–8 dtk)</div>
+            <label>Mulai</label><div id="veClipStart" class="ve-field">0 dtk</div>
+            <label>Durasi</label><div id="veClipDur" class="ve-field">8 dtk</div>
+            <label>Track</label><div id="veClipTrack" class="ve-field">Video</div>
+            <p style="color:#a1a1a1;font-size:13px">Klik batang klip di timeline untuk memilih. Di Diffusion, properti seperti ini menjadi kontrol live dari kode komposisi (@inspect).</p>
+          </div>
+        </div>
         <div class="timeline" id="timeline">
           <div class="playhead" id="playhead" style="left:0%"></div>
+          <div class="ve-ruler"><span>00:00</span><span>00:10</span><span>00:20</span><span>00:30</span></div>
           <div style="color:#d1d5db;font-size:13px;margin-bottom:8px">Durasi 00:30 (simulasi) — tekan Putar untuk menggerakkan playhead</div>
-          <div class="track"><span class="tlabel">Video</span><div class="bar" style="background:#B214FF;width:27%">Hook (0–8 dtk)</div><div class="bar" style="background:#5b5b5b;width:47%">Isi (8–22 dtk)</div><div class="bar" style="background:#404040;width:26%">CTA</div></div>
-          <div class="track"><span class="tlabel">Audio</span><div class="bar" style="background:#5b5b5b;width:80%">Voice-over promo bundling</div></div>
-          <div class="track"><span class="tlabel">Teks</span><div class="bar" style="background:#5b5b5b;width:30%">Overlay: TEST Kopi — Rp15.000</div><div class="bar" style="background:#4a4a4a;width:30%">Overlay: Pesan via WA</div></div>
+          <div class="track"><span class="tlabel">Video</span><div class="bar ve-clip" style="background:#B214FF;width:27%" onclick="selectClip(this,'Hook (0–8 dtk)','0 dtk','8 dtk','Video')">Hook (0–8 dtk)</div><div class="bar ve-clip" style="background:#5b5b5b;width:47%" onclick="selectClip(this,'Isi (8–22 dtk)','8 dtk','14 dtk','Video')">Isi (8–22 dtk)</div><div class="bar ve-clip" style="background:#404040;width:26%" onclick="selectClip(this,'CTA (22–30 dtk)','22 dtk','8 dtk','Video')">CTA</div></div>
+          <div class="track"><span class="tlabel">Audio</span><div class="bar ve-clip" style="background:#5b5b5b;width:80%" onclick="selectClip(this,'Voice-over promo bundling','0 dtk','30 dtk','Audio')">Voice-over promo bundling</div></div>
+          <div class="track"><span class="tlabel">Teks</span><div class="bar ve-clip" style="background:#5b5b5b;width:30%" onclick="selectClip(this,'Overlay: TEST Kopi — Rp15.000','0 dtk','9 dtk','Teks')">Overlay: TEST Kopi — Rp15.000</div><div class="bar ve-clip" style="background:#4a4a4a;width:30%" onclick="selectClip(this,'Overlay: Pesan via WA','12 dtk','9 dtk','Teks')">Overlay: Pesan via WA</div></div>
         </div>
         <button class="btn btn-primary" onclick="playTimeline()">▶ Putar Playhead (simulasi)</button>
       </div>
@@ -907,6 +942,18 @@
       if (p >= 100) { clearInterval(playTimer); playTimer = null; }
       el.style.left = p + "%";
     }, 120);
+  }
+  function selectClip(el, name, start, dur, track) {
+    document.querySelectorAll(".ve-clip").forEach(function (c) { c.classList.remove("selected"); });
+    el.classList.add("selected");
+    document.getElementById("veClipName").textContent = name;
+    document.getElementById("veClipStart").textContent = start;
+    document.getElementById("veClipDur").textContent = dur;
+    document.getElementById("veClipTrack").textContent = track;
+    document.getElementById("vePreviewLabel").textContent = "Preview: " + name;
+  }
+  function veTool(tool) {
+    document.getElementById("veToolNote").textContent = "Simulasi: '" + tool + "' belum terhubung ke Diffusion (tampilan saja).";
   }
 
   /* ---------- Sidebar, resizer, init ---------- */
