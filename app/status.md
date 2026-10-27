@@ -68,6 +68,8 @@
 
 - Bagian 2 ditutup (keputusan Patria 28 Okt ~04:36): Gemini Fase 1-3 tertagih $0 free tier, total Cost jadi $0,00295/Rp53,5; rincian input/output dicatat tak dapat direkonstruksi, kolom in/out jadi '—'. Header Cost dihapus (judul 'Cost' saja, subjudul hilang). i18n 261 kunci x 3. Rantai v21 live PID 44380 (HEAD remote a440c85). Pernyataan lolos PENUH Fase 0 tetap menunggu Patria.
 
+- Cost jadi Billing (perintah Patria + screenshot Billing Meta 28 Okt 04:37): menu rail Billing dengan ikon kartu kredit SVG (cost-icon.png dihapus); view tabel diganti 3 kartu — Pemakaian tercatat, Kredit & pembayaran ($150.00 / Rp 0 / belum ditambahkan), Batas belanja (hard limit $5 + pemakaian $0,00295); tanpa tombol aksi palsu. i18n 270 kunci x 3. Rantai v22 live PID 44647 (HEAD remote f75f9b0).
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.
