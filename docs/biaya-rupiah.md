@@ -47,5 +47,11 @@ ulang angka-angka di bawah ini untuk tanggal lain.
    menampilkan Rp setara + USD sumbernya.
 2. Kredit Meta $150 — berdenominasi USD; laporan menampilkan
    keduanya.
-3. Biaya yang harganya belum diketahui (mis. Muse, Muse Image
-   sebelum Meta aktif) — tidak dikonversi, ditulis "belum diketahui".
+3. Biaya yang harganya belum diketahui — tidak dikonversi, ditulis
+   "belum diketahui". UPDATE 27 Okt malam (Meta aktif): tarif standar
+   Muse Spark 1.3 = $1,25 input / $4,25 output per 1 jt token
+   (katalog 23 Okt + dokumentasi provider; konfirmasi akhir menyusul
+   live test) — dipakai sebagai baseline harga, BUKAN angka ledger
+   aktual; biaya aktual per tugas tetap null sampai ada token live
+   dari pemakaian Meta. Muse Image ($0,01/gambar per katalog 23 Okt)
+   tetap provisional sampai keputusan provider final + live call.

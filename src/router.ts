@@ -47,7 +47,7 @@ export function defaultRouterConfig(): RouterConfig {
   return {
     metaBaseUrl: 'https://api.meta.ai/v1',
     metaApiKey: null,
-    metaModel: 'muse-spark-1.1',
+    metaModel: 'muse-spark-1.3',
     geminiApiKey: null,
     geminiModel: 'gemini-3.1-flash-lite',
     ollamaBaseUrl: 'http://127.0.0.1:11434',
