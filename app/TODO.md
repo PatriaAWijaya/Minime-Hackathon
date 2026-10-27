@@ -27,7 +27,7 @@
   terverifikasi; frontendDist switch di B2)
 - [x] B2: Migrate v5 views into Svelte components (parity check vs v5)
   (migrasi mekanis + parity jsdom 16/16; frontendDist
-  dialihkan ke ../dist; rebuild MacBook rantai v3 berjalan)
+  ../dist; rebuild MacBook v3 sukses, app Svelte jalan PID 23154)
 - [ ] B3: Frontend ↔ backend API (chat via router, gates, approvals)
 - [ ] B4: Kanban/Planner data from backend (no more hardcoded cards)
 - [ ] B5: Postiz drafts from the app (draft-only, unchanged rule)

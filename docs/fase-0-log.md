@@ -1013,3 +1013,25 @@ dokumen lama yang dipakai.
   MacBook rantai v3 (pull -> npm install -> vite
   build -> tauri build -> bunuh proses lama -> open
   -> pgrep) dimulai; hasil menyusul.
+
+  WIRING — B2 LIVE DI MACBOOK (27 Okt sore, rantai v3):
+  Rantai v3 sempat gagal di git pull: file Cargo.lock
+  hasil generate build MacBook (untracked) bertabrakan
+  dengan Cargo.lock yang masuk repo di commit 6e83b54
+  ("untracked files would be overwritten"). Perbaikan:
+  hapus Cargo.lock lokal MacBook saja (regenerable;
+  versi commit sama, tauri 2.12.5) lalu restart rantai
+  — pull lolos ke 8f9e209. Build sangat cepat berkat
+  cache hangat (npm cache Minime v2 + cargo cache
+  rantai v2): vite 361ms, cargo 3,47 dtk, 1 bundle.
+  Proses lama (PID 22069, frontend v5) dibunuh dulu
+  via pkill agar open tidak sekadar mengaktifkan
+  proses lama; proses BARU PID 23154 hidup dari
+  bundle baru (frontendDist ../dist). Catatan: file
+  icons/icon.png termodifikasi lokal oleh cargo tauri
+  icon (re-encode) — tidak menghambat pull karena
+  upstream tidak menyentuhnya; dibiarkan apa adanya.
+  Sisa verifikasi visual (jendela + klik) tetap di
+  tangan Patria. Berikutnya: B3 (chat via router +
+  gate di UI; desain bridge frontend-backend diputuskan
+  dulu di awal fase).
