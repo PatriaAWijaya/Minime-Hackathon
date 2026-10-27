@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* Credential scan (Block J): fail if a secret-looking pattern appears in
  * tracked source/docs. It scans text files, skipping node_modules, dist,
+ * target (regenerable Rust build output, gitignored, never committed),
  * .git, data/ (runtime ledger/db) and the scan script itself.
  * Patterns are generic (key assignments, bearer tokens, sk-/AIza-style
  * values); .env.example contains only variable NAMES and is allow-listed
@@ -8,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'data']);
+const SKIP_DIRS = new Set(['node_modules', 'dist', 'target', '.git', 'data']);
 const ALLOW_FILES = new Set(['.env.example', 'scan.js']);
 const PATTERNS = [
   /sk-[A-Za-z0-9]{16,}/,

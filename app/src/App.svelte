@@ -6,6 +6,9 @@
   import { applyGateStatus } from "./lib/gates.js";
   import { createPostizDraftFromComposer } from "./lib/postiz.js";
   import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
+  import { compileTimeline, validateSequence } from "./lib/video.js";
+  import type { T1Clip, T1Sequence } from "./lib/video.js";
+  import { invoke } from "@tauri-apps/api/core";
 
   let lang = $state(getLang());
 
@@ -32,6 +35,70 @@
     vsRenderStatus();
     updateKeyStatus();
   });
+
+  // ---- Panel Render Video Tier 1 ----
+  interface T1RenderResult { success: boolean; output: string; duration_ms: number; stderr_tail: string; }
+  interface T1Segment { start: number; end: number; }
+  interface T1QcResult { duration: number; has_video: boolean; has_audio: boolean; black: T1Segment[]; silent: T1Segment[]; passed: boolean; notes: string[]; }
+  interface T1CaptureResult { data_url: string; }
+
+  let t1Clips = $state<T1Clip[]>([{ id: 't1c1', src: '', kind: 'video', trimIn: 0, dur: 2, volume: 1 }]);
+  let t1Next = $state(2);
+  let t1W = $state(1280);
+  let t1H = $state(720);
+  let t1Fps = $state(30);
+  let t1Out = $state('');
+  let t1Busy = $state(false);
+  let t1Status = $state('');
+  let t1Qc = $state('');
+  let t1Frame = $state('');
+  let t1Json = $state('');
+
+  function t1AddClip() {
+    t1Clips = [...t1Clips, { id: 't1c' + t1Next, src: '', kind: 'video', trimIn: 0, dur: 2, volume: 1 }];
+    t1Next += 1;
+  }
+  function t1RemoveClip(id: string) {
+    t1Clips = t1Clips.filter((c) => c.id !== id);
+  }
+  function t1QcText(qc: T1QcResult): string {
+    const seg = (ss: T1Segment[]) => ss.length ? ss.map((s) => `${s.start.toFixed(1)}-${s.end.toFixed(1)}`).join(', ') : t('t1.qc.none', lang);
+    return [
+      (qc.passed ? t('t1.qc.pass', lang) : t('t1.qc.fail', lang)),
+      `${t('t1.qc.duration', lang)}: ${qc.duration.toFixed(1)}s`,
+      `${t('t1.qc.black', lang)}: ${seg(qc.black)}`,
+      `${t('t1.qc.silent', lang)}: ${seg(qc.silent)}`,
+      ...qc.notes,
+    ].join('\n');
+  }
+  async function t1Render() {
+    const seq: T1Sequence = {
+      name: 't1',
+      width: Number(t1W), height: Number(t1H), fps: Number(t1Fps),
+      clips: t1Clips.map((c) => ({ id: c.id, src: c.src.trim(), kind: c.kind, trimIn: Number(c.trimIn), dur: Number(c.dur), volume: Number(c.volume) })),
+    };
+    const out = t1Out.trim();
+    const errs = validateSequence(seq, out);
+    if (errs.length > 0) { t1Status = errs.map((e) => t(e, lang)).join(' '); return; }
+    const compiled = compileTimeline(seq, out);
+    t1Json = JSON.stringify({ sequence: seq, ffmpegArgs: compiled.args }, null, 2);
+    t1Busy = true;
+    t1Status = t('t1.rendering', lang);
+    t1Qc = ''; t1Frame = '';
+    try {
+      const r = await invoke<T1RenderResult>('video_render', { args: compiled.args, output: compiled.output });
+      if (!r.success) { t1Status = `${t('t1.fail', lang)} ${r.stderr_tail}`; return; }
+      const qc = await invoke<T1QcResult>('video_qc', { path: compiled.output, expectedDuration: compiled.expectedDuration });
+      t1Qc = t1QcText(qc);
+      const cap = await invoke<T1CaptureResult>('video_capture', { path: compiled.output, at: compiled.expectedDuration / 2 });
+      t1Frame = cap.data_url;
+      t1Status = `${t('t1.done', lang)} ${qc.passed ? t('t1.qc.pass', lang) : t('t1.qc.fail', lang)}`;
+    } catch (e) {
+      t1Status = `${t('t1.fail', lang)} ${String(e)}`;
+    } finally {
+      t1Busy = false;
+    }
+  }
 </script>
 
 <div class="app">
@@ -266,6 +333,33 @@
           <div class="track"><span class="tlabel">B-Roll</span><div class="bar ve-clip" style="background:#5b5b5b;margin-left:27%;width:47%" onclick={(e) => { ve2Select(e.currentTarget,'B-Roll: seduh kopi',8,14,'B-Roll') }}>B-Roll: seduh kopi</div></div>
           <div class="track"><span class="tlabel">{t('word.audio', lang)}</span><div class="bar ve-clip" style="background:#5b5b5b;width:80%" onclick={(e) => { ve2Select(e.currentTarget,'Voice-over promo bundling',0,30,'Audio') }}>Voice-over promo bundling</div><div class="bar ve-clip" style="background:#4a4a4a;width:20%" onclick={(e) => { ve2Select(e.currentTarget,'Musik: akustik ringan',0,30,'Audio') }}>Musik</div></div>
           <div class="track"><span class="tlabel">{t('word.teks', lang)}</span><div class="bar ve-clip" style="background:#5b5b5b;width:30%" onclick={(e) => { ve2Select(e.currentTarget,'Overlay: TEST Kopi — Rp15.000',0,9,'Teks') }}>Overlay: TEST Kopi — Rp15.000</div><div class="bar ve-clip" style="background:#4a4a4a;margin-left:10%;width:30%" onclick={(e) => { ve2Select(e.currentTarget,'Overlay: Pesan via WA',12,9,'Teks') }}>Overlay: Pesan via WA</div></div>
+          </div>
+          <div class="t1-panel">
+            <h3>{t('t1.title', lang)}</h3>
+            <p>{t('t1.note', lang)}</p>
+            <div class="t1-row">
+              <label>{t('t1.width', lang)} <input type="number" bind:value={t1W}></label>
+              <label>{t('t1.height', lang)} <input type="number" bind:value={t1H}></label>
+              <label>{t('t1.fps', lang)} <input type="number" bind:value={t1Fps}></label>
+            </div>
+            <label>{t('t1.output', lang)} <input type="text" bind:value={t1Out} placeholder="/Users/mac/Movies/minime-t1.mp4" style="width:100%;box-sizing:border-box"></label>
+            <h4>{t('t1.clips', lang)}</h4>
+            {#each t1Clips as c (c.id)}
+              <div class="t1-clip">
+                <input type="text" bind:value={c.src} placeholder={t('t1.src', lang)}>
+                <select bind:value={c.kind} title={t('t1.kind', lang)}><option value="video">{t('t1.kind.video', lang)}</option><option value="audio">{t('t1.kind.audio', lang)}</option></select>
+                <input type="number" step="0.1" bind:value={c.trimIn} title={t('t1.trim', lang)}>
+                <input type="number" step="0.1" bind:value={c.dur} title={t('t1.dur', lang)}>
+                {#if c.kind === 'audio'}<input type="number" step="0.1" bind:value={c.volume} title={t('t1.vol', lang)}>{/if}
+                <button onclick={() => t1RemoveClip(c.id)}>{t('t1.remove', lang)}</button>
+              </div>
+            {/each}
+            <button onclick={t1AddClip}>{t('t1.add', lang)}</button>
+            <button onclick={t1Render} disabled={t1Busy}>{t1Busy ? t('t1.rendering', lang) : t('t1.render', lang)}</button>
+            {#if t1Status}<p id="t1Status">{t1Status}</p>{/if}
+            {#if t1Qc}<div><h4>{t('t1.qc', lang)}</h4><pre id="t1Qc">{t1Qc}</pre></div>{/if}
+            {#if t1Frame}<div><h4>{t('t1.frame', lang)}</h4><img id="t1Frame" src={t1Frame} alt=""></div>{/if}
+            {#if t1Json}<div><h4>{t('t1.json', lang)}</h4><textarea id="t1Json" readonly rows="8" style="width:100%;box-sizing:border-box" value={t1Json}></textarea></div>{/if}
           </div>
         </div>
       </div>

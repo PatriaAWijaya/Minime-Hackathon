@@ -46,3 +46,10 @@ that specific case, recorded in the log.
     Indonesia. String UI baru wajib tersedia di ketiga
     bahasa; dropdown bahasa yang belum mengganti apa pun
     dilarang (aturan no.6: tanpa status sukses palsu).
+14. **Engine video: compiler di frontend, eksekusi di Rust,
+    tanpa shell.** Model timeline + compiler FFmpeg murni di
+    frontend (teruji unit); Rust hanya menjalankan argv
+    FFmpeg/ffprobe tanpa shell; QC gagal = render gagal,
+    bukan sukses. Timeline ve2 (dummy) belum tersambung ke
+    model render — penyambungan itu pekerjaan lanjutan,
+    bukan klaim.
