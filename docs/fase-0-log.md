@@ -412,3 +412,32 @@ dokumen lama yang dipakai.
   referensi eksternal. Status: MENUNGGU REVISI Patria atas
   rancangan + prototype v2. Draf v1 dipertahankan sebagai riwayat
   dengan catatan superseded di atasnya.
+
+- 27 Okt siang (perintah Patria "mulai dari UI utama, window chat
+  dengan Prime Agen"): SPESIFIKASI + PROTOTYPE UI UTAMA v3.
+  Spesifikasi di docs/ui-main-layout.md: layout 4 kolom (sidebar
+  ikon 64px + kolom Agen + chat grup + panel Detail), sidebar
+  ikon saja dengan nama saat hover (Home, Search, Kanban, Graph,
+  Library, Media Studio, Planner, Settings di bawah), kolom Agen
+  berkelompok per proyek (Prime selalu aktif di atas; agen lain
+  diaktifkan otomatis Prime atau ditambah/dinonaktifkan pengguna;
+  agen yang sama bisa muncul di beberapa proyek bersamaan), chat
+  seperti grup (User + Prime + sub-agen, masing-masing independen
+  sesuai goalnya, semua hasil dikurasi Prime), panel Detail untuk
+  kustomisasi kondisi + skill agen, lebar kolom bisa di-drag
+  (Agen 180–420px, Detail 220–420px), dan scrollbar independen
+  per kolom. Media Studio: suara (Voice Studio), Image/Reels
+  (Meta/Gemini utama, Canva sebagai fallback bila keduanya gagal,
+  status fallback selalu ditampilkan), video Reels/Talking Head +
+  timeline editor. Planner: auto post Meta + Postiz, default DRAF
+  saja. Library: output akhir per agen (gunakan/simpan/perbaiki).
+  Prototype klik v3 di prototype-v3/index.html (satu file mandiri,
+  tanpa dependensi eksternal): semua view sidebar berfungsi
+  sebagai pratinjau, chat grup dengan balasan Prime + sub-agen
+  simulasi dan pesan Kurasi Prime, tambah/nonaktifkan agen,
+  detail skill yang bisa dicentang, resizer kolom drag, Search
+  memfilter chat, Kanban mini, Graph dengan tambah edge, Library,
+  Media Studio (fallback Canva + timeline), Planner, Settings.
+  Verifikasi: 8 tombol sidebar = 8 view, Riset muncul di 2 proyek,
+  JS lolos node --check, tanpa referensi eksternal. Status:
+  MENUNGGU REVISI Patria atas layout utama v3.
