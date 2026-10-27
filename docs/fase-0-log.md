@@ -357,3 +357,20 @@ dokumen lama yang dipakai.
   GKonten: approvals KOSONG, contentBlocked true, tidak ada draf
   distribusi. Uji gerbang jadi 11 grup (baru: Fase 2 mock + blokir
   tanpa GSTP). Output: docs/fase-2-output.json.
+
+- 27 Okt ~13:06 WIB (keputusan Patria): GKONTEN LOLOS untuk kalender
+  + brief Fase 2 (record docs/fase-2-gkonten-approval.json; file
+  draf Fase 2 TIDAK diubah; dua catatan produksi — QR item-03
+  harus overlay asli, item-01 diperlakukan sebagai gambar statis —
+  dicatat di record sebagai diterima). Fase 3 (draf Postiz) secara
+  gerbang terbuka, tetapi DITUNDA atas perintah Patria berikutnya
+  di pesan yang sama.
+- 27 Okt siang (perintah Patria, sebelum lanjut): FASE UI BARU
+  ditambahkan ke rencana (di antara Fase 2 dan Fase 3). Draf UI
+  ditulis di docs/ui-draft.md (DRAF SAJA, belum implementasi):
+  7 layar mengikuti gerbang yang ada, satu primary action per
+  section, biaya Rp dulu, tidak ada autopublish, target akhir
+  installable Mac (.dmg) dan Windows (.msi) dari satu basis kode,
+  teknologi usulan Tauri 2 + Svelte 5 (PROVISIONAL, dibangun dari
+  nol di repo ini — bukan salinan proyek lama; alternatif Electron
+  dicatat). Gerbang fase ini = persetujuan draf oleh Patria.

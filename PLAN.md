@@ -53,6 +53,19 @@ copied from the main Minime repository.
   text-free image generation, deterministic template overlay (so
   typography is correct), QC, then GKonten per item (Approve /
   text-only edit via cheap recompose / Regenerate / Reject with reason).
+- **Phase UI — Application UI draft, added Tue 27 Oct AFTER GKonten (NEW PHASE, Patria's order):**
+  Draft-first UI for user interaction (docs/ui-draft.md): 7 screens
+  (Projects → Intake → Research & Strategy → STP/GSTP → 7-day
+  Calendar → Brief & QC/GKonten → Distribution Draft & Cost/Trace),
+  one primary action per section, human gates surfaced as
+  Approve/Revise/Reject, costs in IDR first, no autopublish. Final
+  app must be installable on BOTH macOS (.dmg) and Windows (.msi)
+  from one codebase; proposed stack Tauri 2 + Svelte 5 (PROVISIONAL,
+  Patria decides; Electron is the recorded alternative). Built from
+  scratch in this repo (Indie new-work rule — no old-project code).
+  Gate for this phase: Patria's approval of the UI draft itself.
+  Phase 3 is PAUSED until Patria orders it to resume after the UI
+  draft decision.
 - **Phase 3 — Carousel + Postiz draft, Wed 28 Oct (afternoon):**
   Carousel as an Image derivative (hook → body → CTA, per-slide
   review), approved items enter Postiz as DRAFT only (never live
