@@ -377,7 +377,6 @@
           <div class="ve2-asset" onclick={() => { ve2Add('Voice-over: Promo bundling') }}><span>🎙 Voice-over: Promo bundling</span><span>+</span></div>
           <div class="ve2-asset" onclick={() => { ve2Add('Musik: Akustik ringan') }}><span>🎵 Musik: Akustik ringan</span><span>+</span></div>
           <div class="ve2-asset" onclick={() => { ve2Add('Teks: Overlay harga') }}><span>🔤 Teks: Overlay harga</span><span>+</span></div>
-          <p style="color:#a1a1a1;font-size:13px">{t('ve.asset.note', lang)}</p>
           </div>
           <div class="ve2-preview">
           <div class="ve2-canvas"><div style="font-size:42px">▶</div><div id="ve2PreviewLabel">Preview: Hook (0–8 dtk)</div><small>{t('ve.canvas', lang)}</small></div>
@@ -462,7 +461,7 @@
       </div>
     </div>
     <div class="view" id="view-planner">
-      <div class="colhead"><h2>{t('view.planner.title', lang)}</h2><p>{t('settings.cost.mode', lang)} <span class="badge b-ok">{t('word.drafsaja', lang)}</span>{t('planner.media.note', lang)}</p></div>
+      <div class="colhead"><h2>{t('view.planner.title', lang)}</h2></div>
       <div class="scroll">
         <table><thead><tr><th>{t('word.item', lang)}</th><th>{t('word.channel', lang)}</th><th>{t('planner.header.date', lang)}</th><th>{t('word.status', lang)}</th><th>{t('planner.header.postiz', lang)}</th></tr></thead><tbody id="plannerBody"></tbody></table>
         <p><textarea id="postizText" placeholder={t('planner.composer.ph', lang)} rows="3" style="width:100%"></textarea></p>
@@ -474,9 +473,6 @@
       <div class="colhead"><h2>{t('cost.title', lang)}</h2><p>{t('cost.sub', lang)}</p></div>
       <div class="scroll">
         <table><thead><tr><th>{t('cost.col.model', lang)}</th><th>{t('cost.col.provider', lang)}</th><th>{t('cost.col.calls', lang)}</th><th>{t('cost.col.input', lang)}</th><th>{t('cost.col.output', lang)}</th><th>{t('cost.col.tokens', lang)}</th><th>{t('cost.col.usd', lang)}</th><th>{t('cost.col.idr', lang)}</th></tr></thead><tbody>{#each COST_ROWS as r}<tr><td>{r.model}</td><td>{r.provider}</td><td>{r.calls}</td><td>{r.input === null ? t('cost.pending', lang) : fmtInt(r.input, lang)}</td><td>{r.output === null ? t('cost.pending', lang) : fmtInt(r.output, lang)}</td><td>{fmtInt(r.tokens, lang)}</td><td>{fmtUsd(r, lang)}</td><td>{fmtIdr(r, lang)}</td></tr>{/each}<tr><td><b>{t('cost.total', lang)}</b></td><td></td><td><b>{COST_TOTAL.calls}</b></td><td>{t('cost.pending', lang)}</td><td>{t('cost.pending', lang)}</td><td><b>{fmtInt(COST_TOTAL.tokens, lang)}</b></td><td><b>{fmtUsd(COST_TOTAL, lang)}</b></td><td><b>{fmtIdr(COST_TOTAL, lang)}</b></td></tr></tbody></table>
-        <p>{t('cost.note.rates', lang)}</p>
-        <p>{t('cost.note.pending', lang)}</p>
-        <p>{t('cost.note.local', lang)}</p>
       </div>
     </div>
     <div class="view" id="view-settings">
