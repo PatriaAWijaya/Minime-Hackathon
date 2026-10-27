@@ -63,7 +63,15 @@ copied from the main Minime repository.
   from one codebase; proposed stack Tauri 2 + Svelte 5 (PROVISIONAL,
   Patria decides; Electron is the recorded alternative). Built from
   scratch in this repo (Indie new-work rule — no old-project code).
-  Gate for this phase: Patria's approval of the UI draft itself.
+  Gate for this phase: Patria's approval of the UI design itself.
+  REVISED 27 Oct siang (Patria: revisi arah): v1 (7 sequential
+  screens) is SUPERSEDED by v2 — Personal Assistant with Prime
+  Agent, agents + harness skills, Kanban mode, N8N-like agent
+  connection canvas (user-addable edges), and Media Studio mode
+  (Image / Carousel / Reels / Talking Head, ready-to-post status).
+  Design: docs/ui-draft-v2.md. Clickable prototype v2:
+  prototype-v2/index.html (dummy TEST data, simulated decisions).
+  v1 doc is kept as history only.
   Phase 3 is PAUSED until Patria orders it to resume after the UI
   draft decision.
 - **Phase 3 — Carousel + Postiz draft, Wed 28 Oct (afternoon):**

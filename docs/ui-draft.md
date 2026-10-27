@@ -1,3 +1,10 @@
+> REVISI ARAH 27 Okt siang: draf ini DIGANTIKAN oleh docs/ui-draft-v2.md.
+> Arah baru (perintah Patria): UI bekerja seperti personal assistant
+> dengan Prime Agent, agen + harness skill, mode Kanban, kanvas
+> koneksi ala N8N, dan Media Studio (Gambar/Carousel/Reels/Talking
+> Head siap post). Dokumen ini dipertahankan sebagai riwayat v1;
+> jangan dipakai sebagai acuan build. Acuan build adalah v2.
+
 # Draf UI — Aplikasi Konten (Fase UI, DRAF SAJA)
 
 Status: DRAF, 27 Okt 2026. BUKAN implementasi, BUKAN persetujuan.

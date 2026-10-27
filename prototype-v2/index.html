@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aplikasi Konten v2 — Prime Agent Prototype (DUMMY TEST)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 15px; color: #1a1a1a; background: #f4f4f4; }
+  .banner { background: #fff3cd; border-bottom: 2px solid #e6a817; padding: 10px 20px; font-size: 14px; }
+  .banner b { color: #7a5b00; }
+  header { background: #1f2937; color: #fff; padding: 14px 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  header .title { font-size: 19px; font-weight: 700; }
+  header .proj { font-size: 13px; color: #d1d5db; }
+  .tabs { display: flex; gap: 6px; padding: 12px 20px 0; background: #f4f4f4; flex-wrap: wrap; }
+  .tabs button { padding: 11px 18px; min-height: 44px; font-size: 15px; border: 1px solid #ccc; border-bottom: none; border-radius: 8px 8px 0 0; background: #e5e7eb; cursor: pointer; }
+  .tabs button.active { background: #fff; font-weight: 700; }
+  main { padding: 20px; max-width: 1180px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  h2 { font-size: 19px; margin: 22px 0 10px; }
+  h3 { font-size: 16px; margin: 0 0 6px; }
+  p, li { line-height: 1.6; }
+  .sub { color: #555; margin: 0 0 18px; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+  .b-idle { background: #e5e7eb; color: #374151; }
+  .b-work { background: #dbeafe; color: #1e40af; }
+  .b-wait { background: #fef3c7; color: #92400e; }
+  .b-ok { background: #d1fae5; color: #065f46; }
+  .b-no { background: #fee2e2; color: #991b1b; }
+  .btn { padding: 11px 18px; min-height: 44px; font-size: 15px; border-radius: 6px; border: 1px solid #bbb; background: #fff; cursor: pointer; margin-right: 8px; margin-top: 8px; }
+  .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 600; }
+  .btn-danger { color: #991b1b; }
+  .notice { background: #eff6ff; border: 1px solid #93c5fd; border-radius: 6px; padding: 12px 14px; margin-top: 12px; font-size: 14px; }
+  .mode { display: none; }
+  .mode.active { display: block; }
+  /* Asisten */
+  .chatwrap { display: grid; grid-template-columns: 1fr 300px; gap: 16px; }
+  .msg { padding: 12px 14px; border-radius: 8px; margin-bottom: 10px; line-height: 1.6; }
+  .msg.user { background: #dbeafe; margin-left: 60px; }
+  .msg.asst { background: #fff; border: 1px solid #ddd; margin-right: 40px; }
+  .msg .who { font-size: 13px; font-weight: 700; color: #555; margin-bottom: 4px; }
+  input[type=text], textarea, select { width: 100%; padding: 11px 12px; font-size: 15px; border: 1px solid #bbb; border-radius: 6px; font-family: inherit; }
+  textarea { min-height: 64px; }
+  label { display: block; font-weight: 600; margin: 12px 0 6px; }
+  .chip { display: inline-block; padding: 8px 12px; border: 1px solid #93c5fd; background: #eff6ff; border-radius: 20px; font-size: 14px; cursor: pointer; margin: 0 6px 8px 0; }
+  .agentrow { display: flex; justify-content: space-between; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eee; }
+  .agentrow:last-child { border-bottom: none; }
+  /* Kanban */
+  .kanban { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; overflow-x: auto; }
+  .col { background: #e5e7eb; border-radius: 8px; padding: 10px; min-width: 190px; }
+  .col h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .kcard { background: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 14px; line-height: 1.5; }
+  .kcard .small { color: #555; font-size: 13px; }
+  .kcard button { padding: 7px 10px; font-size: 13px; margin-top: 8px; border-radius: 5px; border: 1px solid #bbb; background: #fff; cursor: pointer; }
+  /* Koneksi */
+  .canvaswrap { position: relative; background: #fff; border: 1px solid #ddd; border-radius: 8px; height: 460px; overflow: hidden; }
+  .canvaswrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .node { position: absolute; width: 148px; text-align: center; background: #fff; border: 2px solid #2563eb; border-radius: 10px; padding: 10px 8px; cursor: pointer; font-size: 14px; }
+  .node.prime { border-color: #7c3aed; background: #f5f3ff; font-weight: 700; }
+  .node.sel { box-shadow: 0 0 0 4px #fde68a; }
+  .node .st { font-size: 12px; color: #555; font-weight: 400; }
+  .formrow { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+  /* Media */
+  .filters button { padding: 10px 16px; font-size: 14px; border-radius: 20px; border: 1px solid #bbb; background: #fff; cursor: pointer; margin: 0 6px 8px 0; }
+  .filters button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .mediagrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .mediacard { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+  .ph { background: #e5e7eb; border: 2px dashed #9ca3af; border-radius: 6px; min-height: 150px; display: flex; align-items: center; justify-content: center; text-align: center; color: #4b5563; padding: 12px; font-size: 14px; }
+  .ph.tall { min-height: 240px; }
+  .ph .play { font-size: 42px; }
+  .slidebox { display: flex; gap: 6px; margin-top: 8px; }
+  .slidebox div { flex: 1; background: #dbeafe; border: 1px solid #93c5fd; border-radius: 4px; padding: 8px 4px; font-size: 12px; text-align: center; }
+  .wave { display: flex; gap: 3px; align-items: end; height: 36px; margin-top: 8px; }
+  .wave i { display: block; width: 6px; background: #2563eb; border-radius: 3px; }
+  @media (max-width: 800px) { .chatwrap { grid-template-columns: 1fr; } .kanban { grid-template-columns: 1fr; } .formrow { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="banner"><b>PROTOTYPE v2 — DATA DUMMY TEST.</b> Ini rancangan klik, bukan aplikasi sungguhan. Chat, Kanban, koneksi, dan Media Studio di sini hanya simulasi tampilan — <b>tidak menyimpan approval, tidak menggerakkan agen sungguhan, dan media yang tampil adalah placeholder dummy, bukan hasil generate.</b> Approval GSTP/GKonten sungguhan tetap tercatat terpisah.</div>
+<header>
+  <div class="title">Prime Agent — Personal Assistant</div>
+  <div class="proj">Proyek: TEST Kopi Surabaya (dummy) &nbsp;•&nbsp; Status: GKonten disetujui (simulasi) &nbsp;•&nbsp; Biaya: Rupiah dulu (kurs Rp18.137/USD, 27 Okt 2026)</div>
+</header>
+<div class="tabs">
+  <button data-tab="asisten" class="active">Asisten (Prime Agent)</button>
+  <button data-tab="kanban">Kanban</button>
+  <button data-tab="koneksi">Koneksi Agen</button>
+  <button data-tab="media">Media Studio</button>
+</div>
+<main>
+  <!-- MODE 1: ASISTEN -->
+  <section id="asisten" class="mode active">
+    <h1>Asisten — Prime Agent</h1>
+    <p class="sub">Beri arahan dalam bahasa sehari-hari. Prime Agent memecahnya menjadi tugas, memanggil agen yang dibutuhkan, dan melaporkan progresnya.</p>
+    <div class="chatwrap">
+      <div>
+        <div id="chat">
+          <div class="msg asst"><div class="who">Prime Agent</div>Halo, saya Prime Agent-mu. Ceritakan tujuanmu — riset bisnis, marketing, atau pembuatan produk digital — dan saya akan membaginya ke agen yang tepat. Contoh: "Riset pasar es kopi Surabaya untuk mahasiswa, lalu buatkan konten 7 hari beserta gambarnya."</div>
+          <div class="msg asst"><div class="who">Prime Agent — delegasi berjalan (dummy)</div>Saya tugaskan <b>Riset</b> (harness: riset-pasar, behaviour-digital, spending-digital) untuk riset pasar &amp; behaviour. Setelah itu <b>Strategi</b> (positioning-stp) menyusun STP — dan STP itu menunggu persetujuanmu di gerbang GSTP sebelum lanjut ke konten. <b>Kreatif</b> lalu membuat kalender 7 hari + brief, <b>Media</b> membuat gambarnya, dan <b>Distribusi</b> menyiapkan draf Postiz. Lihat progresnya di tab Kanban.</div>
+        </div>
+        <div>
+          <span class="chip" onclick="quick('Riset pasar es kopi susu di Surabaya untuk mahasiswa, lalu buatkan STP-nya.')">Riset pasar kopi Surabaya</span>
+          <span class="chip" onclick="quick('Buatkan kalender konten 7 hari beserta gambar, carousel, dan reels-nya.')">Konten 7 hari + media</span>
+          <span class="chip" onclick="quick('Buatkan brief produk digital untuk aplikasi pemesanan kopi via WhatsApp.')">Brief produk digital</span>
+        </div>
+        <label>Arahanmu untuk Prime Agent</label>
+        <textarea id="chatInput" placeholder="Tulis arahanmu di sini… mis. Riset kompetitor kopi susu kekinian, lalu buatkan carousel-nya."></textarea>
+        <button class="btn btn-primary" onclick="sendChat()">Kirim Arahan</button>
+        <div class="notice" id="chatNotice" style="display:none"></div>
+      </div>
+      <div>
+        <div class="card">
+          <h3>Agen &amp; harness skill</h3>
+          <div class="agentrow"><span><b>Prime Agent</b><br><small>Orkestrasi + gerbang manusia</small></span><span class="badge b-work">Aktif</span></div>
+          <div class="agentrow"><span><b>Riset</b><br><small>riset-pasar, behaviour-digital, spending-digital</small></span><span class="badge b-ok">Selesai</span></div>
+          <div class="agentrow"><span><b>Strategi</b><br><small>positioning-stp, pak-bi-branding</small></span><span class="badge b-ok">Selesai</span></div>
+          <div class="agentrow"><span><b>Kreatif</b><br><small>copywriting-hook-cta, brief-text-free</small></span><span class="badge b-ok">Selesai</span></div>
+          <div class="agentrow"><span><b>Media</b><br><small>image-text-free, carousel-slide, reels-pendek, talking-head-avatar</small></span><span class="badge b-wait">Menunggu</span></div>
+          <div class="agentrow"><span><b>Distribusi</b><br><small>postiz-draft-only</small></span><span class="badge b-idle">Idle</span></div>
+          <div class="agentrow"><span><b>Produk Digital</b><br><small>brief-produk, riset-pengguna, fitur-mvp</small></span><span class="badge b-idle">Idle</span></div>
+        </div>
+        <div class="card">
+          <h3>Aturan gerbang (simulasi)</h3>
+          <p style="font-size:14px">Tidak ada yang terbit atau terkirim tanpa persetujuanmu. GSTP, GKonten, dan GBatch selalu berhenti dan menunggu ketukanmu — di prototype ini ketukan itu hanya simulasi.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODE 2: KANBAN -->
+  <section id="kanban" class="mode">
+    <h1>Kanban — Pantau Proyek</h1>
+    <p class="sub">Mode ini aktif saat proyek sedang bekerja. Kartu berpindah karena status pekerjaan berubah. Tombol "Maju" di bawah ini hanya simulasi progres di prototype.</p>
+    <div class="kanban" id="kanban"></div>
+    <div class="notice">Tip: klik tombol "Maju &rarr;" pada kartu untuk memindahkan kartu ke kolom berikutnya (simulasi). Di aplikasi sungguhan, kartu berpindah karena status job nyata (SSE) dan keputusan gerbangmu.</div>
+  </section>
+
+  <!-- MODE 3: KONEKSI -->
+  <section id="koneksi" class="mode">
+    <h1>Koneksi Agen — Kanvas ala N8N</h1>
+    <p class="sub">Klik node untuk melihat agen itu. Tambah koneksi baru bila dibutuhkan — koneksi tersimpan sebagai bagian proyek (di prototype ini hanya tampilan).</p>
+    <div class="canvaswrap" id="canvas">
+      <svg id="edges"></svg>
+      <div class="node prime" data-node="prime" style="left:calc(50% - 74px);top:16px">Prime Agent<div class="st">Orkestrasi • Gerbang</div></div>
+      <div class="node" data-node="riset" style="left:24px;top:150px">Riset<div class="st">riset-pasar • behaviour</div></div>
+      <div class="node" data-node="strategi" style="left:220px;top:150px">Strategi<div class="st">positioning • STP</div></div>
+      <div class="node" data-node="kreatif" style="left:416px;top:150px">Kreatif<div class="st">hook • brief</div></div>
+      <div class="node" data-node="media" style="left:612px;top:150px">Media<div class="st">gambar • carousel • reels</div></div>
+      <div class="node" data-node="distribusi" style="left:808px;top:150px">Distribusi<div class="st">Postiz DRAF</div></div>
+      <div class="node" data-node="produk" style="left:calc(50% - 74px);top:300px">Produk Digital<div class="st">brief • fitur MVP</div></div>
+    </div>
+    <div class="card">
+      <h3 id="nodeInfo">Klik sebuah node untuk melihat detailnya.</h3>
+      <p id="nodeDetail" style="color:#555">Detail agen dan aliran koneksinya akan tampil di sini.</p>
+    </div>
+    <div class="card">
+      <h3>Tambah koneksi antar node</h3>
+      <div class="formrow">
+        <div><label>Dari (sumber)</label><select id="edgeFrom"></select></div>
+        <div><label>Ke (tujuan)</label><select id="edgeTo"></select></div>
+        <div><label>Label aliran</label><input type="text" id="edgeLabel" placeholder="mis. Referensi visual dari riset"></div>
+        <div><button class="btn btn-primary" onclick="addEdge()">+ Tambah Koneksi</button></div>
+      </div>
+      <div class="notice" id="edgeNotice" style="display:none"></div>
+      <h3>Daftar koneksi</h3>
+      <ul id="edgeList"></ul>
+    </div>
+  </section>
+
+  <!-- MODE 4: MEDIA STUDIO -->
+  <section id="media" class="mode">
+    <h1>Media Studio</h1>
+    <p class="sub">Hasil konten yang jadi — bukan hanya script. Semua visual di bawah ini adalah <b>placeholder dummy prototype</b>, bukan hasil generate sungguhan. Status "Siap untuk Post" berarti lolos QC + GKonten (simulasi) — penerbitan tetap lewat gerbang distribusi, bukan dari tombol di sini.</p>
+    <div class="filters">
+      <button class="active" data-filter="semua">Semua</button>
+      <button data-filter="gambar">Gambar</button>
+      <button data-filter="carousel">Carousel</button>
+      <button data-filter="reels">Reels</button>
+      <button data-filter="talking">Talking Head</button>
+    </div>
+    <div class="mediagrid" id="mediaGrid"></div>
+  </section>
+</main>
+<script>
+  var tabs = document.querySelectorAll("[data-tab]");
+  tabs.forEach(function (b) {
+    b.addEventListener("click", function () {
+      tabs.forEach(function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      document.querySelectorAll(".mode").forEach(function (m) { m.classList.remove("active"); });
+      document.getElementById(b.getAttribute("data-tab")).classList.add("active");
+      window.scrollTo(0, 0);
+    });
+  });
+  function goTab(id) { document.querySelector('[data-tab="' + id + '"]').click(); }
+
+  /* ---------- Asisten: delegasi simulasi ---------- */
+  function quick(text) { document.getElementById("chatInput").value = text; sendChat(); }
+  function sendChat() {
+    var input = document.getElementById("chatInput");
+    var text = input.value.trim();
+    if (!text) return;
+    var chat = document.getElementById("chat");
+    var u = document.createElement("div"); u.className = "msg user";
+    u.innerHTML = '<div class="who">Kamu</div>' + text.replace(/</g, "&lt;");
+    chat.appendChild(u);
+    var low = text.toLowerCase();
+    var plan = "Saya pecah arahanmu menjadi tugas dan tugaskan agen yang dibutuhkan. Lihat kartu-kartu baru di tab Kanban.";
+    if (low.indexOf("riset") !== -1) plan = "Saya tugaskan <b>Riset</b> (harness: riset-pasar, behaviour-digital, spending-digital) untuk risetnya, lalu <b>Strategi</b> (positioning-stp) menyusun STP. STP akan berhenti di gerbang GSTP menunggumu sebelum lanjut.";
+    else if (low.indexOf("produk") !== -1) plan = "Saya tugaskan <b>Produk Digital</b> (harness: brief-produk, riset-pengguna, fitur-mvp) untuk brief dan struktur fiturnya, dibantu <b>Riset</b> untuk riset pengguna. Hasilnya dokumen produk + materi marketingnya.";
+    else if (low.indexOf("konten") !== -1 || low.indexOf("gambar") !== -1 || low.indexOf("carousel") !== -1 || low.indexOf("reels") !== -1 || low.indexOf("talking") !== -1) plan = "Saya tugaskan <b>Kreatif</b> (copywriting-hook-cta, brief-text-free) untuk kalender + brief, lalu <b>Media</b> (image-text-free, carousel-slide, reels-pendek, talking-head-avatar) untuk gambar, carousel, reels, dan talking head-nya. Hasilnya muncul di tab Media Studio setelah lolos GKonten (simulasi).";
+    var a = document.createElement("div"); a.className = "msg asst";
+    a.innerHTML = '<div class="who">Prime Agent — delegasi (simulasi)</div>' + plan + ' <a href="#" onclick="goTab(\'kanban\');return false;">Lihat Kanban &rarr;</a>';
+    chat.appendChild(a);
+    input.value = "";
+    var n = document.getElementById("chatNotice");
+    n.style.display = "block";
+    n.textContent = "Simulasi: delegasi di atas hanya tampilan. Di aplikasi sungguhan, Prime Agent benar-benar memanggil agen dan kartu Kanban terisi dari status job nyata.";
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  /* ---------- Kanban ---------- */
+  var cols = ["Antrian", "Dikerjakan", "Butuh Approval", "Revisi", "Selesai"];
+  var cards = [
+    { t: "Riset pasar & behaviour kopi Surabaya", a: "Riset", s: "riset-pasar, behaviour-digital", c: 4 },
+    { t: "Susun STP (segmen, targeting, positioning)", a: "Strategi", s: "positioning-stp", c: 4 },
+    { t: "Kalender konten 7 hari", a: "Kreatif", s: "copywriting-hook-cta", c: 1 },
+    { t: "Brief + gambar Hari 1–7", a: "Media", s: "image-text-free", c: 1 },
+    { t: "Carousel Hari 3 (QRIS) + Reels Hari 1", a: "Media", s: "carousel-slide, reels-pendek", c: 0 },
+    { t: "Talking Head: naskah promo bundling", a: "Media", s: "talking-head-avatar", c: 0 },
+    { t: "Siapkan draf Postiz (DRAF saja)", a: "Distribusi", s: "postiz-draft-only", c: 0 }
+  ];
+  function renderKanban() {
+    var wrap = document.getElementById("kanban");
+    wrap.innerHTML = "";
+    cols.forEach(function (col, ci) {
+      var div = document.createElement("div"); div.className = "col";
+      div.innerHTML = "<h3>" + col + "</h3>";
+      cards.forEach(function (card, i) {
+        if (card.c !== ci) return;
+        var k = document.createElement("div"); k.className = "kcard";
+        k.innerHTML = "<b>" + card.t + "</b><div class='small'>Agen: " + card.a + "<br>Harness: " + card.s + "</div>";
+        if (ci < 4) {
+          var btn = document.createElement("button");
+          btn.textContent = ci === 2 ? "Setujui (simulasi) →" : "Maju →";
+          btn.addEventListener("click", function () { card.c = ci + 1; renderKanban(); });
+          k.appendChild(btn);
+        }
+        div.appendChild(k);
+      });
+      wrap.appendChild(div);
+    });
+  }
+  renderKanban();
+
+  /* ---------- Koneksi ---------- */
+  var nodes = {
+    prime: { name: "Prime Agent", desc: "Orkestrasi + gerbang manusia. Menerima arahan pengguna, memecah tugas, memanggil agen, dan menghentikan alur di gerbang GSTP/GKonten/GBatch.", x: 50, y: 8 },
+    riset: { name: "Riset", desc: "Harness: riset-pasar, behaviour-digital, spending-digital. Output: riset pasar, behaviour, spending — bahan untuk Strategi.", x: 8, y: 38 },
+    strategi: { name: "Strategi", desc: "Harness: positioning-stp, pak-bi-branding. Output: positioning, pilar, STP — berhenti di gerbang GSTP.", x: 26, y: 38 },
+    kreatif: { name: "Kreatif", desc: "Harness: copywriting-hook-cta, brief-text-free. Output: kalender, hook, CTA, CreativeBrief text-free.", x: 44, y: 38 },
+    media: { name: "Media", desc: "Harness: image-text-free, carousel-slide, reels-pendek, talking-head-avatar. Output: gambar, carousel, reels, talking head — berhenti di GKonten.", x: 62, y: 38 },
+    distribusi: { name: "Distribusi", desc: "Harness: postiz-draft-only. Output: draf Postiz per channel. Tidak pernah terbit live di slice ini.", x: 80, y: 38 },
+    produk: { name: "Produk Digital", desc: "Harness: brief-produk, riset-pengguna, fitur-mvp. Output: brief produk, struktur fitur, riset pengguna.", x: 50, y: 72 }
+  };
+  var edges = [
+    { from: "prime", to: "riset", label: "Tugaskan riset" },
+    { from: "prime", to: "strategi", label: "Tugaskan STP" },
+    { from: "riset", to: "strategi", label: "Riset → STP" },
+    { from: "strategi", to: "kreatif", label: "STP disetujui → brief" },
+    { from: "kreatif", to: "media", label: "Brief → produksi media" },
+    { from: "media", to: "distribusi", label: "GKonten lolos → draf" },
+    { from: "prime", to: "produk", label: "Tugaskan brief produk" }
+  ];
+  var svgNS = "http://www.w3.org/2000/svg";
+  function nodeCenter(key) {
+    var el = document.querySelector('[data-node="' + key + '"]');
+    var wrap = document.getElementById("canvas");
+    var wr = wrap.getBoundingClientRect(), er = el.getBoundingClientRect();
+    return { x: ((er.left + er.width / 2 - wr.left) / wr.width) * 100, y: ((er.top + er.height / 2 - wr.top) / wr.height) * 100 };
+  }
+  function renderEdges() {
+    var svg = document.getElementById("edges");
+    svg.innerHTML = "";
+    svg.setAttribute("viewBox", "0 0 100 100");
+    svg.setAttribute("preserveAspectRatio", "none");
+    edges.forEach(function (e) {
+      var a = nodeCenter(e.from), b = nodeCenter(e.to);
+      var line = document.createElementNS(svgNS, "line");
+      line.setAttribute("x1", a.x); line.setAttribute("y1", a.y);
+      line.setAttribute("x2", b.x); line.setAttribute("y2", b.y);
+      line.setAttribute("stroke", "#2563eb"); line.setAttribute("stroke-width", "0.6");
+      svg.appendChild(line);
+    });
+    var list = document.getElementById("edgeList");
+    list.innerHTML = "";
+    edges.forEach(function (e) {
+      var li = document.createElement("li");
+      li.textContent = nodes[e.from].name + " → " + nodes[e.to].name + " — " + e.label;
+      list.appendChild(li);
+    });
+  }
+  document.querySelectorAll(".node").forEach(function (el) {
+    el.addEventListener("click", function () {
+      document.querySelectorAll(".node").forEach(function (n) { n.classList.remove("sel"); });
+      el.classList.add("sel");
+      var key = el.getAttribute("data-node");
+      document.getElementById("nodeInfo").textContent = nodes[key].name;
+      var outs = edges.filter(function (e) { return e.from === key; }).map(function (e) { return nodes[e.to].name + " (" + e.label + ")"; }).join(", ") || "tidak ada koneksi keluar";
+      var ins = edges.filter(function (e) { return e.to === key; }).map(function (e) { return nodes[e.from].name + " (" + e.label + ")"; }).join(", ") || "tidak ada koneksi masuk";
+      document.getElementById("nodeDetail").textContent = nodes[key].desc + " Keluar: " + outs + ". Masuk: " + ins + ".";
+    });
+  });
+  var fromSel = document.getElementById("edgeFrom"), toSel = document.getElementById("edgeTo");
+  Object.keys(nodes).forEach(function (k) {
+    var o1 = document.createElement("option"); o1.value = k; o1.textContent = nodes[k].name; fromSel.appendChild(o1);
+    var o2 = document.createElement("option"); o2.value = k; o2.textContent = nodes[k].name; toSel.appendChild(o2);
+  });
+  function addEdge() {
+    var f = fromSel.value, t = toSel.value;
+    var label = document.getElementById("edgeLabel").value.trim() || "Koneksi baru";
+    if (f === t) { alert("Sumber dan tujuan tidak boleh node yang sama."); return; }
+    edges.push({ from: f, to: t, label: label });
+    renderEdges();
+    var n = document.getElementById("edgeNotice");
+    n.style.display = "block";
+    n.textContent = "Simulasi: koneksi " + nodes[f].name + " → " + nodes[t].name + " (" + label + ") ditambahkan ke kanvas. Di aplikasi sungguhan, koneksi ini tersimpan sebagai bagian proyek.";
+  }
+  window.addEventListener("resize", renderEdges);
+  setTimeout(renderEdges, 100);
+
+  /* ---------- Media Studio ---------- */
+  var media = [
+    { type: "gambar", title: "Gambar Hari 1 — Kemudahan Pesan via WA", status: "Siap untuk Post", desc: "Gambar statis text-free, overlay template terpisah. Placeholder dummy — bukan hasil generate." },
+    { type: "gambar", title: "Gambar Hari 4 — Higienitas Kopi Harian", status: "Siap untuk Post", desc: "Gambar statis text-free. Placeholder dummy — bukan hasil generate." },
+    { type: "carousel", title: "Carousel Hari 3 — Efisiensi QRIS (3 slide)", status: "Siap untuk Post", desc: "Slide: Hook → Isi (QRIS simpel) → CTA (pesan via WA). Per slide bisa diperiksa.", slides: ["Hook: Dompet ketinggalan?", "Isi: Scan QRIS, beres.", "CTA: Pesan via WA"] },
+    { type: "carousel", title: "Carousel Hari 5 — Promo Bundling Hemat (3 slide)", status: "Menunggu GKonten", desc: "Slide: Hook → Bundling → CTA. Placeholder dummy.", slides: ["Hook: Ngopi hemat tiap hari", "Isi: Bundling hemat", "CTA: Cek promo di WA"] },
+    { type: "reels", title: "Reels Hari 1 — Capek antre kopi? (9:16)", status: "Siap untuk Post", desc: "Video pendek vertikal dengan hook + CTA WA. Placeholder dummy — bukan video sungguhan." },
+    { type: "reels", title: "Reels Hari 7 — Lifestyle & Refuel (9:16)", status: "Draf", desc: "Video pendek vertikal. Placeholder dummy." },
+    { type: "talking", title: "Talking Head — Promo Bundling", status: "Menunggu GKonten", desc: "Avatar membacakan naskah promo. Naskah bisa diedit teksnya sebelum render ulang (simulasi).", script: "Ngopi enak tiap hari tanpa bikin saldo menipis — cek promo bundling TEST Kopi di chat WA kita!" },
+    { type: "talking", title: "Talking Head — Kenapa QRIS?", status: "Draf", desc: "Avatar + naskah edukasi QRIS. Placeholder dummy.", script: "Dompet ketinggalan bukan masalah — bayar pakai QRIS, scan langsung beres." }
+  ];
+  function renderMedia(filter) {
+    var grid = document.getElementById("mediaGrid");
+    grid.innerHTML = "";
+    media.filter(function (m) { return filter === "semua" || m.type === filter; }).forEach(function (m) {
+      var card = document.createElement("div"); card.className = "mediacard";
+      var badge = m.status === "Siap untuk Post" ? "b-ok" : (m.status === "Menunggu GKonten" ? "b-wait" : "b-idle");
+      var visual = "";
+      if (m.type === "gambar") visual = '<div class="ph">Placeholder gambar dummy<br><small>Bukan hasil generate</small></div>';
+      if (m.type === "carousel") visual = '<div class="ph">Placeholder carousel dummy</div><div class="slidebox">' + m.slides.map(function (s) { return "<div>" + s + "</div>"; }).join("") + "</div>";
+      if (m.type === "reels") visual = '<div class="ph tall"><div><div class="play">▶</div>Placeholder reels dummy<br><small>9:16 — bukan video sungguhan</small></div></div>';
+      if (m.type === "talking") visual = '<div class="ph"><div>Avatar dummy<br><small>Talking head — bukan video sungguhan</small><div class="wave"><i style="height:12px"></i><i style="height:28px"></i><i style="height:18px"></i><i style="height:32px"></i><i style="height:14px"></i><i style="height:24px"></i></div></div></div>';
+      card.innerHTML = "<span class='badge " + badge + "'>" + m.status + "</span> <span class='badge b-idle'>" + m.type + "</span><h3 style='margin-top:10px'>" + m.title + "</h3>" + visual + "<p style='font-size:14px;color:#555'>" + m.desc + "</p>" + (m.script ? "<p style='font-size:14px'><i>Naskah: \"" + m.script + "\"</i></p>" : "") + "<button class='btn' onclick='alert(\"Simulasi: item ini ditandai Siap untuk Post di prototype. Penerbitan sungguhan tetap lewat gerbang distribusi.\")'>Siapkan untuk Post</button>";
+      grid.appendChild(card);
+    });
+  }
+  document.querySelectorAll("[data-filter]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("[data-filter]").forEach(function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      renderMedia(b.getAttribute("data-filter"));
+    });
+  });
+  renderMedia("semua");
+</script>
+</body>
+</html>

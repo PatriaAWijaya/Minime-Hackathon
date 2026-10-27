@@ -390,3 +390,25 @@ dokumen lama yang dipakai.
   7 layar, semua target navigasi valid, 7 hari + 7 brief, JS lolos
   node --check, tanpa referensi eksternal. Status: MENUNGGU REVISI
   Patria dari prototype ini (bukan persetujuan gerbang).
+
+- 27 Okt siang (perintah Patria "revisi arah" + "buatkan rancangan
+  prototype UI-nya"): UI v1 DIGANTIKAN oleh UI v2. Rancangan v2 di
+  docs/ui-draft-v2.md: Prime Agent sebagai personal assistant
+  (satu pintu masuk arahan; tiga jenis arahan utama: riset bisnis,
+  marketing, pembuatan produk digital); 6 agen dengan harness skill
+  masing-masing (Riset, Strategi, Kreatif, Media, Distribusi,
+  Produk Digital); 4 mode (Asisten, Kanban 5 kolom, Koneksi ala
+  N8N dengan tambah edge oleh pengguna, Media Studio dengan
+  Gambar/Carousel/Reels/Talking Head berstatus Siap untuk Post —
+  yang berarti lolos QC+GKonten, BUKAN sudah terbit). Prototype
+  klik v2 di prototype-v2/index.html (satu file mandiri, tanpa
+  dependensi eksternal): chat Prime Agent dengan delegasi simulasi
+  + contoh arahan cepat, Kanban dengan tombol Maju simulasi,
+  kanvas node + tambah koneksi (form sumber/tujuan/label, daftar
+  koneksi, klik node untuk detail), Media Studio dengan filter 4
+  jenis media dan placeholder dummy berlabel (bukan hasil
+  generate). Verifikasi: 4 mode, semua agen + harness skill,
+  5 kolom Kanban, 4 filter media, JS lolos node --check, tanpa
+  referensi eksternal. Status: MENUNGGU REVISI Patria atas
+  rancangan + prototype v2. Draf v1 dipertahankan sebagai riwayat
+  dengan catatan superseded di atasnya.
