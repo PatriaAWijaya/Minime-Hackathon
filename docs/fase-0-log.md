@@ -714,3 +714,14 @@ dokumen lama yang dipakai.
   JS 2 blok lolos node --check, diff 8+/8-. Bentuk tetap gaya
   Muse v5 (rail + list agen + chat + panel Detail); gerbang
   desain UI tetap belum disetujui formal.
+
+  UI — NAMA + LOGO + ICON (27 Okt 15:54 WIB, Patria): nama
+  aplikasi = MiniMe (menutup pertanyaan nama yang tertunda
+  sejak UI stop). Logo = lampiran wordmark (1356×415, RGBA
+  transparan) → prototype-v5/assets/minime-logo.png, tampil
+  di header kolom agen. Icon = lampiran kotak (957×956, RGB)
+  → prototype-v5/assets/minime-icon.png, dipakai sebagai
+  favicon + app mark di atas rail. Judul + banner prototipe
+  diubah ke MiniMe. Keduanya dipakai apa adanya (pink brand
+  dipertahankan); aksen UI tetap violet #B214FF. Verifikasi:
+  3 referensi aset di index.html, JS 2 blok lolos node --check.

@@ -115,6 +115,10 @@ copied from the main Minime repository.
   and 2 Riset message colors — all non-monochrome colors removed;
   palette audit clean, JS syntax OK). The UI design gate itself is
   therefore still formally unapproved.
+  App name decided 27 Oct 15:54 WIB: MiniMe (Patria); logo wordmark +
+  square icon from Patria's attachments (prototype-v5/assets/),
+  used as favicon + rail app mark + agent-column header; brand pink
+  kept as-is, UI accent stays #B214FF.
   v1 doc is kept as history only.
   Phase 3 is PAUSED until Patria orders it to resume after the UI
   draft decision.

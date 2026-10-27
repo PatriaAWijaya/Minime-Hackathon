@@ -89,7 +89,11 @@ provider. The UI phase produced clickable prototypes v1–v5 (current:
 prototype-v5/index.html, Muse-style dark theme, monochrome + violet
 #B214FF accent); UI work was PAUSED 27 Oct 2026 15:02 WIB, then resumed 15:49 WIB on
 Patria's order ('perbaiki UI'): v5 theme fix applied the same evening
-(strict monochrome + violet #B214FF, palette audit clean). Phase 3 was ordered resumed
+(strict monochrome + violet #B214FF, palette audit clean). App name
+decided 27 Oct 15:54 WIB: MiniMe; logo + icon from Patria's attachments
+(prototype-v5/assets/minime-logo.png + minime-icon.png), used as favicon,
+rail app mark, and agent-column header; brand pink kept as-is, UI accent
+stays #B214FF. Phase 3 was ordered resumed
 27 Oct 2026 15:09 WIB and executed the same afternoon: 7 carousels
 x 3 slides (QC 100/100, images null pending-provider) with all 7
 Postiz drafts pushed as DRAFT only 27 Oct ~15:35 WIB (HTTP 201
