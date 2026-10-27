@@ -247,7 +247,7 @@
       </div>
     </div>
     <div class="view" id="view-search">
-      <div class="colhead"><h2>{t('word.search', lang)}</h2><p>{t('colhead.search.sub', lang)}</p></div>
+      <div class="colhead"><h2>{t('word.search', lang)}</h2></div>
       <div class="scroll">
         <input type="text" id="searchInput" placeholder={t('search.ph', lang)} oninput={() => { doSearch() }}>
         <p id="searchCount" style="color:#555"></p>
@@ -279,12 +279,11 @@
             </select>
           </label>
         </div>
-        <p style="margin-top:8px">{t('kanban.hint', lang)}</p>
       </div>
       <div class="scroll"><div id="kanbanBox"></div></div>
     </div>
     <div class="view" id="view-graph">
-      <div class="colhead"><h2>{t('view.graph.title', lang)}</h2><p>{t('graph.hint', lang)}</p>
+      <div class="colhead"><h2>{t('view.graph.title', lang)}</h2>
       <button class="btn btn-primary" onclick={() => { runGraphSim() }}>{t('graph.run', lang)}</button></div>
       <div class="scroll">
         <div class="n8n-canvas" id="graphBox"><svg id="graphEdges"></svg><div id="graphNodes"></div></div>
