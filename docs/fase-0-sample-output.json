@@ -1,0 +1,59 @@
+{
+  "traceId": "trace-1793068732078",
+  "productId": "TEST-BRAND-001",
+  "jobId": "job-1793068731218-7486",
+  "stages": [
+    "brief",
+    "done"
+  ],
+  "approvals": [
+    {
+      "id": "appr-1793068732210-1",
+      "gate": "GS",
+      "productId": "TEST-BRAND-001",
+      "decision": "approved",
+      "approver": "phase-0-test-harness (TEST product only)",
+      "reason": "Phase 0 sample, TEST product",
+      "createdAt": "2026-10-27T02:38:52.210Z",
+      "supersedesId": null
+    },
+    {
+      "id": "appr-1793068732210-2",
+      "gate": "GSTP",
+      "productId": "TEST-BRAND-001",
+      "decision": "approved",
+      "approver": "phase-0-test-harness (TEST product only)",
+      "reason": "Phase 0 sample, TEST product",
+      "createdAt": "2026-10-27T02:38:52.210Z",
+      "supersedesId": null
+    },
+    {
+      "id": "appr-1793068732211-3",
+      "gate": "GKonten",
+      "productId": "TEST-BRAND-001",
+      "decision": "approved",
+      "approver": "phase-0-test-harness (TEST product only)",
+      "reason": "Phase 0 sample, TEST product",
+      "createdAt": "2026-10-27T02:38:52.211Z",
+      "supersedesId": null
+    }
+  ],
+  "ledger": {
+    "records": 4,
+    "totalUsd": 0,
+    "mockRecords": 4
+  },
+  "qc": {
+    "score": 100,
+    "hardViolations": [],
+    "passes": true
+  },
+  "draft": {
+    "productId": "TEST-BRAND-001",
+    "itemId": "item-001",
+    "channel": "postiz",
+    "status": "draft",
+    "published": false
+  },
+  "mock": true
+}

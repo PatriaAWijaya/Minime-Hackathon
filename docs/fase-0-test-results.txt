@@ -1,0 +1,8 @@
+PASS contracts validate, versioned, cross-family QC enforced
+PASS cost ledger append-only + hard limit stops the run
+PASS policy gates enforced at service level, negative tests pass
+PASS queue idempotent + DB-persistent
+PASS router live-unavailable fails visibly; mock labelled; QC cross-family mapping correct
+PASS ollama live probe fails visibly in this VM (expected, recorded as pending)
+PASS sample job end-to-end (mock, draft-only, trace + ledger)
+PASS qc scoring: pass and hard-violation rejection

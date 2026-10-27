@@ -1,0 +1,194 @@
+/**
+ * Model Router (Phase 0, Block C) — configuration-driven, NOT hard-coded
+ * per agent. Chain (canon, Addendum 27 Oct 2026):
+ *   1. Muse via Meta Model API (primary, ALL agents)
+ *   2. Gemini via Google API (fallback 1; also QC for Muse output)
+ *   3. DeepSeek via Ollama, local (fallback 2)
+ * Every call returns a CallResult with a CostRecord. A call that was
+ * served by the mock provider is flagged mock=true and cost=null, so it
+ * can never be mistaken for a measured live call. Live providers are
+ * attempted only when their credentials/endpoint are configured; when
+ * they are not, they fail visibly (LiveUnavailableError) instead of
+ * silently substituting another model.
+ */
+import { CostRecord } from './ledger';
+
+export type ProviderId = 'meta' | 'gemini' | 'ollama' | 'mock';
+
+export interface RouterConfig {
+  metaBaseUrl: string;
+  metaApiKey: string | null;
+  metaModel: string;
+  geminiApiKey: string | null;
+  geminiModel: string;
+  ollamaBaseUrl: string;
+  ollamaModel: string;
+}
+
+export function routerConfigFromEnv(env: NodeJS.ProcessEnv): RouterConfig {
+  return {
+    metaBaseUrl: env.META_MODEL_API_BASE_URL || 'https://api.meta.ai/v1',
+    metaApiKey: env.META_API_KEY || null,
+    metaModel: env.META_MODEL || 'muse-spark-1.1',
+    geminiApiKey: env.GEMINI_API_KEY || null,
+    geminiModel: env.GEMINI_MODEL || 'gemini-2.5-flash',
+    ollamaBaseUrl: env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
+    ollamaModel: env.OLLAMA_MODEL || 'deepseek-r1',
+  };
+}
+
+export class LiveUnavailableError extends Error {
+  constructor(provider: ProviderId, detail: string) {
+    super(`live provider ${provider} unavailable: ${detail}`);
+    this.name = 'LiveUnavailableError';
+  }
+}
+
+export interface CallResult {
+  text: string;
+  provider: ProviderId;
+  family: 'meta' | 'gemini' | 'deepseek' | 'mock';
+  model: string;
+  latencyMs: number;
+  mock: boolean;
+  fallbackFrom: string | null;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  costUsd: number | null;
+}
+
+async function postJson(url: string, headers: Record<string, string>, body: unknown, timeoutMs = 30000): Promise<unknown> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${JSON.stringify(data).slice(0, 300)}`);
+    }
+    return data;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function chatCompletionsText(data: unknown): { text: string; usage: { prompt: number | null; completion: number | null } } {
+  const d = data as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+  const text = d.choices?.[0]?.message?.content ?? '';
+  return { text, usage: { prompt: d.usage?.prompt_tokens ?? null, completion: d.usage?.completion_tokens ?? null } };
+}
+
+export class ModelRouter {
+  constructor(private cfg: RouterConfig) {}
+
+  /** Live Meta call. Throws LiveUnavailableError when not configured. */
+  async callMeta(prompt: string, traceId: string): Promise<CallResult> {
+    if (!this.cfg.metaApiKey) {
+      throw new LiveUnavailableError('meta', 'META_API_KEY is not set (claim/card pending)');
+    }
+    const started = Date.now();
+    const data = await postJson(
+      `${this.cfg.metaBaseUrl.replace(/\/$/, '')}/chat/completions`,
+      { Authorization: `Bearer ${this.cfg.metaApiKey}` },
+      { model: this.cfg.metaModel, messages: [{ role: 'user', content: prompt }], temperature: 0.2 },
+    );
+    const { text, usage } = chatCompletionsText(data);
+    void traceId;
+    return { text, provider: 'meta', family: 'meta', model: this.cfg.metaModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: usage.prompt, completionTokens: usage.completion, costUsd: null };
+  }
+
+  async callGemini(prompt: string): Promise<CallResult> {
+    if (!this.cfg.geminiApiKey) {
+      throw new LiveUnavailableError('gemini', 'GEMINI_API_KEY is not set');
+    }
+    const started = Date.now();
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.cfg.geminiModel)}:generateContent`;
+    const data = (await postJson(url, { 'x-goog-api-key': this.cfg.geminiApiKey }, { contents: [{ parts: [{ text: prompt }] }] })) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+    };
+    const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
+    return { text, provider: 'gemini', family: 'gemini', model: this.cfg.geminiModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: data.usageMetadata?.promptTokenCount ?? null, completionTokens: data.usageMetadata?.candidatesTokenCount ?? null, costUsd: null };
+  }
+
+  async callOllama(prompt: string): Promise<CallResult> {
+    const started = Date.now();
+    let data: unknown;
+    try {
+      data = await postJson(
+        `${this.cfg.ollamaBaseUrl.replace(/\/$/, '')}/api/chat`,
+        {},
+        { model: this.cfg.ollamaModel, messages: [{ role: 'user', content: prompt }], stream: false },
+        15000,
+      );
+    } catch (e) {
+      throw new LiveUnavailableError('ollama', e instanceof Error ? e.message : String(e));
+    }
+    const d = data as { message?: { content?: string }; prompt_eval_count?: number; eval_count?: number };
+    return { text: d.message?.content ?? '', provider: 'ollama', family: 'deepseek', model: this.cfg.ollamaModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: d.prompt_eval_count ?? null, completionTokens: d.eval_count ?? null, costUsd: 0 };
+  }
+
+  /** Mock provider — clearly labelled, for structure tests only. */
+  callMock(prompt: string, agent: string): CallResult {
+    const text = `[MOCK ${agent}] structured output for prompt: ${prompt.slice(0, 120)}`;
+    return { text, provider: 'mock', family: 'mock', model: 'mock', latencyMs: 0, mock: true, fallbackFrom: null, promptTokens: null, completionTokens: null, costUsd: null };
+  }
+
+  /**
+   * Full chain: meta -> gemini -> ollama. Returns the first success and
+   * records fallbackFrom. Throws the last LiveUnavailableError if all fail.
+   * `allowMock` is a test-only escape hatch and is recorded on the result.
+   */
+  async callWithFallback(prompt: string, agent: string, allowMock = false): Promise<CallResult> {
+    const chain: Array<() => Promise<CallResult>> = [
+      () => this.callMeta(prompt, agent),
+      () => this.callGemini(prompt),
+      () => this.callOllama(prompt),
+    ];
+    const names = ['meta', 'gemini', 'ollama'];
+    let lastError: Error | null = null;
+    for (let i = 0; i < chain.length; i++) {
+      try {
+        const r = await chain[i]();
+        if (i > 0) r.fallbackFrom = names[i - 1];
+        return r;
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error(String(e));
+      }
+    }
+    if (allowMock) {
+      const r = this.callMock(prompt, agent);
+      r.fallbackFrom = 'ollama';
+      return r;
+    }
+    throw lastError ?? new Error('all providers failed');
+  }
+
+  toCostRecord(r: CallResult, traceId: string, agent: string): CostRecord {
+    return {
+      traceId,
+      timestamp: new Date().toISOString(),
+      agent,
+      provider: r.provider,
+      family: r.family,
+      model: r.model,
+      promptTokens: r.promptTokens,
+      completionTokens: r.completionTokens,
+      costUsd: r.mock ? 0 : r.costUsd,
+      mock: r.mock,
+      fallbackFrom: r.fallbackFrom,
+    };
+  }
+
+  /** QC family rule: QC must come from a different family than the maker. */
+  qcProviderFor(makerFamily: 'meta' | 'gemini' | 'deepseek' | 'mock'): ProviderId {
+    if (makerFamily === 'meta') return 'gemini';
+    if (makerFamily === 'gemini') return 'meta';
+    return 'gemini';
+  }
+}
