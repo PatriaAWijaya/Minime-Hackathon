@@ -5,6 +5,7 @@
   import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
   import { applyGateStatus } from "./lib/gates.js";
   import { createPostizDraftFromComposer } from "./lib/postiz.js";
+  import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
 
   let lang = $state(getLang());
 
@@ -20,6 +21,7 @@
     renderDetail();
     document.querySelectorAll('.gate-status').forEach((n) => n.remove());
     applyGateStatus();
+    vsRefreshVoiceUI();
     updateKeyStatus();
   }
 
@@ -27,6 +29,7 @@
     initV5();
     setSendChatImpl(sendChatReal);
     applyGateStatus();
+    vsRenderStatus();
     updateKeyStatus();
   });
 </script>
@@ -189,13 +192,38 @@
         </div>
         <div id="ms-tab-voice" style="display:none">
           <h3>{t('ms.tab.voice', lang)}</h3>
-          <button class="btn btn-sm" onclick={() => { veTool('Suara') }}>Suara</button>
-          <span class="veToolNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
+          <p><span id="vsStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { vsCheck() }}>{t('vs.status.check', lang)}</button></p>
+          <p style="color:#a1a1a1;font-size:13px">{t('vs.status.note', lang)}</p>
+          <h4>{t('vs.clone.title', lang)}</h4>
+          <label>{t('vs.voice.label', lang)}</label>
+          <select id="vsVoiceSel"><option value="">{t('vs.voice.empty', lang)}</option></select>
+          <label>{t('vs.text.label', lang)}</label>
+          <textarea id="vsText" rows="4" style="width:100%;box-sizing:border-box" placeholder={t('vs.text.placeholder', lang)}></textarea>
+          <label>{t('vs.speed.label', lang)}</label>
+          <input id="vsSpeed" type="number" min="0.5" max="2" step="0.1" value="1">
+          <button class="btn btn-primary" onclick={() => { vsGenerateTts() }}>{t('vs.generate', lang)}</button>
+          <span id="vsNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
+          <audio id="vsAudio" controls style="display:none;width:100%;margin-top:8px"></audio>
+          <a id="vsDownload" style="display:none">{t('vs.download', lang)}</a>
+          <h4>{t('vs.ref.title', lang)}</h4>
+          <label>{t('vs.ref.label', lang)}</label>
+          <input id="vsRefFile" type="file" accept="audio/*">
+          <label>{t('vs.text.label', lang)}</label>
+          <textarea id="vsCloneText" rows="4" style="width:100%;box-sizing:border-box" placeholder={t('vs.text.placeholder', lang)}></textarea>
+          <textarea id="vsRefText" rows="2" style="width:100%;box-sizing:border-box" placeholder={t('vs.ref.text.placeholder', lang)}></textarea>
+          <label>{t('vs.speed.label', lang)}</label>
+          <input id="vsCloneSpeed" type="number" min="0.5" max="2" step="0.1" value="1">
+          <button class="btn btn-primary" onclick={() => { vsGenerateClone() }}>{t('vs.generate', lang)}</button>
+          <span id="vsCloneNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
+          <audio id="vsCloneAudio" controls style="display:none;width:100%;margin-top:8px"></audio>
+          <a id="vsCloneDownload" style="display:none">{t('vs.download', lang)}</a>
+          <h4>{t('vs.models.title', lang)}</h4>
+          <ul id="vsModelList" style="font-size:14px;line-height:1.8"><li>{t('vs.models.empty', lang)}</li></ul>
+          <h4>{t('vs.assets.title', lang)}</h4>
           <ul style="font-size:14px;line-height:1.8">
             <li>🎙 Voice-over: Promo bundling (30 dtk)</li>
             <li>🎵 Musik: Akustik ringan</li>
           </ul>
-          <p style="color:#a1a1a1;font-size:13px">{t('ms.voice.note', lang)}</p>
         </div>
         <div id="ms-tab-video">
           <div class="notice" style="margin-top:0">{t('ve.diffusion.note', lang)} <b>probe → transcribe → check → capture → render</b>. {t('ve.test.note', lang)}</div>
