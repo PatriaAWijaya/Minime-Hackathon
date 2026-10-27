@@ -41,7 +41,13 @@
 - [x] B6: Full wiring audit (zero-error gate) + log + push
 - [x] B7: i18n ID/EN/ZH — kamus + selector Pengaturan + instruksi bahasa ke router + log + push
   (audit LOLOS: tsc 0, gate 13/13, scan lolos, svelte-check
-  0 error, semua rig hijau; rebuild MacBook rantai v7 berjalan)
+  0 error, semua rig hijau; rebuild MacBook rantai v10 live PID 26752)
+- [x] Hapus kalimat gerbang dari panel Detail (perintah Patria 19:39) + log + push
+  (bundle terverifikasi 0 kemunculan kalimat; live ikut rantai v11)
+- [x] Media Studio 4 tab (perintah Patria 19:42): menu Video Editor terpisah dihapus,
+  tab Script/Image/Voice/Video + log + push
+  (rig-ms 20/20 lolos; svelte-check 0 error, warning 54 -> 38;
+  rebuild MacBook rantai v11 sukses, app jalan PID 27300)
 
 ## Parked (Patria's call)
 - [ ] `.dmg` distribution build
