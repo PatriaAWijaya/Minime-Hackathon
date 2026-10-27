@@ -320,6 +320,19 @@ const ID: Dict = {
   't2.assets.loading': 'Memuat aset…',
   't2.assets.fail': 'Gagal memuat aset.',
   't2.assets.nothumb': 'tanpa thumbnail (bukan video)',
+  't2.audio.track': 'Track audio',
+  't2.audio.voice': 'Voice',
+  't2.audio.music': 'Musik',
+  't2.cap.title': 'Caption (ASS sidecar)',
+  't2.cap.note': 'Caption disimpan sebagai file .ass berdampingan (sidecar) — belum dibakar ke video karena ffmpeg MacBook tanpa filter subtitles/drawtext.',
+  't2.cap.text': 'Teks caption',
+  't2.cap.start': 'Mulai (dtk)',
+  't2.cap.end': 'Akhir (dtk)',
+  't2.cap.add': '＋ Tambah caption',
+  't2.cap.save': 'Simpan file ASS',
+  't2.cap.saved': 'File ASS tersimpan:',
+  't2.err.captext': 'Teks caption tidak boleh kosong.',
+  't2.err.caprange': 'Akhir caption harus > awal.',
 };
 
 const EN: Dict = {
@@ -593,6 +606,19 @@ const EN: Dict = {
   't2.assets.loading': 'Loading asset…',
   't2.assets.fail': 'Failed to load asset.',
   't2.assets.nothumb': 'no thumbnail (not video)',
+  't2.audio.track': 'Audio track',
+  't2.audio.voice': 'Voice',
+  't2.audio.music': 'Music',
+  't2.cap.title': 'Captions (ASS sidecar)',
+  't2.cap.note': 'Captions are saved as a sidecar .ass file — not burned into the video because this MacBook ffmpeg has no subtitles/drawtext filter.',
+  't2.cap.text': 'Caption text',
+  't2.cap.start': 'Start (s)',
+  't2.cap.end': 'End (s)',
+  't2.cap.add': '＋ Add caption',
+  't2.cap.save': 'Save ASS file',
+  't2.cap.saved': 'ASS file saved:',
+  't2.err.captext': 'Caption text must not be empty.',
+  't2.err.caprange': 'Caption end must be after start.',
 };
 
 const ZH: Dict = {
@@ -866,6 +892,19 @@ const ZH: Dict = {
   't2.assets.loading': '正在加载素材…',
   't2.assets.fail': '加载素材失败。',
   't2.assets.nothumb': '无缩略图（非视频）',
+  't2.audio.track': '音频轨道',
+  't2.audio.voice': '人声',
+  't2.audio.music': '音乐',
+  't2.cap.title': '字幕（ASS 外挂）',
+  't2.cap.note': '字幕保存为外挂 .ass 文件——因本机 ffmpeg 缺少 subtitles/drawtext 滤镜，暂不烧录进视频。',
+  't2.cap.text': '字幕文本',
+  't2.cap.start': '开始（秒）',
+  't2.cap.end': '结束（秒）',
+  't2.cap.add': '＋ 添加字幕',
+  't2.cap.save': '保存 ASS 文件',
+  't2.cap.saved': 'ASS 文件已保存：',
+  't2.err.captext': '字幕文本不能为空。',
+  't2.err.caprange': '字幕结束时间必须晚于开始时间。',
 };
 
 const DICTS: Record<Lang, Dict> = { id: ID, en: EN, zh: ZH };

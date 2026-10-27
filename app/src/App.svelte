@@ -6,8 +6,8 @@
   import { applyGateStatus } from "./lib/gates.js";
   import { createPostizDraftFromComposer } from "./lib/postiz.js";
   import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
-  import { compileTimeline, validateSequence } from "./lib/video.js";
-  import type { T1Clip, T1Sequence } from "./lib/video.js";
+  import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
+  import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
   import { invoke } from "@tauri-apps/api/core";
 
   let lang = $state(getLang());
@@ -42,7 +42,7 @@
   interface T1QcResult { duration: number; has_video: boolean; has_audio: boolean; black: T1Segment[]; silent: T1Segment[]; passed: boolean; notes: string[]; }
   interface T1CaptureResult { data_url: string; }
 
-  let t1Clips = $state<T1Clip[]>([{ id: 't1c1', src: '', kind: 'video', trimIn: 0, dur: 2, volume: 1 }]);
+  let t1Clips = $state<T1Clip[]>([{ id: 't1c1', src: '', kind: 'video', trimIn: 0, dur: 2, volume: 1, track: 'voice' }]);
   let t1Next = $state(2);
   let t1W = $state(1280);
   let t1H = $state(720);
@@ -55,7 +55,7 @@
   let t1Json = $state('');
 
   function t1AddClip() {
-    t1Clips = [...t1Clips, { id: 't1c' + t1Next, src: '', kind: 'video', trimIn: 0, dur: 2, volume: 1 }];
+    t1Clips = [...t1Clips, { id: 't1c' + t1Next, src: '', kind: 'video', trimIn: 0, dur: 2, volume: 1, track: 'voice' }];
     t1Next += 1;
   }
   function t1RemoveClip(id: string) {
@@ -75,7 +75,7 @@
     const seq: T1Sequence = {
       name: 't1',
       width: Number(t1W), height: Number(t1H), fps: Number(t1Fps),
-      clips: t1Clips.map((c) => ({ id: c.id, src: c.src.trim(), kind: c.kind, trimIn: Number(c.trimIn), dur: Number(c.dur), volume: Number(c.volume) })),
+      clips: t1Clips.map((c) => ({ id: c.id, src: c.src.trim(), kind: c.kind, trimIn: Number(c.trimIn), dur: Number(c.dur), volume: Number(c.volume), track: c.track ?? 'voice' })),
     };
     const out = t1Out.trim();
     const errs = validateSequence(seq, out);
@@ -97,6 +97,44 @@
       t1Status = `${t('t1.fail', lang)} ${String(e)}`;
     } finally {
       t1Busy = false;
+    }
+  }
+
+  // ---- Caption ASS sidecar Tier 2 (bukan burn-in: ffmpeg tanpa subtitles) ----
+  let t1Caps = $state<{ id: string; text: string; start: number; end: number }[]>([]);
+  let t1CapNext = $state(1);
+  let t1CapBusy = $state(false);
+  let t1CapStatus = $state('');
+  let t1CapPath = $state('');
+  let t1CapAss = $state('');
+  function t1AddCap() {
+    t1Caps = [...t1Caps, { id: 't1cap' + t1CapNext, text: '', start: 0, end: 2 }];
+    t1CapNext += 1;
+  }
+  function t1RemoveCap(id: string) {
+    t1Caps = t1Caps.filter((c) => c.id !== id);
+  }
+  async function t1SaveAss() {
+    const caps: T1Caption[] = t1Caps.map((c) => ({ text: c.text.trim(), start: Number(c.start), end: Number(c.end) }));
+    const errs: string[] = [];
+    for (const cap of caps) {
+      if (!cap.text) errs.push('t2.err.captext');
+      if (!(cap.start >= 0) || !(cap.end > cap.start)) errs.push('t2.err.caprange');
+    }
+    const uniq = [...new Set(errs)];
+    if (uniq.length > 0) { t1CapStatus = uniq.map((e) => t(e, lang)).join(' '); return; }
+    t1CapBusy = true;
+    t1CapStatus = '';
+    try {
+      const ass = assFromCaptions(caps, Number(t1W), Number(t1H));
+      const r = await invoke<{ path: string }>('video_write_ass', { content: ass });
+      t1CapPath = r.path;
+      t1CapAss = ass;
+      t1CapStatus = `${t('t2.cap.saved', lang)} ${r.path}`;
+    } catch (e) {
+      t1CapStatus = `${t('t1.fail', lang)} ${String(e)}`;
+    } finally {
+      t1CapBusy = false;
     }
   }
 
@@ -394,11 +432,25 @@
                 <select bind:value={c.kind} title={t('t1.kind', lang)}><option value="video">{t('t1.kind.video', lang)}</option><option value="audio">{t('t1.kind.audio', lang)}</option></select>
                 <input type="number" step="0.1" bind:value={c.trimIn} title={t('t1.trim', lang)}>
                 <input type="number" step="0.1" bind:value={c.dur} title={t('t1.dur', lang)}>
-                {#if c.kind === 'audio'}<input type="number" step="0.1" bind:value={c.volume} title={t('t1.vol', lang)}>{/if}
+                {#if c.kind === 'audio'}<select bind:value={c.track} title={t('t2.audio.track', lang)}><option value="voice">{t('t2.audio.voice', lang)}</option><option value="music">{t('t2.audio.music', lang)}</option></select><input type="number" step="0.1" bind:value={c.volume} title={t('t1.vol', lang)}>{/if}
                 <button onclick={() => t1RemoveClip(c.id)}>{t('t1.remove', lang)}</button>
               </div>
             {/each}
             <button onclick={t1AddClip}>{t('t1.add', lang)}</button>
+            <h4>{t('t2.cap.title', lang)}</h4>
+            <p>{t('t2.cap.note', lang)}</p>
+            {#each t1Caps as cap (cap.id)}
+              <div class="t1-clip">
+                <input type="text" bind:value={cap.text} placeholder={t('t2.cap.text', lang)}>
+                <input type="number" step="0.1" bind:value={cap.start} title={t('t2.cap.start', lang)}>
+                <input type="number" step="0.1" bind:value={cap.end} title={t('t2.cap.end', lang)}>
+                <button onclick={() => t1RemoveCap(cap.id)}>{t('t1.remove', lang)}</button>
+              </div>
+            {/each}
+            <button onclick={t1AddCap}>{t('t2.cap.add', lang)}</button>
+            <button onclick={t1SaveAss} disabled={t1CapBusy}>{t('t2.cap.save', lang)}</button>
+            {#if t1CapStatus}<p id="t1CapStatus">{t1CapStatus}</p>{/if}
+            {#if t1CapAss}<div><textarea id="t1CapAss" readonly rows="8" style="width:100%;box-sizing:border-box" value={t1CapAss}></textarea></div>{/if}
             <button onclick={t1Render} disabled={t1Busy}>{t1Busy ? t('t1.rendering', lang) : t('t1.render', lang)}</button>
             {#if t1Status}<p id="t1Status">{t1Status}</p>{/if}
             {#if t1Qc}<div><h4>{t('t1.qc', lang)}</h4><pre id="t1Qc">{t1Qc}</pre></div>{/if}

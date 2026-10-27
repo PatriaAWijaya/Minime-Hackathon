@@ -9,7 +9,8 @@ fn main() {
             video::video_qc,
             video::video_capture,
             video::video_probe,
-            video::video_asset_hash
+            video::video_asset_hash,
+            video::video_write_ass
         ])
         .run(tauri::generate_context!())
     {

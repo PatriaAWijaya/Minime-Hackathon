@@ -107,6 +107,17 @@ pub struct HashResult {
     pub size: u64,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WriteAssRequest {
+    pub content: String,
+}
+
+#[derive(Serialize)]
+pub struct WriteAssResult {
+    pub path: String,
+}
+
 fn is_executable(p: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
     match std::fs::metadata(p) {
@@ -476,5 +487,19 @@ pub fn video_asset_hash(req: HashRequest) -> Result<HashResult, String> {
     Ok(HashResult {
         sha256: format!("{:x}", hasher.finalize()),
         size,
+    })
+}
+
+#[tauri::command]
+pub fn video_write_ass(req: WriteAssRequest) -> Result<WriteAssResult, String> {
+    if req.content.trim().is_empty() {
+        return Err("konten ASS kosong".to_string());
+    }
+    // Sidecar: file menetap di temp dir (dipakai player/editor + ffmpeg penuh
+    // nanti), ditimpa tiap simpan baru dari proses yang sama.
+    let path = std::env::temp_dir().join(format!("minime-subs-{}.ass", std::process::id()));
+    std::fs::write(&path, &req.content).map_err(|e| format!("gagal menulis ASS: {e}"))?;
+    Ok(WriteAssResult {
+        path: path.to_string_lossy().to_string(),
     })
 }
