@@ -80,8 +80,7 @@ export function renderDetail() {
       + '<div class="d-label">' + tr('detail.does') + '</div><div class="d-rows">'
       + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.routines', {name: ag.name}) + '\')"><span>' + tr('detail.routines') + '</span><span class="d-val">' + tr('detail.val.configured') + '</span></div>'
       + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.usage', {name: ag.name}) + '\')"><span>' + tr('detail.usage') + '</span><span class="d-val">— ›</span></div></div>'
-      + '<div class="notice" id="detailNotice" style="display:none"></div>'
-      + '<p style="font-size:13px;color:#737373">Gerbang (GSTP/GKonten/GBatch) tidak bisa dimatikan dari panel ini.</p>';
+      + '<div class="notice" id="detailNotice" style="display:none"></div>';
   }
 
 export function detailNote(t) { var n = document.getElementById("detailNotice"); if (n) { n.style.display = "block"; n.textContent = t; } }
