@@ -164,7 +164,7 @@
       </div>
     </div>
     <div class="view" id="view-media">
-      <div class="colhead"><h2>{t('view.media.title', lang)}</h2><p>{t('ve.media.note', lang)}</p></div>
+      <div class="colhead"><h2>{t('view.media.title', lang)}</h2></div>
       <div class="filters" style="flex-shrink:0;margin:0 14px 12px">
         <button id="ms-tabbtn-script" onclick={() => { mediaTab('script') }}>{t('ms.tab.script', lang)}</button>
         <button id="ms-tabbtn-image" onclick={() => { mediaTab('image') }}>{t('ms.tab.image', lang)}</button>
@@ -175,10 +175,8 @@
         <div id="ms-tab-script" style="display:none">
           <h3>{t('ms.tab.script', lang)}</h3>
           <textarea id="msScript" rows="12" style="width:100%;box-sizing:border-box" placeholder={t('ms.script.placeholder', lang)} oninput={(e) => { try { localStorage.setItem('minime.script', e.currentTarget.value); } catch (_) {} }}></textarea>
-          <p style="color:#a1a1a1;font-size:13px">{t('ms.script.note', lang)}</p>
         </div>
         <div id="ms-tab-image" style="display:none">
-          <div class="notice" style="margin-top:0">{t('ve.gen.status', lang)} <b>{t('ve.gen.inactive', lang)}</b> • Gemini Image — <b>{t('ve.gen.standby', lang)}</b> • <b>{t('ve.canva.state', lang)}</b> {t('ve.canva.result', lang)}</div>
           <div class="filters">
           <button class="active" data-filter="semua">{t('filter.all', lang)}</button>
           <button data-filter="gambar">{t('filter.gambar', lang)}</button>
@@ -193,7 +191,6 @@
         <div id="ms-tab-voice" style="display:none">
           <h3>{t('ms.tab.voice', lang)}</h3>
           <p><span id="vsStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { vsCheck() }}>{t('vs.status.check', lang)}</button></p>
-          <p style="color:#a1a1a1;font-size:13px">{t('vs.status.note', lang)}</p>
           <h4>{t('vs.clone.title', lang)}</h4>
           <label>{t('vs.voice.label', lang)}</label>
           <select id="vsVoiceSel"><option value="">{t('vs.voice.empty', lang)}</option></select>
@@ -226,7 +223,6 @@
           </ul>
         </div>
         <div id="ms-tab-video">
-          <div class="notice" style="margin-top:0">{t('ve.diffusion.note', lang)} <b>probe → transcribe → check → capture → render</b>. {t('ve.test.note', lang)}</div>
           <div class="ve-toolbar">
           <button class="btn btn-sm" onclick={() => { veTool('Potong') }}>{t('ve.cut', lang)}</button>
           <button class="btn btn-sm" onclick={() => { veTool('Tambah Teks') }}>{t('ve.addtext', lang)}</button>
@@ -271,7 +267,6 @@
           <div class="track"><span class="tlabel">{t('word.audio', lang)}</span><div class="bar ve-clip" style="background:#5b5b5b;width:80%" onclick={(e) => { ve2Select(e.currentTarget,'Voice-over promo bundling',0,30,'Audio') }}>Voice-over promo bundling</div><div class="bar ve-clip" style="background:#4a4a4a;width:20%" onclick={(e) => { ve2Select(e.currentTarget,'Musik: akustik ringan',0,30,'Audio') }}>Musik</div></div>
           <div class="track"><span class="tlabel">{t('word.teks', lang)}</span><div class="bar ve-clip" style="background:#5b5b5b;width:30%" onclick={(e) => { ve2Select(e.currentTarget,'Overlay: TEST Kopi — Rp15.000',0,9,'Teks') }}>Overlay: TEST Kopi — Rp15.000</div><div class="bar ve-clip" style="background:#4a4a4a;margin-left:10%;width:30%" onclick={(e) => { ve2Select(e.currentTarget,'Overlay: Pesan via WA',12,9,'Teks') }}>Overlay: Pesan via WA</div></div>
           </div>
-          <div class="notice">{t('ve.engines.note', lang)} <b>docs/video-editor-engines.md</b>.</div>
         </div>
       </div>
     </div>
