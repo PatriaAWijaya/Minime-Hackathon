@@ -1,0 +1,15 @@
+{
+  "approvalSource": "Patria menulis 'FAse 0 lolos bersyarat, dengan catatan' di chat HACKATHON, 27 Okt 2026 15:04 WIB. Persetujuan ini direkam oleh Mimi, bukan diberikan oleh Mimi.",
+  "approvedAt": "2026-10-27T15:04:33+07:00",
+  "approver": "Patria A. Wijaya",
+  "decision": "conditionally-approved",
+  "gate": "Fase 0",
+  "scope": "Fondasi Fase 0 (kontrak JSON v1, router, CostLedger, Policy Engine, antrean + SSE, job contoh)",
+  "conditions": [
+    "Tes live Muse lewat kode router (tergantung klaim kredit $150 + kartu tertaut + Spend Limit Meta, Patria-only).",
+    "Re-baseline biaya penuh dari harga aktual Muse/Gemini dan pengukuran CostLedger (saat ini hanya parsial: Ollama Rp0 + ilustrasi Gemini dari tarif sekunder)."
+  ],
+  "conditionsStatus": "open",
+  "note": "Record append-only (kanon: approval tidak pernah diedit; revisi = record baru). Vonis sebelumnya di docs/fase-0-gate-results.md (TIDAK LOLOS GERBANG PENUH, s.d. 11:30 WIB) tetap tercatat sebagai riwayat; status gerbang kini lolos bersyarat. Keputusan ini TIDAK membuka Fase 3 (masih ditunda atas perintah Patria) dan TIDAK mengubah UI stop 27 Okt 15:02 WIB. Lolos penuh dinyatakan hanya setelah kedua catatan ditutup dan Patria menyatakannya.",
+  "supersedesId": null
+}

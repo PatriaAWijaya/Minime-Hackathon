@@ -1,5 +1,17 @@
 # Hasil Gerbang Fase 0 (checklist rencana kegiatan)
 
+## Addendum 27 Okt 2026 15:04 WIB — LOLOS BERSYARAT
+
+Patria memutuskan Fase 0 LOLOS BERSYARAT (bukan lolos penuh). Vonis di
+bawah ini adalah riwayat s.d. 11:30 WIB dan tetap tercatat apa adanya;
+yang berubah adalah status gerbang: fondasi dinyatakan cukup untuk
+lanjut dengan dua catatan yang wajib ditutup sebelum klaim lolos penuh:
+(1) tes live Muse (klaim/kartu Meta, Patria-only), (2) re-baseline
+biaya penuh dari harga aktual. Record:
+docs/fase-0-gate-conditional-approval.json. Keputusan ini TIDAK membuka
+Fase 3 (masih ditunda atas perintah Patria; UI juga dihentikan
+sementara 15:02 WIB).
+
 Diperbarui 27 Okt 2026 ~11:30 WIB — pembaruan ini tidak mengubah vonis:
 Fase 0 tetap TIDAK LOLOS GERBANG PENUH, hanya bukti per kakinya yang
 diperbarui dengan pengukuran live yang sudah dilakukan.

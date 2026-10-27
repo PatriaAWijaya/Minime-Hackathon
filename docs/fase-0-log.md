@@ -639,3 +639,14 @@ dokumen lama yang dipakai.
   (Fase 0 bersyarat, Fase 1 GSTP, Fase 2 executed + GKonten,
   v4/v5 + UI stop, Stack) — tidak ada riwayat yang ditulis ulang,
   koreksi dicatat di sini apa adanya.
+
+- 27 Okt 15:04 WIB (perintah Patria "FAse 0 lolos bersyarat, dengan
+  catatan"): GERBANG FASE 0 LOLOS BERSYARAT. Record
+  docs/fase-0-gate-conditional-approval.json (approver Patria;
+  vonis direkam Mimi, bukan diberikan Mimi). Catatan yang
+  tercatat = dua butir yang selama ini menggantung: (1) tes live
+  Muse, (2) re-baseline biaya penuh; keduanya masih OPEN — lolos
+  penuh hanya setelah keduanya ditutup dan Patria menyatakannya.
+  Addendum ditambahkan di atas docs/fase-0-gate-results.md tanpa
+  menghapus vonis 11:30 WIB. Keputusan ini TIDAK membuka Fase 3
+  dan TIDAK mengubah UI stop 15:02 WIB.
