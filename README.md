@@ -102,7 +102,9 @@ Video Editor view added 27 Oct sore (assets + preview + inspector +
 4-track timeline + transport, own code, click-only); engines still
 missing, listed in docs/video-editor-engines.md. Project description
 cleaned 27 Oct sore to the 3 main model tiers only (Meta, Gemini,
-local Ollama): non-trio model names removed from README/PLAN. Phase 3 was ordered resumed
+local Ollama): non-trio model names removed from README/PLAN. Accent
+changed 27 Oct sore: #B214FF → #FF5A97 on Patria's order (monochrome
++ pink; MiniMe logo unchanged). Phase 3 was ordered resumed
 27 Oct 2026 15:09 WIB and executed the same afternoon: 7 carousels
 x 3 slides (QC 100/100, images null pending-provider) with all 7
 Postiz drafts pushed as DRAFT only 27 Oct ~15:35 WIB (HTTP 201

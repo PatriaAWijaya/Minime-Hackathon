@@ -131,6 +131,8 @@ copied from the main Minime repository.
   (panel aset + preview + inspector + timeline 4 track + transport,
   klik klip/aset, edit nama klip) — UI dulu, engine menyusul
   (daftar di docs/video-editor-engines.md).
+  AKSEN 27 Oct sore: #B214FF → #FF5A97 atas perintah Patria
+  (monochrome + pink; logo MiniMe tetap apa adanya).
   v1 doc is kept as history only.
   Phase 3 is PAUSED until Patria orders it to resume after the UI
   draft decision.

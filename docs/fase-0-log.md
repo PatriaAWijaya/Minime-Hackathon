@@ -782,3 +782,12 @@ dokumen lama yang dipakai.
   README + PLAN (frasa Maverick/Flash/Sonnet → "superseded
   models"); package.json sudah bersih; log histori
   (fase-0-log) TIDAK diubah — itu catatan, bukan deskripsi.
+
+  UI — AKSEN PINK (27 Okt sore, perintah Patria "ubah warna
+  aksen menjadi #FF5A97"): 50 kemunculan #B214FF di
+  prototype-v5/index.html diganti ke #FF5A97 (CSS, inline
+  style, JS warna Prime, banner); kata "violet" di file
+  hilang (0 tersisa); banner kini "MONOCHROME + AKSEN PINK
+  #FF5A97". Logo MiniMe tidak diubah (aset brand apa
+  adanya). Build single-file diperbarui. Riwayat tema
+  violet di log ini TIDAK diubah (catatan saat itu).
