@@ -128,6 +128,24 @@
   .wa-pop { display: none; background: #262626; border: 1px solid #3a3a3a; border-radius: 12px; padding: 10px 12px; }
   .wa-pop.open { display: block; }
   .wa-pop button { background: #1f1f1f; border: 1px solid #3a3a3a; color: #ececec; border-radius: 20px; padding: 7px 12px; margin: 0 6px 6px 0; cursor: pointer; font-size: 13px; }
+
+  .agent-topbar { display: flex; align-items: center; gap: 8px; padding: 14px 14px 10px; flex-shrink: 0; }
+  .scope-dot { width: 12px; height: 12px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+  .agent-scope { font-weight: 700; font-size: 16px; }
+  .nav-arrow { background: transparent; border: none; color: #a1a1a1; font-size: 22px; cursor: pointer; padding: 0 4px; }
+  .agent-plus { margin-left: 2px; background: #262626; border: 1px solid #3a3a3a; color: #ececec; width: 36px; height: 36px; border-radius: 10px; font-size: 20px; cursor: pointer; flex-shrink: 0; }
+  .add-menu { display: none; margin: 0 14px 10px; background: #1f1f1f; border: 1px solid #2a2a2a; border-radius: 10px; padding: 10px; flex-shrink: 0; }
+  .add-menu.open { display: block; }
+  .add-menu button { display: block; width: 100%; text-align: left; background: #262626; border: 1px solid #3a3a3a; color: #ececec; border-radius: 8px; padding: 9px 12px; margin-bottom: 6px; cursor: pointer; font-size: 14px; }
+  .add-menu button:last-child { margin-bottom: 0; }
+  .agent-searchbox { display: flex; align-items: center; gap: 8px; background: #262626; border-radius: 10px; padding: 9px 12px; margin: 0 14px 10px; flex-shrink: 0; }
+  .agent-searchbox input { background: transparent !important; border: none !important; padding: 0 !important; }
+  .agent { background: #1f1f1f; border-radius: 12px; }
+  .agent-av { width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; }
+  .agent-main { flex: 1; min-width: 0; }
+  .agent-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .agent-time { color: #a1a1a1; font-size: 12px; flex-shrink: 0; }
+  .agent-preview { color: #a1a1a1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -146,14 +164,18 @@
   </div>
 
   <div class="col" id="agentCol">
-    <div class="colhead"><h2>Agen Aktif</h2><p>Proyek aktif bisa diganti dari chat. Prime selalu aktif.</p></div>
-    <div style="padding:12px 14px 0;flex-shrink:0"><input type="text" id="navSearch" placeholder="Search" oninput="filterAgents(this.value)"><div class="mainchat" onclick="showView('home')"><div class="av" style="background:#6d28d9">P</div><div><b>Main chat</b><br><small style="color:#a1a1a1">Prime Agent — chat utama</small></div></div></div><div class="scroll" id="agentList"></div>
-    <div style="border-top:1px solid #ddd;padding:12px 14px;flex-shrink:0">
-      <label style="margin-top:0">Tambah agen ke proyek aktif</label>
-      <select id="addAgentSel"></select>
-      <button class="btn btn-primary" style="width:100%" onclick="addAgent()">+ Tambah Agen</button>
-      <div class="notice" id="addNotice" style="display:none"></div>
+    <div class="agent-topbar">
+      <span class="scope-dot"></span><span class="agent-scope">Local</span><span style="color:#a1a1a1">⌄</span>
+      <span style="flex:1"></span>
+      <button class="nav-arrow" onclick="viewBack()" title="Kembali">‹</button>
+      <button class="nav-arrow" onclick="viewForward()" title="Maju">›</button>
+      <button class="agent-plus" onclick="toggleAddMenu()" title="Tambah agen">＋</button>
     </div>
+    <div class="add-menu" id="addMenu"></div>
+    <div class="agent-searchbox"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a1a1a1" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg><input type="text" id="navSearch" placeholder="Search" oninput="filterAgents(this.value)"></div>
+    <div style="padding:0 14px;flex-shrink:0"><div class="mainchat" onclick="showView('home')"><div class="av" style="background:#6d28d9">P</div><div><b>Main chat</b><br><small style="color:#a1a1a1">Prime Agent — chat utama</small></div></div></div>
+    <div class="scroll" id="agentList"></div>
+    <div style="padding:0 14px 12px;flex-shrink:0"><div class="notice" id="addNotice" style="display:none"></div></div>
   </div>
   <div class="resizer" id="resizeAgent"></div>
 
@@ -368,12 +390,14 @@
 
   /* ---------- Agen ---------- */
   function renderAgents() {
-    var html = "";
+    var html = "", rowNo = -1;
     Object.keys(PROJECTS).forEach(function (pid) {
       var proj = PROJECTS[pid];
       html += '<div class="group">' + proj.name + (pid === currentProj ? ' • PROYEK AKTIF' : '') + '</div>';
       proj.agents.forEach(function (a, i) {
         var ag = AGENTS[a.key], off = a.status === "Nonaktif";
+        rowNo++;
+        var times = ["2:32 PM", "1:47 PM", "12:05 PM", "11:20 AM", "10:02 AM", "9:15 AM", "8:40 AM", "7:55 AM"];
         html += '<div class="agent ' + (selectedAgent === a.key && pid === currentProj ? 'sel' : '') + (off ? ' off' : '') + (pid === currentProj ? ' curproj' : '') + '" onclick="selectAgent(\'' + a.key + '\',\'' + pid + '\')">'
           + '<div class="av" style="background:' + ag.color + '">' + ag.name.charAt(0) + '</div>'
           + '<div class="meta"><b>' + ag.name + '</b> <span class="badge ' + (off ? 'b-no' : 'b-ok') + '">' + a.status + '</span><br><small>' + a.task + '</small></div>'
@@ -382,22 +406,14 @@
       });
     });
     document.getElementById("agentList").innerHTML = html;
-    var sel = document.getElementById("addAgentSel");
-    if (!sel.dataset.filled) {
-      Object.keys(AGENTS).forEach(function (k) {
-        if (k === "prime") return;
-        var o = document.createElement("option"); o.value = k; o.textContent = AGENTS[k].name + " — " + AGENTS[k].role; sel.appendChild(o);
-      });
-      sel.dataset.filled = "1";
-    }
   }
   function toggleAgent(idx, pid) {
     var a = PROJECTS[pid].agents[idx];
     a.status = a.status === "Nonaktif" ? "Idle" : "Nonaktif";
     renderAgents(); renderDetail();
   }
-  function addAgent() {
-    var key = document.getElementById("addAgentSel").value;
+  function addAgent(key) {
+    if (!key) return;
     var proj = PROJECTS[currentProj];
     var n = document.getElementById("addNotice"); n.style.display = "block";
     if (proj.agents.some(function (a) { return a.key === key; })) {
@@ -405,6 +421,7 @@
       return;
     }
     proj.agents.push({ key: key, status: "Idle", task: "Baru ditambahkan (simulasi)" });
+    document.getElementById("addMenu").classList.remove("open");
     renderAgents();
     n.textContent = "Simulasi: agen " + AGENTS[key].name + " ditambahkan ke " + proj.name + ".";
   }
@@ -962,6 +979,25 @@ function filterAgents(q) {
     var _qc = quickChat;
     quickChat = function (t) { _qc(t); waInputChanged(); };
   })();
+  function toggleAddMenu() { document.getElementById('addMenu').classList.toggle('open'); }
+  function renderAddMenu() {
+    var menu = document.getElementById('addMenu');
+    var proj = PROJECTS[currentProj];
+    var avail = Object.keys(AGENTS).filter(function (k) { return k !== 'prime' && !proj.agents.some(function (a) { return a.key === k; }); });
+    menu.innerHTML = '<div style="font-size:13px;color:#a1a1a1;margin-bottom:8px">Tambah agen ke ' + proj.name + '</div>'
+      + (avail.length ? avail.map(function (k) { return '<button onclick="addAgent(\'' + k + '\')">' + AGENTS[k].name + ' — ' + AGENTS[k].role + '</button>'; }).join('') : '<div style="font-size:13px;color:#a1a1a1">Semua agen sudah ada di proyek ini.</div>');
+  }
+  var _ra2 = renderAgents;
+  renderAgents = function () { _ra2(); renderAddMenu(); };
+  var viewHist = ['home'], viewHistIdx = 0, navJump = false;
+  var _sv2 = showView;
+  showView = function (id) {
+    if (!navJump) { viewHist = viewHist.slice(0, viewHistIdx + 1); if (viewHist[viewHistIdx] !== id) { viewHist.push(id); viewHistIdx++; } }
+    _sv2(id);
+  };
+  function viewBack() { if (viewHistIdx > 0) { navJump = true; viewHistIdx--; _sv2(viewHist[viewHistIdx]); navJump = false; } }
+  function viewForward() { if (viewHistIdx < viewHist.length - 1) { navJump = true; viewHistIdx++; _sv2(viewHist[viewHistIdx]); navJump = false; } }
+  renderAgents();
   waInputChanged();
 </script>
 </body>

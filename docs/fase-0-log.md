@@ -542,3 +542,27 @@ dokumen lama yang dipakai.
   ada di baris atas composer. Verifikasi: kedua blok JS lolos
   node --check, tanpa referensi eksternal. Status: MENUNGGU
   REVISI Patria dari prototype v5 (dengan composer WA).
+
+- 27 Okt sore (perintah Patria "UI list agent buat seperti ini,
+  menu tambah agen hanya berupa icon + di bar atas, rata kanan
+  dengan kolom list agen", dengan lampiran panel list gelap):
+  LIST AGEN v5 DIGANTI seperti lampiran (masih di file
+  prototype-v5/index.html yang sama). Bar atas kolom agen kini:
+  titik hijau + "Local" + chevron di kiri, panah back/forward
+  (riwayat view sungguhan di prototype: kembali/maju antar view
+  yang sudah dibuka), dan HANYA ikon ＋ di kanan sebagai menu
+  tambah agen — form "Tambah agen" di bawah list DIHAPUS total.
+  Klik ＋ membuka menu dropdown berisi agen yang belum ada di
+  proyek aktif (klik agen → agen ditambahkan, menu tertutup,
+  list diperbarui). Di bawah bar: Search box gelap membulat
+  dengan ikon kaca pembesar (memfilter list agen, seperti
+  sebelumnya). Tiap item list kini seperti kartu di lampiran:
+  avatar kotak membulat warna agen + nama tebal + jam di kanan
+  atas (dummy, gaya "2:32 PM") + baris preview tugas•status
+  yang terpotong ellipsis ("Hello! What can I help you wit…"
+  ala lampiran). Pengelompokan per proyek dan tombol
+  Nonaktifkan/Aktifkan dipertahankan (fungsi), hanya tampilannya
+  yang mengikuti lampiran. Verifikasi: kedua blok JS lolos
+  node --check, tanpa referensi eksternal, form lama benar-benar
+  hilang dari file. Status: MENUNGGU REVISI Patria dari
+  prototype v5 (dengan list agen gaya lampiran).
