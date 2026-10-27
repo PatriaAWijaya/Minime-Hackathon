@@ -1233,3 +1233,27 @@ dokumen lama yang dipakai.
   1 bundle; proses lama PID 24427 dibunuh, proses
   BARU PID 24681 hidup dari bundle B6. Tahap B
   SELESAI.
+
+  HAPUS BANNER v5 (27 Okt sore, perintah Patria 19:08 WIB):
+  div.banner di App.svelte (baris 16) dihapus utuh —
+  teks "MiniMe — PROTOTYPE v5 — UI UTAMA GAYA MUSE,
+  MONOCHROME + AKSEN PINK PASTEL #FFD1DC ... media
+  adalah placeholder dummy" tidak lagi tampil di app.
+  Build lolos, parity 16/16 + rig B4 lolos ulang.
+  Aturan CSS .banner di app.css dibiarkan (stylesheet
+  v5 verbatim, tak terpakai, tak merusak).
+
+  KEPUTUSAN BAHASA (27 Okt sore, perintah Patria
+  19:07 WIB): model AI + UI memakai Indonesia,
+  Inggris, Mandarin; pengguna mengganti bahasa lewat
+  menu Pengaturan; default Patria = Indonesia.
+  Dicatat sebagai rule.md no.13. Keadaan saat ini:
+  UI sudah Indonesia (default Patria terpenuhi);
+  selector + kamus EN/ZH + instruksi bahasa ke router
+  BELUM dibangun — diusulkan sebagai B7 (kamus
+  3 bahasa + selector Pengaturan yang tersimpan +
+  instruksi bahasa ke router yang aman per provider,
+  lalu parity + rantai). Dropdown tanpa fungsi
+  dilarang aturan no.6, jadi selector tidak dipasang
+  sebelum kamusnya ada. Menunggu keputusan Patria:
+  kerjakan B7 sekarang atau sesudah Fase 4/5.

@@ -13,7 +13,6 @@
   });
 </script>
 
-<div class="banner"><b>MiniMe — PROTOTYPE v5 — UI UTAMA GAYA MUSE, MONOCHROME + AKSEN PINK PASTEL #FFD1DC.</b> Tema monochrome gelap dengan aksen pink pastel #FFD1DC; susunan panel semirip lampiran (rail ikon + list agen + chat + panel Detail agen; list agen + Detail hanya tampil di window Home, window lain memakai lebar penuh). 6 ikon rail berasal dari dokumen lampiran (Home, Search, Kanban, Graph, Library, Planner); Media Studio, Video Editor &amp; Settings memakai fallback gaya garis karena tidak ada ikon lampiran untuk ketiganya. Semua interaksi dari v4 dipertahankan. Kanban TEST Kopi & Planner kini memakai data nyata (Fase 2/3 + 7 draf Postiz, per 27 Okt 2026); chat/agents/media masih simulasi di browser — media adalah placeholder dummy.</div>
 <div class="app">
   <div class="sidebar">
     <img class="appmark" src="minime-icon.png" alt="MiniMe">

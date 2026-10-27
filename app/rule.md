@@ -40,3 +40,9 @@ that specific case, recorded in the log.
 12. **Theme + nav are locked.** Monochrome + pastel pink `#FFD1DC`
     (dark text on accent surfaces); agent list + Detail panel
     only in the Home window. Changes need Patria's order.
+13. **Bahasa: Indonesia, Inggris, Mandarin.** Model AI dan UI
+    memakai tiga bahasa ini (ID/EN/ZH); pengguna mengganti
+    bahasa lewat menu Pengaturan; default Patria adalah
+    Indonesia. String UI baru wajib tersedia di ketiga
+    bahasa; dropdown bahasa yang belum mengganti apa pun
+    dilarang (aturan no.6: tanpa status sukses palsu).
