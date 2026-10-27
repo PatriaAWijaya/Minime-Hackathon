@@ -71,6 +71,18 @@ copied from the main Minime repository.
   (Image / Carousel / Reels / Talking Head, ready-to-post status).
   Design: docs/ui-draft-v2.md. Clickable prototype v2:
   prototype-v2/index.html (dummy TEST data, simulated decisions).
+  MAIN LAYOUT v3 (27 Oct siang, Patria: 'mulai dari UI utama'):
+  4-column main window — icon-only sidebar (Home, Search, Kanban,
+  Graph, Library, Media Studio, Planner, Settings at bottom; names
+  on hover) + Agent column grouped per project (Prime always
+  active; others auto-activated by Prime or added/deactivated by
+  user; same agent may appear in several projects at once) +
+  group-chat window (User + Prime + sub-agents, all results
+  curated by Prime) + Detail panel (customize agent condition +
+  skills); resizable column widths + independent scrollbars.
+  Spec: docs/ui-main-layout.md. Clickable prototype v3:
+  prototype-v3/index.html (dummy, simulated). Awaiting Patria's
+  revision of the v3 main layout.
   v1 doc is kept as history only.
   Phase 3 is PAUSED until Patria orders it to resume after the UI
   draft decision.
