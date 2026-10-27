@@ -10,10 +10,14 @@
   pastel pink `#FFD1DC`, Kanban 5 kolom, Graph gaya n8n, Media
   Studio + full Video Editor view (click-only, dummy data),
   agent list + Detail only in Home window.
-- App shell: NOT YET BUILT (this build starts it). No Tauri or
-  Electron code exists in the repo yet — only mentions in docs.
-- Live test: not yet possible as a desktop app; testing so far
-  is via the HTML build file and jsdom click tests (passed).
+- App shell: BUILT + LAUNCHED 27 Oct sore (Tahap A). Bundle:
+  `app/src-tauri/target/debug/bundle/macos/MiniMe.app` di
+  MacBook (HEAD 08b8e3b, proses PID 22069 hidup saat
+  verifikasi). Frontend = build v5 statis (dummy data).
+- Live test: aplikasi desktop sudah bisa dibuka di MacBook;
+  klik sudah teruji di mesin DOM (jsdom, lolos) dan proses
+  app hidup; konfirmasi visual jendela + klik di tangan
+  Patria (satu-satunya yang tidak bisa diverifikasi remote).
 
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,

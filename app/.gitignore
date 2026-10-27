@@ -2,3 +2,5 @@
 target/
 # Node modules (Tahap B: Svelte + Vite)
 node_modules/
+# Generated Tauri schemas (regenerable by tauri-build, never committed)
+gen/

@@ -2,20 +2,24 @@
 
 ## Tahap A — shell (in progress, 27 Oct 2026 sore)
 - [x] Protocol docs: AGENTS.md, status.md, rule.md, TODO.md, PLAN.md
-- [ ] Tauri shell scaffold (`app/src-tauri/`) + config + capabilities
-- [ ] FrontendDist points at `prototype-v5/build` (no duplicate copy)
-- [ ] JSON validation + credential scan pass
-- [ ] Commit + push (SHA pair recorded)
-- [ ] Clone/pull repo on MacBook, verify toolchain (cargo, tauri CLI)
-- [ ] `tauri build --debug` on MacBook, verify `.app` bundle
-- [ ] Launch app on MacBook, verify process alive + window opens
+- [x] Tauri shell scaffold (`app/src-tauri/`) + config + capabilities
+- [x] FrontendDist points at `prototype-v5/build` (no duplicate copy)
+- [x] JSON validation + credential scan pass
+- [x] Commit + push (SHA pair recorded)
+- [x] Clone/pull repo on MacBook, verify toolchain (cargo, tauri CLI)
+- [x] `tauri build --debug` on MacBook, verify `.app` bundle
+- [x] Launch app on MacBook, verify process alive + window opens
 - [ ] Live click test: Home → Kanban → Graph → Home (columns rule)
+  (verifikasi visual/klik oleh Patria di MacBook)
 
 ## Uji konsistensi (after Tahap A)
-- [ ] `npx tsc` 0 errors, gate-test all pass, scan passed
-- [ ] tauri.conf.json valid; frontendDist content == current v5 build
-- [ ] Bundle exists, app launches, nav/columns/theme behave
-- [ ] Log entry + push
+- [x] `npx tsc` 0 errors, gate-test all pass, scan passed
+- [x] tauri.conf.json valid; frontendDist content == current v5 build
+- [x] Bundle exists, app launches, nav/columns/theme behave
+  (remote: bundle + proses hidup; visual/klik: Patria, lihat di bawah)
+- [x] Log entry + push
+- [ ] Konfirmasi visual Patria: jendela app + klik Home→Kanban→Home
+  (kolom rule) di MacBook
 
 ## Tahap B — full wiring (after the audit, gated sub-phases)
 - [ ] B1: Svelte 5 scaffold + Vite (`base: './'`) + mount

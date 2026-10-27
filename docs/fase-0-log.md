@@ -924,3 +924,32 @@ dokumen lama yang dipakai.
   menjelaskan kemungkinan gagalnya cargo check VM (macro
   yang sama membaca icon.png) — perbaikan ini melayani
   keduanya.
+
+  BUILD APP — TAHAP A SUKSES + AUDIT LOLOS (27 Okt sore):
+  Rantai v2 (set -e): pull OK (HEAD 08b8e3b) -> cargo
+  tauri icon OK (set ikon lengkap: .icns, png, Square
+  logos) -> cargo tauri build --debug SUKSES -> bundle
+  ADA: app/src-tauri/target/debug/bundle/macos/MiniMe.app
+  -> open OK -> proses HIDUP PID 22069 (binary
+  MiniMe.app/Contents/MacOS/minime, masih hidup saat
+  verifikasi susulan). Marker MH_BUILD2_OK tercapai.
+  Validasi VM menyusul lolos: cargo check exit 0
+  ("Finished dev profile in 3m 10s", minime vs tauri
+  2.12.5) — perbaikan icon juga menyelamatkan check ini.
+  AUDIT PASCA-BUILD: tsc 0 error; gate-test 13/13;
+  scan lolos SETELAH target/ VM dihapus — scan sempat
+  menandai false positive (fragmen hash di fingerprint
+  JSON build artifact), bukan kunci asli; target/ memang
+  tidak boleh ada di tree kerja (sudah di-.gitignore).
+  Cargo.lock di-commit (tauri 2.12.5 = sama dengan yang
+  di-resolve build MacBook). gen/ (4 skema JSON 304K
+  hasil generate tauri-build) di-.gitignore + dihapus
+  dari tree VM (regenerable, bukan source). Klarifikasi
+  ukuran: build v5 = 209.781 byte (angka 209.380
+  sebelumnya adalah hitungan karakter Python, bukan
+  byte). frontendDist bundle = build v5 terkini (pastel
+  53x, rule no-nav ada). YANG MASIH MENUNGGU TANGAN
+  PATRIA: konfirmasi visual jendela app + klik
+  Home->Kanban->Home di MacBook (verifikasi remote
+  hanya sampai bundle + proses hidup). Berikutnya:
+  wiring Tahap B (B1 scaffold Svelte + mount).
