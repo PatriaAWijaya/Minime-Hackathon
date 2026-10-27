@@ -52,6 +52,8 @@
   (rig-vs 14/14 lolos; svelte-check 0 error; CSP + :3900;
   rebuild MacBook rantai v12 sukses, app jalan PID 28629;
   bukti live menunggu VoiceStudio.app dibuka Patria)
+- [x] Hapus 6 kalimat catatan (perintah Patria 20:35) + log + push
+  (bundle terverifikasi 0 kemunculan; rebuild MacBook rantai v13 sukses, app jalan PID 29831)
 
 ## Parked (Patria's call)
 - [ ] `.dmg` distribution build

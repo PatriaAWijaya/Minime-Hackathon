@@ -54,6 +54,7 @@
 - Hapus kalimat gerbang dari panel Detail (27 Okt 19:39, perintah Patria): kalimat "Gerbang (GSTP/GKonten/GBatch) tidak bisa dimatikan dari panel ini." dihapus dari template Detail; bundle terverifikasi 0 kemunculan; kode lokal a599e64 <-> remote 68c5c65.
 - Media Studio 4 tab (27 Okt 19:42, perintah Patria): menu Video Editor terpisah dihapus dari rail; Media Studio kini 4 tab bergantian — Script Editor (pad naskah tersimpan lokal), Image Editor (grid + filter + status generator), Voice Editor (aset suara + tombol Suara), Video Editor (editor lengkap ve2 + toolbar) — SELESAI, rig-ms 20/20 lolos; rantai v11 live PID 27300 (HEAD remote b9beca9). Default tab Video (PROVISIONAL).
 - Voice Editor wiring VoiceStudio (27 Okt 20:09, perintah Patria): klien API lokal :3900 + UI Clone gaya VoiceStudio (status, voice, TTS, clone referensi, model, player + unduh) — SELESAI, rig-vs 14/14 lolos; rantai v12 live PID 28629 (HEAD remote ec05496). Engine offline saat build (VoiceStudio.app tertutup); bukti live menunggu Patria buka app-nya.
+- Hapus 6 kalimat catatan (27 Okt 20:35, perintah Patria): subjudul Media Studio, catatan Script, notice status generator, catatan proses VoiceStudio, notice pola Diffusion, notice daftar engine — SELESAI, bundle 0 kemunculan; rantai v13 live PID 29831 (HEAD remote 6f1ce50).
 
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
