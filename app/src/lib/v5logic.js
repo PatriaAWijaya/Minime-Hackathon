@@ -485,32 +485,21 @@ export function refreshBackendData() {
   PROJECTS.kopi.kanban = kopiKanban();
 }
 
-export function playTimeline() {
-    if (playTimer) clearInterval(playTimer);
-    var p = 0, el = document.getElementById("playhead");
-    playTimer = setInterval(function () {
-      p += 2;
-      if (p >= 100) { clearInterval(playTimer); playTimer = null; }
-      el.style.left = p + "%";
-    }, 120);
-  }
-
-export function selectClip(el, name, start, dur, track) {
-    document.querySelectorAll(".ve-clip").forEach(function (c) { c.classList.remove("selected"); });
-    el.classList.add("selected");
-    document.getElementById("veClipName").textContent = name;
-    document.getElementById("veClipStart").textContent = start;
-    document.getElementById("veClipDur").textContent = dur;
-    document.getElementById("veClipTrack").textContent = track;
-    document.getElementById("vePreviewLabel").textContent = "Preview: " + name;
-  }
+export function mediaTab(id) {
+  ['script', 'image', 'voice', 'video'].forEach(function (k) {
+    var p = document.getElementById('ms-tab-' + k);
+    if (p) p.style.display = (k === id) ? 'block' : 'none';
+    var b = document.getElementById('ms-tabbtn-' + k);
+    if (b) b.classList.toggle('active', k === id);
+  });
+}
 
 export function veTool(tool) {
-    document.getElementById("veToolNote").textContent = "Simulasi: '" + tool + "' belum terhubung ke Diffusion (tampilan saja).";
-  }
+  document.querySelectorAll(".veToolNote").forEach(function (n) { n.textContent = "Simulasi: '" + tool + "' belum terhubung ke Diffusion (tampilan saja)."; });
+}
 
 export function ve2Select(el, name, start, dur, track) {
-    document.querySelectorAll("#view-videoeditor .ve-clip").forEach(function (c) { c.classList.remove("selected"); });
+    document.querySelectorAll("#ms-tab-video .ve-clip").forEach(function (c) { c.classList.remove("selected"); });
     el.classList.add("selected");
     document.getElementById("ve2Name").value = name;
     document.getElementById("ve2Start").value = start;
@@ -521,7 +510,7 @@ export function ve2Select(el, name, start, dur, track) {
 
 export function ve2SyncName() {
     var v = document.getElementById("ve2Name").value;
-    var sel = document.querySelector("#view-videoeditor .ve-clip.selected");
+    var sel = document.querySelector("#ms-tab-video .ve-clip.selected");
     if (sel) sel.textContent = v;
     document.getElementById("ve2PreviewLabel").textContent = "Preview: " + v;
   }
@@ -721,8 +710,6 @@ var MEDIA = [
 
 var PLANNER = plannerReal();
 
-var playTimer = null;
-
 var playTimer2 = null;
 
 var _ra2 = renderAgents;
@@ -793,5 +780,7 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addGraphEdge, addKanbanList, addNodeAfter, agentKeyByName, buildEdgeOptions, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libRevise, libSave, libUse, makeResizer, mediaBadge, mediaFilter, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimeline, playTimer, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectClip, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  var _ms = document.getElementById('msScript');
+  if (_ms) { try { _ms.value = localStorage.getItem('minime.script') || ''; } catch (_) {} }
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addGraphEdge, addKanbanList, addNodeAfter, agentKeyByName, buildEdgeOptions, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libRevise, libSave, libUse, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }
