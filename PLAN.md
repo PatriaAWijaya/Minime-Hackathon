@@ -35,11 +35,14 @@ copied from the main Minime repository.
   session). Still pending: live Muse (Meta credit claim + card +
   spend limit, Patria-only) and full cost re-baselining. No live Muse
   metric is claimed until those tests pass.
-- **Phase 1 — Decisions, Tue 27 Oct (draft) / gate after live tests:**
+- **Phase 1 — Decisions, Tue 27 Oct (draft EXECUTED live, awaiting GSTP):**
   Intake → Research → Business Strategy → STP, stopping at GS/GSTP
   gates. No production before GSTP approval; exactly one Approved STP
-  active per product. Draft preparation may proceed; gates are NOT
-  approved on Patria's behalf.
+  active per product. Executed 27 Oct siang via Gemini (1.551 tokens,
+  STP status draft, approvals empty, production blocked — output in
+  docs/fase-1-output.json). Gates are NOT approved on Patria's behalf;
+  Fase 2 may not start until Patria approves, revises, or rejects
+  this STP.
 - **Phase 2 — Image production, Wed 28 Oct (morning, 2/day pace):**
   7-day calendar from the approved STP, CreativeBrief JSON per item,
   text-free image generation, deterministic template overlay (so

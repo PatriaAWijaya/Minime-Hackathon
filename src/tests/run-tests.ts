@@ -14,6 +14,7 @@ import { JobQueue } from '../queue';
 import { ModelRouter, routerConfigFromEnv, LiveUnavailableError } from '../router';
 import { scoreQc } from '../qc';
 import { runSample } from '../pipeline';
+import { runFase1 } from '../fase1';
 
 function clean(p: string) {
   try { fs.rmSync(p, { recursive: true, force: true }); } catch { /* noop */ }
@@ -92,6 +93,17 @@ async function main() {
   assert.ok((sample as { draft: { published: boolean } }).draft.published === false, 'sample must end in draft, never publish');
   assert.ok(Array.isArray(sample.stages) && (sample.stages as string[]).includes('done'));
   ok('sample job end-to-end (mock, draft-only, trace + ledger)');
+
+  // Phase 1 (draft only) — mock run must produce a draft STP, record
+  // NO approval, and leave production blocked.
+  clean('data/jobs.sqlite');
+  clean('data/cost-ledger.jsonl');
+  const fase1 = await runFase1({ allowMock: true, dataDir: 'data' });
+  assert.strictEqual((fase1.stp as { status: string }).status, 'draft', 'Fase 1 STP must be draft, never approved by code');
+  assert.deepStrictEqual(fase1.approvals, [], 'Fase 1 must record no approval on Patria behalf');
+  assert.strictEqual(fase1.productionBlocked, true, 'production must be blocked without GSTP');
+  assert.strictEqual(fase1.mock, true, 'Fase 1 test run is mock — must be reported as mock');
+  ok('fase1 draft: STP draft, no approval, production blocked');
 
   // QC scoring
   const qc = scoreQc({ productId: 'P1', visualPrompt: 'a sufficiently long text-free visual prompt here', textOverlay: 'TEST', makerFamily: 'meta', qcFamily: 'gemini', modelRenderedText: false });

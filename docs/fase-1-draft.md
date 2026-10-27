@@ -1,8 +1,10 @@
 # Draf Fase 1 — Intake → Research → Strategy → STP (DRAF SAJA)
 
-Status: DRAF, 27 Okt 2026. BUKAN persetujuan. Gerbang Fase 0 belum lolos
-penuh, jadi dokumen ini hanya persiapan Fase 1: tidak ada approval GS
-maupun GSTP atas nama Patria di sini, dan tidak ada produksi yang boleh
+Status: DRAF, 27 Okt 2026. BUKAN persetujuan. UPDATE siang: draf ini
+SUDAH DIEKSEKUSI LIVE lewat src/fase1.ts; output terverifikasi ada di
+docs/fase-1-output.json dan statusnya MENUNGGU GSTP Patria. Tetap tidak
+ada approval GS maupun GSTP atas nama Patria di sini, dan tidak ada
+produksi yang boleh
 jalan dari draf ini sampai GSTP disetujui Patria sendiri.
 
 Brand uji: `TEST-BRAND-001` ("TEST Brand", netral, berlabel TEST — bukan

@@ -5,4 +5,5 @@ PASS queue idempotent + DB-persistent
 PASS router live-unavailable fails visibly; mock labelled; QC cross-family mapping correct
 PASS ollama live probe fails visibly in this VM (expected, recorded as pending)
 PASS sample job end-to-end (mock, draft-only, trace + ledger)
+PASS fase1 draft: STP draft, no approval, production blocked
 PASS qc scoring: pass and hard-violation rejection

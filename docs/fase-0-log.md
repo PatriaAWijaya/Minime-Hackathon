@@ -259,3 +259,20 @@ dokumen lama yang dipakai.
   ke Ollama sudah menjadi respons yang benar); Postiz TIDAK
   dipaksakan start (butuh Docker + sumber daya MacBook 8 GB yang
   sudah ketat; start adalah langkah Fase 3).
+
+- 27 Okt siang (perintah Patria "lanjutkan ke tahap berikutnya"):
+  FASE 1 DIEKSEKUSI SEBAGAI DRAF. Kode baru src/fase1.ts +
+  src/fase1-run.ts (npm run fase1): Intake (brief TEST fiksi:
+  TEST Kopi Surabaya, es kopi susu Rp15.000 untuk mahasiswa/pekerja
+  muda Surabaya) -> Research -> Strategy -> STP, semua lewat rantai
+  live (Meta gagal tanpa key -> Gemini 3.1-flash-lite, fallbackFrom
+  meta). Hasil live: 3 panggilan non-mock, total 1.551 token
+  (833 prompt + 718 completion), costUsd null (harga Gemini belum
+  di-baseline resmi, jadi ledger TIDAK mengklaim biaya dolar).
+  Riset draf kualitatif tanpa angka/URL karangan (sesuai prompt),
+  sumber berupa jenis verifikasi yang harus dicek. STP status
+  'draft', approvals KOSONG, productionBlocked true (terverifikasi
+  lewat GateError). Uji gerbang bertambah jadi 9 grup (baru: Fase 1
+  mock — STP draft, tanpa approval, produksi diblokir). Fase 1
+  TIDAK dinyatakan lolos: gerbangnya adalah GSTP Patria, dan itu
+  belum diberikan. Output: docs/fase-1-output.json.

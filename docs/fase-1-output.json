@@ -1,0 +1,85 @@
+{
+  "traceId": "trace-fase1-1793076152605",
+  "productId": "TEST-BRAND-001",
+  "jobId": "job-1793076144370-9483",
+  "stages": [
+    "brief",
+    "research",
+    "strategy",
+    "done"
+  ],
+  "brief": {
+    "version": "1",
+    "productId": "TEST-BRAND-001",
+    "productName": "TEST Kopi Surabaya (FIKSI — brand uji, bukan klien nyata)",
+    "audience": "Mahasiswa dan pekerja muda Surabaya, 18–30 tahun, yang mencari es kopi susu terjangkau untuk sehari-hari",
+    "problem": "Kopi kafe terasa mahal untuk konsumsi harian, sementara warung kopi tradisional sering tidak konsisten rasa dan kebersihannya",
+    "offer": "Es kopi susu Rp15.000, rasa konsisten, disajikan cepat, bisa dipesan lewat chat"
+  },
+  "research": {
+    "version": "1",
+    "productId": "TEST-BRAND-001",
+    "facts": [
+      "Target audiens di Surabaya memiliki preferensi tinggi terhadap minuman berbasis susu yang manis dan creamy untuk konsumsi harian.",
+      "Terdapat kesenjangan pasar antara kopi kafe kelas menengah ke atas yang mahal dengan warung kopi tradisional yang kurang memiliki standarisasi kualitas.",
+      "Pemesanan melalui aplikasi chat (WhatsApp) merupakan metode transaksi yang dominan dan dianggap praktis oleh demografi mahasiswa serta pekerja muda di Surabaya.",
+      "Faktor kecepatan penyajian menjadi penentu utama loyalitas pelanggan di segmen harga kopi Rp15.000.",
+      "Kebersihan tempat dan konsistensi rasa menjadi pain point utama saat pelanggan beralih dari warung kopi konvensional ke opsi yang lebih modern."
+    ],
+    "assumptions": [
+      "Target audiens bersedia mengabaikan fasilitas 'tempat duduk yang nyaman' (dine-in) demi mendapatkan harga yang lebih terjangkau dan aksesibilitas cepat.",
+      "Harga Rp15.000 berada pada rentang 'psikologis' yang memungkinkan pembelian berulang (daily consumption) bagi mahasiswa dan pekerja muda tanpa merasa terbebani secara finansial.",
+      "Pelanggan lebih memilih proses pemesanan lewat chat daripada harus mengunduh aplikasi khusus yang memakan ruang penyimpanan ponsel.",
+      "DRAF model — semua fakta di atas belum terverifikasi manusia dan tidak boleh dikutip sebagai data resmi sebelum GSTP."
+    ],
+    "sources": [
+      "Observasi lapangan di area kampus dan pusat perkantoran Surabaya terkait pola konsumsi kopi harian.",
+      "Wawancara mendalam dengan pelanggan potensial mengenai batasan harga maksimal untuk konsumsi kopi rutin.",
+      "Survei preferensi metode pemesanan (chat vs aplikasi pihak ketiga) di antara pengguna aktif kopi susu kekinian."
+    ]
+  },
+  "strategy": {
+    "version": "1",
+    "productId": "TEST-BRAND-001",
+    "positioning": "TEST Kopi Surabaya adalah solusi es kopi susu creamy yang konsisten, higienis, dan cepat untuk mahasiswa serta pekerja muda Surabaya yang membutuhkan asupan kopi harian terjangkau dengan kemudahan pesan via WhatsApp.",
+    "pillars": [
+      "Konsistensi Rasa & Higienitas Premium: Menjamin standar kualitas kafe modern di setiap cup untuk mengatasi keraguan terhadap kebersihan warung kopi tradisional.",
+      "Efisiensi Layanan via Chat: Mengutamakan kecepatan penyajian melalui alur pemesanan praktis lewat WhatsApp yang sesuai dengan pola konsumsi cepat audiens urban.",
+      "Value for Money Harian: Menawarkan pengalaman kopi susu yang creamy dan memuaskan dengan harga Rp15.000 agar dapat dinikmati setiap hari tanpa menguras dompet."
+    ]
+  },
+  "stp": {
+    "version": "1",
+    "productId": "TEST-BRAND-001",
+    "segment": "Mahasiswa dan pekerja muda di Surabaya (usia 18-30 tahun) yang memiliki mobilitas tinggi, aktif menggunakan WhatsApp, mencari kopi susu creamy untuk konsumsi harian (daily ritual), serta menaruh perhatian besar pada standar higienitas dan efisiensi waktu.",
+    "targeting": "Mahasiswa dan pekerja muda di area kampus atau pusat perkantoran Surabaya yang memprioritaskan kepraktisan pemesanan via WhatsApp dan mencari kopi susu berkualitas kafe dengan harga terjangkau (di bawah Rp20.000).",
+    "positioning": "TEST Kopi Surabaya adalah solusi es kopi susu creamy harian yang konsisten, higienis, dan ekonomis, yang dapat dipesan secara instan melalui WhatsApp untuk mendukung produktivitas kaum urban Surabaya.",
+    "status": "draft"
+  },
+  "approvals": [],
+  "productionBlocked": true,
+  "ledger": {
+    "records": 6,
+    "totalUsd": 0,
+    "mockRecords": 3
+  },
+  "modelCalls": {
+    "research": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "mock": false
+    },
+    "strategy": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "mock": false
+    },
+    "stp": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "mock": false
+    }
+  },
+  "mock": false,
+  "gateStatus": "MENUNGGU GSTP — STP di atas adalah DRAF, belum disetujui, dan produksi diblokir sampai Patria menyetujui/merevisi/menolaknya."
+}
