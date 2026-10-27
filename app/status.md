@@ -64,6 +64,8 @@
 
 - Hapus sufiks judul Library + note ve.lib.note (28 Okt dini hari, perintah Patria): judul jadi 'Library' saja (3 bahasa) + paragraf penjelas di colhead Library dihapus + kunci ve.lib.note x3 dihapus (i18n 285 kunci x 3 nihil mati); tombol 'Gunakan' + 'Perbaiki Lanjut' tetap berfungsi. Verifikasi build + svelte-check 0 error + tsc 0 + gate-test 13/13 + scan PASSED + rig-libdel 8/8. Rantai v19 live PID 43276 (HEAD remote 04e8dd5).
 
+- Sapuan hapus teks + seksi (28 Okt dini hari, 4 perintah Patria): teks Search/Kanban/Graph + judul Graph jadi 'Graph'; seksi bawah Graph dihapus total (detail node, form koneksi, daftar edge; kanvas + Run + notice simulasi tetap); judul Planner jadi 'Planner' + note aset ve2 + 3 note Cost dihapus; composer Planner dihapus total (textarea + tombol + notice; draf baru hanya lewat dashboard Postiz; 7 draf + tabel + record tidak disentuh). i18n 285 -> 263 kunci x 3 nihil mati; verifikasi tiap commit hijau + rig-graphdel 14/14, rig-del3 8/8, rig-del4 5/5. Rantai v20 live PID 43975 (HEAD remote 6133652).
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.
