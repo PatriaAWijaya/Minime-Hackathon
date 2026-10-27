@@ -48,6 +48,10 @@
   tab Script/Image/Voice/Video + log + push
   (rig-ms 20/20 lolos; svelte-check 0 error, warning 54 -> 38;
   rebuild MacBook rantai v11 sukses, app jalan PID 27300)
+- [x] Voice Editor wiring VoiceStudio (perintah Patria 20:09): klien API lokal + UI Clone + log + push
+  (rig-vs 14/14 lolos; svelte-check 0 error; CSP + :3900;
+  rebuild MacBook rantai v12 sukses, app jalan PID 28629;
+  bukti live menunggu VoiceStudio.app dibuka Patria)
 
 ## Parked (Patria's call)
 - [ ] `.dmg` distribution build
