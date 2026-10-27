@@ -87,8 +87,9 @@ approved by Patria on 27 Oct 2026 12:04 WIB
 score, not image-semantics validation) and images left null pending a
 provider. The UI phase produced clickable prototypes v1–v5 (current:
 prototype-v5/index.html, Muse-style dark theme, monochrome + violet
-#B214FF accent); UI work is PAUSED as of 27 Oct 2026 15:02 WIB on
-Patria's order (to be refined later). Phase 3 was ordered resumed
+#B214FF accent); UI work was PAUSED 27 Oct 2026 15:02 WIB, then resumed 15:49 WIB on
+Patria's order ('perbaiki UI'): v5 theme fix applied the same evening
+(strict monochrome + violet #B214FF, palette audit clean). Phase 3 was ordered resumed
 27 Oct 2026 15:09 WIB and executed the same afternoon: 7 carousels
 x 3 slides (QC 100/100, images null pending-provider) with all 7
 Postiz drafts pushed as DRAFT only 27 Oct ~15:35 WIB (HTTP 201

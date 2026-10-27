@@ -108,9 +108,13 @@ copied from the main Minime repository.
   with single violet accent #B214FF. A verification audit found and
   fixed one stale reference (emojiPanel in waToggleAttach). UI STOP
   27 Oct 15:02 WIB (Patria: 'sementara UI kita cukupkan, UI akan kita
-  sempurnakan nanti') — no further UI work until Patria orders
-  refinement; the UI design gate itself is therefore still formally
-  unapproved, with revisions deferred.
+  sempurnakan nanti') — LIFTED 27 Oct 15:49 WIB by Patria's order
+  'perbaiki UI' (monochrome + violet #B214FF, Muse form): v5 theme
+  fix applied the same evening (8 edits — banner bold, Prime bubble,
+  curation bubble, user bubble, input placeholder, video-track bar,
+  and 2 Riset message colors — all non-monochrome colors removed;
+  palette audit clean, JS syntax OK). The UI design gate itself is
+  therefore still formally unapproved.
   v1 doc is kept as history only.
   Phase 3 is PAUSED until Patria orders it to resume after the UI
   draft decision.

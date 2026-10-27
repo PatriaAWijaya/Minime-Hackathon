@@ -698,3 +698,19 @@ dokumen lama yang dipakai.
   Pilot item-01 diverifikasi dulu, baru 6 sisanya. Kanal:
   Instagram 'Branding, Marketing & AI'. Tidak ada approval
   baru; UI tetap stop.
+
+  UI — PERBAIKAN TEMA v5 (27 Okt ~15:50 WIB, stop 15:02 DICABUT
+  atas perintah Patria 'perbaiki UI', monochrome + violet #B214FF,
+  bentuk gaya Muse): audit palet v5 menemukan 8 penyimpangan
+  warna di luar monochrome+violet — banner bold emas, bubble
+  Prime biru-ungu, bubble kurasi emas-zaitun, bubble user biru
+  gelap, placeholder abu-biru, bar video ungu kedua (#7c3aed),
+  dan 2 pesan Riset yang keliru memakai warna violet Prime.
+  Perbaikan: banner bold → #B214FF; bubble Prime → abu + border
+  violet; bubble kurasi → abu gelap; bubble user → #333333;
+  placeholder → #737373; bar video Isi → #5b5b5b; pesan Riset →
+  #525252 (abu bertingkat agen, Prime tetap satu-satunya violet).
+  Verifikasi: audit palet bersih (hanya abu/putih + #B214FF),
+  JS 2 blok lolos node --check, diff 8+/8-. Bentuk tetap gaya
+  Muse v5 (rail + list agen + chat + panel Detail); gerbang
+  desain UI tetap belum disetujui formal.
