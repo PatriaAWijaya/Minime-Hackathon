@@ -63,10 +63,10 @@ Kurs: ~Rp18.148 per USD (Finnhub, 28 Okt 2026).
   konektivitas, model, dan token — bukan pengetahuan model tentang
   aplikasi.
 - Status re-baseline: Meta kini punya angka aktual (satu panggilan).
-  Harga Gemini (Fase 1/2/3) tetap belum di-baseline resmi, sehingga
-  re-baseline PENUH belum selesai. Kondisi Fase 0 (1) tertutup
-  bukti live; kondisi (2) tertutup sebagian (Meta saja). Lolos
-  penuh Fase 0 tetap menunggu pernyataan Patria sendiri.
+  Re-baseline PENUH selesai per keputusan Patria 28 Okt ~04:36 WIB
+  (lihat seksi penutup di bawah). Kondisi Fase 0 (1) dan (2)
+  keduanya tertutup. Lolos penuh Fase 0 tetap menunggu pernyataan
+  Patria sendiri.
 - Setara kredit pada kurs 28 Okt: $150 = **Rp2.722.200**
   (kreditnya sendiri tetap berdenominasi USD).
 
@@ -84,3 +84,28 @@ Kurs: ~Rp18.148 per USD (Finnhub, 28 Okt 2026).
    aktual; biaya aktual per tugas tetap null sampai ada token live
    dari pemakaian Meta. Muse Image ($0,01/gambar per katalog 23 Okt)
    tetap provisional sampai keputusan provider final + live call.
+
+## Re-baseline selesai — bagian 2 ditutup (keputusan Patria, 28 Okt 2026 ~04:36 WIB)
+
+- Gemini Fase 1–3 (7 panggilan, 10.859 token): **tertagih $0 (Rp0)**
+  karena pemakaian berjalan di free tier (Google AI Studio, proyek
+  'Default Gemini Project'). Bukan $0 karena tidak dipakai — dipakai,
+  tapi tier-nya gratis.
+- Rincian input/output 7 panggilan tersebut **tidak dapat
+  direkonstruksi**: cek dashboard Google Cloud 28 Okt 03:54–04:27 WIB
+  (read-only) hanya memberi agregat harian per proyek dalam bucket
+  UTC-8 (26 Okt: in 8,02K + out 4,09K, 28 request; 27 Okt: in 1,09K +
+  out 1,54K, 2 request), yang mencampur panggilan Fase dengan
+  panggilan lain dan membentang di dua bucket untuk satu hari Jakarta.
+  Ledger lokal hanya menyimpan 3 record mock; total 10.859 token
+  berasal dari riwayat percakapan, bukan ledger.
+- Nilai setara tarif standar untuk 10.859 token itu ($0,0027–$0,0163
+  ≈ Rp49–Rp296) dicatat sebagai PEMBANDING saja, bukan biaya
+  tertagih, dan tidak lagi dipakai sebagai baseline.
+- Total tertagih pekerjaan hackathon yang tercatat: 8 panggilan,
+  11.577 token, **$0,00295 (≈ Rp53,5)** — seluruhnya dari uji live
+  Meta; kontribusi Gemini $0.
+- Dampak ke aplikasi: baris Gemini di view Cost kini $0/Rp0 dengan
+  kolom input/output '—' (rincian tidak diketahui); total menjadi
+  $0,00295/Rp53,5. Keputusan ini milik Patria (opsi widget
+  'Catat $0 free tier, tutup bagian 2').

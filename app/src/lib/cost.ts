@@ -1,7 +1,9 @@
 // Cost per model yang tercatat dari pekerjaan hackathon.
 // Sumber: uji live Meta 28 Okt 2026 (1 panggilan, angka aktual) +
-// Fase 1-3 (7 panggilan Gemini, total token diketahui, rincian
-// input/output menunggu hasil cek dashboard Google Cloud).
+// Fase 1-3 (7 panggilan Gemini, 10.859 token, tertagih $0 karena
+// free tier; rincian input/output TIDAK dapat direkonstruksi —
+// cek dashboard Google Cloud 28 Okt hanya memberi agregat harian
+// UTC-8 proyek, bukan rincian per panggilan).
 // Modul murni: tanpa impor Node, aman di-bundle ke frontend.
 
 export type CostRow = {
@@ -36,10 +38,10 @@ export const COST_ROWS: CostRow[] = [
     calls: 7,
     input: null,
     output: null,
-    usdMin: 0.0027,
-    usdMax: 0.0163,
-    idrMin: 49,
-    idrMax: 296,
+    usdMin: 0,
+    usdMax: 0,
+    idrMin: 0,
+    idrMax: 0,
     tokens: 10859,
   },
 ];
@@ -47,10 +49,10 @@ export const COST_ROWS: CostRow[] = [
 export const COST_TOTAL = {
   calls: 8,
   tokens: 11577,
-  usdMin: 0.00565,
-  usdMax: 0.01925,
-  idrMin: 102.5,
-  idrMax: 349.5,
+  usdMin: 0.00295,
+  usdMax: 0.00295,
+  idrMin: 53.5,
+  idrMax: 53.5,
 };
 
 function trimNum(n: number): string {
