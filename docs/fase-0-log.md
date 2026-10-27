@@ -329,3 +329,31 @@ dokumen lama yang dipakai.
   disetujui eksplisit. Konsekuensi: Fase 2 tidak lagi diblokir
   gerbang (requireProductionAllowed hanya membutuhkan GSTP), tetapi
   Fase 2 BELUM dimulai — menunggu perintah Patria berikutnya.
+
+- 27 Okt siang (perintah Patria "Mulai Fase 2"): FASE 2 DIEKSEKUSI
+  (kalender + brief, GKonten MENUNGGU). Kode baru src/fase2.ts +
+  src/fase2-run.ts (npm run fase2): verifikasi GSTP dari record
+  Patria (tanpa record = GateError, teruji), kalender 7 hari dari
+  STP yang disetujui + riset behaviour, 7 CreativeBrief (visual
+  text-free, overlay template, ukuran per channel), QC rule 100/100
+  untuk semua item, gambar = null dengan status pending-provider
+  (Muse Image menunggu Meta aktif; tidak ada placeholder yang
+  diklaim sebagai gambar). Hasil live (2 panggilan Gemini non-mock,
+  3.604 token: 2.102 prompt + 1.502 completion, cost null karena
+  harga belum di-baseline): kalender mencakup 3 pilar, channel WA
+  Status + Reels/TikTok, CTA ke WA/QRIS, touch points penemuan ->
+  eksplorasi -> transaksi -> loyalitas. Perbaikan router yang
+  ditemukan selama run ini: callWithFallback kini menyebut SEMUA
+  kegagalan provider (bukan hanya yang terakhir), karena run
+  pertama gagal dengan error Ollama yang menutupi 503 Gemini yang
+  intermiten; setelah perbaikan, run ulang lolos. Catatan QC yang
+  jujur: skor 100 adalah skor rule struktural (prompt terisi,
+  overlay <=120, tanpa hard violation) — ia TIDAK memvalidasi
+  semantik gambar; item-03 memuat penggambaran QR code di visual
+  prompt, yang pada produksi nyata harus menjadi overlay QR asli,
+  bukan digambar model, dan item-01 deskripsinya bernuansa video
+  (transisi) padahal brief ini untuk gambar statis — keduanya
+  dicatat sebagai bahan revisi GKonten, bukan disembunyikan.
+  GKonten: approvals KOSONG, contentBlocked true, tidak ada draf
+  distribusi. Uji gerbang jadi 11 grup (baru: Fase 2 mock + blokir
+  tanpa GSTP). Output: docs/fase-2-output.json.

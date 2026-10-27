@@ -179,7 +179,10 @@ export class ModelRouter {
 
   /**
    * Full chain: meta -> gemini -> ollama. Returns the first success and
-   * records fallbackFrom. Throws the last LiveUnavailableError if all fail.
+   * records fallbackFrom. If all fail, throws a LiveUnavailableError
+   * that names EVERY provider's failure, not just the last one — so a
+   * transient Gemini 503 is never masked by the final Ollama error and
+   * callers can retry on 503 instead of misdiagnosing the chain.
    * `allowMock` is a test-only escape hatch and is recorded on the result.
    */
   async callWithFallback(prompt: string, agent: string, allowMock = false): Promise<CallResult> {
@@ -189,14 +192,14 @@ export class ModelRouter {
       () => this.callOllama(prompt),
     ];
     const names = ['meta', 'gemini', 'ollama'];
-    let lastError: Error | null = null;
+    const failures: string[] = [];
     for (let i = 0; i < chain.length; i++) {
       try {
         const r = await chain[i]();
         if (i > 0) r.fallbackFrom = names[i - 1];
         return r;
       } catch (e) {
-        lastError = e instanceof Error ? e : new Error(String(e));
+        failures.push(`${names[i]}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
     if (allowMock) {
@@ -204,7 +207,7 @@ export class ModelRouter {
       r.fallbackFrom = 'ollama';
       return r;
     }
-    throw lastError ?? new Error('all providers failed');
+    throw new LiveUnavailableError('ollama', `all providers failed: ${failures.join('; ')}`);
   }
 
   toCostRecord(r: CallResult, traceId: string, agent: string): CostRecord {

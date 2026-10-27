@@ -1,0 +1,261 @@
+{
+  "traceId": "trace-fase2-1793077740478",
+  "productId": "TEST-BRAND-001",
+  "jobId": "job-1793077739515-9760",
+  "stages": [
+    "calendar",
+    "briefs",
+    "done"
+  ],
+  "gstpApproval": {
+    "gate": "GSTP",
+    "decision": "approved",
+    "approver": "Patria A. Wijaya",
+    "source": "docs/fase-1-gstp-approval.json"
+  },
+  "approvedStp": {
+    "positioning": "TEST Kopi adalah penyedia es kopi susu harian paling praktis di Surabaya yang menjamin konsistensi rasa dan higienitas melalui akses pemesanan WhatsApp yang instan dan pembayaran QRIS tanpa hambatan bagi gaya hidup sibuk Anda.",
+    "productId": "TEST-BRAND-001",
+    "segment": "Mahasiswa dan pekerja muda di Surabaya (usia 18-28 tahun) yang memiliki intensitas penggunaan ponsel tinggi, sangat bergantung pada WhatsApp untuk aktivitas harian, memiliki gaya hidup urban dengan mobilitas tinggi, serta menunjukkan pola konsumsi 'budget-conscious' yang sensitif terhadap harga namun loyal pada metode pembayaran digital (QRIS) demi efisiensi.",
+    "sourceFile": "docs/fase-1-output.json",
+    "sourceTraceId": "trace-fase1-1793077341157",
+    "status": "approved",
+    "targeting": "Fokus pada audiens 'Urban Hustlers' di area kampus dan pusat perkantoran Surabaya dengan strategi akuisisi melalui WhatsApp Business dan konten video pendek (Reels/TikTok) yang mengarahkan langsung ke chat, serta memanfaatkan skema promosi e-wallet/QRIS untuk menjaga retensi di tengah perilaku konsumen yang sangat sensitif terhadap selisih harga.",
+    "version": "1"
+  },
+  "calendar": [
+    {
+      "day": 1,
+      "theme": "Kemudahan Pesan via WhatsApp",
+      "pillar": "Kenyamanan Digital",
+      "contentType": "Video Pendek (Reels/TikTok)",
+      "channel": "Instagram/TikTok",
+      "touchPoint": "Penemuan",
+      "hook": "Capek antre kopi saat buru-buru ke kampus/kantor?",
+      "cta": "Klik link di bio buat pesan via WA sekarang!"
+    },
+    {
+      "day": 2,
+      "theme": "Standarisasi Rasa yang Konsisten",
+      "pillar": "Konsistensi Kualitas",
+      "contentType": "Behind the Scenes (Video)",
+      "channel": "WhatsApp Status",
+      "touchPoint": "Eksplorasi",
+      "hook": "Rasa kopi pagi ini sama enaknya dengan kemarin, fix nggak pakai drama.",
+      "cta": "Chat 'Mau' ke nomor ini buat order kopi favoritmu."
+    },
+    {
+      "day": 3,
+      "theme": "Efisiensi QRIS untuk Urban Hustler",
+      "pillar": "Efisiensi Urban",
+      "contentType": "Ulasan Jujur/Testimoni",
+      "channel": "Instagram/TikTok",
+      "touchPoint": "Transaksi",
+      "hook": "Dompet ketinggalan? Tenang, bayar pakai QRIS tinggal scan langsung beres.",
+      "cta": "Klik link di bio untuk pesan dan bayar instan."
+    },
+    {
+      "day": 4,
+      "theme": "Solusi Higienitas Kopi Harian",
+      "pillar": "Konsistensi Kualitas",
+      "contentType": "Foto Produk (High Quality)",
+      "channel": "WhatsApp Status",
+      "touchPoint": "Eksplorasi",
+      "hook": "Higienis itu wajib, apalagi untuk kopi yang diminum tiap hari.",
+      "cta": "Chat admin sekarang buat tanya menu hari ini."
+    },
+    {
+      "day": 5,
+      "theme": "Promo Bundling Hemat",
+      "pillar": "Efisiensi Urban",
+      "contentType": "Konten Edukasi/Info Promo",
+      "channel": "Instagram/TikTok",
+      "touchPoint": "Penemuan",
+      "hook": "Ngopi enak tiap hari tanpa bikin saldo menipis.",
+      "cta": "Cek promo bundling terbaru di chat WA kita!"
+    },
+    {
+      "day": 6,
+      "theme": "Kecepatan Layanan",
+      "pillar": "Kenyamanan Digital",
+      "contentType": "Video POV/Interaksi Admin",
+      "channel": "WhatsApp Status",
+      "touchPoint": "Transaksi",
+      "hook": "Admin kita siap bales chat secepat itu buat kopi kamu.",
+      "cta": "Buktikan kecepatan balas admin di chat sekarang."
+    },
+    {
+      "day": 7,
+      "theme": "Lifestyle & Refuel",
+      "pillar": "Efisiensi Urban",
+      "contentType": "Video Estetik/Reels",
+      "channel": "Instagram/TikTok",
+      "touchPoint": "Loyalitas/Advokasi",
+      "hook": "Siap hadapi deadline minggu depan bareng segelas TEST Kopi.",
+      "cta": "Order via WA, siap antar sampai depan kantor/kampus."
+    }
+  ],
+  "briefs": [
+    {
+      "version": "1",
+      "productId": "TEST-BRAND-001",
+      "itemId": "item-01",
+      "visualPrompt": "A busy young professional looking stressed while checking a watch in a crowded Surabaya street, transition to a happy face holding a coffee cup, blurred background of a modern office or campus.",
+      "textOverlay": "Antre kopi kelamaan? Pesan via WhatsApp di TEST Kopi sekarang!",
+      "channelSizes": [
+        "1080x1920"
+      ],
+      "day": 1,
+      "image": null,
+      "imageStatus": "pending-provider"
+    },
+    {
+      "version": "1",
+      "productId": "TEST-BRAND-001",
+      "itemId": "item-02",
+      "visualPrompt": "Close-up cinematic shot of a barista precisely measuring ingredients and pouring espresso, bright and clean workspace, emphasis on professional coffee gear.",
+      "textOverlay": "Rasa konsisten tiap hari. Chat TEST Kopi buat order!",
+      "channelSizes": [
+        "1080x1920"
+      ],
+      "day": 2,
+      "image": null,
+      "imageStatus": "pending-provider"
+    },
+    {
+      "version": "1",
+      "productId": "TEST-BRAND-001",
+      "itemId": "item-03",
+      "visualPrompt": "A person in an urban setting holding only a smartphone, scanning a small QR code sticker on a coffee counter with a smile, blurred city buildings in the background.",
+      "textOverlay": "Bayar pakai QRIS di TEST Kopi, simpel dan praktis!",
+      "channelSizes": [
+        "1080x1920"
+      ],
+      "day": 3,
+      "image": null,
+      "imageStatus": "pending-provider"
+    },
+    {
+      "version": "1",
+      "productId": "TEST-BRAND-001",
+      "itemId": "item-04",
+      "visualPrompt": "High-quality macro shot of a sealed, clean coffee bottle/cup resting on a minimalist white surface, natural morning sunlight filtering through.",
+      "textOverlay": "TEST Kopi: Higienis untuk rutinitas harianmu. Chat admin!",
+      "channelSizes": [
+        "1080x1920"
+      ],
+      "day": 4,
+      "image": null,
+      "imageStatus": "pending-provider"
+    },
+    {
+      "version": "1",
+      "productId": "TEST-BRAND-001",
+      "itemId": "item-05",
+      "visualPrompt": "Flat lay photography of two cups of coffee side by side with a small snack, vibrant and inviting colors, minimalist workspace setup.",
+      "textOverlay": "Promo bundling hemat di TEST Kopi. Klik link di bio!",
+      "channelSizes": [
+        "1080x1920"
+      ],
+      "day": 5,
+      "image": null,
+      "imageStatus": "pending-provider"
+    },
+    {
+      "version": "1",
+      "productId": "TEST-BRAND-001",
+      "itemId": "item-06",
+      "visualPrompt": "Split screen showing a person typing 'pesan kopi' on a phone and a smiling barista immediately starting to prepare the drink, fast-paced atmosphere.",
+      "textOverlay": "Admin gercep! Pesan TEST Kopi via WA sekarang.",
+      "channelSizes": [
+        "1080x1920"
+      ],
+      "day": 6,
+      "image": null,
+      "imageStatus": "pending-provider"
+    },
+    {
+      "version": "1",
+      "productId": "TEST-BRAND-001",
+      "itemId": "item-07",
+      "visualPrompt": "Esthetic shot of an iced coffee cup on a wooden desk near a laptop with a sunset or soft afternoon light, clean office/study environment.",
+      "textOverlay": "Siap hadapi minggu depan? Order TEST Kopi via WA!",
+      "channelSizes": [
+        "1080x1920"
+      ],
+      "day": 7,
+      "image": null,
+      "imageStatus": "pending-provider"
+    }
+  ],
+  "qc": [
+    {
+      "itemId": "item-01",
+      "score": 100,
+      "hardViolations": [],
+      "passes": true
+    },
+    {
+      "itemId": "item-02",
+      "score": 100,
+      "hardViolations": [],
+      "passes": true
+    },
+    {
+      "itemId": "item-03",
+      "score": 100,
+      "hardViolations": [],
+      "passes": true
+    },
+    {
+      "itemId": "item-04",
+      "score": 100,
+      "hardViolations": [],
+      "passes": true
+    },
+    {
+      "itemId": "item-05",
+      "score": 100,
+      "hardViolations": [],
+      "passes": true
+    },
+    {
+      "itemId": "item-06",
+      "score": 100,
+      "hardViolations": [],
+      "passes": true
+    },
+    {
+      "itemId": "item-07",
+      "score": 100,
+      "hardViolations": [],
+      "passes": true
+    }
+  ],
+  "imageStatus": "pending-provider",
+  "imageNote": "Tidak ada gambar yang dihasilkan pada Fase 2: provider gambar (Muse Image, provisional) menunggu aktivasi Meta; tidak ada placeholder yang diklaim sebagai gambar hasil generate.",
+  "gkontenApproval": [],
+  "contentBlocked": true,
+  "ledger": {
+    "records": 4,
+    "totalUsd": 0,
+    "totalIdr": null,
+    "usdIdrRate": null,
+    "hardLimitIdr": null,
+    "mockRecords": 2
+  },
+  "modelCalls": {
+    "calendar": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "mock": false
+    },
+    "briefs": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "mock": false
+    }
+  },
+  "mock": false,
+  "gateStatus": "MENUNGGU GKONTEN — kalender + brief di atas adalah DRAF produksi, QC rule lolos, tetapi belum ada persetujuan konten dan belum ada draf distribusi; Fase 3 menunggu keputusan GKonten Patria."
+}

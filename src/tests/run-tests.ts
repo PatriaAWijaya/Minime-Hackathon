@@ -15,6 +15,7 @@ import { ModelRouter, routerConfigFromEnv, LiveUnavailableError } from '../route
 import { scoreQc } from '../qc';
 import { runSample } from '../pipeline';
 import { runFase1 } from '../fase1';
+import { runFase2 } from '../fase2';
 import { toIdr, formatIdr, parseUsdIdrRate } from '../currency';
 
 function clean(p: string) {
@@ -70,6 +71,16 @@ async function main() {
   await assert.rejects(() => router.callMeta('hi', 't'), LiveUnavailableError);
   await assert.rejects(() => router.callGemini('hi'), LiveUnavailableError);
   await assert.rejects(() => router.callWithFallback('hi', 'Test', false));
+  // Chain failure must name every provider's failure, not just the last
+  // (a Gemini 503 must never be masked by the final Ollama error).
+  try {
+    await router.callWithFallback('hi', 'Test', false);
+    assert.fail('chain should have failed');
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    assert.ok(msg.includes('meta:') && msg.includes('gemini:') && msg.includes('ollama:'), `chain error must name all providers, got: ${msg}`);
+    assert.ok(e instanceof LiveUnavailableError);
+  }
   const mock = router.callMock('hi', 'Test');
   assert.strictEqual(mock.mock, true);
   assert.strictEqual(router.qcProviderFor('meta'), 'gemini');
@@ -109,6 +120,23 @@ async function main() {
   assert.strictEqual(fase1.productionBlocked, true, 'production must be blocked without GSTP');
   assert.strictEqual(fase1.mock, true, 'Fase 1 test run is mock — must be reported as mock');
   ok('fase1 draft: STP draft, no approval, production blocked');
+
+  // Phase 2 (mock) — requires a GSTP approval record, produces 7
+  // briefs with QC passing, image pending, and NO GKonten approval.
+  // The test approval fixture below is a TEST fixture only, not a
+  // real Patria approval; the real record lives in docs/.
+  clean('data/jobs.sqlite');
+  clean('data/cost-ledger.jsonl');
+  fs.writeFileSync('data/fase2-test-approval.json', JSON.stringify({ gate: 'GSTP', decision: 'approved', productId: 'TEST-BRAND-001', approver: 'test-harness', approvedStp: { segment: 'test segment', targeting: 'test targeting', positioning: 'test positioning' } }));
+  const fase2 = await runFase2({ allowMock: true, dataDir: 'data', approvalPath: 'data/fase2-test-approval.json', researchPath: 'docs/fase-1-output.json' });
+  assert.strictEqual((fase2.calendar as unknown[]).length, 7, 'Fase 2 calendar must have 7 days');
+  assert.strictEqual((fase2.briefs as unknown[]).length, 7, 'Fase 2 must have 7 briefs');
+  assert.ok((fase2.qc as Array<{ passes: boolean }>).every((q) => q.passes), 'all Fase 2 QC must pass');
+  assert.strictEqual(fase2.imageStatus, 'pending-provider', 'Fase 2 must not claim a generated image');
+  assert.deepStrictEqual(fase2.gkontenApproval, [], 'Fase 2 must record no GKonten approval');
+  assert.strictEqual(fase2.contentBlocked, true, 'distribution must be blocked without GKonten');
+  await assert.rejects(() => runFase2({ allowMock: true, dataDir: 'data', approvalPath: 'data/no-such-approval.json', researchPath: 'docs/fase-1-output.json' }), GateError, 'Fase 2 without GSTP record must be blocked');
+  ok('fase2: 7-day calendar + 7 briefs, QC pass, image pending, GKonten pending, no-GSTP blocked');
 
   // Rupiah reporting (standing rule, Patria 27 Oct 2026): IDR first,
   // USD only as source; no conversion without a rate, ever.
