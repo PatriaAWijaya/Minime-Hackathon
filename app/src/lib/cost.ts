@@ -46,6 +46,15 @@ export const COST_ROWS: CostRow[] = [
   },
 ];
 
+// Hard limit ledger $5 (satuan tagihan provider). Nilai Rp setara
+// dihitung pada kurs 28 Okt 2026 (Rp18.148/USD) untuk kartu Billing.
+export const BILLING_HARD_LIMIT = {
+  usdMin: 5,
+  usdMax: 5,
+  idrMin: 90740,
+  idrMax: 90740,
+};
+
 export const COST_TOTAL = {
   calls: 8,
   tokens: 11577,
