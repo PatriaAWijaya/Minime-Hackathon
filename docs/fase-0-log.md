@@ -1080,3 +1080,17 @@ dokumen lama yang dipakai.
   ("Warna langit pada siang hari adalah biru.").
   Berikutnya: rebuild MacBook rantai v4 (frontendDist
   sudah ../dist; npm install tidak berubah deps).
+
+  WIRING — B3 LIVE DI MACBOOK (27 Okt sore, rantai v4):
+  Pull lolos bersih (upstream B3 tidak menyentuh
+  Cargo.lock/icons yang termodifikasi lokal). Build
+  hangat: vite 351ms, 1 bundle. Proses lama PID 23154
+  dibunuh, proses BARU PID 23734 hidup dari bundle
+  B3. Catatan: marker skrip masih tertulis
+  MH_BUILD3_OK (skrip v4 disalin dari v3) — kosmetik
+  saja; semua langkah di bawah set -e lolos. Sisa
+  verifikasi visual di tangan Patria, termasuk chat
+  live: tanpa kunci, chat memakai Ollama lokal MacBook
+  (pastikan ollama serve jalan); kunci Gemini/Meta
+  diisi sekali di Settings bila mau jalur cloud.
+  Berikutnya: B4 (Kanban/Planner dari data backend).
