@@ -8,7 +8,7 @@
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 15px; color: #ececec; background: #0e0e0e; display: flex; flex-direction: column; }
-  .banner { background: #fff3cd; border-bottom: 2px solid #e6a817; padding: 8px 16px; font-size: 13px; color: #1a1a1a; flex-shrink: 0; }
+  .banner { background: #1a1a1a; border-bottom: 2px solid #B214FF; padding: 8px 16px; font-size: 13px; color: #ececec; flex-shrink: 0; }
   .banner b { color: #7a5b00; }
   .app { display: flex; flex: 1; min-height: 0; }
   .sidebar { width: 64px; flex-shrink: 0; background: #0a0a0a; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 4px; border-right: 1px solid #262626; }
@@ -26,22 +26,22 @@
   .scroll::-webkit-scrollbar { width: 10px; }
   .scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 5px; }
   .resizer { width: 6px; flex-shrink: 0; background: #262626; cursor: col-resize; }
-  .resizer:hover { background: #3b82f6; }
+  .resizer:hover { background: #B214FF; }
   #agentCol { width: 260px; flex-shrink: 0; border-right: 1px solid #262626; }
   #chatCol { flex: 1; min-width: 0; background: #1e1e1e; }
   #detailCol { width: 320px; flex-shrink: 0; border-left: 1px solid #262626; }
   .profile { display: flex; gap: 12px; align-items: center; }
-  .profileav { width: 52px; height: 52px; border-radius: 50%; background: #6d28d9; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; flex-shrink: 0; }
-  .conn { color: #22c55e; font-size: 13px; }
+  .profileav { width: 52px; height: 52px; border-radius: 50%; background: #B214FF; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; flex-shrink: 0; }
+  .conn { color: #B214FF; font-size: 13px; }
   .mainchat { display: flex; gap: 10px; align-items: center; padding: 10px; border: 1px solid #2a2a2a; border-radius: 8px; cursor: pointer; margin-top: 10px; }
-  .mainchat:hover { border-color: #3b82f6; }
+  .mainchat:hover { border-color: #B214FF; }
   .group { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #a1a1a1; margin: 14px 0 6px; }
   .group:first-child { margin-top: 0; }
   .agent { display: flex; gap: 10px; padding: 10px; border: 1px solid #2a2a2a; border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: #1e1e1e; }
-  .agent:hover { border-color: #3b82f6; }
-  .agent.sel { border-color: #3b82f6; background: #1e293b; }
+  .agent:hover { border-color: #B214FF; }
+  .agent.sel { border-color: #B214FF; background: #262626; }
   .agent.off { opacity: 0.55; }
-  .agent.curproj { border-left: 4px solid #3b82f6; }
+  .agent.curproj { border-left: 4px solid #B214FF; }
   .av { width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; }
   .agent .meta { flex: 1; min-width: 0; font-size: 14px; line-height: 1.45; }
   .agent .meta small { color: #a1a1a1; }
@@ -55,33 +55,33 @@
   .msg.user { flex-direction: row-reverse; text-align: right; }
   .msg.user .bubble { background: #1d3a5f; text-align: left; }
   .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-  .b-ok { background: #14532d; color: #a7f3d0; }
-  .b-wait { background: #78350f; color: #fde68a; }
+  .b-ok { background: #333333; color: #ececec; }
+  .b-wait { background: #B214FF; color: #ffffff; }
   .b-idle { background: #262626; color: #d4d4d4; }
-  .b-no { background: #7f1d1d; color: #fecaca; }
+  .b-no { background: #525252; color: #d4d4d4; }
   .composer { border-top: 1px solid #262626; padding: 12px 14px; flex-shrink: 0; background: #171717; }
   .composer textarea { width: 100%; padding: 11px 12px; font-size: 15px; border: 1px solid #3a3a3a; border-radius: 20px; font-family: inherit; min-height: 56px; background: #262626; color: #ececec; }
   .btn { padding: 11px 18px; min-height: 44px; font-size: 15px; border-radius: 6px; border: 1px solid #3a3a3a; background: #262626; color: #ececec; cursor: pointer; margin: 8px 8px 0 0; }
-  .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 600; }
+  .btn-primary { background: #B214FF; color: #fff; border-color: #B214FF; font-weight: 600; }
   .btn-sm { padding: 6px 10px; font-size: 13px; min-height: 0; }
-  .chip { display: inline-block; padding: 7px 11px; border: 1px solid #3b82f6; background: #1e293b; border-radius: 20px; font-size: 13px; cursor: pointer; margin: 0 6px 6px 0; color: #bfdbfe; }
-  .notice { background: #172554; border: 1px solid #3b82f6; border-radius: 6px; padding: 11px 13px; margin-top: 12px; font-size: 14px; line-height: 1.5; color: #dbeafe; }
+  .chip { display: inline-block; padding: 7px 11px; border: 1px solid #B214FF; background: #262626; border-radius: 20px; font-size: 13px; cursor: pointer; margin: 0 6px 6px 0; color: #ececec; }
+  .notice { background: #1f1f1f; border: 1px solid #B214FF; border-radius: 6px; padding: 11px 13px; margin-top: 12px; font-size: 14px; line-height: 1.5; color: #ececec; }
   .view { display: none; }
   .view.active { display: flex; flex-direction: column; min-height: 0; flex: 1; }
   .kanban { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
   .kcol { background: #1f1f1f; border-radius: 8px; padding: 10px; min-height: 120px; }
-  .kcol.over { outline: 2px dashed #3b82f6; }
+  .kcol.over { outline: 2px dashed #B214FF; }
   .kcol h4 { font-size: 12px; text-transform: uppercase; margin: 0 0 8px; color: #a1a1a1; }
   .kcard { background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 6px; padding: 9px; margin-bottom: 8px; font-size: 13px; line-height: 1.5; cursor: grab; }
   .graphbox { position: relative; background: #171717; border: 1px solid #262626; border-radius: 8px; height: 340px; overflow: hidden; }
   .graphbox svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .gnode { position: absolute; width: 124px; text-align: center; background: #262626; border: 2px solid #3b82f6; border-radius: 10px; padding: 8px 6px; font-size: 13px; cursor: grab; user-select: none; color: #ececec; }
-  .gnode.prime { border-color: #8b5cf6; background: #2e1065; font-weight: 700; }
-  .gnode.sel { box-shadow: 0 0 0 4px #fde68a; }
+  .gnode { position: absolute; width: 124px; text-align: center; background: #262626; border: 2px solid #B214FF; border-radius: 10px; padding: 8px 6px; font-size: 13px; cursor: grab; user-select: none; color: #ececec; }
+  .gnode.prime { border-color: #B214FF; background: #262626; font-weight: 700; }
+  .gnode.sel { box-shadow: 0 0 0 4px #B214FF; }
   table { width: 100%; border-collapse: collapse; background: #171717; font-size: 14px; }
   th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #262626; }
   .filters button { padding: 10px 16px; font-size: 14px; border-radius: 20px; border: 1px solid #3a3a3a; background: #262626; color: #ececec; cursor: pointer; margin: 0 6px 8px 0; }
-  .filters button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .filters button.active { background: #B214FF; color: #fff; border-color: #B214FF; }
   .mediagrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
   .mediacard { background: #1f1f1f; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; }
   .ph { background: #262626; border: 2px dashed #555; border-radius: 6px; min-height: 120px; display: flex; align-items: center; justify-content: center; text-align: center; color: #a1a1a1; padding: 10px; font-size: 13px; }
@@ -90,7 +90,7 @@
   .track { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
   .track .tlabel { width: 70px; flex-shrink: 0; color: #d1d5db; }
   .track .bar { height: 26px; border-radius: 5px; display: flex; align-items: center; padding: 0 8px; font-size: 12px; color: #fff; }
-  .playhead { position: absolute; top: 0; bottom: 0; width: 3px; background: #facc15; }
+  .playhead { position: absolute; top: 0; bottom: 0; width: 3px; background: #B214FF; }
   label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 14px; }
   input[type=text], select, textarea { width: 100%; padding: 10px 11px; font-size: 14px; border: 1px solid #3a3a3a; border-radius: 6px; font-family: inherit; background: #262626; color: #ececec; }
   .skillrow { display: flex; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #262626; font-size: 14px; }
@@ -108,29 +108,25 @@
   .n8n-canvas { position: relative; background: #0a0a0a; background-image: radial-gradient(#3a3a3a 1px, transparent 1px); background-size: 22px 22px; border: 1px solid #262626; border-radius: 8px; height: 480px; overflow: hidden; }
   .n8n-canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .n8n-node { position: absolute; background: #1f1f1f; border: 1.5px solid #9ca3af; border-radius: 10px; padding: 10px 12px; cursor: grab; user-select: none; color: #ececec; z-index: 2; }
-  .n8n-node.prime { border-color: #8b5cf6; }
-  .n8n-node.decision { border-color: #22c55e; }
-  .n8n-node.trigger { border-color: #f87171; }
+  .n8n-node.prime { border-color: #B214FF; }
+  .n8n-node.decision { border-color: #737373; }
+  .n8n-node.trigger { border-color: #9ca3af; }
   .n8n-node .nname { font-weight: 700; font-size: 14px; }
   .n8n-node .nsub { font-size: 12px; color: #a1a1a1; }
   .n8n-node.circle { width: 118px; height: 118px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-  .n8n-node.exec { box-shadow: 0 0 0 3px #facc15; border-color: #facc15; }
+  .n8n-node.exec { box-shadow: 0 0 0 3px #B214FF; border-color: #B214FF; }
   .n8n-plus { position: absolute; right: -30px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border: 1px solid #6b7280; background: #262626; color: #ececec; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; z-index: 3; }
 
   .composer { display: flex; flex-direction: column; gap: 8px; }
-  .wa-row { display: flex; align-items: center; gap: 10px; }
-  .wa-plus { background: transparent; border: none; color: #a1a1a1; font-size: 32px; line-height: 1; cursor: pointer; flex-shrink: 0; padding: 0 2px; }
   .wa-pill { flex: 1; display: flex; align-items: center; gap: 8px; background: #262626; border-radius: 999px; padding: 6px 6px 6px 18px; min-width: 0; }
-  #chatInput { background: transparent !important; border: none !important; flex: 1; padding: 8px 0 !important; caret-color: #25D366; outline: none; font-size: 15px; color: #ececec; min-width: 0; }
+  #chatInput { background: transparent !important; border: none !important; flex: 1; padding: 8px 0 !important; caret-color: #B214FF; outline: none; font-size: 15px; color: #ececec; min-width: 0; }
   #chatInput::placeholder { color: #8696a0; }
-  .wa-emoji { background: transparent; border: none; cursor: pointer; flex-shrink: 0; padding: 4px; display: flex; }
-  .wa-mic, .wa-send { width: 46px; height: 46px; border-radius: 50%; background: #25D366; border: none; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   .wa-pop { display: none; background: #262626; border: 1px solid #3a3a3a; border-radius: 12px; padding: 10px 12px; }
   .wa-pop.open { display: block; }
   .wa-pop button { background: #1f1f1f; border: 1px solid #3a3a3a; color: #ececec; border-radius: 20px; padding: 7px 12px; margin: 0 6px 6px 0; cursor: pointer; font-size: 13px; }
 
   .agent-topbar { display: flex; align-items: center; gap: 8px; padding: 14px 14px 10px; flex-shrink: 0; }
-  .scope-dot { width: 12px; height: 12px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+  .scope-dot { width: 12px; height: 12px; border-radius: 50%; background: #B214FF; flex-shrink: 0; }
   .agent-scope { font-weight: 700; font-size: 16px; }
   .nav-arrow { background: transparent; border: none; color: #a1a1a1; font-size: 22px; cursor: pointer; padding: 0 4px; }
   .agent-plus { margin-left: 2px; background: #262626; border: 1px solid #3a3a3a; color: #ececec; width: 36px; height: 36px; border-radius: 10px; font-size: 20px; cursor: pointer; flex-shrink: 0; }
@@ -146,10 +142,37 @@
   .agent-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
   .agent-time { color: #a1a1a1; font-size: 12px; flex-shrink: 0; }
   .agent-preview { color: #a1a1a1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+
+  .chat-date-head { text-align: center; }
+  .chat-date { color: #a1a1a1; font-size: 13px; }
+  .chat-proj { font-size: 12px; color: #737373; margin-top: 2px; }
+  .msg { gap: 0; }
+  .msg .bubble { background: #1f1f1f; border-radius: 18px; padding: 10px 14px; line-height: 1.6; margin-top: 0; max-width: 78%; }
+  .msg.prime .bubble { background: #1f1f1f; border: none; }
+  .msg.curation .bubble { background: #1f1f1f; border: 1px dashed #B214FF; }
+  .msg-col { display: flex; flex-direction: column; max-width: 78%; gap: 4px; }
+  .msg-col .bubble { max-width: 100%; }
+  .msg.user { flex-direction: row; justify-content: flex-end; text-align: left; }
+  .msg.user .bubble { background: #2a2a2a; text-align: left; }
+  .cur-label { font-size: 11px; color: #B214FF; font-weight: 700; }
+  .main-pill { padding: 6px 6px 6px 10px; }
+  .pill-plus { background: transparent; border: none; color: #a1a1a1; font-size: 24px; cursor: pointer; flex-shrink: 0; padding: 0 4px; }
+  .pill-mic { background: transparent; border: none; cursor: pointer; flex-shrink: 0; display: flex; padding: 4px; }
+  .pill-send { width: 36px; height: 36px; border-radius: 50%; background: #B214FF; border: none; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .detail-avatar-wrap { position: relative; width: 64px; height: 64px; margin: 6px 0 14px; }
+  .detail-avatar { width: 64px; height: 64px; border-radius: 16px; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 28px; }
+  .avatar-edit { position: absolute; right: -6px; bottom: -6px; width: 24px; height: 24px; border-radius: 50%; background: #0a0a0a; border: 1px solid #3a3a3a; color: #ececec; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .d-label { font-size: 13px; color: #a1a1a1; font-weight: 600; margin: 16px 0 6px; }
+  .d-field { background: #1f1f1f !important; border-radius: 10px !important; }
+  .d-area { min-height: 130px; }
+  .d-rows { border: 1px solid #2a2a2a; border-radius: 10px; overflow: hidden; }
+  .d-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 11px 12px; border-bottom: 1px solid #262626; cursor: pointer; font-size: 14px; }
+  .d-row:last-child { border-bottom: none; }
+  .d-val { color: #a1a1a1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; }
 </style>
 </head>
 <body>
-<div class="banner"><b>PROTOTYPE v5 — GAYA Muse + IKON LAMPIRAN, DATA DUMMY TEST.</b> Tema gelap dan susunan panel semirip mungkin dengan Muse (rail ikon + panel nav + chat + panel kanan profil &amp; Today). 6 ikon rail berasal dari dokumen lampiran (Home, Search, Kanban, Graph, Library, Planner); Media Studio &amp; Settings memakai fallback gaya garis karena tidak ada ikon lampiran untuk keduanya. Semua interaksi dari v4 dipertahankan, tetapi <b>masih simulasi di browser — tidak menyimpan approval sungguhan dan media adalah placeholder dummy.</b></div>
+<div class="banner"><b>PROTOTYPE v5 — UI UTAMA GAYA LAMPIRAN, MONOCHROME + AKSEN VIOLET #B214FF, DATA DUMMY TEST.</b> Tema monochrome gelap dengan aksen violet #B214FF; susunan panel semirip lampiran (rail ikon + list agen + chat + panel Detail agen). 6 ikon rail berasal dari dokumen lampiran (Home, Search, Kanban, Graph, Library, Planner); Media Studio &amp; Settings memakai fallback gaya garis karena tidak ada ikon lampiran untuk keduanya. Semua interaksi dari v4 dipertahankan, tetapi <b>masih simulasi di browser — tidak menyimpan approval sungguhan dan media adalah placeholder dummy.</b></div>
 <div class="app">
   <div class="sidebar">
     <button data-view="home" class="active"><img class="railicon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAEA0lEQVR42u2dO4gVZxSAv7m76YS10RRGVLSSGJWkSGEQU/gqRFAERVGSTgykSCWpUisGQSWQmCAqCFqJr05MFUjhozW4lWCwSLAQfDAp9i4um13vndm5M//j++Cyy525c/ec8805/95nUZYlki89U6AAogCiAKIAogCiAKIAogCiAKIAybIIKGddJhQgD24AL+a4/p/+tqwoMnsyaNhgCztAvsWvuq8CBM7WmgUtgX2OgLh5Aqxc4DGeA0sUIO2Wn+26oGfx814XpCbA9yMuVAn84AhI56wvGritHSDC4j+dVcACmMxxJMQuwESNQuwGls1x/SpgTw0JljoCuuEScGBEbbtqUq4DuxQgjnkf0n04Aloo/vWahSmAO6mvC2ISYHONBK9ZYGveDqytIcFWR0CzPATWddyOqyZqsr+wVIAI5n2264JeYsX/ccQJL4CzKa0LQu0Ah4HfAj/TqibuKHBOAQbzGhiPpM1GPxJCGwFlxeK/6TihRUvSZCFA1cQcAj4IoYsCX9eIdUwBpjhRo/gFcDEgec/X6AZvgFO5rwFSfLg1qph6ESXqD+J4rL0AHsWyLuhCgNU1Av4M+Jx4+AT4ooYEH6c+Am4D2xJr+U2f3XeBLSkKkO3LrkKOvRdoAi6T1suwC+BKiOuCUXeATcDvFW+zGPiXNJlg6k2oVdgJ3IqxA/xUo/hFwsWnH1vVznYTuBpbB/gVOJLpvB9Vi78G7I2hA3xZsfjHMyz+tPDfVth/D7Ajhg5QetbHk7OexQ+mG3Ty30GTAuwfcr/HFn9eCZ4Oue/BEEfAMAc6CXxnrd/LaeCbtjpoUwJ8Cvw5YJ/7wEbrOxT3GPxcwgbgQSgClG0Z68Kw2Zy29VCwxQ80Z00IsMJadcZHIQgw6EmOtdapNh8O2P5zCGuAQQew/QecXz8sOnMUQAFEAUQBRAFEAUQBRAFEAUQBRAFEAUQBRAFEAUQBRAFi4iv+/wXRdS/7FCAezvSL9kuDx7zSP+aZ1JKV2msC2/q8m5Bi8jWBLRe/7ftyBAzZ9tvmgiMgnBHQ1RkZQmzZj4DDHd73MTtA9x2g63lcxNwBxkmfInLBXASKAogCiAKIAogCiAKIAogCiAKIAogCiAKIAogCiAKIAogCiAKIAogCiAKIAogCiAKIAsgs2nhrWJl4Dks7gCiA5CvA8oDjW9zAMVYGHN+C35re5pdHR5mg1OPrBZboEIufdHy9BJP0bER/S5LxjY8oSeuBQ7z7duu3/Z9jM35/O+P36W3zMde26du/Ap4D54G/WjrrNjH16aHvW2O8miP2+eIam7V9Zl5eApNMffDl340H1NAaQPw3UBRAFEAUQBRAFEAUQBRAFEAUQBRAFEAC5D+lrP3K2LgEFAAAAABJRU5ErkJggg==" alt=""><span class="tip">Home — kembali ke UI utama</span></button>
@@ -173,7 +196,7 @@
     </div>
     <div class="add-menu" id="addMenu"></div>
     <div class="agent-searchbox"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a1a1a1" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg><input type="text" id="navSearch" placeholder="Search" oninput="filterAgents(this.value)"></div>
-    <div style="padding:0 14px;flex-shrink:0"><div class="mainchat" onclick="showView('home')"><div class="av" style="background:#6d28d9">P</div><div><b>Main chat</b><br><small style="color:#a1a1a1">Prime Agent — chat utama</small></div></div></div>
+    <div style="padding:0 14px;flex-shrink:0"><div class="mainchat" onclick="showView('home')"><div class="av" style="background:#B214FF">P</div><div><b>Main chat</b><br><small style="color:#a1a1a1">Prime Agent — chat utama</small></div></div></div>
     <div class="scroll" id="agentList"></div>
     <div style="padding:0 14px 12px;flex-shrink:0"><div class="notice" id="addNotice" style="display:none"></div></div>
   </div>
@@ -181,8 +204,9 @@
 
   <div class="col" id="chatCol">
     <div class="view active" id="view-home">
-      <div class="colhead"><h2 id="chatTitle">Chat — TEST Kopi Surabaya</h2>
-        <p>Grup chat proyek aktif. Semua hasil dikurasi Prime Agent sebelum final.</p>
+      <div class="colhead chat-date-head">
+        <div class="chat-date">Today 2:31 PM</div>
+        <div class="chat-proj" id="chatProj">TEST Kopi Surabaya</div>
         <label style="margin-top:8px">Proyek aktif
           <select id="projectSel" onchange="switchProject(this.value)" style="margin-top:4px">
             <option value="kopi">TEST Kopi Surabaya</option>
@@ -203,22 +227,11 @@
           <button onclick="waAttach('Kamera')">📷 Kamera</button>
           <button onclick="waAttach('Audio')">🎵 Audio</button>
         </div>
-        <div class="wa-pop" id="emojiPanel">
-          <button onclick="waEmoji('😀')">😀</button>
-          <button onclick="waEmoji('👍')">👍</button>
-          <button onclick="waEmoji('🔥')">🔥</button>
-          <button onclick="waEmoji('☕')">☕</button>
-          <button onclick="waEmoji('✅')">✅</button>
-          <button onclick="waEmoji('🚀')">🚀</button>
-        </div>
-        <div class="wa-row">
-          <button class="wa-plus" onclick="waToggleAttach()" title="Lampirkan">＋</button>
-          <div class="wa-pill">
-            <input type="text" id="chatInput" placeholder="Tulis pesan…" oninput="waInputChanged()" autocomplete="off">
-            <button class="wa-emoji" onclick="waToggleEmoji()" title="Emoji"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a1a1a1" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="#a1a1a1" stroke="none"/><circle cx="15" cy="10" r="1" fill="#a1a1a1" stroke="none"/><path d="M8 14c1.2 1.4 2.5 2 4 2s2.8-.6 4-2"/></svg></button>
-          </div>
-          <button class="wa-mic" id="waMicBtn" onclick="waMic()" title="Pesan suara (simulasi)"><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="21" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></button>
-          <button class="wa-send" id="waSendBtn" onclick="sendChat()" title="Kirim" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+        <div class="wa-pill main-pill">
+          <button class="pill-plus" onclick="waToggleAttach()" title="Lampirkan">＋</button>
+          <input type="text" id="chatInput" placeholder="Message Prime Agent" oninput="waInputChanged()" autocomplete="off">
+          <button class="pill-mic" onclick="waMic()" title="Pesan suara (simulasi)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a1a1a1" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+          <button class="pill-send" onclick="sendChat()" title="Kirim"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
         </div>
         <div class="notice" id="waNote" style="display:none;margin-top:0"></div>
       </div>
@@ -234,14 +247,14 @@
     <div class="view" id="view-kanban">
       <div class="colhead">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <div class="av" style="background:#6d28d9">P</div>
-          <h2 id="kanbanTitle" style="margin:0">TEST Kopi Surabaya</h2><span style="color:#facc15;font-size:18px">☆</span>
+          <div class="av" style="background:#B214FF">P</div>
+          <h2 id="kanbanTitle" style="margin:0">TEST Kopi Surabaya</h2><span style="color:#B214FF;font-size:18px">☆</span>
           <div style="margin-left:auto;display:flex;align-items:center">
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#6d28d9">P</div>
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#2563eb;margin-left:-8px">R</div>
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#059669;margin-left:-8px">S</div>
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#ea580c;margin-left:-8px">K</div>
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#db2777;margin-left:-8px">M</div>
+            <div class="av" style="width:28px;height:28px;font-size:12px;background:#B214FF">P</div>
+            <div class="av" style="width:28px;height:28px;font-size:12px;background:#B214FF;margin-left:-8px">R</div>
+            <div class="av" style="width:28px;height:28px;font-size:12px;background:#404040;margin-left:-8px">S</div>
+            <div class="av" style="width:28px;height:28px;font-size:12px;background:#5b5b5b;margin-left:-8px">K</div>
+            <div class="av" style="width:28px;height:28px;font-size:12px;background:#5b5b5b;margin-left:-8px">M</div>
             <button class="btn btn-sm" style="margin-left:10px" onclick="alert('Simulasi: tambah anggota tim (tampilan saja).')">＋</button>
           </div>
         </div>
@@ -304,9 +317,9 @@
         <div class="timeline" id="timeline">
           <div class="playhead" id="playhead" style="left:0%"></div>
           <div style="color:#d1d5db;font-size:13px;margin-bottom:8px">Durasi 00:30 (simulasi) — tekan Putar untuk menggerakkan playhead</div>
-          <div class="track"><span class="tlabel">Video</span><div class="bar" style="background:#2563eb;width:27%">Hook (0–8 dtk)</div><div class="bar" style="background:#7c3aed;width:47%">Isi (8–22 dtk)</div><div class="bar" style="background:#059669;width:26%">CTA</div></div>
-          <div class="track"><span class="tlabel">Audio</span><div class="bar" style="background:#ea580c;width:80%">Voice-over promo bundling</div></div>
-          <div class="track"><span class="tlabel">Teks</span><div class="bar" style="background:#db2777;width:30%">Overlay: TEST Kopi — Rp15.000</div><div class="bar" style="background:#0891b2;width:30%">Overlay: Pesan via WA</div></div>
+          <div class="track"><span class="tlabel">Video</span><div class="bar" style="background:#B214FF;width:27%">Hook (0–8 dtk)</div><div class="bar" style="background:#7c3aed;width:47%">Isi (8–22 dtk)</div><div class="bar" style="background:#404040;width:26%">CTA</div></div>
+          <div class="track"><span class="tlabel">Audio</span><div class="bar" style="background:#5b5b5b;width:80%">Voice-over promo bundling</div></div>
+          <div class="track"><span class="tlabel">Teks</span><div class="bar" style="background:#5b5b5b;width:30%">Overlay: TEST Kopi — Rp15.000</div><div class="bar" style="background:#4a4a4a;width:30%">Overlay: Pesan via WA</div></div>
         </div>
         <button class="btn btn-primary" onclick="playTimeline()">▶ Putar Playhead (simulasi)</button>
       </div>
@@ -335,19 +348,18 @@
   <div class="resizer" id="resizeDetail"></div>
 
   <div class="col" id="detailCol">
-    <div class="colhead"><div class="profile"><div class="profileav">P</div><div style="min-width:0"><h2 id="detailTitle" style="margin:0">Detail — Prime Agent</h2><div class="conn">● Connected</div><p id="detailSub">Klik agen di kolom Agen atau avatar di chat untuk melihat detailnya.</p></div></div></div>
     <div class="scroll" id="detailBody"></div>
   </div>
 </div>
 <script>
   var AGENTS = {
-    prime: { name: "Prime Agent", color: "#6d28d9", role: "Personal Assistant — orkestrasi & kurasi", goal: "Memastikan setiap arahan menjadi tugas yang jelas, didelegasikan ke agen yang tepat, dan hasilnya dikurasi sebelum final.", skills: ["Orkestrasi delegasi", "Kurasi hasil agen", "Penegakan gerbang GSTP/GKonten/GBatch"], model: "Meta (Muse) → Gemini → Ollama", always: true },
-    riset: { name: "Riset", color: "#2563eb", role: "Riset pasar & audiens", goal: "Riset pasar, behaviour digital, dan pola spending yang terverifikasi — tanpa mengarang angka/URL.", skills: ["riset-pasar", "behaviour-digital", "spending-digital", "verifikasi-fakta"], model: "Gemini (fallback dari Meta)", always: false },
-    strategi: { name: "Strategi", color: "#059669", role: "Positioning & STP", goal: "Mengubah riset menjadi positioning, pilar, dan STP yang spesifik dan bisa diuji.", skills: ["positioning-stp", "pak-bi-branding", "segmentasi-spending"], model: "Gemini (fallback dari Meta)", always: false },
-    kreatif: { name: "Kreatif", color: "#ea580c", role: "Naskah & Brief", goal: "Kalender, hook, CTA, dan CreativeBrief text-free yang siap diproduksi Media.", skills: ["copywriting-hook-cta", "brief-text-free", "overlay-template"], model: "Gemini (fallback dari Meta)", always: false },
-    media: { name: "Media", color: "#db2777", role: "Produksi media", goal: "Gambar, carousel, reels, dan talking head yang lolos QC dan siap untuk post (setelah GKonten).", skills: ["image-text-free", "carousel-slide", "reels-pendek", "talking-head-avatar"], model: "Meta Image (menunggu aktif) → Gemini → Canva fallback", always: false },
-    distribusi: { name: "Distribusi", color: "#0891b2", role: "Draf distribusi", goal: "Draf Postiz per channel tanpa pernah terbit live di slice ini.", skills: ["postiz-draft-only", "status-channel"], model: "Postiz (DRAF saja)", always: false },
-    produk: { name: "Produk Digital", color: "#65a30d", role: "Brief produk digital", goal: "Brief, struktur fitur MVP, dan riset pengguna dari arahan produk.", skills: ["brief-produk", "riset-pengguna", "fitur-mvp"], model: "Gemini (fallback dari Meta)", always: false }
+    prime: { name: "Prime Agent", color: "#B214FF", role: "Personal Assistant — orkestrasi & kurasi", goal: "Memastikan setiap arahan menjadi tugas yang jelas, didelegasikan ke agen yang tepat, dan hasilnya dikurasi sebelum final.", skills: ["Orkestrasi delegasi", "Kurasi hasil agen", "Penegakan gerbang GSTP/GKonten/GBatch"], model: "Meta (Muse) → Gemini → Ollama", always: true },
+    riset: { name: "Riset", color: "#525252", role: "Riset pasar & audiens", goal: "Riset pasar, behaviour digital, dan pola spending yang terverifikasi — tanpa mengarang angka/URL.", skills: ["riset-pasar", "behaviour-digital", "spending-digital", "verifikasi-fakta"], model: "Gemini (fallback dari Meta)", always: false },
+    strategi: { name: "Strategi", color: "#404040", role: "Positioning & STP", goal: "Mengubah riset menjadi positioning, pilar, dan STP yang spesifik dan bisa diuji.", skills: ["positioning-stp", "pak-bi-branding", "segmentasi-spending"], model: "Gemini (fallback dari Meta)", always: false },
+    kreatif: { name: "Kreatif", color: "#5b5b5b", role: "Naskah & Brief", goal: "Kalender, hook, CTA, dan CreativeBrief text-free yang siap diproduksi Media.", skills: ["copywriting-hook-cta", "brief-text-free", "overlay-template"], model: "Gemini (fallback dari Meta)", always: false },
+    media: { name: "Media", color: "#333333", role: "Produksi media", goal: "Gambar, carousel, reels, dan talking head yang lolos QC dan siap untuk post (setelah GKonten).", skills: ["image-text-free", "carousel-slide", "reels-pendek", "talking-head-avatar"], model: "Meta Image (menunggu aktif) → Gemini → Canva fallback", always: false },
+    distribusi: { name: "Distribusi", color: "#4a4a4a", role: "Draf distribusi", goal: "Draf Postiz per channel tanpa pernah terbit live di slice ini.", skills: ["postiz-draft-only", "status-channel"], model: "Postiz (DRAF saja)", always: false },
+    produk: { name: "Produk Digital", color: "#666666", role: "Brief produk digital", goal: "Brief, struktur fitur MVP, dan riset pengguna dari arahan produk.", skills: ["brief-produk", "riset-pengguna", "fitur-mvp"], model: "Gemini (fallback dari Meta)", always: false }
   };
   var PROJECTS = {
     kopi: { name: "TEST Kopi Surabaya", agents: [
@@ -359,12 +371,12 @@
       { key: "distribusi", status: "Idle", task: "—" }
     ], chat: [
       { who: "user", name: "Kamu", color: "#374151", text: "Riset pasar es kopi Surabaya untuk mahasiswa, lalu buatkan konten 7 hari beserta gambarnya." },
-      { who: "prime", name: "Prime Agent", color: "#6d28d9", text: "Siap. Saya pecah jadi: Riset → Strategi (STP, menunggu GSTP darimu) → Kreatif (kalender + brief) → Media (gambar) → Distribusi (draf Postiz). Saya tugaskan Riset sekarang." },
-      { who: "riset", name: "Riset", color: "#2563eb", text: "Riset selesai: audiens mahasiswa/pekerja muda Surabaya, behaviour digital tinggi (on-screen panjang, video pendek), spending sensitif harga, transaksi dominan via WhatsApp + QRIS." },
-      { who: "strategi", name: "Strategi", color: "#059669", text: "STP draf: segmen mahasiswa/pekerja muda 18–28, targeting Urban Hustlers via WhatsApp Business + Reels/TikTok, positioning es kopi susu harian paling praktis via WA + QRIS. Menunggu GSTP." },
-      { who: "prime", name: "Prime Agent", color: "#6d28d9", text: "Kurasi Prime: STP di atas sudah saya periksa — segmen dan targetingnya konsisten dengan riset behaviour dan spending. Saya rekomendasikan untuk disetujui di gerbang GSTP, tetapi keputusan tetap di tanganmu.", curation: true },
-      { who: "kreatif", name: "Kreatif", color: "#ea580c", text: "Kalender 7 hari + 7 brief selesai (setelah GSTP). Tema mencakup kenyamanan digital, konsistensi kualitas, dan efisiensi urban; semua CTA mengarah ke WA/QRIS." },
-      { who: "media", name: "Media", color: "#db2777", text: "Gambar Hari 1–7 masih menunggu provider (Meta Image belum aktif). Saya tidak membuat gambar palsu — statusnya pending-provider sampai generator aktif atau fallback Canva dipakai." }
+      { who: "prime", name: "Prime Agent", color: "#B214FF", text: "Siap. Saya pecah jadi: Riset → Strategi (STP, menunggu GSTP darimu) → Kreatif (kalender + brief) → Media (gambar) → Distribusi (draf Postiz). Saya tugaskan Riset sekarang." },
+      { who: "riset", name: "Riset", color: "#B214FF", text: "Riset selesai: audiens mahasiswa/pekerja muda Surabaya, behaviour digital tinggi (on-screen panjang, video pendek), spending sensitif harga, transaksi dominan via WhatsApp + QRIS." },
+      { who: "strategi", name: "Strategi", color: "#404040", text: "STP draf: segmen mahasiswa/pekerja muda 18–28, targeting Urban Hustlers via WhatsApp Business + Reels/TikTok, positioning es kopi susu harian paling praktis via WA + QRIS. Menunggu GSTP." },
+      { who: "prime", name: "Prime Agent", color: "#B214FF", text: "Kurasi Prime: STP di atas sudah saya periksa — segmen dan targetingnya konsisten dengan riset behaviour dan spending. Saya rekomendasikan untuk disetujui di gerbang GSTP, tetapi keputusan tetap di tanganmu.", curation: true },
+      { who: "kreatif", name: "Kreatif", color: "#5b5b5b", text: "Kalender 7 hari + 7 brief selesai (setelah GSTP). Tema mencakup kenyamanan digital, konsistensi kualitas, dan efisiensi urban; semua CTA mengarah ke WA/QRIS." },
+      { who: "media", name: "Media", color: "#5b5b5b", text: "Gambar Hari 1–7 masih menunggu provider (Meta Image belum aktif). Saya tidak membuat gambar palsu — statusnya pending-provider sampai generator aktif atau fallback Canva dipakai." }
     ], kanban: [
       { t: "Riset pasar & behaviour", a: "Riset", c: 4 }, { t: "STP v2", a: "Strategi", c: 4 },
       { t: "Kalender 7 hari", a: "Kreatif", c: 4 }, { t: "Gambar Hari 1–7", a: "Media", c: 1 },
@@ -377,8 +389,8 @@
       { key: "produk", status: "Mengerjakan", task: "Struktur fitur MVP" }
     ], chat: [
       { who: "user", name: "Kamu", color: "#374151", text: "Buatkan brief produk digital untuk aplikasi pemesanan kopi via WhatsApp." },
-      { who: "prime", name: "Prime Agent", color: "#6d28d9", text: "Siap. Saya tugaskan Riset untuk riset pengguna, lalu Produk Digital menyusun brief dan struktur fitur MVP." },
-      { who: "riset", name: "Riset", color: "#2563eb", text: "Riset pengguna berjalan: pemesanan via chat sudah jadi kebiasaan, hambatan utamanya antre dan pembayaran tunai (simulasi)." }
+      { who: "prime", name: "Prime Agent", color: "#B214FF", text: "Siap. Saya tugaskan Riset untuk riset pengguna, lalu Produk Digital menyusun brief dan struktur fitur MVP." },
+      { who: "riset", name: "Riset", color: "#B214FF", text: "Riset pengguna berjalan: pemesanan via chat sudah jadi kebiasaan, hambatan utamanya antre dan pembayaran tunai (simulasi)." }
     ], kanban: [
       { t: "Riset pengguna aplikasi kopi", a: "Riset", c: 1 },
       { t: "Struktur fitur MVP", a: "Produk Digital", c: 1 },
@@ -430,30 +442,43 @@
     if (pid) currentProj = pid;
     document.getElementById("projectSel").value = currentProj;
     renderAgents(); renderDetail(); renderChat(); renderKanban();
-    document.getElementById("chatTitle").textContent = "Chat — " + PROJECTS[currentProj].name;
+    document.getElementById("chatProj").textContent = PROJECTS[currentProj].name;
   }
   function renderDetail() {
     var ag = AGENTS[selectedAgent], proj = PROJECTS[currentProj];
-    document.getElementById("detailTitle").textContent = "Detail — " + ag.name;
-    document.getElementById("detailSub").textContent = "Proyek: " + proj.name + " • " + ag.role + (ag.always ? " • Selalu aktif." : "");
-    var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox" checked> <span>' + s + '</span></div>'; }).join("");
+    var ins = ag.instructions || (selectedAgent === "prime" ? "General-purpose assistant" : ag.goal);
+    var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox" checked onchange="detailNote(\'Simulasi: skill ' + s + ' diubah (tampilan saja).\')"> <span>' + s + '</span></div>'; }).join("");
     document.getElementById("detailBody").innerHTML =
-      '<p><b>Goal:</b><br>' + ag.goal + '</p><p><b>Model / provider:</b><br>' + ag.model + '</p>'
-      + '<h3 style="font-size:15px">Harness skill (kustomisasi — simulasi)</h3>' + skills
-      + '<label>Catatan / goal tambahan</label><textarea placeholder="Penyesuaian goal untuk proyek ' + proj.name + '…"></textarea>'
-      + '<button class="btn btn-primary" onclick="saveDetail()">Simpan Kustomisasi (simulasi)</button>'
+      '<div class="detail-avatar-wrap"><div class="detail-avatar" style="background:' + ag.color + '">' + ag.name.charAt(0) + '</div><button class="avatar-edit" onclick="detailNote(\'Simulasi: ganti avatar ' + ag.name + ' (tampilan saja).\')" title="Ubah avatar">✎</button></div>'
+      + '<div class="d-label">Name</div><input type="text" class="d-field" value="' + ag.name + '" onchange="renameAgent(this.value)">'
+      + '<div class="d-label">Title</div><input type="text" class="d-field" placeholder="Describe what your agent does" value="' + ag.role + '" onchange="retitleAgent(this.value)">'
+      + '<div class="d-label">Instructions</div><textarea class="d-field d-area" onchange="setInstructions(this.value)">' + ins + '</textarea>'
+      + '<div class="d-label">Brain</div><div class="d-rows">'
+      + '<div class="d-row" onclick="detailNote(\'Simulasi: ganti model — rantai aktif Meta → Gemini → Ollama (tampilan saja).\')"><span>Model</span><span class="d-val">' + ag.model + ' ›</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'Simulasi: ubah Reasoning (tampilan saja).\')"><span>Reasoning</span><span class="d-val">Low ↕</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'Simulasi: atur Backup models (tampilan saja).\')"><span>Backup models</span><span class="d-val">Ask first ›</span></div></div>'
+      + '<div class="d-label">Knows</div><div class="d-rows">'
+      + '<div class="d-row" onclick="detailNote(\'Simulasi: Memories ' + ag.name + ' masih kosong di prototype ini.\')"><span>Memories</span><span class="d-val">0 saved ›</span></div>'
+      + '<div class="d-row" onclick="toggleSkillList()"><span>Skills</span><span class="d-val">' + ag.skills.length + ' assigned ›</span></div>'
+      + '<div id="skillList" style="display:none">' + skills + '</div>'
+      + '<div class="d-row" onclick="detailNote(\'Simulasi: Files ' + ag.name + ' (tampilan saja).\')"><span>Files</span><span class="d-val">17 KB ›</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'Simulasi: Tables ' + ag.name + ' (tampilan saja).\')"><span>Tables</span><span class="d-val">0 tables ›</span></div></div>'
+      + '<div class="d-label">Does</div><div class="d-rows">'
+      + '<div class="d-row" onclick="detailNote(\'Simulasi: Routines ' + ag.name + ' (tampilan saja).\')"><span>Routines</span><span class="d-val">0 configured ›</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'Simulasi: Usage ' + ag.name + ' (tampilan saja).\')"><span>Usage</span><span class="d-val">— ›</span></div></div>'
       + '<div class="notice" id="detailNotice" style="display:none"></div>'
-      + '<p style="font-size:13px;color:#555">Gerbang (GSTP/GKonten/GBatch) tidak bisa dimatikan dari panel ini.</p>';
+      + '<p style="font-size:13px;color:#737373">Gerbang (GSTP/GKonten/GBatch) tidak bisa dimatikan dari panel ini.</p>';
   }
-  function saveDetail() {
-    var n = document.getElementById("detailNotice");
-    if (n) { n.style.display = "block"; n.textContent = "Simulasi: kustomisasi " + AGENTS[selectedAgent].name + " tersimpan untuk proyek ini (tampilan saja)."; }
-  }
+  function detailNote(t) { var n = document.getElementById("detailNotice"); if (n) { n.style.display = "block"; n.textContent = t; } }
+  function toggleSkillList() { var el = document.getElementById("skillList"); if (el) el.style.display = el.style.display === "none" ? "block" : "none"; }
+  function renameAgent(v) { if (!v.trim()) return; AGENTS[selectedAgent].name = v.trim(); renderAgents(); renderDetail(); detailNote("Simulasi: nama agen diubah menjadi " + v.trim() + " (tampilan saja)."); }
+  function retitleAgent(v) { AGENTS[selectedAgent].role = v; renderAgents(); renderDetail(); }
+  function setInstructions(v) { AGENTS[selectedAgent].instructions = v; detailNote("Simulasi: instructions tersimpan (tampilan saja)."); }
 
   /* ---------- Proyek & Chat ---------- */
   function switchProject(pid) {
     currentProj = pid;
-    document.getElementById("chatTitle").textContent = "Chat — " + PROJECTS[pid].name;
+    document.getElementById("chatProj").textContent = PROJECTS[pid].name;
     renderAgents(); renderChat(); renderKanban(); renderDetail();
   }
   function renderChat() {
@@ -462,8 +487,9 @@
     PROJECTS[currentProj].chat.forEach(function (m) {
       var div = document.createElement("div");
       div.className = "msg " + (m.who === "user" ? "user" : (m.curation ? "curation" : (m.who === "prime" ? "prime" : "")));
-      div.innerHTML = '<div class="av" style="background:' + m.color + '">' + m.name.charAt(0) + '</div>'
-        + '<div class="body"><div class="who">' + m.name + (m.curation ? ' — <span class="badge b-wait">KURASI PRIME</span>' : '') + '</div><div class="bubble">' + m.text + '</div></div>';
+      div.innerHTML = m.curation
+        ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + m.text + '</div></div>'
+        : '<div class="bubble">' + m.text + '</div>';
       box.appendChild(div);
     });
     box.scrollTop = box.scrollHeight;
@@ -481,18 +507,18 @@
     input.value = "";
     var saved = text;
     setTimeout(function () {
-      postChat("prime", "Prime Agent", "#6d28d9", "Diterima. Saya pecah arahanmu dan tugaskan agen yang dibutuhkan — hasilnya muncul di chat ini dan kartunya di Kanban (simulasi).");
+      postChat("prime", "Prime Agent", "#B214FF", "Diterima. Saya pecah arahanmu dan tugaskan agen yang dibutuhkan — hasilnya muncul di chat ini dan kartunya di Kanban (simulasi).");
     }, 700);
     setTimeout(function () {
       var low = saved.toLowerCase();
-      var agent = "Riset", color = "#2563eb", reply = "Saya mulai risetnya dari behaviour digital dan spending audiens (simulasi).";
-      if (low.indexOf("gambar") !== -1 || low.indexOf("carousel") !== -1 || low.indexOf("reels") !== -1 || low.indexOf("talking") !== -1) { agent = "Media"; color = "#db2777"; reply = "Saya siapkan medianya — gambar/carousel/reels/talking head tampil di Media Studio setelah lolos GKonten (simulasi)."; }
-      else if (low.indexOf("produk") !== -1) { agent = "Produk Digital"; color = "#65a30d"; reply = "Saya susun brief produk dan struktur fitur MVP-nya (simulasi)."; }
+      var agent = "Riset", color = "#B214FF", reply = "Saya mulai risetnya dari behaviour digital dan spending audiens (simulasi).";
+      if (low.indexOf("gambar") !== -1 || low.indexOf("carousel") !== -1 || low.indexOf("reels") !== -1 || low.indexOf("talking") !== -1) { agent = "Media"; color = "#5b5b5b"; reply = "Saya siapkan medianya — gambar/carousel/reels/talking head tampil di Media Studio setelah lolos GKonten (simulasi)."; }
+      else if (low.indexOf("produk") !== -1) { agent = "Produk Digital"; color = "#666666"; reply = "Saya susun brief produk dan struktur fitur MVP-nya (simulasi)."; }
       postChat("x", agent, color, reply);
     }, 1500);
   }
   function primeCurate() {
-    postChat("prime", "Prime Agent", "#6d28d9", "Kurasi Prime (simulasi): semua hasil agen di atas sudah saya periksa konsistensinya terhadap STP dan riset. Yang masih menunggu keputusanmu: gerbang GKonten untuk media dan gerbang distribusi untuk draf Postiz.", true);
+    postChat("prime", "Prime Agent", "#B214FF", "Kurasi Prime (simulasi): semua hasil agen di atas sudah saya periksa konsistensinya terhadap STP dan riset. Yang masih menunggu keputusanmu: gerbang GKonten untuk media dan gerbang distribusi untuk draf Postiz.", true);
   }
   function doSearch() {
     var q = document.getElementById("searchInput").value.trim().toLowerCase();
@@ -513,7 +539,7 @@
   }
   function cardComments(card) { return (card.t.length % 4) + 1; }
   function colName(ci) { return ci < KCOLS.length ? KCOLS[ci] : extraCols[ci - KCOLS.length]; }
-  function colColor(ci) { return ["#6b7280", "#3b82f6", "#facc15", "#ef4444", "#22c55e"][ci] || "#8b5cf6"; }
+  function colColor(ci) { return ["#525252", "#6b7280", "#B214FF", "#737373", "#404040"][ci] || "#737373"; }
   function renderKanban() {
     document.getElementById("kanbanTitle").textContent = PROJECTS[currentProj].name;
     var wrap = document.getElementById("kanbanBox");
@@ -785,7 +811,7 @@
   }
   function libUse(i) {
     showView("home");
-    postChat("prime", "Prime Agent", "#6d28d9", "Output '" + LIB[i].o + "' digunakan sebagai bahan tahap berikutnya di " + PROJECTS[currentProj].name + " (simulasi).", true);
+    postChat("prime", "Prime Agent", "#B214FF", "Output '" + LIB[i].o + "' digunakan sebagai bahan tahap berikutnya di " + PROJECTS[currentProj].name + " (simulasi).", true);
     var n = document.getElementById("libNotice"); n.style.display = "block";
     n.textContent = "Simulasi: pesan Prime Agent terkirim ke chat proyek aktif.";
   }
@@ -797,7 +823,7 @@
     PROJECTS[currentProj].kanban.push({ t: "Revisi: " + LIB[i].o, a: LIB[i].a, c: 3 });
     renderKanban();
     showView("home");
-    postChat("prime", "Prime Agent", "#6d28d9", "Perbaikan dibuka untuk '" + LIB[i].o + "' — kartunya masuk kolom Revisi di Kanban, menunggu catatanmu (simulasi).", true);
+    postChat("prime", "Prime Agent", "#B214FF", "Perbaikan dibuka untuk '" + LIB[i].o + "' — kartunya masuk kolom Revisi di Kanban, menunggu catatanmu (simulasi).", true);
   }
 
   /* ---------- Media Studio ---------- */
@@ -920,19 +946,6 @@ function filterAgents(q) {
   });
 }
 (function () {
-  var _rd = renderDetail;
-  renderDetail = function () {
-    _rd();
-    var body = document.getElementById('detailBody');
-    var proj = PROJECTS[currentProj];
-    var today = proj.kanban.slice(0, 4).map(function (c) {
-      return '<div class="todayitem"><b>' + c.t + '</b><br><small style="color:#a1a1a1">Agen: ' + c.a + ' • ' + KCOLS[c.c] + '</small></div>';
-    }).join('');
-    var div = document.createElement('div');
-    div.innerHTML = '<h3 style="font-size:15px;margin:0 0 8px">Today — ' + proj.name + '</h3>' + today + '<hr style="border:none;border-top:1px solid #262626;margin:14px 0">';
-    body.insertBefore(div, body.firstChild);
-  };
-  renderDetail();
   document.querySelectorAll('[data-kbtab]').forEach(function (b) {
     b.addEventListener('click', function () {
       kanbanTab = b.getAttribute('data-kbtab');
@@ -942,22 +955,10 @@ function filterAgents(q) {
   });
 })();
 
-  function waInputChanged() {
-    var v = document.getElementById('chatInput').value.trim();
-    document.getElementById('waMicBtn').style.display = v ? 'none' : 'flex';
-    document.getElementById('waSendBtn').style.display = v ? 'flex' : 'none';
-  }
+  function waInputChanged() { /* lampiran: mic + kirim selalu tampil, tidak ada toggle */ }
   function waToggleAttach() {
     document.getElementById('attachMenu').classList.toggle('open');
     document.getElementById('emojiPanel').classList.remove('open');
-  }
-  function waToggleEmoji() {
-    document.getElementById('emojiPanel').classList.toggle('open');
-    document.getElementById('attachMenu').classList.remove('open');
-  }
-  function waEmoji(e) {
-    var inp = document.getElementById('chatInput');
-    inp.value += e; inp.focus(); waInputChanged();
   }
   function waAttach(kind) {
     document.getElementById('attachMenu').classList.remove('open');
@@ -998,6 +999,8 @@ function filterAgents(q) {
   function viewBack() { if (viewHistIdx > 0) { navJump = true; viewHistIdx--; _sv2(viewHist[viewHistIdx]); navJump = false; } }
   function viewForward() { if (viewHistIdx < viewHist.length - 1) { navJump = true; viewHistIdx++; _sv2(viewHist[viewHistIdx]); navJump = false; } }
   renderAgents();
+  var _sa2 = selectAgent;
+  selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
 </script>
 </body>

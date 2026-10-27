@@ -566,3 +566,41 @@ dokumen lama yang dipakai.
   node --check, tanpa referensi eksternal, form lama benar-benar
   hilang dari file. Status: MENUNGGU REVISI Patria dari
   prototype v5 (dengan list agen gaya lampiran).
+
+- 27 Okt sore (perintah Patria "UI utama buat seperti ini",
+  dengan lampiran UI utama gelap, lalu perintah susulan
+  "Warna UI monochrome dengan aksen violet #B214FF"): UI UTAMA
+  v5 DIGANTI seperti lampiran + TEMA MONOCHROME-VIOLET (masih
+  di file prototype-v5/index.html yang sama). Chat tengah kini:
+  header terpusat "Today 2:31 PM" + label proyek kecil di
+  bawahnya (dropdown ganti proyek tetap di bawah header);
+  bubble TANPA avatar/nama — pesan pengguna pill gelap di
+  kanan, pesan agen pill gelap di kiri, kurasi Prime pill
+  bergaris putus-putus violet + label KURASI PRIME; composer
+  menjadi SATU pill (tombol ＋ di dalam kiri → menu lampiran,
+  placeholder dinamis "Message {nama agen}" yang mengikuti
+  agen terpilih, mic abu di dalam, tombol kirim BULAT VIOLET
+  dengan panah putih — mic + kirim selalu tampil seperti
+  lampiran, bukan lagi toggle mic→kirim gaya WA). Panel Detail
+  kanan kini seperti lampiran: avatar kotak besar warna agen
+  + badge pensil, field Name (edit nama → list ikut berubah),
+  Title (placeholder "Describe what your agent does"),
+  Instructions (textarea, default Prime "General-purpose
+  assistant"), Brain (Model = rantai Meta → Gemini → Ollama,
+  Reasoning Low, Backup models Ask first), Knows (Memories 0
+  saved, Skills N assigned — klik membuka daftar checkbox
+  harness, Files 17 KB, Tables 0 tables), Does (Routines 0
+  configured, Usage —). Suntikan "Today" dari panel kanan
+  DIHAPUS (lampiran tidak punya). TEMA: seluruh v5 monochrome
+  (hitam/abu-abu) dengan SATU aksen #B214FF — tombol primer,
+  seleksi agen, border proyek aktif, hover, badge Butuh
+  Approval, avatar Prime, tombol kirim, kurasi, banner, dan
+  caret input; avatar agen lain abu-abu bertingkat, bar
+  Kanban abu-abu (kecuali Butuh Approval = violet), node
+  Graph abu-abu (kecuali Prime = violet). Diverifikasi: kedua
+  blok JS lolos node --check, tanpa referensi eksternal,
+  elemen lama (chatTitle/detailTitle/saveDetail/emojiPanel/
+  waMicBtn) benar-benar hilang, tidak ada sisa hex aksen lama
+  (biru/hijau/merah/kuning). Status: MENUNGGU REVISI Patria
+  dari prototype v5 (dengan UI utama gaya lampiran + tema
+  violet).
