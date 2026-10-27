@@ -870,3 +870,18 @@ dokumen lama yang dipakai.
   nama tim / Kanban 5v3 / teknologi UI, 10 engine video
   editor, gambar untuk 7 draf Postiz, hapus cron posting
   setelah 4 Nov.
+
+  RECHECK NAV HOME-ONLY 27 Okt sore (perintah Patria
+  "prototipe masih tampil, cek ulang"): uji browser live
+  gagal BUKAN karena halaman rusak — browser itu menolak
+  alamat loopback (127.0.0.1/localhost) di level request,
+  situs eksternal normal. Rute pengganti: file build yang
+  persis dibuka user dieksekusi di mesin DOM (jsdom) dengan
+  klik sungguhan — HASIL: Home awal: no-nav false,
+  agentCol/detailCol flex, resizer block; klik Kanban:
+  no-nav true, keempatnya none, view-kanban aktif; klik
+  Graph: tetap tersembunyi; klik Home: kembali tampil,
+  no-nav false; 0 error script. VONIS: kode BENAR dan
+  bekerja; tampilan "masih tampil" di layar Patria berasal
+  dari salinan build LAMA (tab/lampiran sebelum perbaikan
+  nav) yang belum dimuat ulang — bukan bug baru.
