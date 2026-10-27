@@ -12,6 +12,7 @@
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { postChat } from './v5logic.js';
+import { POSTIZ_KEY_LS, readPostizKey } from './postiz.js';
 
 const GEMINI_KEY_LS = 'minime.geminiKey';
 const META_KEY_LS = 'minime.metaKey';
@@ -32,6 +33,7 @@ export function keyStatusText(): string {
   return (
     'Gemini: ' + (k.gemini ? 'tersimpan' : 'belum diisi') +
     ' · Meta: ' + (k.meta ? 'tersimpan' : 'belum diisi') +
+    ' · Postiz: ' + (readPostizKey() ? 'tersimpan' : 'belum diisi') +
     ' · Ollama lokal: tidak butuh kunci.'
   );
 }
@@ -44,11 +46,14 @@ export function updateKeyStatus(): void {
 export function saveKeys(): void {
   const g = document.getElementById('apiKeyGemini') as HTMLInputElement | null;
   const m = document.getElementById('apiKeyMeta') as HTMLInputElement | null;
+  const p = document.getElementById('apiKeyPostiz') as HTMLInputElement | null;
   try {
     if (g && g.value.trim()) window.localStorage.setItem(GEMINI_KEY_LS, g.value.trim());
     if (m && m.value.trim()) window.localStorage.setItem(META_KEY_LS, m.value.trim());
+    if (p && p.value.trim()) window.localStorage.setItem(POSTIZ_KEY_LS, p.value.trim());
     if (g) g.value = '';
     if (m) m.value = '';
+    if (p) p.value = '';
   } catch {
     // storage unavailable: keys simply stay unset for this session
   }

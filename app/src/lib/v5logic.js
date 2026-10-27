@@ -461,10 +461,10 @@ export function saveScript(idx) {
 export function mediaToPlanner(idx) {
     var m = MEDIA[idx];
     m.status = "Siap untuk Post";
-    PLANNER.push({ item: m.title, ch: "Instagram / Postiz", when: "31 Okt, 11:30 WIB", st: "DRAF Postiz" });
+    PLANNER.push({ item: m.title, ch: "Instagram / Postiz", when: "Session ini", st: "DRAF lokal", postId: "—" });
     renderMedia(); renderPlanner();
     var n = document.getElementById("mediaNotice"); n.style.display = "block";
-    n.textContent = "Simulasi: '" + m.title + "' ditandai Siap untuk Post dan ditambahkan sebagai DRAF di Planner (bukan terbit).";
+    n.textContent = "Simulasi: '" + m.title + "' ditandai Siap untuk Post dan ditambahkan sebagai DRAF LOKAL di Planner (hanya di app ini, bukan draf Postiz — draf Postiz asli dibuat dari composer Planner di bawah tabel).";
   }
 
 export function renderPlanner() {
@@ -472,6 +472,12 @@ export function renderPlanner() {
       return "<tr><td>" + p.item + "</td><td>" + p.ch + "</td><td>" + p.when + "</td><td><span class='badge b-wait'>" + p.st + "</span></td><td><small>" + p.postId + "</small></td></tr>";
     }).join("");
   }
+
+/** B5: append one planner row (used by the Postiz composer). Session-only. */
+export function addPlannerRow(row) {
+  PLANNER.push(row);
+  renderPlanner();
+}
 
 export function playTimeline() {
     if (playTimer) clearInterval(playTimer);

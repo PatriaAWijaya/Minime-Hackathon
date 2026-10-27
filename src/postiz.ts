@@ -6,12 +6,16 @@
  * leave draft state through a human approval in the Postiz
  * dashboard (or a later, separately gated batch step), never
  * through this code path.
- * The public API base and key format follow the local integration
- * guide (~/postiz-mac/postiz-mac/INTEGRASI_MINIME.md): base URL
- * http://localhost:4007, public API at /public/v1, Bearer key
- * starting with pos_. The key itself is never stored in this repo;
- * it arrives via environment (or, on the MacBook, via Keychain)
- * and is never printed.
+ * The public API base and key format follow the LIVE-PROVEN values
+ * from the Fase 3 session (docs/fase-3-postiz-drafts.json, 27 Okt
+ * 2026 15:35 WIB, 7 drafts HTTP 201): base URL http://localhost:4007
+ * with the public API at /api/public/v1, and the RAW API key in the
+ * Authorization header. CORRECTED 27 Okt sore (B5): the earlier
+ * /public/v1 path 307-redirects to /auth and creates nothing, and
+ * "Bearer <key>" returns 401 — both the old comment and the old
+ * request code were wrong and are fixed here. The key itself is
+ * never stored in this repo; it arrives via environment (or, on the
+ * MacBook, via Keychain) and is never printed.
  */
 
 export interface PostizCarouselSlide {
@@ -44,10 +48,10 @@ export class PostizDraftClient {
 
   /** Create one draft. Sends only the documented draft fields. */
   async createDraft(payload: PostizDraftPayload): Promise<{ draftId: string | null; status: number }> {
-    const res = await fetch(`${this.baseUrl}/public/v1/posts`, {
+    const res = await fetch(`${this.baseUrl}/api/public/v1/posts`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `${this.apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ type: 'draft', caption: payload.caption }),
@@ -71,11 +75,12 @@ export class PostizDraftClient {
   }
 
   /** Liveness probe only: returns the HTTP status of the public API
-   *  integrations endpoint without claiming authentication. A 307
-   *  redirect means the app is up and responding (it redirects to
-   *  login); connection refusal means it is down. */
+   *  integrations endpoint without claiming authentication. Any HTTP
+   *  response means the app is up; only a connection refusal means
+   *  it is down. (The old comment's 307 claim belonged to the wrong
+   *  /public/v1 path and is removed.) */
   async checkApiAlive(): Promise<number> {
-    const res = await fetch(`${this.baseUrl}/public/v1/integrations`, { redirect: 'manual' });
+    const res = await fetch(`${this.baseUrl}/api/public/v1/integrations`, { redirect: 'manual' });
     return res.status;
   }
 }

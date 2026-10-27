@@ -33,6 +33,9 @@
 - B4 (27 Okt sore): Kanban TEST Kopi + Planner dari
   artefak nyata (Fase 1–3 + record Postiz; rig B4
   28/28 lolos). Rantai v5 berjalan.
+- B5 (27 Okt sore): composer Planner -> draf Postiz
+  nyata (draft-only; /api/public/v1 + kunci raw;
+  rig B5 15/15 lolos). Rantai v6 berjalan.
 
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,

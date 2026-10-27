@@ -1136,3 +1136,47 @@ dokumen lama yang dipakai.
   lama PID 23734 dibunuh, proses BARU PID 24065 hidup
   dari bundle B4. Berikutnya: B5 (draf Postiz dari
   app, draft-only tidak berubah).
+
+  WIRING — B5 DRAF POSTIZ DARI APP (27 Okt sore):
+  Composer baru di view Planner (textarea + tombol
+  "Buat Draf di Postiz") membuat draf NYATA via modul
+  app/src/lib/postiz.ts — port src/postiz.ts yang
+  DIKOREKSI ke nilai live-proven Fase 3 (record
+  27 Okt 15:35 WIB, 7x201): base
+  http://127.0.0.1:4007/api/public/v1 + kunci RAW di
+  header Authorization. Koreksi ini JUGA diterapkan
+  ke src/postiz.ts Node (path + header + komentar;
+  gate-test tetap 13/13 — test capture tidak mengunci
+  path/header). Jaminan draft-only dipertahankan
+  lewat konstruksi: modul ini TIDAK PUNYA method
+  publish/schedule/delete; draf hanya bisa keluar
+  dari status draf lewat manusia di dashboard Postiz.
+  Body persis bentuk live-proven: {type:'draft',
+  caption} saja. TIDAK ADA pilihan channel di composer
+  — format field channel tidak terselesaikan di
+  dokumen (diagram guide menyebut channels:[...]
+  tapi contohnya sendiri menghilang); draf jatuh ke
+  default channel Postiz dan composer + notice
+  mengatakan itu apa adanya (cek/pindah di dashboard).
+  Kunci Postiz di localStorage (Settings, dari
+  Keychain MacBook); tanpa kunci, tombol tidak
+  memanggil API sama sekali. Draf sukses menambah
+  baris Planner session-only (caption, Postiz, DRAF,
+  postId) — persistensi drafnya ada di Postiz sendiri.
+  Relabel kejujuran: baris "Siapkan untuk Post" dari
+  Media Studio kini 'DRAF lokal' + 'Session ini'
+  (bukan lagi 'DRAF Postiz' + tanggal karangan 31
+  Okt 11:30 WIB) — dummy media tidak boleh menyamar
+  jadi draf Postiz. CSP ditambah 127.0.0.1:4007.
+  Verifikasi: parity 16/16 lolos ulang; rig B5 15/15
+  (tanpa kunci: notice + nol fetch; berkunci: POST
+  ke /api/public/v1/posts + baris + postId + notice
+  sukses; 401: notice error + nol baris). Yang BELUM
+  terbukti live (jujur): klik draf sungguhan dari app
+  MacBook — SSH tidak bisa membaca Keychain (exit 36),
+  jadi langkah itu menunggu Patria (isi kunci sekali
+  di Settings, tulis caption, klik; draf muncul di
+  dashboard Postiz sebagai DRAF). Kontainer Postiz
+  MacBook terverifikasi UP (postiz/postgres/redis).
+  Berikutnya: rebuild MacBook rantai v6; lalu B6
+  (audit full wiring).

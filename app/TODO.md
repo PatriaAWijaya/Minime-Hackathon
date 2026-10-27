@@ -34,7 +34,10 @@
 - [x] B4: Kanban/Planner data from backend (no more hardcoded cards)
   (diturunkan dari artefak Fase 1–3 + record Postiz;
   rig B4 28/28 lolos; rebuild MacBook v5 sukses, app jalan PID 24065)
-- [ ] B5: Postiz drafts from the app (draft-only, unchanged rule)
+- [x] B5: Postiz drafts from the app (draft-only, unchanged rule)
+  (composer Planner -> draf nyata via /api/public/v1;
+  rig B5 15/15 lolos; uji live MacBook menunggu kunci Patria;
+  rebuild MacBook rantai v6 berjalan)
 - [ ] B6: Full wiring audit (zero-error gate) + log + push
 
 ## Parked (Patria's call)

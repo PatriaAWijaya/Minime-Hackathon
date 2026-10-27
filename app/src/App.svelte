@@ -3,6 +3,7 @@
   import { initV5, setSendChatImpl, addGraphEdge, doSearch, filterAgents, playTimeline, primeCurate, quickChat, renderKanban, runGraphSim, selectClip, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
   import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
   import { applyGateStatus } from "./lib/gates.js";
+  import { createPostizDraftFromComposer } from "./lib/postiz.js";
 
   onMount(() => {
     initV5();
@@ -240,6 +241,11 @@
       <div class="scroll">
         <table><thead><tr><th>Item</th><th>Channel</th><th>Tanggal draf</th><th>Status</th><th>Draf Postiz</th></tr></thead><tbody id="plannerBody"></tbody></table>
         <div class="notice">Data di bawah adalah 7 draf Postiz nyata (dibuat 27 Okt 2026 15:35 WIB, mode DRAF saja, belum terjadwal kirim — menunggu GBatch). Tanggal draf sesuai record (UTC). Tidak ada tombol terbit live di slice ini.</div>
+        <h3>Buat draf Postiz baru (B5 — DRAF saja, tidak pernah terbit/jadwal)</h3>
+        <p>Draf teks saja (caption). Channel mengikuti default Postiz — cek/pindah di dashboard Postiz. Butuh kunci Postiz di Settings.</p>
+        <p><textarea id="postizText" placeholder="Tulis caption draf..." rows="3" style="width:100%"></textarea></p>
+        <button class="btn btn-primary" onclick={() => { createPostizDraftFromComposer() }}>Buat Draf di Postiz</button>
+        <div class="notice" id="postizNotice" style="display:none"></div>
       </div>
     </div>
     <div class="view" id="view-settings">
@@ -248,7 +254,7 @@
         <h3>Koneksi &amp; Provider</h3>
         <p><label><input type="checkbox" checked> Meta Model API (Muse) — utama</label><label><input type="checkbox" checked> Gemini — fallback 1</label><label><input type="checkbox" checked> Ollama lokal — fallback 2/3</label><label><input type="checkbox" checked> Canva Fallback untuk Image (bila Meta &amp; Gemini gagal)</label><label><input type="checkbox"> Voice Studio (127.0.0.1:3900)</label></p>
         <h3>Kunci API (B3 — disimpan lokal di perangkat ini saja)</h3>
-        <p><label>Gemini API key: <input type="password" id="apiKeyGemini" placeholder="Belum diisi" style="width:320px"></label><label>Meta API key: <input type="password" id="apiKeyMeta" placeholder="Belum diisi (butuh klaim $150 + kartu)" style="width:320px"></label><label>Ollama lokal: tidak butuh kunci (127.0.0.1:11434)</label></p>
+        <p><label>Gemini API key: <input type="password" id="apiKeyGemini" placeholder="Belum diisi" style="width:320px"></label><label>Meta API key: <input type="password" id="apiKeyMeta" placeholder="Belum diisi (butuh klaim $150 + kartu)" style="width:320px"></label><label>Postiz API key: <input type="password" id="apiKeyPostiz" placeholder="Belum diisi (dari Keychain MacBook)" style="width:320px"></label><label>Ollama lokal: tidak butuh kunci (127.0.0.1:11434)</label></p>
         <button class="btn btn-primary" onclick={() => { saveKeys() }}>Simpan Kunci</button>
         <div class="notice" id="keyStatus"></div>
         <h3>Gerbang &amp; Distribusi</h3>
