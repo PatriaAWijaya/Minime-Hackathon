@@ -62,6 +62,8 @@
 
 - Sidebar Cost + ikon Cost/Setting (28 Okt dini hari, perintah Patria): tombol rail Cost baru (ikon gear + $ kiriman Patria) + view-cost tabel biaya per model — Muse Spark 1.3 aktual (1 panggilan, 34/684 token, $0,00295 ~Rp53,5) + Gemini 3.1 Flash-Lite Fase 1-3 (7 panggilan, 10.859 token, rincian menunggu dashboard, rentang $0,0027-$0,0163 ~Rp49-Rp296) + total (8 panggilan, 11.577 token, $0,00565-$0,01925 ~Rp102,5-Rp349,5); tombol Settings ganti ikon hamburger kiriman Patria (invert CSS karena rail gelap, file apa adanya); i18n 286 kunci x 3 nihil mati; verifikasi build + svelte-check 0 error + tsc 0 + gate-test 13/13 + scan PASSED + rig-cost 16/16. Rantai v18 live PID 42171 (HEAD remote e7d2cc2). SISA: rincian token Gemini menunggu hasil dashboard Google Cloud.
 
+- Hapus sufiks judul Library + note ve.lib.note (28 Okt dini hari, perintah Patria): judul jadi 'Library' saja (3 bahasa) + paragraf penjelas di colhead Library dihapus + kunci ve.lib.note x3 dihapus (i18n 285 kunci x 3 nihil mati); tombol 'Gunakan' + 'Perbaiki Lanjut' tetap berfungsi. Verifikasi build + svelte-check 0 error + tsc 0 + gate-test 13/13 + scan PASSED + rig-libdel 8/8. Rantai v19 live PID 43276 (HEAD remote 04e8dd5).
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.
