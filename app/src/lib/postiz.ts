@@ -21,6 +21,7 @@
 // into the bundle, never committed, and never sent anywhere except
 // the Postiz API on this machine.
 import { addPlannerRow } from './v5logic.js';
+import { tr } from './i18n.js';
 
 export const POSTIZ_KEY_LS = 'minime.postizKey';
 const POSTIZ_BASE = 'http://127.0.0.1:4007/api/public/v1';
@@ -36,7 +37,7 @@ export function readPostizKey(): string | null {
 export async function createPostizDraft(caption: string): Promise<{ draftId: string | null; status: number }> {
   const key = readPostizKey();
   if (!key) {
-    throw new Error('Kunci Postiz belum diisi (Settings → Kunci API).');
+    throw new Error(tr('postiz.err.nokey'));
   }
   const res = await fetch(`${POSTIZ_BASE}/posts`, {
     method: 'POST',
@@ -71,29 +72,29 @@ export async function createPostizDraftFromComposer(): Promise<void> {
   const input = document.getElementById('postizText') as HTMLTextAreaElement | null;
   const caption = (input?.value ?? '').trim();
   if (!caption) {
-    show('Tulis caption dulu sebelum membuat draf.');
+    show(tr('postiz.notice.empty'));
     return;
   }
   if (!readPostizKey()) {
-    show('Kunci Postiz belum diisi — isi dulu di Settings → Kunci API, lalu klik lagi.');
+    show(tr('postiz.notice.nokey'));
     return;
   }
-  show('Mengirim draf ke Postiz…');
+  show(tr('postiz.notice.sending'));
   try {
     const r = await createPostizDraft(caption);
     addPlannerRow({
       item: caption.length > 60 ? caption.slice(0, 60) + '…' : caption,
       ch: 'Postiz',
       when: 'Baru saja (session)',
-      st: 'DRAF',
+      st: tr('planner.status.draft'),
       postId: r.draftId ?? '—',
     });
     if (input) input.value = '';
     show(
-      `Draf dibuat di Postiz (HTTP ${r.status}${r.draftId ? ', id ' + r.draftId : ''}). ` +
-        'DRAF saja — tidak terbit, tidak terjadwal. Channel mengikuti default Postiz; cek/pindah di dashboard Postiz.',
+      tr('postiz.notice.ok1', { status: r.status, id: r.draftId ? ', id ' + r.draftId : '' }) +
+        tr('postiz.notice.ok2'),
     );
   } catch (e) {
-    show('Gagal membuat draf: ' + (e instanceof Error ? e.message : String(e)));
+    show(tr('postiz.notice.fail') + (e instanceof Error ? e.message : String(e)));
   }
 }

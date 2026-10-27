@@ -12,6 +12,7 @@
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { postChat } from './v5logic.js';
+import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { POSTIZ_KEY_LS, readPostizKey } from './postiz.js';
 
 const GEMINI_KEY_LS = 'minime.geminiKey';
@@ -31,10 +32,10 @@ export function readKeys(): { gemini: string | null; meta: string | null } {
 export function keyStatusText(): string {
   const k = readKeys();
   return (
-    'Gemini: ' + (k.gemini ? 'tersimpan' : 'belum diisi') +
-    ' · Meta: ' + (k.meta ? 'tersimpan' : 'belum diisi') +
-    ' · Postiz: ' + (readPostizKey() ? 'tersimpan' : 'belum diisi') +
-    ' · Ollama lokal: tidak butuh kunci.'
+    'Gemini: ' + (k.gemini ? tr('key.saved') : tr('key.empty')) +
+    ' · Meta: ' + (k.meta ? tr('key.saved') : tr('key.empty')) +
+    ' · Postiz: ' + (readPostizKey() ? tr('key.saved') : tr('key.empty')) +
+    ' · ' + tr('key.ollama.short')
   );
 }
 
@@ -74,19 +75,20 @@ export async function sendChatReal(): Promise<void> {
   if (!input) return;
   const text = input.value.trim();
   if (!text) return;
-  postChat('user', 'Kamu', '#374151', esc(text));
+  postChat('user', tr('chat.you'), '#374151', esc(text));
   input.value = '';
   const keys = readKeys();
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
+  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()];
   const router = new ModelRouter(cfg);
   const trace = 'trace-chat-' + Date.now();
   try {
     const r = await router.callWithFallback(text, trace);
     const footer =
-      ' — via ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
-      (r.fallbackFrom ? ' (fallback dari ' + r.fallbackFrom + ')' : '');
+      ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
+      (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '');
     postChat('prime', 'Prime Agent', '#FFD1DC', esc(r.text) + footer);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -94,8 +96,7 @@ export async function sendChatReal(): Promise<void> {
       'prime',
       'Prime Agent',
       '#FFD1DC',
-      'Gagal menghubungi model: ' + esc(msg) +
-        ' — cek kunci di Settings, atau pastikan Ollama jalan (127.0.0.1:11434).',
+      tr('chat.error') + esc(msg) + tr('chat.error.hint'),
     );
   }
 }

@@ -43,6 +43,7 @@ only on a clean audit.
 - **B4:** Kanban/Planner backed by backend data, not hardcoded HTML.
 - **B5:** Postiz drafts from the app (draft-only rule unchanged).
 - **B6:** Full wiring audit (zero-error gate) + log + push.
+- **B7:** i18n ID/EN/ZH — kamus + selector Pengaturan + instruksi bahasa ke router + log + push.
 Each sub-phase is reviewed before the next starts. No sub-phase
 is skipped, and no gate is self-approved.
 

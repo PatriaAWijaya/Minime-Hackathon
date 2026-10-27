@@ -26,6 +26,12 @@ export interface RouterConfig {
   ollamaBaseUrl: string;
   ollamaModel: string;
   ollamaFallbackModel: string;
+  /**
+   * Optional system instruction (B7: language). Applied per provider:
+   * Meta/Ollama as a system message, Gemini as systemInstruction.
+   * Absent = no instruction (Node fase runners keep today's behavior).
+   */
+  systemInstruction?: string;
 }
 
 /**
@@ -122,7 +128,7 @@ export class ModelRouter {
     const data = await postJson(
       `${this.cfg.metaBaseUrl.replace(/\/$/, '')}/chat/completions`,
       { Authorization: `Bearer ${this.cfg.metaApiKey}` },
-      { model: this.cfg.metaModel, messages: [{ role: 'user', content: prompt }], temperature: 0.2 },
+      { model: this.cfg.metaModel, messages: [...(this.cfg.systemInstruction ? [{ role: 'system', content: this.cfg.systemInstruction }] : []), { role: 'user', content: prompt }], temperature: 0.2 },
     );
     const { text, usage } = chatCompletionsText(data);
     void traceId;
@@ -140,7 +146,7 @@ export class ModelRouter {
     // swapped for the real key on approved egress). Header placement
     // was tried and is NOT compatible with that mechanism.
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.cfg.geminiModel)}:generateContent?key=${encodeURIComponent(this.cfg.geminiApiKey)}`;
-    const data = (await postJson(url, {}, { contents: [{ parts: [{ text: prompt }] }] })) as {
+    const data = (await postJson(url, {}, { contents: [{ parts: [{ text: prompt }] }], ...(this.cfg.systemInstruction ? { systemInstruction: { parts: [{ text: this.cfg.systemInstruction }] } } : {}) })) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
       usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
     };
@@ -159,7 +165,7 @@ export class ModelRouter {
       data = await postJson(
         `${this.cfg.ollamaBaseUrl.replace(/\/$/, '')}/api/chat`,
         {},
-        { model, messages: [{ role: 'user', content: prompt }], stream: false },
+        { model, messages: [...(this.cfg.systemInstruction ? [{ role: 'system', content: this.cfg.systemInstruction }] : []), { role: 'user', content: prompt }], stream: false },
         15000,
       );
     } catch (e) {

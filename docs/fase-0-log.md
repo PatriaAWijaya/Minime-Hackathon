@@ -1324,3 +1324,18 @@ dokumen lama yang dipakai.
   PID 25268 dibunuh, proses BARU PID 25603 hidup dari
   bundle scrollbar. Konfirmasi visual (resize + scroll
   per kolom + composer di bawah) menunggu mata Patria.
+
+## B7 i18n — kamus EN/ZH + selector Pengaturan + instruksi bahasa ke router (27 Okt 2026 sore, perintah Patria 19:18 WIB)
+- Modul baru app/src/lib/i18n.ts: Lang id/en/zh, LANG_LS minime.lang, default id, getLang/setLang, t(key, lang?, vars) + tr(key, vars) (bahasa modul), fallback ke ID bila kunci tak ada (UI tak pernah kosong). Nilai ID = string yang sudah tampil, verbatim — mode default tidak berubah satu piksel pun (dibuktikan rig paritas + B3/B4/B5 tetap hijau).
+- Kamus mencakup chrome UI: tips rail, judul view, label kolom/tabel, tombol, placeholder, judul atribut, chip, filter media, label/inspector Video Editor, label + note panel Detail, label derivasi Kanban (7), nama bulan, status gerbang, status kunci, footer chat, notifikasi Postiz, notifikasi simulasi (agen/media/pengaturan/suara/cari). Total ~130 kunci x 3 bahasa.
+- Selector di Pengaturan (h3 Bahasa + dropdown id/en/zh, label autonym): applyLanguage di App.svelte — setLang + refreshBackendData (derivasi ulang Kanban/Planner dalam bahasa aktif) + re-render 5 daftar + hapus + injeksi ulang status gerbang + refresh status kunci. Markup statis ikut lewat state lang Svelte (t(key, lang)).
+- Backend-data diubah const -> fungsi (kopiKanban/plannerReal) agar derivasi mengikuti bahasa saat ini, bukan bahasa saat load. KCOLS var -> kcols() (fungsi). Finder status gerbang diubah dari cari teks 'Gerbang' menjadi id gateHead (tahan terjemahan).
+- Router (src/router.ts): field opsional systemInstruction; Meta/Ollama = pesan role system di depan; Gemini = field systemInstruction (bukan pesan role system — itu jalur yang benar untuk generateContent). chat.ts mengisi dari MODEL_LANG_INSTRUCTION[getLang()]. Node fase runner TIDAK mengisi (perilaku lama tak berubah — gate-test 13/13 tetap hijau, bodi request lama tak berubah).
+- BATAS JUJUR: yang tidak diterjemahkan adalah DATA (nama agen/proyek, isi artefak TEST Kopi, judul media/timeline dummy, keluaran model, judul tugas dummy, status item media) + teks simulasi internal view Video Editor/Graph yang tidak terjangkau pemetaan. Satu kunci sempat salah sasaran (view.library.desc ternyata goal agen Media di v5logic.js, bukan markup) — kunci DIHAPUS dari kamus, bukan dipaksakan.
+- Verifikasi: vite build lolos (JS 168.74 kB / gzip 61.44 kB — naik wajar karena kamus 3 bahasa), svelte-check 0 error + 54 warning (sama seperti B6, tanpa warning baru), tsc root 0, gate-test 13/13, scan lolos, paritas 16/16, rig B3 (2 mode) + B4 28/28 + B5 15/15 hijau, rig-b7 BARU 17/17 lolos (default ID, switch EN/ZH, persist localStorage, blocklist chrome ID di mode EN, instruksi system EN di bodi Ollama, footer EN 'fallback from').
+
+## Konfirmasi visual — DISETUJUI (Patria, 27 Okt 2026 19:19 WIB)
+- Patria menyetujui window + klik + resize/scrollbar baru. Menutup item konfirmasi visual yang tertunda sejak Tahap A (window + klik B2/B3/B4) dan scrollbar v9 (resize + scroll per kolom + composer menempel bawah). Dicatat di MEMORY.md + status.md.
+
+## Cron posting harian — penghapusan dijadwalkan (perintah Patria 27 Okt 2026 19:19 WIB)
+- Perintah dibaca sebagai penghapusan SETELAH 4 Nov (bukan sekarang — posting harian masih wajib jalan sampai 4 Nov sesuai perintah 27 Okt pagi). Job runonce 'hapus-cron-posting-hackathon' dibuat: jalan Kamis 5 Nov 2026 08:00 WIB (sebelum run pagi 09:00), menghapus posting-hackathon-pagi-0900 + posting-hackathon-malam-2200, verifikasi via cron.list, lapor ke chat Hackathon. Kedua job harian terverifikasi masih aktif saat penjadwalan.

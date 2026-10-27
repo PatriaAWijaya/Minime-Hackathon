@@ -11,6 +11,8 @@
 //
 // Exposed on window as __gates for console debugging and the jsdom
 // parity rig; gate state itself is not secret.
+import { tr } from './i18n.js';
+
 export type GateId = 'GSTP' | 'GKonten' | 'GBatch';
 
 export interface GateState {
@@ -44,22 +46,23 @@ export function requireGate(gate: GateId): boolean {
   return GATES[gate].approved;
 }
 
-function gateRow(gate: GateId, label: string): string {
+function gateRow(gate: GateId): string {
   const g = GATES[gate];
   const badge = g.approved
-    ? '<span class="badge b-ok">LOLOS</span>'
-    : '<span class="badge b-wait">BELUM</span>';
+    ? '<span class="badge b-ok">' + tr('gate.ok') + '</span>'
+    : '<span class="badge b-wait">' + tr('gate.wait') + '</span>';
   const ref = g.trace ? ' (' + g.trace + ')' : '';
-  return '<div>' + badge + ' <b>' + label + '</b> — ' + g.note + ref + '</div>';
+  const key = gate.toLowerCase();
+  return '<div>' + badge + ' <b>' + tr('gate.' + key) + '</b> — ' + tr('gate.note.' + key) + ref + '</div>';
 }
 
 export function gateStatusHtml(): string {
   return (
-    '<div class="notice gate-status"><b>Status gerbang (cermin record approval):</b><br>' +
-    gateRow('GSTP', 'GSTP — STP') +
-    gateRow('GKonten', 'GKonten — kalender + brief') +
-    gateRow('GBatch', 'GBatch — kirim live') +
-    '<div>Mode distribusi: DRAF saja (default kanon). Tidak ada tombol terbit live di slice ini.</div></div>'
+    '<div class="notice gate-status"><b>' + tr('gate.title') + '</b><br>' +
+    gateRow('GSTP') +
+    gateRow('GKonten') +
+    gateRow('GBatch') +
+    '<div>' + tr('gate.mode') + '</div></div>'
   );
 }
 
@@ -69,9 +72,9 @@ export function applyGateStatus(): void {
   if (planner && !planner.querySelector('.gate-status')) {
     planner.insertAdjacentHTML('afterbegin', gateStatusHtml());
   }
-  const gerbang = Array.from(document.querySelectorAll('#view-settings h3')).find(
-    (h) => (h.textContent || '').indexOf('Gerbang') !== -1,
-  );
+  // Language-proof anchor: the Gerbang h3 carries id="gateHead" (B7),
+  // so the finder never depends on the translated heading text.
+  const gerbang = document.getElementById('gateHead');
   if (gerbang && gerbang.parentElement && !gerbang.parentElement.querySelector('.gate-status')) {
     gerbang.insertAdjacentHTML('afterend', gateStatusHtml());
   }

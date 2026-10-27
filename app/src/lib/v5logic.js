@@ -7,7 +7,8 @@
 
 // B4: Kanban (TEST Kopi) + Planner now come from real artifacts via
 // backend-data.js; the dummy literals below were replaced, not kept.
-import { KOPI_KANBAN, PLANNER_REAL } from './backend-data.js';
+import { kopiKanban, plannerReal } from './backend-data.js';
+import { tr } from './i18n.js';
 
 /* ---------- Agen ---------- */
 export function renderAgents() {
@@ -40,13 +41,13 @@ export function addAgent(key) {
     var proj = PROJECTS[currentProj];
     var n = document.getElementById("addNotice"); n.style.display = "block";
     if (proj.agents.some(function (a) { return a.key === key; })) {
-      n.textContent = "Simulasi: agen " + AGENTS[key].name + " sudah ada di proyek ini (satu agen bisa muncul di beberapa proyek, tapi tidak dua kali di proyek yang sama).";
+      n.textContent = tr('agent.add.exists', {name: AGENTS[key].name});
       return;
     }
     proj.agents.push({ key: key, status: "Idle", task: "Baru ditambahkan (simulasi)" });
     document.getElementById("addMenu").classList.remove("open");
     renderAgents();
-    n.textContent = "Simulasi: agen " + AGENTS[key].name + " ditambahkan ke " + proj.name + ".";
+    n.textContent = tr('agent.add.done', {name: AGENTS[key].name, proj: proj.name});
   }
 
 export function selectAgent(key, pid) {
@@ -60,25 +61,25 @@ export function selectAgent(key, pid) {
 export function renderDetail() {
     var ag = AGENTS[selectedAgent], proj = PROJECTS[currentProj];
     var ins = ag.instructions || (selectedAgent === "prime" ? "General-purpose assistant" : ag.goal);
-    var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox" checked onchange="detailNote(\'Simulasi: skill ' + s + ' diubah (tampilan saja).\')"> <span>' + s + '</span></div>'; }).join("");
+    var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox" checked onchange="detailNote(\'' + tr('detail.note.skill', {s: s}) + '\')"> <span>' + s + '</span></div>'; }).join("");
     document.getElementById("detailBody").innerHTML =
-      '<div class="detail-avatar-wrap"><div class="detail-avatar" style="background:' + ag.color + '">' + ag.name.charAt(0) + '</div><button class="avatar-edit" onclick="detailNote(\'Simulasi: ganti avatar ' + ag.name + ' (tampilan saja).\')" title="Ubah avatar">✎</button></div>'
-      + '<div class="d-label">Name</div><input type="text" class="d-field" value="' + ag.name + '" onchange="renameAgent(this.value)">'
-      + '<div class="d-label">Title</div><input type="text" class="d-field" placeholder="Describe what your agent does" value="' + ag.role + '" onchange="retitleAgent(this.value)">'
-      + '<div class="d-label">Instructions</div><textarea class="d-field d-area" onchange="setInstructions(this.value)">' + ins + '</textarea>'
-      + '<div class="d-label">Brain</div><div class="d-rows">'
-      + '<div class="d-row" onclick="detailNote(\'Simulasi: ganti model — rantai aktif Meta → Gemini → Ollama (tampilan saja).\')"><span>Model</span><span class="d-val">' + ag.model + ' ›</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'Simulasi: ubah Reasoning (tampilan saja).\')"><span>Reasoning</span><span class="d-val">Low ↕</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'Simulasi: atur Backup models (tampilan saja).\')"><span>Backup models</span><span class="d-val">Ask first ›</span></div></div>'
-      + '<div class="d-label">Knows</div><div class="d-rows">'
-      + '<div class="d-row" onclick="detailNote(\'Simulasi: Memories ' + ag.name + ' masih kosong di prototype ini.\')"><span>Memories</span><span class="d-val">0 saved ›</span></div>'
-      + '<div class="d-row" onclick="toggleSkillList()"><span>Skills</span><span class="d-val">' + ag.skills.length + ' assigned ›</span></div>'
+      '<div class="detail-avatar-wrap"><div class="detail-avatar" style="background:' + ag.color + '">' + ag.name.charAt(0) + '</div><button class="avatar-edit" onclick="detailNote(\'' + tr('detail.note.avatar', {name: ag.name}) + '\')" title="Ubah avatar">✎</button></div>'
+      + '<div class="d-label">' + tr('detail.name') + '</div><input type="text" class="d-field" value="' + ag.name + '" onchange="renameAgent(this.value)">'
+      + '<div class="d-label">' + tr('detail.title') + '</div><input type="text" class="d-field" placeholder="Describe what your agent does" value="' + ag.role + '" onchange="retitleAgent(this.value)">'
+      + '<div class="d-label">' + tr('detail.instructions') + '</div><textarea class="d-field d-area" onchange="setInstructions(this.value)">' + ins + '</textarea>'
+      + '<div class="d-label">' + tr('detail.brain') + '</div><div class="d-rows">'
+      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.model') + '\')"><span>' + tr('detail.model') + '</span><span class="d-val">' + ag.model + ' ›</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.reasoning') + '\')"><span>' + tr('detail.reasoning') + '</span><span class="d-val">' + tr('detail.val.low') + '</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.backup') + '\')"><span>' + tr('detail.backup') + '</span><span class="d-val">' + tr('detail.val.askfirst') + '</span></div></div>'
+      + '<div class="d-label">' + tr('detail.knows') + '</div><div class="d-rows">'
+      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.memories', {name: ag.name}) + '\')"><span>' + tr('detail.memories') + '</span><span class="d-val">' + tr('detail.val.saved') + '</span></div>'
+      + '<div class="d-row" onclick="toggleSkillList()"><span>' + tr('detail.skills') + '</span><span class="d-val">' + ag.skills.length + ' assigned ›</span></div>'
       + '<div id="skillList" style="display:none">' + skills + '</div>'
-      + '<div class="d-row" onclick="detailNote(\'Simulasi: Files ' + ag.name + ' (tampilan saja).\')"><span>Files</span><span class="d-val">17 KB ›</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'Simulasi: Tables ' + ag.name + ' (tampilan saja).\')"><span>Tables</span><span class="d-val">0 tables ›</span></div></div>'
-      + '<div class="d-label">Does</div><div class="d-rows">'
-      + '<div class="d-row" onclick="detailNote(\'Simulasi: Routines ' + ag.name + ' (tampilan saja).\')"><span>Routines</span><span class="d-val">0 configured ›</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'Simulasi: Usage ' + ag.name + ' (tampilan saja).\')"><span>Usage</span><span class="d-val">— ›</span></div></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.files', {name: ag.name}) + '\')"><span>' + tr('detail.files') + '</span><span class="d-val">17 KB ›</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.tables', {name: ag.name}) + '\')"><span>' + tr('detail.tables') + '</span><span class="d-val">' + tr('detail.val.tables') + '</span></div></div>'
+      + '<div class="d-label">' + tr('detail.does') + '</div><div class="d-rows">'
+      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.routines', {name: ag.name}) + '\')"><span>' + tr('detail.routines') + '</span><span class="d-val">' + tr('detail.val.configured') + '</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.usage', {name: ag.name}) + '\')"><span>' + tr('detail.usage') + '</span><span class="d-val">— ›</span></div></div>'
       + '<div class="notice" id="detailNotice" style="display:none"></div>'
       + '<p style="font-size:13px;color:#737373">Gerbang (GSTP/GKonten/GBatch) tidak bisa dimatikan dari panel ini.</p>';
   }
@@ -156,8 +157,8 @@ export function doSearch() {
     var results = document.getElementById("searchResults");
     if (!q) { results.innerHTML = ""; document.getElementById("searchCount").textContent = ""; return; }
     var hits = PROJECTS[currentProj].chat.filter(function (m) { return m.text.toLowerCase().indexOf(q) !== -1 || m.name.toLowerCase().indexOf(q) !== -1; });
-    document.getElementById("searchCount").textContent = hits.length + " hasil untuk '" + q + "' di chat " + PROJECTS[currentProj].name + " (simulasi).";
-    results.innerHTML = hits.map(function (m) { return '<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:8px"><b>' + m.name + ':</b> ' + m.text + '</div>'; }).join("") || "<p>Tidak ada hasil.</p>";
+    document.getElementById("searchCount").textContent = tr('search.count', {n: hits.length, q: q, proj: PROJECTS[currentProj].name});
+    results.innerHTML = hits.map(function (m) { return '<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:8px"><b>' + m.name + ':</b> ' + m.text + '</div>'; }).join("") || "<p>" + tr('search.empty') + "</p>";
   }
 
 export function agentKeyByName(n) {
@@ -168,7 +169,7 @@ export function agentKeyByName(n) {
 
 export function cardComments(card) { return 0; } // B4: no comment backend yet — never fabricate a count
 
-export function colName(ci) { return ci < KCOLS.length ? KCOLS[ci] : extraCols[ci - KCOLS.length]; }
+export function colName(ci) { var kc = kcols(); return ci < kc.length ? kc[ci] : extraCols[ci - kc.length]; }
 
 export function colColor(ci) { return ["#525252", "#6b7280", "#FFD1DC", "#737373", "#404040"][ci] || "#737373"; }
 
@@ -187,11 +188,11 @@ export function renderKanban() {
     }
     if (kanbanTab === "list") {
       wrap.innerHTML = cards.filter(vis).map(function (card) {
-        return "<div class='todayitem'><b>" + card.t + "</b><br><small style='color:#a1a1a1'>Agen: " + card.a + " • " + colName(card.c) + " • 💬 " + cardComments(card) + "</small></div>";
+        return "<div class='todayitem'><b>" + card.t + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + card.a + " • " + colName(card.c) + " • 💬 " + cardComments(card) + "</small></div>";
       }).join("") || "<p>Tidak ada tugas untuk filter ini.</p>";
       return;
     }
-    var totalCols = KCOLS.length + extraCols.length;
+    var totalCols = kcols().length + extraCols.length;
     var board = document.createElement("div"); board.className = "kanban";
     for (var ci = 0; ci < totalCols; ci++) {
       (function (ci) {
@@ -208,18 +209,18 @@ export function renderKanban() {
           if (card.c !== ci || !vis(card)) return;
           var key = agentKeyByName(card.a), ag = AGENTS[key];
           var k = document.createElement("div"); k.className = "kcard"; k.draggable = true;
-          k.innerHTML = "<div class='accent' style='background:" + colColor(ci) + "'></div><b>" + card.t + "</b><br><small style='color:#a1a1a1'>Agen: " + card.a + "</small>"
+          k.innerHTML = "<div class='accent' style='background:" + colColor(ci) + "'></div><b>" + card.t + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + card.a + "</small>"
             + "<div class='kb-cardfoot'><span>💬 " + cardComments(card) + "</span><span class='av' style='width:26px;height:26px;font-size:12px;background:" + ag.color + "'>" + ag.name.charAt(0) + "</span></div>";
           k.addEventListener("dragstart", function () { dragCard = i; });
           if (ci < totalCols - 1) {
-            var b = document.createElement("button"); b.className = "btn btn-sm"; b.textContent = "Maju →";
+            var b = document.createElement("button"); b.className = "btn btn-sm"; b.textContent = tr('kanban.advance');
             b.addEventListener("click", function () { card.c = ci + 1; renderKanban(); });
             k.appendChild(b);
           }
           div.appendChild(k);
         });
         var add = document.createElement("button"); add.className = "btn btn-sm"; add.style.width = "100%";
-        add.textContent = "＋ Add task";
+        add.textContent = tr('kanban.add');
         add.addEventListener("click", function () { cards.push({ t: "Tugas baru (simulasi)", a: "Prime Agent", c: ci }); renderKanban(); });
         div.appendChild(add);
         board.appendChild(div);
@@ -461,10 +462,10 @@ export function saveScript(idx) {
 export function mediaToPlanner(idx) {
     var m = MEDIA[idx];
     m.status = "Siap untuk Post";
-    PLANNER.push({ item: m.title, ch: "Instagram / Postiz", when: "Session ini", st: "DRAF lokal", postId: "—" });
+    PLANNER.push({ item: m.title, ch: "Instagram / Postiz", when: tr('planner.when.session'), st: tr('planner.status.local'), postId: "—" });
     renderMedia(); renderPlanner();
     var n = document.getElementById("mediaNotice"); n.style.display = "block";
-    n.textContent = "Simulasi: '" + m.title + "' ditandai Siap untuk Post dan ditambahkan sebagai DRAF LOKAL di Planner (hanya di app ini, bukan draf Postiz — draf Postiz asli dibuat dari composer Planner di bawah tabel).";
+    n.textContent = tr('media.toplanner.note', {title: m.title});
   }
 
 export function renderPlanner() {
@@ -477,6 +478,12 @@ export function renderPlanner() {
 export function addPlannerRow(row) {
   PLANNER.push(row);
   renderPlanner();
+}
+
+/** B7: re-derive backend data in the current language (after a language switch). */
+export function refreshBackendData() {
+  PLANNER = plannerReal();
+  PROJECTS.kopi.kanban = kopiKanban();
 }
 
 export function playTimeline() {
@@ -553,7 +560,7 @@ export function showView(id) {
 
 export function showSetNotice() {
     var n = document.getElementById("setNotice");
-    n.style.display = "block"; n.textContent = "Simulasi: pengaturan tersimpan (tampilan saja).";
+    n.style.display = "block"; n.textContent = tr('settings.saved.note');
   }
 
 export function makeResizer(handleId, colId, minW, maxW) {
@@ -597,7 +604,7 @@ export function waAttach(kind) {
 export function waMic() {
     var n = document.getElementById('waNote');
     n.style.display = 'block';
-    n.textContent = 'Simulasi: rekam pesan suara — di aplikasi sungguhan, ini membuka perekam Voice Studio dan hasilnya ditranskripsi menjadi arahan untuk Prime Agent.';
+    n.textContent = tr('voice.note');
   }
 
 export function toggleAddMenu() { document.getElementById('addMenu').classList.toggle('open'); }
@@ -640,7 +647,7 @@ var PROJECTS = {
       { who: "prime", name: "Prime Agent", color: "#FFD1DC", text: "Kurasi Prime: STP di atas sudah saya periksa — segmen dan targetingnya konsisten dengan riset behaviour dan spending. Saya rekomendasikan untuk disetujui di gerbang GSTP, tetapi keputusan tetap di tanganmu.", curation: true },
       { who: "kreatif", name: "Kreatif", color: "#5b5b5b", text: "Kalender 7 hari + 7 brief selesai (setelah GSTP). Tema mencakup kenyamanan digital, konsistensi kualitas, dan efisiensi urban; semua CTA mengarah ke WA/QRIS." },
       { who: "media", name: "Media", color: "#5b5b5b", text: "Gambar Hari 1–7 masih menunggu provider (Meta Image belum aktif). Saya tidak membuat gambar palsu — statusnya pending-provider sampai generator aktif atau fallback Canva dipakai." }
-    ], kanban: KOPI_KANBAN },
+    ], kanban: kopiKanban() },
     produk: { name: "TEST Produk Digital", agents: [
       { key: "prime", status: "Aktif", task: "Mengkurasi brief produk" },
       { key: "riset", status: "Mengerjakan", task: "Riset pengguna aplikasi kopi" },
@@ -658,7 +665,7 @@ var PROJECTS = {
 
 var currentProj = "kopi", selectedAgent = "prime", mediaFilter = "semua";
 
-var KCOLS = ["Antrian", "Dikerjakan", "Butuh Approval", "Revisi", "Selesai"];
+function kcols() { return [tr('kcol.0'), tr('kcol.1'), tr('kcol.2'), tr('kcol.3'), tr('kcol.4')]; }
 
 /* ---------- Kanban (drag & drop) ---------- */
 var dragCard = null;
@@ -713,7 +720,7 @@ var MEDIA = [
     { type: "talking", title: "Talking Head — Kenapa QRIS?", status: "Draf", desc: "Avatar + naskah edukasi QRIS. Placeholder dummy.", script: "Dompet ketinggalan bukan masalah — bayar pakai QRIS, scan langsung beres." }
   ];
 
-var PLANNER = PLANNER_REAL;
+var PLANNER = plannerReal();
 
 var playTimer = null;
 
@@ -787,5 +794,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, KCOLS, LIB, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addGraphEdge, addKanbanList, addNodeAfter, agentKeyByName, buildEdgeOptions, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libRevise, libSave, libUse, makeResizer, mediaBadge, mediaFilter, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimeline, playTimer, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectClip, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addGraphEdge, addKanbanList, addNodeAfter, agentKeyByName, buildEdgeOptions, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libRevise, libSave, libUse, makeResizer, mediaBadge, mediaFilter, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimeline, playTimer, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectClip, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

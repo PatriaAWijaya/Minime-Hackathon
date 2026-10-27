@@ -39,6 +39,7 @@
   rig B5 15/15 lolos; uji live MacBook menunggu kunci Patria;
   rebuild MacBook v6 sukses, app jalan PID 24427)
 - [x] B6: Full wiring audit (zero-error gate) + log + push
+- [x] B7: i18n ID/EN/ZH — kamus + selector Pengaturan + instruksi bahasa ke router + log + push
   (audit LOLOS: tsc 0, gate 13/13, scan lolos, svelte-check
   0 error, semua rig hijau; rebuild MacBook rantai v7 berjalan)
 

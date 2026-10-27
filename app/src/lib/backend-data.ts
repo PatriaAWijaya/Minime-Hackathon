@@ -15,6 +15,7 @@ import fase2 from '../../../docs/fase-2-output.json';
 import fase3 from '../../../docs/fase-3-output.json';
 import postizRecord from '../../../docs/fase-3-postiz-drafts.json';
 import { GATES } from './gates.js';
+import { MONTHS, getLang, tr } from './i18n.js';
 
 export interface KanbanCard {
   t: string;
@@ -64,35 +65,33 @@ const nDrafts = rec.drafts.length;
 const draftsDone = nDrafts > 0 && rec.drafts.every((d) => d.status === 'draft');
 const imageStatus = f3.imageStatus;
 
-export const KOPI_KANBAN: KanbanCard[] = [
-  { t: 'Riset pasar & behaviour', a: 'Riset', c: f1.stages.includes('done') ? COL.selesai : COL.dikerjakan },
-  { t: 'STP v2', a: 'Strategi', c: GATES.GSTP.approved ? COL.selesai : COL.approval },
-  { t: `Kalender ${nDays} hari + ${nBriefs} brief`, a: 'Kreatif', c: GATES.GKonten.approved ? COL.selesai : COL.approval },
-  { t: `Carousel ${nCarousels} item (${nSlides} slide, QC ${qcMin})`, a: 'Kreatif', c: carouselDone ? COL.selesai : COL.revisi },
-  { t: `Gambar ${nSlides} slide (${imageStatus})`, a: 'Media', c: imageStatus === 'pending-provider' ? COL.antrian : COL.dikerjakan },
-  { t: `Draf Postiz (${nDrafts} draf)`, a: 'Distribusi', c: draftsDone ? COL.selesai : COL.dikerjakan },
-  { t: 'Terbit live (butuh GBatch)', a: 'Distribusi', c: GATES.GBatch.approved ? COL.selesai : COL.approval },
-];
+export function kopiKanban(): KanbanCard[] {
+  return [
+    { t: tr('kb.label.research'), a: 'Riset', c: f1.stages.includes('done') ? COL.selesai : COL.dikerjakan },
+    { t: tr('kb.label.stp'), a: 'Strategi', c: GATES.GSTP.approved ? COL.selesai : COL.approval },
+    { t: tr('kb.label.calendar', { nDays, nBriefs }), a: 'Kreatif', c: GATES.GKonten.approved ? COL.selesai : COL.approval },
+    { t: tr('kb.label.carousel', { nCarousels, nSlides, qcMin }), a: 'Kreatif', c: carouselDone ? COL.selesai : COL.revisi },
+    { t: tr('kb.label.images', { nSlides, imageStatus }), a: 'Media', c: imageStatus === 'pending-provider' ? COL.antrian : COL.dikerjakan },
+    { t: tr('kb.label.drafts', { nDrafts }), a: 'Distribusi', c: draftsDone ? COL.selesai : COL.dikerjakan },
+    { t: tr('kb.label.publish'), a: 'Distribusi', c: GATES.GBatch.approved ? COL.selesai : COL.approval },
+  ];
+}
 
-const ID_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-
-/**
- * Render a record date exactly as stored (UTC). The Postiz record's
- * dates are Zulu; converting silently to WIB would misstate them.
- */
 function fmtUtc(iso: string): string {
   const d = new Date(iso);
   const hh = String(d.getUTCHours()).padStart(2, '0');
   const mm = String(d.getUTCMinutes()).padStart(2, '0');
-  return `${d.getUTCDate()} ${ID_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()} ${hh}:${mm} UTC`;
+  return `${d.getUTCDate()} ${MONTHS[getLang()][d.getUTCMonth()]} ${d.getUTCFullYear()} ${hh}:${mm} UTC`;
 }
 
 const themeByItem = new Map(f3.carousels.map((c) => [c.itemId, c.theme]));
 
-export const PLANNER_REAL: PlannerRow[] = rec.drafts.map((dr) => ({
-  item: `Hari ${dr.day} — ${themeByItem.get(dr.itemId) ?? dr.itemId}`,
-  ch: `Instagram · ${rec.channel.name}`,
-  when: fmtUtc(dr.date),
-  st: 'DRAF',
-  postId: dr.postId,
-}));
+export function plannerReal(): PlannerRow[] {
+  return rec.drafts.map((dr) => ({
+    item: tr('planner.item.day', { day: dr.day, theme: themeByItem.get(dr.itemId) ?? dr.itemId }),
+    ch: `Instagram · ${rec.channel.name}`,
+    when: fmtUtc(dr.date),
+    st: tr('planner.status.draft'),
+    postId: dr.postId,
+  }));
+}

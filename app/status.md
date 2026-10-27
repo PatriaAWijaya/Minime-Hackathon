@@ -49,6 +49,8 @@
   layout-scroll.css, app.css tetap verbatim); window
   tak lagi scroll, tiap kolom scroll sendiri, composer
   menempel bawah. Rantai v9 sukses, app jalan PID 25603.
+- KONFIRMASI VISUAL (27 Okt 19:19 WIB, Patria): window + klik + resize/scrollbar baru DISETUJUI.
+- B7 i18n (27 Okt sore, perintah Patria 19:18): kamus EN/ZH + selector Pengaturan + instruksi bahasa ke router — SELESAI, rig-b7 17/17 lolos; rantai v10 menyusul.
 
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
