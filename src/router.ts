@@ -218,6 +218,7 @@ export class ModelRouter {
       promptTokens: r.promptTokens,
       completionTokens: r.completionTokens,
       costUsd: r.mock ? 0 : r.costUsd,
+      costIdr: null, // filled by CostLedger.append() at the ledger's rate
       mock: r.mock,
       fallbackFrom: r.fallbackFrom,
     };

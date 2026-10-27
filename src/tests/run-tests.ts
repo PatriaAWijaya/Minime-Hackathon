@@ -15,6 +15,7 @@ import { ModelRouter, routerConfigFromEnv, LiveUnavailableError } from '../route
 import { scoreQc } from '../qc';
 import { runSample } from '../pipeline';
 import { runFase1 } from '../fase1';
+import { toIdr, formatIdr, parseUsdIdrRate } from '../currency';
 
 function clean(p: string) {
   try { fs.rmSync(p, { recursive: true, force: true }); } catch { /* noop */ }
@@ -35,9 +36,9 @@ async function main() {
   // Block D — ledger append-only + hard limit
   clean('data/test-ledger.jsonl');
   const ledger = new CostLedger('data/test-ledger.jsonl', 1);
-  ledger.append({ traceId: 't1', timestamp: new Date().toISOString(), agent: 'Test', provider: 'mock', family: 'mock', model: 'mock', promptTokens: null, completionTokens: null, costUsd: 0, mock: true, fallbackFrom: null });
+  ledger.append({ traceId: 't1', timestamp: new Date().toISOString(), agent: 'Test', provider: 'mock', family: 'mock', model: 'mock', promptTokens: null, completionTokens: null, costUsd: 0, costIdr: null, mock: true, fallbackFrom: null });
   assert.strictEqual(ledger.summary().records, 1);
-  assert.throws(() => ledger.append({ traceId: 't1', timestamp: new Date().toISOString(), agent: 'Test', provider: 'meta', family: 'meta', model: 'm', promptTokens: 1, completionTokens: 1, costUsd: 2, mock: false, fallbackFrom: null }), CostLimitError);
+  assert.throws(() => ledger.append({ traceId: 't1', timestamp: new Date().toISOString(), agent: 'Test', provider: 'meta', family: 'meta', model: 'm', promptTokens: 1, completionTokens: 1, costUsd: 2, costIdr: null, mock: false, fallbackFrom: null }), CostLimitError);
   ok('cost ledger append-only + hard limit stops the run');
 
   // Block E — policy gates + negative tests
@@ -104,6 +105,29 @@ async function main() {
   assert.strictEqual(fase1.productionBlocked, true, 'production must be blocked without GSTP');
   assert.strictEqual(fase1.mock, true, 'Fase 1 test run is mock — must be reported as mock');
   ok('fase1 draft: STP draft, no approval, production blocked');
+
+  // Rupiah reporting (standing rule, Patria 27 Oct 2026): IDR first,
+  // USD only as source; no conversion without a rate, ever.
+  assert.strictEqual(toIdr(5, 18137), 90685);
+  assert.strictEqual(toIdr(0.0001, 18137), 1.81);
+  assert.strictEqual(toIdr(null, 18137), null);
+  assert.strictEqual(toIdr(5, null), null);
+  assert.strictEqual(formatIdr(90685), 'Rp90.685');
+  assert.strictEqual(formatIdr(1.81), 'Rp1,81');
+  assert.strictEqual(parseUsdIdrRate({ USD_IDR_RATE: '18137' }), 18137);
+  assert.strictEqual(parseUsdIdrRate({}), null);
+  assert.strictEqual(parseUsdIdrRate({ USD_IDR_RATE: 'bukan-angka' }), null);
+  clean('data/idr-test-ledger.jsonl');
+  const idrLedger = new CostLedger('data/idr-test-ledger.jsonl', 5, 18137);
+  idrLedger.append({ traceId: 't', timestamp: '2026-10-27T00:00:00Z', agent: 'Test', provider: 'gemini', family: 'gemini', model: 'gemini-3.1-flash-lite', promptTokens: 10, completionTokens: 10, costUsd: 0.0001, costIdr: null, mock: false, fallbackFrom: null });
+  idrLedger.append({ traceId: 't', timestamp: '2026-10-27T00:00:00Z', agent: 'Test', provider: 'mock', family: 'mock', model: 'mock', promptTokens: null, completionTokens: null, costUsd: 0, costIdr: null, mock: true, fallbackFrom: null });
+  const idrSummary = idrLedger.summary();
+  assert.strictEqual(idrSummary.totalIdr, 1.81);
+  assert.strictEqual(idrSummary.hardLimitIdr, 90685);
+  assert.strictEqual(idrSummary.usdIdrRate, 18137);
+  const noRateLedger = new CostLedger('data/idr-test-ledger.jsonl', 5, null);
+  assert.strictEqual(noRateLedger.summary().totalIdr, null, 'without a rate, IDR total must be null, not guessed');
+  ok('rupiah reporting: conversion, format, null-rate honesty, ledger IDR');
 
   // QC scoring
   const qc = scoreQc({ productId: 'P1', visualPrompt: 'a sufficiently long text-free visual prompt here', textOverlay: 'TEST', makerFamily: 'meta', qcFamily: 'gemini', modelRenderedText: false });

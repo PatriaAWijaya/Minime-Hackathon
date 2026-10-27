@@ -1,0 +1,51 @@
+# Biaya dalam Rupiah — aturan pelaporan (Patria, 27 Okt 2026)
+
+**Aturan:** sebisa mungkin, semua biaya dilaporkan dalam Rupiah.
+USD hanya tampil sebagai sumber (dalam kurung) bila provider memang
+menagih dalam USD, atau bila harga belum diketahui sehingga tidak ada
+yang bisa dikonversi — dalam kasus terakhir, jangan mengarang angka Rp.
+
+## Bagaimana ini diterapkan di kode
+
+- Sumber kebenaran ledger tetap USD (`costUsd`), karena provider
+  menagih dalam USD — itu tidak bisa diubah.
+- Setiap record juga membawa `costIdr`, dihitung oleh `CostLedger`
+  pada saat pencatatan dengan kurs `USD_IDR_RATE` dari environment.
+  `summary()` melaporkan `totalIdr` lebih dulu, lalu `totalUsd`
+  sebagai sumber.
+- Kurs TIDAK pernah di-hardcode sebagai default permanen. Bila
+  `USD_IDR_RATE` tidak diset, `costIdr`/`totalIdr` bernilai null —
+  bukan tebakan. Kurs yang dipakai selalu tercatat di summary sehingga
+  setiap angka Rp bisa diaudit ke kurs dan tanggalnya.
+- Hard limit tetap ditegakkan dalam USD (satuan tagihan provider),
+  tetapi selalu dilaporkan juga dalam Rp pada kurs yang berlaku.
+
+## Angka referensi 27 Okt 2026 (dicek hari itu, bukan konstanta)
+
+Kurs: ~Rp18.137 per USD (Finnhub; sumber publik lain hari itu
+berkisar Rp18.131–Rp18.152). Perbarui `USD_IDR_RATE` sebelum memakai
+ulang angka-angka di bawah ini untuk tanggal lain.
+
+- Hard limit ledger $5 = **Rp90.685** (pada kurs di atas).
+- Kredit Meta Model API $150 = **Rp2.720.550** setara — tetapi
+  kreditnya sendiri berdenominasi USD, jadi di laporan selalu
+  ditulis keduanya: Rp2.720.550 (setara $150).
+- Biaya ilustratif Gemini per tugas singkat ~$0,0001 = **~Rp1,81**
+  (tarif publikasi sekunder, BUKAN angka ledger resmi — perlu
+  konfirmasi halaman pricing Google sebelum dipakai sebagai angka
+  ledger).
+- Ollama lokal (DeepSeek/Qwen di MacBook) = **Rp0** marginal.
+- Biaya Fase 1 live 27 Okt siang (1.551 token Gemini): **belum bisa
+  dirupiahkan** — harga per token Gemini belum di-baseline resmi,
+  sehingga `costUsd` bernilai null dan konversi Rp-nya juga null.
+  Ini pengecualian yang jujur dari aturan, bukan pelanggaran:
+  tidak ada harga = tidak ada konversi.
+
+## Yang masih berdenominasi USD (pengecualian)
+
+1. Harga resmi provider (Meta, Google) — sumbernya USD; laporan
+   menampilkan Rp setara + USD sumbernya.
+2. Kredit Meta $150 — berdenominasi USD; laporan menampilkan
+   keduanya.
+3. Biaya yang harganya belum diketahui (mis. Muse, Muse Image
+   sebelum Meta aktif) — tidak dikonversi, ditulis "belum diketahui".

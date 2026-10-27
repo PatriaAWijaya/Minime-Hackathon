@@ -276,3 +276,20 @@ dokumen lama yang dipakai.
   mock — STP draft, tanpa approval, produksi diblokir). Fase 1
   TIDAK dinyatakan lolos: gerbangnya adalah GSTP Patria, dan itu
   belum diberikan. Output: docs/fase-1-output.json.
+
+- 27 Okt siang (perintah Patria "biaya sebisa mungkin konversi menjadi
+  rupiah, kecuali tidak ada pilihan lain"): ATURAN BIAYA RUPIAH
+  diterapkan. Kode baru src/currency.ts (toIdr, formatIdr,
+  parseUsdIdrRate); CostRecord kini membawa costIdr yang dihitung
+  CostLedger pada kurs USD_IDR_RATE dari environment; summary()
+  melaporkan totalIdr dulu, USD sebagai sumber; tanpa kurs, IDR =
+  null (tidak ditebak). Kurs TIDAK di-hardcode sebagai default.
+  Referensi 27 Okt 2026: ~Rp18.137/USD (Finnhub; sumber lain
+  Rp18.131–Rp18.152). Konsekuensi angka: hard limit $5 = Rp90.685;
+  kredit Meta $150 = Rp2.720.550 setara (kreditnya sendiri tetap
+  USD, jadi laporan menampilkan keduanya); Gemini ilustratif
+  ~Rp1,81/tugas singkat (tarif sekunder, bukan ledger resmi);
+  Ollama Rp0; biaya Fase 1 live belum bisa dirupiahkan (harga per
+  token belum di-baseline, costUsd null). Uji gerbang jadi 10 grup
+  (baru: pelaporan Rupiah — konversi, format, kejujuran null-rate).
+  Dokumen: docs/biaya-rupiah.md.
