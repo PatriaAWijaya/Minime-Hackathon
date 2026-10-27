@@ -140,5 +140,13 @@ dokumen lama yang dipakai.
 - Push: lihat bagian "Push" di bawah.
 
 ## Push
-- (Diisi setelah percobaan push Git Data API — jangan diisi dengan klaim
-  sebelum percobaan benar-benar jalan dan terbaca-balik.)
+- Percobaan push via Git Data API (skrip `push_rebased.py`, pola yang sama
+  dengan Minime) BERHASIL pada 27 Okt 2026 — berbeda dengan percobaan
+  GitHub MCP sebelumnya yang gagal 403.
+- Pasangan SHA: lokal `5da2776` ↔ remote `6942985`, tree identik
+  (`1f500db`, terverifikasi baca-balik via `git ls-remote` dan API
+  commit GitHub: HEAD remote = `6942985`, pesan commit sama, tree sama).
+- Catatan: push ini membuktikan akses tulis lewat Git Data API berfungsi
+  untuk repo ini. Instalasi GitHub App TIDAK lagi menjadi blocker untuk
+  push Fase 0 — tetapi tetap dicatat sebagai opsi bila jalur ini
+  sewaktu-waktu gagal.

@@ -2,7 +2,7 @@
 
 | # | Kriteria gerbang | Status | Bukti |
 |---|---|---|---|
-| 1 | Repo ter-push dan terbaca-balik; scan nol kredensial | TERGANTUNG PUSH (lihat bawah) / scan PASS | `npm run scan` PASSED |
+| 1 | Repo ter-push dan terbaca-balik; scan nol kredensial | LOLOS | Remote HEAD `6942985`, tree identik dengan lokal (`1f500db`), terverifikasi baca-balik; `npm run scan` PASSED |
 | 2 | Kontrak JSON v1 tervalidasi; 1 job contoh selesai dengan CostRecord + trace ID | LOLOS (mock) | gate-test + `docs/fase-0-sample-output.json`, `mock: true`, draft `published: false` |
 | 3 | Tiga jalur router teruji live dan hasilnya tercatat per jalur | TIDAK LOLOS — TERTUNDA | Live gagal terlihat (tanpa kunci / tanpa Ollama di VM); struktur fallback + mock LOLOS |
 | 4 | Fallback teruji sengaja; QC lintas-keluarga teruji | SEBAGIAN | Fallback chain + pemetaan QC teruji di mock; QC live TERTUNDA |
