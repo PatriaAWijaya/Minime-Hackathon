@@ -13,14 +13,13 @@
 // No channel field: the documented channel format is unresolved (the
 // integration guide diagrams channels: [...] but its own example
 // omits it), so the draft lands on Postiz's default channel handling
-// — the user confirms or moves it in the dashboard. The composer
-// notice says exactly that; it never claims a channel choice.
+// — the user confirms or moves it in the dashboard. No channel choice is claimed anywhere; the draft lands on
+// Postiz's default channel handling (composer UI removed 28 Okt 2026).
 //
 // The key lives ONLY in this device's localStorage, entered by the
 // user in Settings (from the MacBook Keychain). It is never baked
 // into the bundle, never committed, and never sent anywhere except
 // the Postiz API on this machine.
-import { addPlannerRow } from './v5logic.js';
 import { tr } from './i18n.js';
 
 export const POSTIZ_KEY_LS = 'minime.postizKey';
@@ -60,41 +59,3 @@ export async function createPostizDraft(caption: string): Promise<{ draftId: str
   return { draftId, status: res.status };
 }
 
-/** Composer handler: user-typed caption -> real Postiz draft (draft-only). */
-export async function createPostizDraftFromComposer(): Promise<void> {
-  const notice = document.getElementById('postizNotice');
-  const show = (msg: string): void => {
-    if (notice) {
-      notice.style.display = 'block';
-      notice.textContent = msg;
-    }
-  };
-  const input = document.getElementById('postizText') as HTMLTextAreaElement | null;
-  const caption = (input?.value ?? '').trim();
-  if (!caption) {
-    show(tr('postiz.notice.empty'));
-    return;
-  }
-  if (!readPostizKey()) {
-    show(tr('postiz.notice.nokey'));
-    return;
-  }
-  show(tr('postiz.notice.sending'));
-  try {
-    const r = await createPostizDraft(caption);
-    addPlannerRow({
-      item: caption.length > 60 ? caption.slice(0, 60) + '…' : caption,
-      ch: 'Postiz',
-      when: 'Baru saja (session)',
-      st: tr('planner.status.draft'),
-      postId: r.draftId ?? '—',
-    });
-    if (input) input.value = '';
-    show(
-      tr('postiz.notice.ok1', { status: r.status, id: r.draftId ? ', id ' + r.draftId : '' }) +
-        tr('postiz.notice.ok2'),
-    );
-  } catch (e) {
-    show(tr('postiz.notice.fail') + (e instanceof Error ? e.message : String(e)));
-  }
-}
