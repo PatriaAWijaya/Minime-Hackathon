@@ -33,7 +33,7 @@
   tes live Gemini lolos; rebuild MacBook v4 sukses, app jalan PID 23734)
 - [x] B4: Kanban/Planner data from backend (no more hardcoded cards)
   (diturunkan dari artefak Fase 1–3 + record Postiz;
-  rig B4 28/28 lolos; rebuild MacBook rantai v5 berjalan)
+  rig B4 28/28 lolos; rebuild MacBook v5 sukses, app jalan PID 24065)
 - [ ] B5: Postiz drafts from the app (draft-only, unchanged rule)
 - [ ] B6: Full wiring audit (zero-error gate) + log + push
 

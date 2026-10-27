@@ -1130,3 +1130,9 @@ dokumen lama yang dipakai.
   (kartu, kolom, baris, postId, tanggal, tidak ada
   dummy di kedua view). Berikutnya: rebuild MacBook
   rantai v5; lalu B5 (draf Postiz dari app).
+
+  WIRING — B4 LIVE DI MACBOOK (27 Okt sore, rantai v5):
+  Pull lolos bersih; vite 365ms, 1 bundle; proses
+  lama PID 23734 dibunuh, proses BARU PID 24065 hidup
+  dari bundle B4. Berikutnya: B5 (draf Postiz dari
+  app, draft-only tidak berubah).
