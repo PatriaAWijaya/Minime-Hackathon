@@ -304,7 +304,7 @@
       </div>
     </div>
     <div class="view" id="view-library">
-      <div class="colhead"><h2>{t('view.library.title', lang)}</h2><p>{t('ve.lib.note', lang)}</p></div>
+      <div class="colhead"><h2>{t('view.library.title', lang)}</h2></div>
       <div class="scroll">
         <table><tbody id="libBody"></tbody></table>
         <div class="notice" id="libNotice" style="display:none"></div>
