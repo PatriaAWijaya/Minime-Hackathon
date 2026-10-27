@@ -519,3 +519,26 @@ dokumen lama yang dipakai.
   nyata. Verifikasi: kedua blok JS lolos node --check, tanpa
   referensi eksternal. Status: MENUNGGU REVISI Patria dari
   prototype v5 (dengan Graph gaya n8n).
+
+- 27 Okt sore (perintah Patria "input chat user buat seperti WA,
+  posisi input user selalu berada dibawah window chat", dengan
+  lampiran bilah input WA): COMPOSER CHAT v5 DIGANTI gaya
+  WhatsApp (masih di file prototype-v5/index.html yang sama).
+  Susunan persis lampiran: tombol ＋ di kiri luar pill, pill
+  input gelap membulat penuh dengan kursor hijau (#25D366),
+  tombol emoji (smiley) di dalam pill sebelah kanan, dan tombol
+  bulat hijau di kanan luar pill. Perilaku WA: saat input kosong
+  tombol kanan adalah MIC hijau (klik → simulasi rekam suara
+  Voice Studio); begitu mengetik, tombol berubah menjadi KIRIM
+  hijau (pesawat kertas); Enter juga mengirim; tombol ＋ membuka
+  menu lampiran (Gambar/Dokumen/Kamera/Audio, simulasi); tombol
+  emoji membuka panel emoji yang menyisipkan emoji ke input.
+  Posisi dijamin selalu di bawah: layout diubah dari
+  calc(100vh) menjadi flex column (banner + app flex:1), dan
+  composer berada di luar area scroll chat (colhead + scroll
+  flex:1 + composer flex-shrink:0), sehingga tidak pernah ikut
+  ter-scroll atau tertutup — baik saat pesan sedikit maupun
+  menumpuk. Tombol contoh arahan cepat dan Kurasi Prime tetap
+  ada di baris atas composer. Verifikasi: kedua blok JS lolos
+  node --check, tanpa referensi eksternal. Status: MENUNGGU
+  REVISI Patria dari prototype v5 (dengan composer WA).

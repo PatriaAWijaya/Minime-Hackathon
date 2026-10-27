@@ -7,10 +7,10 @@
 <style>
   * { box-sizing: border-box; }
   html, body { height: 100%; }
-  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 15px; color: #ececec; background: #0e0e0e; }
-  .banner { background: #fff3cd; border-bottom: 2px solid #e6a817; padding: 8px 16px; font-size: 13px; color: #1a1a1a; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 15px; color: #ececec; background: #0e0e0e; display: flex; flex-direction: column; }
+  .banner { background: #fff3cd; border-bottom: 2px solid #e6a817; padding: 8px 16px; font-size: 13px; color: #1a1a1a; flex-shrink: 0; }
   .banner b { color: #7a5b00; }
-  .app { display: flex; height: calc(100vh - 35px); }
+  .app { display: flex; flex: 1; min-height: 0; }
   .sidebar { width: 64px; flex-shrink: 0; background: #0a0a0a; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 4px; border-right: 1px solid #262626; }
   .sidebar button { position: relative; width: 46px; height: 46px; border: none; border-radius: 10px; background: transparent; color: #d1d5db; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .sidebar button:hover, .sidebar button.active { background: #262626; color: #fff; }
@@ -116,6 +116,18 @@
   .n8n-node.circle { width: 118px; height: 118px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
   .n8n-node.exec { box-shadow: 0 0 0 3px #facc15; border-color: #facc15; }
   .n8n-plus { position: absolute; right: -30px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border: 1px solid #6b7280; background: #262626; color: #ececec; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; z-index: 3; }
+
+  .composer { display: flex; flex-direction: column; gap: 8px; }
+  .wa-row { display: flex; align-items: center; gap: 10px; }
+  .wa-plus { background: transparent; border: none; color: #a1a1a1; font-size: 32px; line-height: 1; cursor: pointer; flex-shrink: 0; padding: 0 2px; }
+  .wa-pill { flex: 1; display: flex; align-items: center; gap: 8px; background: #262626; border-radius: 999px; padding: 6px 6px 6px 18px; min-width: 0; }
+  #chatInput { background: transparent !important; border: none !important; flex: 1; padding: 8px 0 !important; caret-color: #25D366; outline: none; font-size: 15px; color: #ececec; min-width: 0; }
+  #chatInput::placeholder { color: #8696a0; }
+  .wa-emoji { background: transparent; border: none; cursor: pointer; flex-shrink: 0; padding: 4px; display: flex; }
+  .wa-mic, .wa-send { width: 46px; height: 46px; border-radius: 50%; background: #25D366; border: none; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .wa-pop { display: none; background: #262626; border: 1px solid #3a3a3a; border-radius: 12px; padding: 10px 12px; }
+  .wa-pop.open { display: block; }
+  .wa-pop button { background: #1f1f1f; border: 1px solid #3a3a3a; color: #ececec; border-radius: 20px; padding: 7px 12px; margin: 0 6px 6px 0; cursor: pointer; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -158,11 +170,35 @@
       </div>
       <div class="scroll" id="chatBox"></div>
       <div class="composer">
-        <span class="chip" onclick="quickChat('Riset kompetitor kopi susu kekinian di Surabaya, lalu buatkan carousel-nya.')">Riset kompetitor + carousel</span>
-        <span class="chip" onclick="quickChat('Buatkan talking head untuk promo bundling.')">Talking head promo</span>
-        <textarea id="chatInput" placeholder="Tulis arahan atau pesan untuk grup ini…"></textarea>
-        <button class="btn btn-primary" onclick="sendChat()">Kirim</button>
-        <button class="btn" onclick="primeCurate()">Kurasi Prime (simulasi)</button>
+        <div>
+          <span class="chip" onclick="quickChat('Riset kompetitor kopi susu kekinian di Surabaya, lalu buatkan carousel-nya.')">Riset kompetitor + carousel</span>
+          <span class="chip" onclick="quickChat('Buatkan talking head untuk promo bundling.')">Talking head promo</span>
+          <button class="btn btn-sm" onclick="primeCurate()">Kurasi Prime (simulasi)</button>
+        </div>
+        <div class="wa-pop" id="attachMenu">
+          <button onclick="waAttach('Gambar')">🖼 Gambar</button>
+          <button onclick="waAttach('Dokumen')">📄 Dokumen</button>
+          <button onclick="waAttach('Kamera')">📷 Kamera</button>
+          <button onclick="waAttach('Audio')">🎵 Audio</button>
+        </div>
+        <div class="wa-pop" id="emojiPanel">
+          <button onclick="waEmoji('😀')">😀</button>
+          <button onclick="waEmoji('👍')">👍</button>
+          <button onclick="waEmoji('🔥')">🔥</button>
+          <button onclick="waEmoji('☕')">☕</button>
+          <button onclick="waEmoji('✅')">✅</button>
+          <button onclick="waEmoji('🚀')">🚀</button>
+        </div>
+        <div class="wa-row">
+          <button class="wa-plus" onclick="waToggleAttach()" title="Lampirkan">＋</button>
+          <div class="wa-pill">
+            <input type="text" id="chatInput" placeholder="Tulis pesan…" oninput="waInputChanged()" autocomplete="off">
+            <button class="wa-emoji" onclick="waToggleEmoji()" title="Emoji"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a1a1a1" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="#a1a1a1" stroke="none"/><circle cx="15" cy="10" r="1" fill="#a1a1a1" stroke="none"/><path d="M8 14c1.2 1.4 2.5 2 4 2s2.8-.6 4-2"/></svg></button>
+          </div>
+          <button class="wa-mic" id="waMicBtn" onclick="waMic()" title="Pesan suara (simulasi)"><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="21" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+          <button class="wa-send" id="waSendBtn" onclick="sendChat()" title="Kirim" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+        </div>
+        <div class="notice" id="waNote" style="display:none;margin-top:0"></div>
       </div>
     </div>
     <div class="view" id="view-search">
@@ -888,6 +924,45 @@ function filterAgents(q) {
     });
   });
 })();
+
+  function waInputChanged() {
+    var v = document.getElementById('chatInput').value.trim();
+    document.getElementById('waMicBtn').style.display = v ? 'none' : 'flex';
+    document.getElementById('waSendBtn').style.display = v ? 'flex' : 'none';
+  }
+  function waToggleAttach() {
+    document.getElementById('attachMenu').classList.toggle('open');
+    document.getElementById('emojiPanel').classList.remove('open');
+  }
+  function waToggleEmoji() {
+    document.getElementById('emojiPanel').classList.toggle('open');
+    document.getElementById('attachMenu').classList.remove('open');
+  }
+  function waEmoji(e) {
+    var inp = document.getElementById('chatInput');
+    inp.value += e; inp.focus(); waInputChanged();
+  }
+  function waAttach(kind) {
+    document.getElementById('attachMenu').classList.remove('open');
+    var n = document.getElementById('waNote');
+    n.style.display = 'block';
+    n.textContent = 'Simulasi: lampirkan ' + kind + ' — di aplikasi sungguhan, file ini masuk sebagai lampiran pesan untuk Prime Agent.';
+  }
+  function waMic() {
+    var n = document.getElementById('waNote');
+    n.style.display = 'block';
+    n.textContent = 'Simulasi: rekam pesan suara — di aplikasi sungguhan, ini membuka perekam Voice Studio dan hasilnya ditranskripsi menjadi arahan untuk Prime Agent.';
+  }
+  document.getElementById('chatInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
+  });
+  (function () {
+    var _sc = sendChat;
+    sendChat = function () { _sc(); waInputChanged(); };
+    var _qc = quickChat;
+    quickChat = function (t) { _qc(t); waInputChanged(); };
+  })();
+  waInputChanged();
 </script>
 </body>
 </html>
