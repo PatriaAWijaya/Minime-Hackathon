@@ -311,6 +311,15 @@ const ID: Dict = {
   't1.err.size': 'Lebar/tinggi harus bilangan bulat positif.',
   't1.err.fps': 'FPS harus 1–120.',
   't1.err.out': 'Output harus path .mp4.',
+  't2.assets.title': 'Asset Library (Tier 2)',
+  't2.assets.note': 'Aset dari path lokal: probe ffprobe + hash SHA-256 + thumbnail. Sesi ini saja; salin manifest JSON untuk menyimpan.',
+  't2.assets.src': 'Path file aset',
+  't2.assets.add': '＋ Tambah aset',
+  't2.assets.remove': 'Hapus',
+  't2.assets.manifest': 'Manifest aset (JSON, bisa disalin)',
+  't2.assets.loading': 'Memuat aset…',
+  't2.assets.fail': 'Gagal memuat aset.',
+  't2.assets.nothumb': 'tanpa thumbnail (bukan video)',
 };
 
 const EN: Dict = {
@@ -575,6 +584,15 @@ const EN: Dict = {
   't1.err.size': 'Width/height must be positive integers.',
   't1.err.fps': 'FPS must be 1–120.',
   't1.err.out': 'Output must be an .mp4 path.',
+  't2.assets.title': 'Asset Library (Tier 2)',
+  't2.assets.note': 'Assets from local paths: ffprobe probe + SHA-256 hash + thumbnail. Session only; copy the manifest JSON to save.',
+  't2.assets.src': 'Asset file path',
+  't2.assets.add': '＋ Add asset',
+  't2.assets.remove': 'Remove',
+  't2.assets.manifest': 'Asset manifest (JSON, copyable)',
+  't2.assets.loading': 'Loading asset…',
+  't2.assets.fail': 'Failed to load asset.',
+  't2.assets.nothumb': 'no thumbnail (not video)',
 };
 
 const ZH: Dict = {
@@ -839,6 +857,15 @@ const ZH: Dict = {
   't1.err.size': '宽/高必须为正整数。',
   't1.err.fps': '帧率必须为 1–120。',
   't1.err.out': '输出必须为 .mp4 路径。',
+  't2.assets.title': '素材库 (Tier 2)',
+  't2.assets.note': '本地路径素材：ffprobe 探测 + SHA-256 哈希 + 缩略图。仅限本次会话；复制清单 JSON 以保存。',
+  't2.assets.src': '素材文件路径',
+  't2.assets.add': '＋ 添加素材',
+  't2.assets.remove': '删除',
+  't2.assets.manifest': '素材清单（JSON，可复制）',
+  't2.assets.loading': '正在加载素材…',
+  't2.assets.fail': '加载素材失败。',
+  't2.assets.nothumb': '无缩略图（非视频）',
 };
 
 const DICTS: Record<Lang, Dict> = { id: ID, en: EN, zh: ZH };

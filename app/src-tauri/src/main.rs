@@ -7,7 +7,9 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             video::video_render,
             video::video_qc,
-            video::video_capture
+            video::video_capture,
+            video::video_probe,
+            video::video_asset_hash
         ])
         .run(tauri::generate_context!())
     {

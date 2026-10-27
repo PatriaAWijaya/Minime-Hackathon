@@ -99,6 +99,50 @@
       t1Busy = false;
     }
   }
+
+  // ---- Panel Asset Library Tier 2 ----
+  interface T2Stream { index: number; codec_type: string; codec_name: string; width: number | null; height: number | null; }
+  interface T2ProbeResult { duration: number; size: number; streams: T2Stream[]; format_name: string; }
+  interface T2HashResult { sha256: string; size: number; }
+  interface T2Asset { id: string; src: string; name: string; duration: number; size: number; streams: T2Stream[]; sha256: string; thumb: string; }
+  let t2Assets = $state<T2Asset[]>([]);
+  let t2Next = $state(1);
+  let t2NewSrc = $state('');
+  let t2Busy = $state(false);
+  let t2Status = $state('');
+  function t2StreamsText(streams: T2Stream[]): string {
+    return streams.map((x) => x.codec_type === 'video' && x.width && x.height ? `${x.codec_name} ${x.width}x${x.height}` : x.codec_name).join(' + ') || '-';
+  }
+  function t2Manifest(): string {
+    return JSON.stringify({ version: 1, assets: t2Assets.map((a) => ({ src: a.src, name: a.name, duration: a.duration, size: a.size, streams: a.streams, sha256: a.sha256 })) }, null, 2);
+  }
+  function t2RemoveAsset(id: string) {
+    t2Assets = t2Assets.filter((a) => a.id !== id);
+  }
+  async function t2AddAsset() {
+    const src = t2NewSrc.trim();
+    if (!src) { t2Status = t('t2.assets.fail', lang); return; }
+    t2Busy = true;
+    t2Status = t('t2.assets.loading', lang);
+    try {
+      const probe = await invoke<T2ProbeResult>('video_probe', { path: src });
+      const hash = await invoke<T2HashResult>('video_asset_hash', { path: src });
+      let thumb = '';
+      try {
+        const cap = await invoke<T1CaptureResult>('video_capture', { path: src, at: Math.min(1, probe.duration / 2) });
+        thumb = cap.data_url;
+      } catch { thumb = ''; }
+      const name = src.split('/').pop() || src;
+      t2Assets = [...t2Assets, { id: 't2a' + t2Next, src, name, duration: probe.duration, size: hash.size, streams: probe.streams, sha256: hash.sha256, thumb }];
+      t2Next += 1;
+      t2NewSrc = '';
+      t2Status = '';
+    } catch (e) {
+      t2Status = `${t('t2.assets.fail', lang)} ${String(e)}`;
+    } finally {
+      t2Busy = false;
+    }
+  }
 </script>
 
 <div class="app">
@@ -360,6 +404,22 @@
             {#if t1Qc}<div><h4>{t('t1.qc', lang)}</h4><pre id="t1Qc">{t1Qc}</pre></div>{/if}
             {#if t1Frame}<div><h4>{t('t1.frame', lang)}</h4><img id="t1Frame" src={t1Frame} alt=""></div>{/if}
             {#if t1Json}<div><h4>{t('t1.json', lang)}</h4><textarea id="t1Json" readonly rows="8" style="width:100%;box-sizing:border-box" value={t1Json}></textarea></div>{/if}
+          </div>
+          <div class="t2-panel">
+            <h3>{t('t2.assets.title', lang)}</h3>
+            <p>{t('t2.assets.note', lang)}</p>
+            <label>{t('t2.assets.src', lang)} <input id="t2NewSrc" type="text" bind:value={t2NewSrc} placeholder="/Users/mac/Movies/minime-t1-clip1.mp4" style="width:100%;box-sizing:border-box"></label>
+            <button onclick={t2AddAsset} disabled={t2Busy}>{t2Busy ? t('t2.assets.loading', lang) : t('t2.assets.add', lang)}</button>
+            {#if t2Status}<p id="t2Status">{t2Status}</p>{/if}
+            {#each t2Assets as a (a.id)}
+              <div class="t2-asset">
+                {#if a.thumb}<img src={a.thumb} alt="">{/if}
+                {#if !a.thumb}<span>{t('t2.assets.nothumb', lang)}</span>{/if}
+                <span>{a.name} — {a.duration.toFixed(1)}s — {t2StreamsText(a.streams)} — {a.sha256.slice(0, 12)}…</span>
+                <button onclick={() => t2RemoveAsset(a.id)}>{t('t2.assets.remove', lang)}</button>
+              </div>
+            {/each}
+            {#if t2Assets.length}<div><h4>{t('t2.assets.manifest', lang)}</h4><textarea id="t2Manifest" readonly rows="8" style="width:100%;box-sizing:border-box" value={t2Manifest()}></textarea></div>{/if}
           </div>
         </div>
       </div>

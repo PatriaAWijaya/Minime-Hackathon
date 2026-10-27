@@ -1,4 +1,5 @@
-// Engine video Tier 1 (Rust): eksekusi FFmpeg + QC + capture verifikasi.
+// Engine video (Rust): Tier 1 eksekusi FFmpeg + QC + capture verifikasi,
+// Tier 2 probe media + hash aset.
 // Dipanggil frontend lewat Tauri invoke. TIDAK memakai shell: Command menerima
 // argv langsung, jadi path file user tidak bisa menjadi injeksi perintah.
 // Pencarian ffmpeg/ffprobe: PATH, lalu /opt/homebrew/bin (Homebrew Mac),
@@ -6,6 +7,8 @@
 // PATH shell user.
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -60,6 +63,50 @@ pub struct CaptureResult {
     pub data_url: String,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProbeRequest {
+    pub path: String,
+}
+
+#[derive(Serialize)]
+pub struct StreamInfo {
+    pub index: u32,
+    pub codec_type: String,
+    pub codec_name: String,
+    pub width: Option<i64>,
+    pub height: Option<i64>,
+}
+
+#[derive(Serialize)]
+pub struct ProbeInfo {
+    pub duration: f64,
+    pub has_video: bool,
+    pub has_audio: bool,
+    pub streams: Vec<StreamInfo>,
+    pub format_name: String,
+}
+
+#[derive(Serialize)]
+pub struct ProbeResult {
+    pub duration: f64,
+    pub size: u64,
+    pub streams: Vec<StreamInfo>,
+    pub format_name: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HashRequest {
+    pub path: String,
+}
+
+#[derive(Serialize)]
+pub struct HashResult {
+    pub sha256: String,
+    pub size: u64,
+}
+
 fn is_executable(p: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
     match std::fs::metadata(p) {
@@ -97,6 +144,79 @@ fn tail(s: &str, n: usize) -> String {
     } else {
         s[s.len() - n..].to_string()
     }
+}
+
+// Probe ffprobe JSON sekali, dipakai video_qc dan video_probe (tanpa duplikasi
+// parser). Mengembalikan durasi, jenis stream, daftar stream, dan nama format.
+fn probe_file(ffprobe: &PathBuf, path: &str) -> Result<ProbeInfo, String> {
+    let probe = Command::new(ffprobe)
+        .args([
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration:format_name",
+            "-show_entries",
+            "stream=index:codec_type:codec_name:width:height",
+            "-of",
+            "json",
+            path,
+        ])
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| format!("gagal menjalankan ffprobe: {e}"))?;
+    let pj: serde_json::Value = serde_json::from_slice(&probe.stdout)
+        .map_err(|e| format!("ffprobe JSON tidak bisa dibaca: {e}"))?;
+    let duration = pj
+        .get("format")
+        .and_then(|f| f.get("duration"))
+        .and_then(|d| d.as_str())
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.0);
+    let format_name = pj
+        .get("format")
+        .and_then(|f| f.get("format_name"))
+        .and_then(|f| f.as_str())
+        .unwrap_or("")
+        .to_string();
+    let mut has_video = false;
+    let mut has_audio = false;
+    let mut streams: Vec<StreamInfo> = Vec::new();
+    if let Some(arr) = pj.get("streams").and_then(|s| s.as_array()) {
+        for st in arr {
+            let codec_type = st
+                .get("codec_type")
+                .and_then(|c| c.as_str())
+                .unwrap_or("")
+                .to_string();
+            let codec_name = st
+                .get("codec_name")
+                .and_then(|c| c.as_str())
+                .unwrap_or("")
+                .to_string();
+            if codec_type == "video" {
+                has_video = true;
+            }
+            if codec_type == "audio" {
+                has_audio = true;
+            }
+            streams.push(StreamInfo {
+                index: st.get("index").and_then(|i| i.as_u64()).unwrap_or(0) as u32,
+                codec_type,
+                codec_name,
+                width: st.get("width").and_then(|w| w.as_i64()),
+                height: st.get("height").and_then(|h| h.as_i64()),
+            });
+        }
+    }
+    Ok(ProbeInfo {
+        duration,
+        has_video,
+        has_audio,
+        streams,
+        format_name,
+    })
 }
 
 // Ambil angka setelah label "black_start:" / "silence_end:" dst. dari satu baris.
@@ -178,43 +298,11 @@ pub fn video_qc(req: QcRequest) -> Result<QcResult, String> {
         .ok_or_else(|| "ffprobe tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string())?;
     let ffmpeg = find_tool("ffmpeg")
         .ok_or_else(|| "ffmpeg tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string())?;
-    // Durasi + jenis stream lewat ffprobe JSON.
-    let probe = Command::new(&ffprobe)
-        .args([
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-show_entries",
-            "stream=codec_type",
-            "-of",
-            "json",
-            &req.path,
-        ])
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| format!("gagal menjalankan ffprobe: {e}"))?;
-    let pj: serde_json::Value = serde_json::from_slice(&probe.stdout)
-        .map_err(|e| format!("ffprobe JSON tidak bisa dibaca: {e}"))?;
-    let duration = pj
-        .get("format")
-        .and_then(|f| f.get("duration"))
-        .and_then(|d| d.as_str())
-        .and_then(|s| s.parse::<f64>().ok())
-        .unwrap_or(0.0);
-    let mut has_video = false;
-    let mut has_audio = false;
-    if let Some(streams) = pj.get("streams").and_then(|s| s.as_array()) {
-        for st in streams {
-            match st.get("codec_type").and_then(|c| c.as_str()) {
-                Some("video") => has_video = true,
-                Some("audio") => has_audio = true,
-                _ => {}
-            }
-        }
-    }
+    // Durasi + jenis stream lewat probe_file (dipakai bersama video_probe).
+    let info = probe_file(&ffprobe, &req.path)?;
+    let duration = info.duration;
+    let has_video = info.has_video;
+    let has_audio = info.has_audio;
     // Black detect (hitam >= 0.5 dtk, ambang 10%) + silence detect (hening >= 2 dtk).
     let black = Command::new(&ffmpeg)
         .args([
@@ -348,5 +436,45 @@ pub fn video_capture(req: CaptureRequest) -> Result<CaptureResult, String> {
             &base64::engine::general_purpose::STANDARD,
             &bytes
         )),
+    })
+}
+
+#[tauri::command]
+pub fn video_probe(req: ProbeRequest) -> Result<ProbeResult, String> {
+    let meta =
+        std::fs::metadata(&req.path).map_err(|_| format!("file tidak ditemukan: {}", req.path))?;
+    if !meta.is_file() {
+        return Err(format!("bukan file: {}", req.path));
+    }
+    let ffprobe = find_tool("ffprobe")
+        .ok_or_else(|| "ffprobe tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string())?;
+    let info = probe_file(&ffprobe, &req.path)?;
+    Ok(ProbeResult {
+        duration: info.duration,
+        size: meta.len(),
+        streams: info.streams,
+        format_name: info.format_name,
+    })
+}
+
+#[tauri::command]
+pub fn video_asset_hash(req: HashRequest) -> Result<HashResult, String> {
+    let mut file =
+        std::fs::File::open(&req.path).map_err(|_| format!("file tidak ditemukan: {}", req.path))?;
+    let size = file.metadata().map(|m| m.len()).unwrap_or(0);
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 65536];
+    loop {
+        let n = file
+            .read(&mut buf)
+            .map_err(|e| format!("gagal membaca file: {e}"))?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(HashResult {
+        sha256: format!("{:x}", hasher.finalize()),
+        size,
     })
 }
