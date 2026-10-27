@@ -1257,3 +1257,64 @@ dokumen lama yang dipakai.
   dilarang aturan no.6, jadi selector tidak dipasang
   sebelum kamusnya ada. Menunggu keputusan Patria:
   kerjakan B7 sekarang atau sesudah Fase 4/5.
+
+  AUDIT MENDETAIL — REKAP + VONIS LOLOS (27 Okt sore,
+  perintah Patria 19:10: checklist sudah/belum, cek
+  konsistensi logic + code + performa, tanpa fungsi
+  tumpang tindih, nol error lolos, compact + powerful):
+  GERBANG: tsc root 0 error, gate-test 13/13, scan
+  lolos, svelte-check 0 error (54 warning a11y warisan
+  v5, non-blocking), vite build lolos, cargo check
+  segar lolos (19:01 WIB, 3m10s), jsdom parity 16/16
+  + rig B3 2 mode + rig B4 28/28 + rig B5 15/15 — semua
+  hijau pada dist final. LOGIC: trace gates.ts ==
+  traceId output Fase 1/2 (record approval sendiri
+  tidak membawa traceId — menaut lewat productId +
+  gate, bukan inkonsistensi); router default Meta
+  muse-spark-1.1 -> Gemini gemini-3.1-flash-lite ->
+  Ollama deepseek-r1:1.5b -> qwen2.5:3b; Postiz Node
+  vs app SEPAKAT (/api/public/v1 + kunci raw);
+  draft-only terbukti (nol definisi method publish/
+  schedule di kedua klien); nav home-only utuh
+  (toggle no-nav satu choke point di showView);
+  tema utuh (#FFD1DC x53, aksen lama x0); banner v5
+  sudah 0 di App.svelte; frontendDist ../dist (file
+  single-file prototype 209.781 byte hanya referensi,
+  tidak diserve). OVERLAP: 0 definisi fungsi ganda
+  di v5logic (sendChat tepat 1, dengan hook delegasi
+  B3); Node postiz vs app postiz = port beda runtime
+  yang disepakati, bukan duplikasi; gates vs
+  PolicyEngine = cermin beda runtime, kosakata gate
+  sama; postChat/requireGate/extraCols/playTimer2
+  semua terpakai/terekspos (requireGate = API guard
+  teruji tanpa caller app — draf tidak butuh GBatch).
+  PERFORMA: dist total ~144 KB (JS 127,10 KB gzip
+  47,81 + CSS 16,25 KB + HTML 0,44 KB); vite ~1,5
+  detik; rantai MacBook hangat ~25-30 detik; proses
+  MacBook ~64 MB RSS; Ollama 1.5b ~39 tok/s (ukur
+  27 Okt). TEMUAN: tidak ada yang memblokir; satu
+  catatan — kamus EN/ZH + selector bahasa + instruksi
+  bahasa ke router adalah B7 (belum dibangun,
+  menunggu keputusan waktu). Audit ini mengubah NOL
+  baris kode app (hanya log) — tidak butuh rebuild.
+
+  SCROLLBAR PER-KOLOM (27 Okt sore, perintah Patria
+  19:12): diagnosis — rantai tinggi dari .app ke bawah
+  SUDAH benar (.app flex:1, .col flex column,
+  .view.active flex column flex:1, .scroll overflow-y
+  auto + flex:1, .composer flex-shrink:0), yang putus
+  hanya #app (target mount tanpa aturan: .app flex:1
+  tak punya induk flex sehingga tinggi mengikuti
+  konten dan window ikut scroll). Perbaikan di file
+  BARU app/src/layout-scroll.css (3 aturan: window
+  overflow hidden; #app flex column flex:1 min-height
+  0; sidebar overflow-y auto) + import di main.ts;
+  app.css TIDAK diubah (tetap verbatim v5), tidak ada
+  aturan yang diduplikasi (.view.active sudah benar,
+  tidak ditulis ulang). Verifikasi: build lolos,
+  ketiga aturan ada di bundle CSS, semua selector
+  cocok dengan markup, parity + rig B3/B4/B5 hijau.
+  Bukti VISUAL (tiap kolom scroll sendiri, composer
+  tetap di bawah saat window di-resize) tidak bisa
+  dibuktikan jsdom (tanpa rendering) — menunggu
+  konfirmasi mata Patria di MacBook.

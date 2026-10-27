@@ -1,4 +1,5 @@
 import "./app.css";
+import "./layout-scroll.css";
 import { mount } from "svelte";
 import App from "./App.svelte";
 

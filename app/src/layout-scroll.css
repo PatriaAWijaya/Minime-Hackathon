@@ -1,0 +1,14 @@
+/* layout-scroll.css — scrollbar per-kolom + composer menempel bawah.
+   DIAGNOSIS (27 Okt sore): rantai tinggi sudah benar dari .app ke
+   bawah (.app flex:1, .col flex column, .view.active flex column
+   flex:1, .scroll overflow-y auto + flex:1, .composer flex-shrink:0
+   — semua sudah ada di app.css), TAPI rantai itu putus di #app:
+   #app (target mount Svelte) tidak punya aturan apa pun, jadi
+   .app yang flex:1 tidak punya induk flex dan tingginya mengikuti
+   konten — begitu chat memanjang, window ikut memanjang dan
+   scrollbar muncul di window, composer ikut terseret ke bawah.
+   File ini HANYA menambal 3 titik itu; app.css TIDAK diubah
+   (tetap verbatim v5) dan tidak ada aturan yang diduplikasi. */
+html, body { overflow: hidden; }
+#app { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.sidebar { overflow-y: auto; min-height: 0; }

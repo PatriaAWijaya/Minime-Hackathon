@@ -40,6 +40,15 @@
   scan lolos, svelte-check 0 error (55->54 warning a11y),
   parity + rig B3/B4/B5 hijau. Rantai v7 sukses, app
   jalan PID 24681.
+- AUDIT MENDETAIL (27 Okt sore, perintah Patria 19:10):
+  vonis LOLOS, nol error (tsc 0, gate 13/13, scan lolos,
+  svelte-check 0 error, cargo check segar lolos, semua rig
+  hijau). Rantai v9 berjalan.
+- SCROLLBAR PER-KOLOM (27 Okt sore, perintah Patria
+  19:12): rantai tinggi diperbaiki di #app (file baru
+  layout-scroll.css, app.css tetap verbatim); window
+  tak lagi scroll, tiap kolom scroll sendiri, composer
+  menempel bawah. Rantai v9 berjalan.
 
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
