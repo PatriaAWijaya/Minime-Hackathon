@@ -66,6 +66,8 @@
 
 - Sapuan hapus teks + seksi (28 Okt dini hari, 4 perintah Patria): teks Search/Kanban/Graph + judul Graph jadi 'Graph'; seksi bawah Graph dihapus total (detail node, form koneksi, daftar edge; kanvas + Run + notice simulasi tetap); judul Planner jadi 'Planner' + note aset ve2 + 3 note Cost dihapus; composer Planner dihapus total (textarea + tombol + notice; draf baru hanya lewat dashboard Postiz; 7 draf + tabel + record tidak disentuh). i18n 285 -> 263 kunci x 3 nihil mati; verifikasi tiap commit hijau + rig-graphdel 14/14, rig-del3 8/8, rig-del4 5/5. Rantai v20 live PID 43975 (HEAD remote 6133652).
 
+- Bagian 2 ditutup (keputusan Patria 28 Okt ~04:36): Gemini Fase 1-3 tertagih $0 free tier, total Cost jadi $0,00295/Rp53,5; rincian input/output dicatat tak dapat direkonstruksi, kolom in/out jadi '—'. Header Cost dihapus (judul 'Cost' saja, subjudul hilang). i18n 261 kunci x 3. Rantai v21 live PID 44380 (HEAD remote a440c85). Pernyataan lolos PENUH Fase 0 tetap menunggu Patria.
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.
