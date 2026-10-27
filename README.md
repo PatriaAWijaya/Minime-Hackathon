@@ -103,8 +103,12 @@ Video Editor view added 27 Oct sore (assets + preview + inspector +
 missing, listed in docs/video-editor-engines.md. Project description
 cleaned 27 Oct sore to the 3 main model tiers only (Meta, Gemini,
 local Ollama): non-trio model names removed from README/PLAN. Accent
-changed 27 Oct sore: #B214FF → #FF5A97 on Patria's order (monochrome
-+ pink; MiniMe logo unchanged). Phase 3 was ordered resumed
+changed 27 Oct sore: #B214FF → #FF5A97 → #FFD1DC pastel pink on
+Patria's order (monochrome + pastel pink; MiniMe logo unchanged;
+dark #262626 text on accent surfaces for contrast). Nav 27 Oct
+sore: agent list + Detail panel show ONLY in the Home window;
+other windows use full width (.no-nav toggled by showView, all
+navigation paths included via _sv2). Phase 3 was ordered resumed
 27 Oct 2026 15:09 WIB and executed the same afternoon: 7 carousels
 x 3 slides (QC 100/100, images null pending-provider) with all 7
 Postiz drafts pushed as DRAFT only 27 Oct ~15:35 WIB (HTTP 201

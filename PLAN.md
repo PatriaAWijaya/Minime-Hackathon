@@ -131,8 +131,15 @@ copied from the main Minime repository.
   (panel aset + preview + inspector + timeline 4 track + transport,
   klik klip/aset, edit nama klip) — UI dulu, engine menyusul
   (daftar di docs/video-editor-engines.md).
-  AKSEN 27 Oct sore: #B214FF → #FF5A97 atas perintah Patria
-  (monochrome + pink; logo MiniMe tetap apa adanya).
+  AKSEN 27 Oct sore: #B214FF → #FF5A97 → #FFD1DC pink pastel
+  atas perintah Patria (monochrome + pink pastel; logo MiniMe
+  tetap apa adanya; teks di atas permukaan aksen digelapkan
+  #262626 agar terbaca: tombol primer, badge, avatar, panah
+  kirim; avatar/bar pastel ditangani selektor atribut).
+  NAV 27 Okt sore: list agen + panel Detail HANYA di window
+  Home; window lain memakai lebar penuh (class .no-nav yang
+  dipasang showView; semua jalur navigasi ikut karena _sv2
+  menunjuk showView yang sama).
   v1 doc is kept as history only.
   Phase 3 is PAUSED until Patria orders it to resume after the UI
   draft decision.

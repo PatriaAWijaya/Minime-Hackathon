@@ -791,3 +791,82 @@ dokumen lama yang dipakai.
   #FF5A97". Logo MiniMe tidak diubah (aset brand apa
   adanya). Build single-file diperbarui. Riwayat tema
   violet di log ini TIDAK diubah (catatan saat itu).
+
+  AUDIT + REKAP 27 Okt sore (perintah Patria: "rekap pekerjaan
+  detail, checklist sudah/belum; cek mendetail konsistensi
+  logic, code, performa; hindari fungsi tumpang tindih; nol
+  error lolos; compact namun powerful" + "catat semua
+  perubahannya dalam log"):
+  PERUBAHAN SORE INI (3):
+  (1) AKSEN PINK PASTEL #FFD1DC (ganti #FF5A97, perintah
+  Patria 16:22): 50 kemunculan diganti + 3 di 2 rule baru =
+  53; 0 #FF5A97 / 0 #B214FF tersisa di v5 sumber+build.
+  Kontras diperbaiki karena pastel terang tidak terbaca
+  dengan teks putih: tombol primer, tombol filter aktif,
+  badge b-wait, avatar profil, dan panah kirim kini teks/
+  stroke #262626; avatar + bar pastel ditangani 2 selektor
+  atribut (.av[style*="#FFD1DC"], .track
+  .bar[style*="#FFD1DC"]) sehingga mencakup avatar statis
+  maupun yang dirender JS. Satu kesalahan sempat dibuat
+  dan langsung diperbaiki: replace 'color: #fff' ikut
+  memakan 'color: #ffffff' (b-wait) menjadi
+  '#262626fff' tidak valid — terdeteksi grep, diperbaiki
+  ke #262626, terverifikasi. renderChat dipastikan tidak
+  memakai warna untuk teks (bubble berdasar class saja).
+  (2) NAV HOME-ONLY (perintah Patria 16:24): list agen
+  (agentCol) + panel Detail (detailCol) + kedua resizer
+  kini HANYA tampil di window Home — class .no-nav
+  dipasang showView (id !== 'home'); semua jalur
+  navigasi ikut karena _sv2 menunjuk showView yang sama
+  (sidebar, mainchat, viewBack/viewForward, tombol Buka
+  Video Editor). Banner diperbarui. Build 209.380 byte.
+  (3) TIDAK ADA refactor dedup (vonis audit, di bawah).
+  HASIL AUDIT (dijalankan ulang setelah semua edit):
+  - tsc: 0 error; gate-test: 13/13 PASS; credential
+    scan: PASSED; JS prototipe (sumber+build, 2 blok
+    script): node --check OK; build single-file
+    direproduksi identik dari sumber (0 referensi aset,
+    9 data URI).
+  - Fungsi: 63 definisi, 0 duplikat. Pasangan mirip
+    (selectClip/ve2Select, playTimeline/ve2Play,
+    veTool/ve2Note) DINILAI BUKAN tumpang tindih: kontrak
+    DOM berbeda (div vs input inspector, playhead saja
+    vs playhead+timecode, teks note berbeda) — menyatukan
+    menambah branching tanpa mengurangi baris bermakna;
+    diputuskan dipertahankan, bukan di-refactor
+    (refactor gratisan justru berisiko memasukkan error
+    yang dilarang). Data dummy klip yang tercermin di 2
+    view dicatat sebagai duplikasi dummy yang diketahui,
+    bukan logika ganda.
+  - Wiring: 47 target getElementById semua ada di DOM;
+    28 handler onclick, satu-satunya yang tak terdefinisi
+    sebagai fungsi app adalah alert() — itu API native
+    browser (tombol simulasi tambah anggota tim), bukan
+    error. Satu-satunya URL eksternal adalah namespace
+    SVG w3.org (bukan fetch jaringan). 0 TODO/FIXME.
+  - Kontrak: rantai router di router.ts sesuai kanon
+    (Meta -> Gemini -> Ollama DeepSeek -> Ollama Qwen);
+    fase2/fase3 menegakkan gate (GSTP, lalu GSTP+GKonten)
+    via GateError; record Postiz: 7 draf, 0 published,
+    0 scheduled, 7 postId. Deps NestJS/Fastify/RxJS
+    TERPAKAI (main.ts, app.module, app.controller) —
+    bukan beban mati; arsitektur kanon memang NestJS.
+  - Performa/compact: repo 3,8 MB (di luar node_modules);
+    prototipe lama v1–v4 + prototype/ total ~172 KB
+    (riwayat iterasi event, sengaja dipertahankan untuk
+    provenance Indie, bukan dihapus tanpa perintah);
+    prototipe v5 368 KB total; timer playhead terbatas
+    (50 tick x 120 ms, dibersihkan saat restart) — bukan
+    leak. NestJS dipakai; tidak ada dependensi menganggur
+    di package.json.
+  - Konsistensi docs: README/PLAN/MEMORY/log diperbarui
+    ke aksen pastel + nav home-only; riwayat violet/pink
+    di log dipertahankan sebagai catatan saat itu.
+  VONIS AUDIT: LOLOS, nol error. Yang belum (tetap
+  terbuka): verifikasi $150 Meta (blokir sign-in browser,
+  menunggu aksi Patria), tes live Muse, re-baseline biaya
+  penuh, Fase 0 lolos penuh, Fase 4/5/6, video demo,
+  submit 4 Nov, keputusan brand final / provider gambar /
+  nama tim / Kanban 5v3 / teknologi UI, 10 engine video
+  editor, gambar untuk 7 draf Postiz, hapus cron posting
+  setelah 4 Nov.
