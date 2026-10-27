@@ -1185,3 +1185,44 @@ dokumen lama yang dipakai.
   Pull lolos bersih; vite 367ms, 1 bundle; proses
   lama PID 24065 dibunuh, proses BARU PID 24427 hidup
   dari bundle B5. Berikutnya: B6 (audit full wiring).
+
+  WIRING — B6 AUDIT FULL WIRING, VONIS: LOLOS (27 Okt sore):
+  Gerbang zero-error rule.md no.5 hijau semua: tsc
+  root 0 error, gate-test 13/13, scan lolos, vite build
+  lolos (base './' terverifikasi di dist), svelte-check
+  0 error. Janji B1 yang tertunda (type-check app)
+  DITEPATI di B6: svelte-check 4.7.7 + svelte.config.js
+  (vitePreprocess) + script `check` terpasang; hasil
+  awal 55 warning a11y, 1 diperbaiki (label catatan
+  Ollama tanpa kontrol -> span, kode B3 sendiri)
+  sehingga 54 warning — semuanya a11y warisan markup
+  v5 (div klik tanpa role/keyboard, label tanpa
+  kontrol), non-blocking di kedua tool, TIDAK
+  diperbaiki di fase audit (refaktor markup = risiko
+  regresi tanpa manfaat fungsional; ditunda ke fase
+  poles UI). Suite jsdom pada dist final: parity
+  16/16, rig B3 2 mode, rig B4 28/28, rig B5 15/15 —
+  semua hijau. Pemeriksaan mekanis: bundle bebas
+  kode Node (fs/CostLedger 0); 4 origin fetch app
+  (Meta, Gemini, Ollama, Postiz) semuanya ada di CSP
+  connect-src; Rust 0 unwrap/expect; 0 literal kunci
+  di app/src; 0 dependensi tak terpakai (svelte-check
+  membuat typescript terpakai). Dead code: ekspor
+  BACKEND_DATA_NOTE yang tak terpakai dihapus
+  (rule no.7); requireGate dipertahankan sebagai API
+  guard teruji (bukan dead code — jalur kirim masa
+  depan wajib memanggilnya; draf tidak butuh GBatch).
+  Rust tidak berubah sejak cek cargo Tahap A yang
+  lolos; tiap versi tauri.conf sudah dibuktikan oleh
+  build MacBook v3–v6. Keterbatasan yang DICATAT
+  (bukan disembunyikan, di luar cakupan B6): proyek
+  TEST Produk Digital tetap dummy; drag/"Maju"/"Add
+  task" session-only; data Kanban/Planner snapshot
+  build-time; uji live draf Postiz dari app menunggu
+  kunci Patria; konfirmasi visual Patria atas window
+  + klik masih tertunda sejak Tahap A. B6 bukan
+  approval gerbang apa pun — Fase 0 tetap lolos
+  bersyarat (2 syarat terbuka). Tahap B SELESAI
+  (B1–B6); berikutnya rebuild MacBook rantai v7
+  (sinkronisasi svelte-check + span) lalu Fase 4/5
+  sesuai rencana (29 Okt).

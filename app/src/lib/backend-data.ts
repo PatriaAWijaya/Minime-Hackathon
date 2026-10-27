@@ -96,6 +96,3 @@ export const PLANNER_REAL: PlannerRow[] = rec.drafts.map((dr) => ({
   st: 'DRAF',
   postId: dr.postId,
 }));
-
-export const BACKEND_DATA_NOTE =
-  `Snapshot per 27 Okt 2026: Fase 1–3 + ${nDrafts} draf Postiz (record ${rec.created}).`;
