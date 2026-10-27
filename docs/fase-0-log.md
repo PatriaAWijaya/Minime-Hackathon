@@ -902,3 +902,25 @@ dokumen lama yang dipakai.
   di VM: JSON parse OK, frontendDist ter-resolve, scan
   lolos. Kompilasi Rust TIDAK bisa divalidasi di VM (tanpa
   Rust) — validasi itu menjadi tugas build MacBook.
+
+  BUILD APP — GAGAL SATU FILE, LALU DIPERBAIKI (27 Okt sore):
+  Rantai build v1 di MacBook jalan sampai akhir TAPI tanpa
+  bundle — dan skrip v1 tidak memakai set -e sehingga tetap
+  mencetak DONE (pelajaran: rantai build wajib fail-fast +
+  verifikasi artefak, bukan sekadar mencapai akhir).
+  Diagnosis dari log (1.093 baris): tauri-cli terinstal OK,
+  semua crate terkompilasi (tauri 2.12.5, tao, dll.), lalu
+  gagal di langkah terakhir: proc macro generate_context!()
+  panik "failed to open icon .../app/src-tauri/icons/
+  icon.png: No such file or directory" — scaffold Tahap A
+  tidak menyertakan direktori icons sama sekali. Perbaikan:
+  icon.png 1024x1024 RGBA dibuat dari mark brand MiniMe
+  (prototype-v5/assets/minime-icon.png 957x956, ditempel
+  tengah kanvas transparan tanpa stretch) ke
+  app/src-tauri/icons/icon.png dan di-commit. Rantai v2
+  (set -e + marker jujur) akan: pull -> cargo tauri icon
+  (generate .icns + ukuran) -> build --debug -> verifikasi
+  bundle -> open -> pgrep. Catatan: kegagalan ini juga
+  menjelaskan kemungkinan gagalnya cargo check VM (macro
+  yang sama membaca icon.png) — perbaikan ini melayani
+  keduanya.
