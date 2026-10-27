@@ -1,0 +1,707 @@
+{
+  "traceId": "trace-fase3-1793088874703",
+  "productId": "TEST-BRAND-001",
+  "jobId": "job-1793088856257-7270",
+  "stages": [
+    "carousel",
+    "postiz-drafts",
+    "done"
+  ],
+  "gstpApproval": {
+    "gate": "GSTP",
+    "decision": "approved",
+    "approver": "Patria A. Wijaya",
+    "source": "docs/fase-1-gstp-approval.json"
+  },
+  "gkontenApproval": {
+    "gate": "GKonten",
+    "decision": "approved",
+    "approver": "Patria A. Wijaya",
+    "source": "docs/fase-2-gkonten-approval.json"
+  },
+  "carousels": [
+    {
+      "itemId": "item-01",
+      "day": 1,
+      "channel": "Instagram/TikTok",
+      "theme": "Kemudahan Pesan via WhatsApp",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Capek antre kopi saat buru-buru ke kampus atau kantor?",
+          "imagePrompt": "A young professional in a business casual outfit looking stressed at a wristwatch in a busy Surabaya street, cinematic lighting.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "body",
+          "overlayText": "Skip antrean panjang. Pesan kopi favoritmu langsung lewat WhatsApp.",
+          "imagePrompt": "Close-up of a person's hand holding a smartphone showing a messaging app interface, blurred city street background.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "cta",
+          "overlayText": "Klik link di bio untuk pesan via WhatsApp sekarang!",
+          "imagePrompt": "A happy person holding a cup of TEST Kopi, modern campus building in the background, bright daylight.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        }
+      ]
+    },
+    {
+      "itemId": "item-02",
+      "day": 2,
+      "channel": "WhatsApp Status",
+      "theme": "Standarisasi Rasa yang Konsisten",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Rasa kopi pagi ini sama enaknya dengan kemarin, fix nggak pakai drama.",
+          "imagePrompt": "Close-up cinematic shot of a barista precisely measuring coffee grounds, bright and clean coffee shop workspace.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "body",
+          "overlayText": "Kami menjaga standarisasi rasa agar setiap tetes kopi TEST Kopi tetap nikmat setiap hari.",
+          "imagePrompt": "High-quality shot of a barista pouring espresso into a cup, professional coffee machine and tools in the background.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "cta",
+          "overlayText": "Chat 'Mau' ke nomor ini buat order kopi favoritmu.",
+          "imagePrompt": "Smartphone screen showing a chat conversation with a coffee shop, wooden table background.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        }
+      ]
+    },
+    {
+      "itemId": "item-03",
+      "day": 3,
+      "channel": "Instagram/TikTok",
+      "theme": "Efisiensi QRIS untuk Urban Hustler",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Dompet ketinggalan? Tenang, bayar pakai QRIS tinggal scan langsung beres.",
+          "imagePrompt": "A person standing at a minimalist coffee counter looking confident and smiling while holding a smartphone.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "body",
+          "overlayText": "Lebih praktis dan efisien untuk urban hustler yang sibuk beraktivitas.",
+          "imagePrompt": "Close-up of a smartphone screen scanning a QR code placed on a clean wooden coffee shop counter.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "cta",
+          "overlayText": "Klik link di bio untuk pesan dan bayar instan pakai QRIS.",
+          "imagePrompt": "A person smiling while receiving a cup of coffee at the counter, bright urban setting.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        }
+      ]
+    },
+    {
+      "itemId": "item-04",
+      "day": 4,
+      "channel": "WhatsApp Status",
+      "theme": "Solusi Higienitas Kopi Harian",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Higienis itu wajib, apalagi untuk kopi yang diminum tiap hari.",
+          "imagePrompt": "A clean, sealed coffee bottle resting on a minimalist white surface with soft morning sunlight.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "body",
+          "overlayText": "Kami memastikan setiap proses pembuatan kopi terjaga kebersihannya sampai ke tanganmu.",
+          "imagePrompt": "Macro shot of a clean, minimalist coffee cup with a secure lid, bright and airy environment.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "cta",
+          "overlayText": "Chat admin sekarang buat tanya menu hari ini.",
+          "imagePrompt": "A person holding a phone with a message interface open, blurred background of a tidy kitchen counter.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        }
+      ]
+    },
+    {
+      "itemId": "item-05",
+      "day": 5,
+      "channel": "Instagram/TikTok",
+      "theme": "Promo Bundling Hemat",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Ngopi enak tiap hari tanpa bikin saldo menipis.",
+          "imagePrompt": "Flat lay photography of two cups of coffee side by side with small cookies on a wooden table.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "body",
+          "overlayText": "Dapatkan penawaran terbaik untuk ngopi bareng teman atau stok sendiri di rumah.",
+          "imagePrompt": "Top view of a minimalist workspace with two coffee cups and an aesthetic notebook.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "cta",
+          "overlayText": "Cek promo bundling terbaru di chat WA kita sekarang!",
+          "imagePrompt": "A hand holding a smartphone showing an inviting promotional graphic, coffee cups in the blurred background.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        }
+      ]
+    },
+    {
+      "itemId": "item-06",
+      "day": 6,
+      "channel": "WhatsApp Status",
+      "theme": "Kecepatan Layanan",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Admin kita siap bales chat secepat itu buat kopi kamu.",
+          "imagePrompt": "A person quickly typing on a smartphone screen, energetic and fast-paced vibe.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "body",
+          "overlayText": "Nggak perlu menunggu lama, orderanmu langsung diproses oleh barista kami.",
+          "imagePrompt": "A smiling barista starting to prepare a drink behind the counter, motion blur effect.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "cta",
+          "overlayText": "Buktikan kecepatan balas admin di chat sekarang.",
+          "imagePrompt": "A close-up of a hand sending a message on a mobile phone, bright and modern interior.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        }
+      ]
+    },
+    {
+      "itemId": "item-07",
+      "day": 7,
+      "channel": "Instagram/TikTok",
+      "theme": "Lifestyle & Refuel",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Siap hadapi deadline minggu depan bareng segelas TEST Kopi.",
+          "imagePrompt": "An iced coffee cup on a wooden desk next to a closed laptop, warm afternoon light.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "body",
+          "overlayText": "Teman setia untuk produktivitas dan semangatmu di awal minggu.",
+          "imagePrompt": "A person working on a laptop with a cup of coffee nearby, aesthetic and cozy office setup.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        },
+        {
+          "role": "cta",
+          "overlayText": "Order via WA, siap antar sampai depan kantor atau kampusmu.",
+          "imagePrompt": "A delivery bag sitting next to a computer setup, reflecting a busy but organized workspace.",
+          "image": null,
+          "imageStatus": "pending-provider",
+          "qc": {
+            "score": 100,
+            "hardViolations": [],
+            "passes": true
+          }
+        }
+      ]
+    }
+  ],
+  "carouselQc": [
+    {
+      "itemId": "item-01",
+      "slides": [
+        {
+          "role": "hook",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "body",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "cta",
+          "score": 100,
+          "passes": true
+        }
+      ]
+    },
+    {
+      "itemId": "item-02",
+      "slides": [
+        {
+          "role": "hook",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "body",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "cta",
+          "score": 100,
+          "passes": true
+        }
+      ]
+    },
+    {
+      "itemId": "item-03",
+      "slides": [
+        {
+          "role": "hook",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "body",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "cta",
+          "score": 100,
+          "passes": true
+        }
+      ]
+    },
+    {
+      "itemId": "item-04",
+      "slides": [
+        {
+          "role": "hook",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "body",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "cta",
+          "score": 100,
+          "passes": true
+        }
+      ]
+    },
+    {
+      "itemId": "item-05",
+      "slides": [
+        {
+          "role": "hook",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "body",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "cta",
+          "score": 100,
+          "passes": true
+        }
+      ]
+    },
+    {
+      "itemId": "item-06",
+      "slides": [
+        {
+          "role": "hook",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "body",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "cta",
+          "score": 100,
+          "passes": true
+        }
+      ]
+    },
+    {
+      "itemId": "item-07",
+      "slides": [
+        {
+          "role": "hook",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "body",
+          "score": 100,
+          "passes": true
+        },
+        {
+          "role": "cta",
+          "score": 100,
+          "passes": true
+        }
+      ]
+    }
+  ],
+  "postizDrafts": [
+    {
+      "type": "draft",
+      "caption": "Capek antre kopi saat buru-buru ke kampus atau kantor?\n\nKlik link di bio untuk pesan via WhatsApp sekarang!",
+      "itemId": "item-01",
+      "day": 1,
+      "channel": "Instagram/TikTok",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Capek antre kopi saat buru-buru ke kampus atau kantor?",
+          "imagePrompt": "A young professional in a business casual outfit looking stressed at a wristwatch in a busy Surabaya street, cinematic lighting."
+        },
+        {
+          "role": "body",
+          "overlayText": "Skip antrean panjang. Pesan kopi favoritmu langsung lewat WhatsApp.",
+          "imagePrompt": "Close-up of a person's hand holding a smartphone showing a messaging app interface, blurred city street background."
+        },
+        {
+          "role": "cta",
+          "overlayText": "Klik link di bio untuk pesan via WhatsApp sekarang!",
+          "imagePrompt": "A happy person holding a cup of TEST Kopi, modern campus building in the background, bright daylight."
+        }
+      ],
+      "images": null,
+      "imageStatus": "pending-provider",
+      "status": "pending-postiz",
+      "draftId": null,
+      "published": false,
+      "reason": "Postiz API key (pos_) belum tersedia di environment — draf tersimpan di output ini dan siap dibuat sebagai DRAF (bukan publish) setelah key ada."
+    },
+    {
+      "type": "draft",
+      "caption": "Rasa kopi pagi ini sama enaknya dengan kemarin, fix nggak pakai drama.\n\nChat 'Mau' ke nomor ini buat order kopi favoritmu.",
+      "itemId": "item-02",
+      "day": 2,
+      "channel": "WhatsApp Status",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Rasa kopi pagi ini sama enaknya dengan kemarin, fix nggak pakai drama.",
+          "imagePrompt": "Close-up cinematic shot of a barista precisely measuring coffee grounds, bright and clean coffee shop workspace."
+        },
+        {
+          "role": "body",
+          "overlayText": "Kami menjaga standarisasi rasa agar setiap tetes kopi TEST Kopi tetap nikmat setiap hari.",
+          "imagePrompt": "High-quality shot of a barista pouring espresso into a cup, professional coffee machine and tools in the background."
+        },
+        {
+          "role": "cta",
+          "overlayText": "Chat 'Mau' ke nomor ini buat order kopi favoritmu.",
+          "imagePrompt": "Smartphone screen showing a chat conversation with a coffee shop, wooden table background."
+        }
+      ],
+      "images": null,
+      "imageStatus": "pending-provider",
+      "status": "pending-postiz",
+      "draftId": null,
+      "published": false,
+      "reason": "Postiz API key (pos_) belum tersedia di environment — draf tersimpan di output ini dan siap dibuat sebagai DRAF (bukan publish) setelah key ada."
+    },
+    {
+      "type": "draft",
+      "caption": "Dompet ketinggalan? Tenang, bayar pakai QRIS tinggal scan langsung beres.\n\nKlik link di bio untuk pesan dan bayar instan pakai QRIS.",
+      "itemId": "item-03",
+      "day": 3,
+      "channel": "Instagram/TikTok",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Dompet ketinggalan? Tenang, bayar pakai QRIS tinggal scan langsung beres.",
+          "imagePrompt": "A person standing at a minimalist coffee counter looking confident and smiling while holding a smartphone."
+        },
+        {
+          "role": "body",
+          "overlayText": "Lebih praktis dan efisien untuk urban hustler yang sibuk beraktivitas.",
+          "imagePrompt": "Close-up of a smartphone screen scanning a QR code placed on a clean wooden coffee shop counter."
+        },
+        {
+          "role": "cta",
+          "overlayText": "Klik link di bio untuk pesan dan bayar instan pakai QRIS.",
+          "imagePrompt": "A person smiling while receiving a cup of coffee at the counter, bright urban setting."
+        }
+      ],
+      "images": null,
+      "imageStatus": "pending-provider",
+      "status": "pending-postiz",
+      "draftId": null,
+      "published": false,
+      "reason": "Postiz API key (pos_) belum tersedia di environment — draf tersimpan di output ini dan siap dibuat sebagai DRAF (bukan publish) setelah key ada."
+    },
+    {
+      "type": "draft",
+      "caption": "Higienis itu wajib, apalagi untuk kopi yang diminum tiap hari.\n\nChat admin sekarang buat tanya menu hari ini.",
+      "itemId": "item-04",
+      "day": 4,
+      "channel": "WhatsApp Status",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Higienis itu wajib, apalagi untuk kopi yang diminum tiap hari.",
+          "imagePrompt": "A clean, sealed coffee bottle resting on a minimalist white surface with soft morning sunlight."
+        },
+        {
+          "role": "body",
+          "overlayText": "Kami memastikan setiap proses pembuatan kopi terjaga kebersihannya sampai ke tanganmu.",
+          "imagePrompt": "Macro shot of a clean, minimalist coffee cup with a secure lid, bright and airy environment."
+        },
+        {
+          "role": "cta",
+          "overlayText": "Chat admin sekarang buat tanya menu hari ini.",
+          "imagePrompt": "A person holding a phone with a message interface open, blurred background of a tidy kitchen counter."
+        }
+      ],
+      "images": null,
+      "imageStatus": "pending-provider",
+      "status": "pending-postiz",
+      "draftId": null,
+      "published": false,
+      "reason": "Postiz API key (pos_) belum tersedia di environment — draf tersimpan di output ini dan siap dibuat sebagai DRAF (bukan publish) setelah key ada."
+    },
+    {
+      "type": "draft",
+      "caption": "Ngopi enak tiap hari tanpa bikin saldo menipis.\n\nCek promo bundling terbaru di chat WA kita sekarang!",
+      "itemId": "item-05",
+      "day": 5,
+      "channel": "Instagram/TikTok",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Ngopi enak tiap hari tanpa bikin saldo menipis.",
+          "imagePrompt": "Flat lay photography of two cups of coffee side by side with small cookies on a wooden table."
+        },
+        {
+          "role": "body",
+          "overlayText": "Dapatkan penawaran terbaik untuk ngopi bareng teman atau stok sendiri di rumah.",
+          "imagePrompt": "Top view of a minimalist workspace with two coffee cups and an aesthetic notebook."
+        },
+        {
+          "role": "cta",
+          "overlayText": "Cek promo bundling terbaru di chat WA kita sekarang!",
+          "imagePrompt": "A hand holding a smartphone showing an inviting promotional graphic, coffee cups in the blurred background."
+        }
+      ],
+      "images": null,
+      "imageStatus": "pending-provider",
+      "status": "pending-postiz",
+      "draftId": null,
+      "published": false,
+      "reason": "Postiz API key (pos_) belum tersedia di environment — draf tersimpan di output ini dan siap dibuat sebagai DRAF (bukan publish) setelah key ada."
+    },
+    {
+      "type": "draft",
+      "caption": "Admin kita siap bales chat secepat itu buat kopi kamu.\n\nBuktikan kecepatan balas admin di chat sekarang.",
+      "itemId": "item-06",
+      "day": 6,
+      "channel": "WhatsApp Status",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Admin kita siap bales chat secepat itu buat kopi kamu.",
+          "imagePrompt": "A person quickly typing on a smartphone screen, energetic and fast-paced vibe."
+        },
+        {
+          "role": "body",
+          "overlayText": "Nggak perlu menunggu lama, orderanmu langsung diproses oleh barista kami.",
+          "imagePrompt": "A smiling barista starting to prepare a drink behind the counter, motion blur effect."
+        },
+        {
+          "role": "cta",
+          "overlayText": "Buktikan kecepatan balas admin di chat sekarang.",
+          "imagePrompt": "A close-up of a hand sending a message on a mobile phone, bright and modern interior."
+        }
+      ],
+      "images": null,
+      "imageStatus": "pending-provider",
+      "status": "pending-postiz",
+      "draftId": null,
+      "published": false,
+      "reason": "Postiz API key (pos_) belum tersedia di environment — draf tersimpan di output ini dan siap dibuat sebagai DRAF (bukan publish) setelah key ada."
+    },
+    {
+      "type": "draft",
+      "caption": "Siap hadapi deadline minggu depan bareng segelas TEST Kopi.\n\nOrder via WA, siap antar sampai depan kantor atau kampusmu.",
+      "itemId": "item-07",
+      "day": 7,
+      "channel": "Instagram/TikTok",
+      "slides": [
+        {
+          "role": "hook",
+          "overlayText": "Siap hadapi deadline minggu depan bareng segelas TEST Kopi.",
+          "imagePrompt": "An iced coffee cup on a wooden desk next to a closed laptop, warm afternoon light."
+        },
+        {
+          "role": "body",
+          "overlayText": "Teman setia untuk produktivitas dan semangatmu di awal minggu.",
+          "imagePrompt": "A person working on a laptop with a cup of coffee nearby, aesthetic and cozy office setup."
+        },
+        {
+          "role": "cta",
+          "overlayText": "Order via WA, siap antar sampai depan kantor atau kampusmu.",
+          "imagePrompt": "A delivery bag sitting next to a computer setup, reflecting a busy but organized workspace."
+        }
+      ],
+      "images": null,
+      "imageStatus": "pending-provider",
+      "status": "pending-postiz",
+      "draftId": null,
+      "published": false,
+      "reason": "Postiz API key (pos_) belum tersedia di environment — draf tersimpan di output ini dan siap dibuat sebagai DRAF (bukan publish) setelah key ada."
+    }
+  ],
+  "postizLive": false,
+  "published": false,
+  "imageStatus": "pending-provider",
+  "imageNote": "Tidak ada gambar yang dihasilkan pada Fase 3: provider gambar (Muse Image, provisional) menunggu aktivasi Meta; slide carousel membawa imagePrompt + overlay template, gambar null pending-provider.",
+  "ledger": {
+    "records": 4,
+    "totalUsd": 0,
+    "totalIdr": null,
+    "usdIdrRate": null,
+    "hardLimitIdr": null,
+    "mockRecords": 3
+  },
+  "modelCalls": {
+    "carousel": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "mock": false
+    }
+  },
+  "mock": false,
+  "gateStatus": "FASE 3 DRAF TERTUNDA DI POSTIZ — carousel lolos QC dan payload draf tersimpan di output ini (status pending-postiz), tetapi belum ada draf di Postiz karena API key belum tersedia; tidak ada yang dipublish."
+}

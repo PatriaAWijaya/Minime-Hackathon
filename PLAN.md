@@ -114,12 +114,23 @@ copied from the main Minime repository.
   v1 doc is kept as history only.
   Phase 3 is PAUSED until Patria orders it to resume after the UI
   draft decision.
-- **Phase 3 — Carousel + Postiz draft, Wed 28 Oct (afternoon):**
+- **Phase 3 — Carousel + Postiz draft, Tue 27 Oct sore: EXECUTED live (Patria: 'Lanjutkan Fase 3').**
   Carousel as an Image derivative (hook → body → CTA, per-slide
   review), approved items enter Postiz as DRAFT only (never live
-  publish in this demo), status read back per channel, cost dashboard
-  from CostLedger. Negative gate tests must pass. If Image is unstable,
-  Carousel is cut first.
+  publish in this demo). Executed 27 Oct sore via Gemini (1 call,
+  2.595 tokens): 7 carousels x 3 slides, QC rule 100/100 all
+  21 slides, images null pending-provider. Postiz leg PARTIAL:
+  MacBook awake, Docker started via SSH, postiz/postgres/redis
+  containers UP, API answers 307 (alive) — but the pos_ API key
+  is NOT in the MacBook Keychain, so all 7 drafts are saved with
+  status pending-postiz (published false, postizLive false).
+  Unlock step (Patria): create the API key in the Postiz dashboard
+  (localhost:4007) + store it in Keychain per INTEGRASI_MINIME.md
+  §2, then the saved drafts can be pushed as DRAFTS from the
+  MacBook via SSH (the key never leaves the MacBook). Output
+  docs/fase-3-output.json. Code: src/fase3.ts + src/postiz.ts
+  (draft-only client: no publish/schedule method). Negative gate
+  tests pass (no GKonten/GSTP → GateError; payload always draft).
 - **Phase 4 — Loop proof, Thu 29 Oct (morning):** public Form → CRM
   Leads (capture, dedupe, scoring 1–5) → draft Outreach batch with
   GTemplate/GBatch. NO live sending. WhatsApp stays Phase A (Email +

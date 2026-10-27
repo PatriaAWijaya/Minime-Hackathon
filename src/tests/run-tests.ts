@@ -16,6 +16,8 @@ import { scoreQc } from '../qc';
 import { runSample } from '../pipeline';
 import { runFase1 } from '../fase1';
 import { runFase2 } from '../fase2';
+import { runFase3 } from '../fase3';
+import { PostizDraftClient } from '../postiz';
 import { toIdr, formatIdr, parseUsdIdrRate } from '../currency';
 
 function clean(p: string) {
@@ -137,6 +139,59 @@ async function main() {
   assert.strictEqual(fase2.contentBlocked, true, 'distribution must be blocked without GKonten');
   await assert.rejects(() => runFase2({ allowMock: true, dataDir: 'data', approvalPath: 'data/no-such-approval.json', researchPath: 'docs/fase-1-output.json' }), GateError, 'Fase 2 without GSTP record must be blocked');
   ok('fase2: 7-day calendar + 7 briefs, QC pass, image pending, GKonten pending, no-GSTP blocked');
+
+  // Phase 3 (mock) — requires approved GSTP + GKonten records,
+  // produces 7 carousels (3 slides each, QC pass, image pending)
+  // and Postiz DRAFT payloads only (pending-postiz without a key,
+  // never published). The Postiz client itself has no publish
+  // method by construction; a live draft is verified against a
+  // local capture server, not against real Postiz.
+  fs.writeFileSync('data/fase3-test-gkonten.json', JSON.stringify({ gate: 'GKonten', decision: 'approved', productId: 'TEST-BRAND-001', approver: 'test-harness' }));
+  const fase3 = await runFase3({ allowMock: true, dataDir: 'data', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json', fase2Path: 'docs/fase-2-output.json' });
+  assert.strictEqual((fase3.carousels as unknown[]).length, 7, 'Fase 3 must have 7 carousels');
+  for (const c of fase3.carousels as Array<Record<string, unknown>>) {
+    const slides = c.slides as Array<Record<string, unknown>>;
+    assert.strictEqual(slides.length, 3, 'each carousel must have exactly 3 slides');
+    assert.deepStrictEqual(slides.map((s) => s.role), ['hook', 'body', 'cta'], 'slide roles must be hook,body,cta in order');
+    for (const s of slides) {
+      assert.ok(String(s.overlayText).length > 0 && String(s.overlayText).length <= 120, 'overlay must be non-empty and <=120 chars');
+      assert.strictEqual(s.image, null, 'carousel slide image must be null pending provider');
+      assert.strictEqual(s.imageStatus, 'pending-provider', 'carousel slide imageStatus must be pending-provider');
+    }
+  }
+  assert.ok((fase3.carouselQc as Array<Record<string, unknown>>).every((q) => (q.slides as Array<Record<string, unknown>>).every((s) => s.passes === true)), 'all Fase 3 carousel QC must pass');
+  assert.strictEqual((fase3.postizDrafts as Array<Record<string, unknown>>).length, 7, 'Fase 3 must have 7 Postiz draft payloads');
+  assert.ok((fase3.postizDrafts as Array<Record<string, unknown>>).every((d) => d.type === 'draft' && d.status === 'pending-postiz' && d.published === false), 'without a key, all drafts must be pending-postiz and unpublished');
+  assert.strictEqual(fase3.published, false, 'Fase 3 must never publish');
+  assert.strictEqual(fase3.postizLive, false, 'Fase 3 without a key must not be live');
+  await assert.rejects(() => runFase3({ allowMock: true, dataDir: 'data', gkontenApprovalPath: 'data/no-such-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json', fase2Path: 'docs/fase-2-output.json' }), GateError, 'Fase 3 without GKonten record must be blocked');
+  await assert.rejects(() => runFase3({ allowMock: true, dataDir: 'data', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/no-such-gstp.json', fase2Path: 'docs/fase-2-output.json' }), GateError, 'Fase 3 without GSTP record must be blocked');
+  ok('fase3: 7 carousels x 3 slides, QC pass, image pending, drafts pending-postiz, unpublished, no-gate blocked');
+
+  // Postiz draft-only client: live draft shape against a capture
+  // server; no publish/schedule method may exist on the client.
+  const http = await import('node:http');
+  let captured: Record<string, unknown> = {};
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      try { captured = JSON.parse(body) as Record<string, unknown>; } catch { captured = {}; }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ id: 'draft-test-123' }));
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+  const port = (server.address() as { port: number }).port;
+  const postizClient = new PostizDraftClient(`http://127.0.0.1:${port}`, 'pos_testkey');
+  const created = await postizClient.createDraft({ type: 'draft', caption: 'hook\n\ncta', itemId: 'item-01', day: 1, channel: 'Instagram/TikTok', slides: [{ role: 'hook', overlayText: 'hook', imagePrompt: 'a sufficiently long text-free image prompt here' }], images: null, imageStatus: 'pending-provider' });
+  assert.strictEqual(created.draftId, 'draft-test-123', 'Postiz client must parse the draft id');
+  assert.strictEqual(captured.type, 'draft', 'Postiz request must be a draft, never a publish');
+  assert.strictEqual((postizClient as unknown as Record<string, unknown>).publish, undefined, 'Postiz client must have no publish method');
+  assert.strictEqual((postizClient as unknown as Record<string, unknown>).schedule, undefined, 'Postiz client must have no schedule method');
+  assert.throws(() => new PostizDraftClient(`http://127.0.0.1:${port}`, ''), /API key is required/, 'Postiz client without a key must refuse to construct');
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  ok('postiz client: draft-only shape, no publish/schedule method, key required');
 
   // Rupiah reporting (standing rule, Patria 27 Oct 2026): IDR first,
   // USD only as source; no conversion without a rate, ever.

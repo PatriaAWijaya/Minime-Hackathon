@@ -650,3 +650,30 @@ dokumen lama yang dipakai.
   Addendum ditambahkan di atas docs/fase-0-gate-results.md tanpa
   menghapus vonis 11:30 WIB. Keputusan ini TIDAK membuka Fase 3
   dan TIDAK mengubah UI stop 15:02 WIB.
+
+- 27 Okt sore (perintah Patria "Lanjutkan Fase 3"): FASE 3
+  DIEKSEKUSI live. Kode: src/fase3.ts + src/fase3-run.ts +
+  src/postiz.ts (klien DRAF-only — tanpa method publish/schedule
+  by construction, dibuktikan gate test). Gerbang masuk: record
+  GSTP + GKonten Patria diimpor (tanpa keduanya → GateError).
+  Hasil live via Gemini (1 call, 2.595 token: 1.062 prompt +
+  1.533 completion, non-mock, trace trace-fase3-1793088874703):
+  7 carousel × 3 slide (hook → isi → CTA), QC rule 100/100
+  semua 21 slide, gambar null pending-provider (Muse Image
+  masih menunggu Meta). Output docs/fase-3-output.json.
+  Postiz: MacBook ternyata bangun & SSH hidup (up 4:13);
+  Docker Desktop dinyalakan via SSH; kontainer postiz,
+  postiz-postgres (healthy), postiz-redis (healthy), temporal
+  UP; API merespons 307 di / dan /public/v1/integrations
+  (redirect = app hidup). TAPI API key pos_ TIDAK ada di
+  Keychain MacBook (url + api-key MISSING, dicek eksistensinya
+  saja, nilainya tidak pernah dibaca/dicetak) → 7 draf
+  berstatus pending-postiz, published false, postizLive false.
+  Langkah yang membuka kaki live: Patria buat API key di
+  dashboard Postiz (localhost:4007) + simpan ke Keychain sesuai
+  INTEGRASI_MINIME.md §2, lalu kabari — draf didorong dari
+  MacBook via SSH (key tidak pernah keluar dari MacBook dan
+  tidak dikirim via chat). Gate test 13/13 PASS (termasuk
+  fase3 + postiz client), scan PASSED, tsc 0 error. Fase 3
+  TIDAK mencatat approval baru; UI tetap stop (perintah
+  15:02 WIB tidak berubah).

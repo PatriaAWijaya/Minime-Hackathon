@@ -7,5 +7,7 @@ PASS ollama live probe fails visibly in this VM (expected, recorded as pending)
 PASS sample job end-to-end (mock, draft-only, trace + ledger)
 PASS fase1 draft: STP draft, no approval, production blocked
 PASS fase2: 7-day calendar + 7 briefs, QC pass, image pending, GKonten pending, no-GSTP blocked
+PASS fase3: 7 carousels x 3 slides, QC pass, image pending, drafts pending-postiz, unpublished, no-gate blocked
+PASS postiz client: draft-only shape, no publish/schedule method, key required
 PASS rupiah reporting: conversion, format, null-rate honesty, ledger IDR
 PASS qc scoring: pass and hard-violation rejection
