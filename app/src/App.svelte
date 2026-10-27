@@ -1,9 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, addGraphEdge, doSearch, filterAgents, playTimeline, primeCurate, quickChat, renderKanban, runGraphSim, selectClip, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, addGraphEdge, doSearch, filterAgents, playTimeline, primeCurate, quickChat, renderKanban, runGraphSim, selectClip, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
+  import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
+  import { applyGateStatus } from "./lib/gates.js";
 
   onMount(() => {
     initV5();
+    setSendChatImpl(sendChatReal);
+    applyGateStatus();
+    updateKeyStatus();
   });
 </script>
 
@@ -242,6 +247,10 @@
       <div class="scroll">
         <h3>Koneksi &amp; Provider</h3>
         <p><label><input type="checkbox" checked> Meta Model API (Muse) — utama</label><label><input type="checkbox" checked> Gemini — fallback 1</label><label><input type="checkbox" checked> Ollama lokal — fallback 2/3</label><label><input type="checkbox" checked> Canva Fallback untuk Image (bila Meta &amp; Gemini gagal)</label><label><input type="checkbox"> Voice Studio (127.0.0.1:3900)</label></p>
+        <h3>Kunci API (B3 — disimpan lokal di perangkat ini saja)</h3>
+        <p><label>Gemini API key: <input type="password" id="apiKeyGemini" placeholder="Belum diisi" style="width:320px"></label><label>Meta API key: <input type="password" id="apiKeyMeta" placeholder="Belum diisi (butuh klaim $150 + kartu)" style="width:320px"></label><label>Ollama lokal: tidak butuh kunci (127.0.0.1:11434)</label></p>
+        <button class="btn btn-primary" onclick={() => { saveKeys() }}>Simpan Kunci</button>
+        <div class="notice" id="keyStatus"></div>
         <h3>Gerbang &amp; Distribusi</h3>
         <p><label><input type="checkbox" checked> Distribusi default DRAF saja</label><label><input type="checkbox"> Auto post batch terjadwal (butuh persetujuan awal tiap batch)</label></p>
         <h3>Biaya &amp; Tampilan</h3>

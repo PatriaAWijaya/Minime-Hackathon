@@ -13,7 +13,7 @@
  * they are not, they fail visibly (LiveUnavailableError) instead of
  * silently substituting another model.
  */
-import { CostRecord } from './ledger';
+import type { CostRecord } from './ledger';
 
 export type ProviderId = 'meta' | 'gemini' | 'ollama' | 'mock';
 
@@ -28,16 +28,39 @@ export interface RouterConfig {
   ollamaFallbackModel: string;
 }
 
-export function routerConfigFromEnv(env: NodeJS.ProcessEnv): RouterConfig {
+/**
+ * Canon defaults, browser-safe (no env access). The single source of
+ * chain defaults: routerConfigFromEnv() below delegates here, and the
+ * Tauri frontend (app/src/lib/chat.ts) builds its config from here
+ * plus keys the user enters in Settings (localStorage, device only).
+ * Using `import type` for CostRecord keeps this module free of Node
+ * imports (ledger.ts pulls in fs/path), so Vite can bundle it into
+ * the WebView. toCostRecord() still returns a CostRecord shape.
+ */
+export function defaultRouterConfig(): RouterConfig {
   return {
-    metaBaseUrl: env.META_MODEL_API_BASE_URL || 'https://api.meta.ai/v1',
+    metaBaseUrl: 'https://api.meta.ai/v1',
+    metaApiKey: null,
+    metaModel: 'muse-spark-1.1',
+    geminiApiKey: null,
+    geminiModel: 'gemini-3.1-flash-lite',
+    ollamaBaseUrl: 'http://127.0.0.1:11434',
+    ollamaModel: 'deepseek-r1:1.5b',
+    ollamaFallbackModel: 'qwen2.5:3b',
+  };
+}
+
+export function routerConfigFromEnv(env: NodeJS.ProcessEnv): RouterConfig {
+  const base = defaultRouterConfig();
+  return {
+    metaBaseUrl: env.META_MODEL_API_BASE_URL || base.metaBaseUrl,
     metaApiKey: env.META_API_KEY || null,
-    metaModel: env.META_MODEL || 'muse-spark-1.1',
+    metaModel: env.META_MODEL || base.metaModel,
     geminiApiKey: env.GEMINI_API_KEY || null,
-    geminiModel: env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
-    ollamaBaseUrl: env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
-    ollamaModel: env.OLLAMA_MODEL || 'deepseek-r1:1.5b',
-    ollamaFallbackModel: env.OLLAMA_FALLBACK_MODEL || 'qwen2.5:3b',
+    geminiModel: env.GEMINI_MODEL || base.geminiModel,
+    ollamaBaseUrl: env.OLLAMA_BASE_URL || base.ollamaBaseUrl,
+    ollamaModel: env.OLLAMA_MODEL || base.ollamaModel,
+    ollamaFallbackModel: env.OLLAMA_FALLBACK_MODEL || base.ollamaFallbackModel,
   };
 }
 

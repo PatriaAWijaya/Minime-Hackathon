@@ -1035,3 +1035,48 @@ dokumen lama yang dipakai.
   tangan Patria. Berikutnya: B3 (chat via router +
   gate di UI; desain bridge frontend-backend diputuskan
   dulu di awal fase).
+
+  WIRING — B3 CHAT VIA ROUTER + GATE DI UI (27 Okt sore):
+  Keputusan bridge (dicatat dulu, baru bangun): TIDAK
+  ada server terpisah, TIDAK ada rewrite Rust — router
+  TypeScript yang sama di-bundle ke frontend via Vite.
+  Syaratnya 2 refaktor kecil router.ts (perilaku tidak
+  berubah, dibuktikan tsc + gate 13/13): (1) import
+  CostRecord diubah ke `import type` (ledger.ts menarik
+  fs/path Node — tanpa ini bundle gagal); (2) tambah
+  defaultRouterConfig() browser-safe, dan
+  routerConfigFromEnv() mendelegasikan ke sana (satu
+  sumber default; chat.ts memakai default + kunci dari
+  localStorage). Bundle terbukti bebas kode Node
+  (grep CostLedger/fs = 0) dan memuat 3 origin router.
+  Chat: v5logic.sendChat() diberi hook delegasi
+  (setSendChatImpl; guard di baris pertama) sehingga
+  composer, chip quickChat, DAN Enter semua mengalir
+  ke sendChatReal (chat.ts) tanpa mengubah wiring v5:
+  bubble user -> router.callWithFallback -> bubble
+  Prime + footer provenance (provider/model/latensi/
+  fallback); gagal -> bubble error jujur, bukan balasan
+  karangan. Kunci HANYA di localStorage perangkat
+  (input password di Settings; tidak ikut bundle/repo;
+  tanpa kunci, provider dilewati chain seperti runner
+  Node). CSP connect-src ditambah 3 origin persis:
+  api.meta.ai, generativelanguage.googleapis.com,
+  127.0.0.1:11434. vite.config: server.fs.allow ['..']
+  agar dev server bisa melayani ../src/router.ts.
+  Gerbang (jujur soal cakupan): UI TIDAK PUNYA tombol
+  kirim live untuk dikunci (Planner menegaskan itu) —
+  maka B3 memberi status gerbang terlihat (Planner +
+  Settings: GSTP LOLOS, GKonten LOLOS, GBatch BELUM),
+  guard requireGate() untuk jalur kirim masa depan,
+  dan jalur DRAF sengaja TIDAK dikunci (kanon: draf
+  tidak butuh GBatch). Cermin state dari record
+  approval asli (trace + tanggal terverifikasi).
+  Verifikasi: parity jsdom 16/16 lolos ulang; rig B3
+  lolos 2 mode (stub sukses: balasan Ollama + footer
+  + simpan kunci + status; stub gagal: bubble error
+  menyebut semua provider); tes LIVE Node dengan kunci
+  surrogate: provider gemini, model gemini-3.1-flash-
+  lite, 3469ms, fallback dari meta, balasan benar
+  ("Warna langit pada siang hari adalah biru.").
+  Berikutnya: rebuild MacBook rantai v4 (frontendDist
+  sudah ../dist; npm install tidak berubah deps).

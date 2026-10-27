@@ -26,6 +26,10 @@
   (App.svelte + app.css + lib/v5logic.js, logika tidak
   diubah; parity jsdom 16/16 lolos). frontendDist kini
   ../dist; rebuild MacBook rantai v3 berjalan.
+- B3 (27 Okt sore): chat via router di-bundle ke
+  frontend (delegate hook di sendChat; kunci di
+  localStorage; gate status + guard GBatch). Parity +
+  rig B3 lolos; tes live Gemini lolos; rantai v4 berjalan.
 
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,

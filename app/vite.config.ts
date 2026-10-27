@@ -7,6 +7,6 @@ export default defineConfig({
   plugins: [svelte()],
   base: './',
   clearScreen: false,
-  server: { port: 1420, strictPort: true },
+  server: { port: 1420, strictPort: true, fs: { allow: ['..'] } },
   build: { outDir: 'dist' }
 });

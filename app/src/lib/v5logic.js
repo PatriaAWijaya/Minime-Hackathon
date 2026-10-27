@@ -117,7 +117,14 @@ export function postChat(who, name, color, text, curation) {
 
 export function quickChat(text) { document.getElementById("chatInput").value = text; sendChat(); }
 
+var sendChatImpl = null;
+
+export function setSendChatImpl(fn) {
+  sendChatImpl = fn;
+}
+
 export function sendChat() {
+    if (typeof sendChatImpl === "function") return sendChatImpl();
     var input = document.getElementById("chatInput");
     var text = input.value.trim();
     if (!text) return;
