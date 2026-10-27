@@ -1226,3 +1226,10 @@ dokumen lama yang dipakai.
   (B1–B6); berikutnya rebuild MacBook rantai v7
   (sinkronisasi svelte-check + span) lalu Fase 4/5
   sesuai rencana (29 Okt).
+
+  WIRING — B6 LIVE DI MACBOOK (27 Okt sore, rantai v7):
+  Pull lolos bersih; vite 366ms (konfigurasi
+  vitePreprocess baru terbukti jalan di MacBook),
+  1 bundle; proses lama PID 24427 dibunuh, proses
+  BARU PID 24681 hidup dari bundle B6. Tahap B
+  SELESAI.

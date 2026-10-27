@@ -38,7 +38,8 @@
   rig B5 15/15 lolos). Rantai v6 berjalan.
 - B6 (27 Okt sore): AUDIT LOLOS — tsc 0, gate 13/13,
   scan lolos, svelte-check 0 error (55->54 warning a11y),
-  parity + rig B3/B4/B5 hijau. Rantai v7 berjalan.
+  parity + rig B3/B4/B5 hijau. Rantai v7 sukses, app
+  jalan PID 24681.
 
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
