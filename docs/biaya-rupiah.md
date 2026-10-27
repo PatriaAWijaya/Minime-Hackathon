@@ -41,6 +41,35 @@ ulang angka-angka di bawah ini untuk tanggal lain.
   Ini pengecualian yang jujur dari aturan, bukan pelanggaran:
   tidak ada harga = tidak ada konversi.
 
+## Angka aktual live Meta 28 Okt 2026 (panggilan pertama yang berhasil)
+
+Kurs: ~Rp18.148 per USD (Finnhub, 28 Okt 2026).
+
+- Uji live Muse Spark 1.3, 28 Okt ~03:36 WIB, lewat router repo
+  (hanya kunci Meta yang diset, sengaja): provider `meta`, tanpa
+  fallback, `mock: false`, latensi 10.549 ms, 34 token input +
+  684 token output, jawaban satu kalimat Bahasa Indonesia.
+  Persetujuan akses kali ini disetujui sehingga request berangkat.
+- Biaya aktual panggilan ini: **$0,00295 (≈ Rp53,5)** — hitungan
+  manual dari usage + tarif standar: 34 × $1,25/1 jt +
+  684 × $4,25/1 jt. `costUsd` router tetap null karena router
+  tidak menghitung biaya; angka ini hitungan dari usage API,
+  bukan klaim ledger otomatis. Token output 684 untuk satu kalimat
+  dicatat apa adanya dari usage API (kemungkinan mencakup token
+  penalaran internal); tidak diubah.
+- Catatan jujur: prompt uji ("apa itu MiniMe?") ambigu, sehingga
+  model menjawab dari pengetahuan umum (karakter film Austin
+  Powers), bukan tentang aplikasi MiniMe Patria. Uji ini membuktikan
+  konektivitas, model, dan token — bukan pengetahuan model tentang
+  aplikasi.
+- Status re-baseline: Meta kini punya angka aktual (satu panggilan).
+  Harga Gemini (Fase 1/2/3) tetap belum di-baseline resmi, sehingga
+  re-baseline PENUH belum selesai. Kondisi Fase 0 (1) tertutup
+  bukti live; kondisi (2) tertutup sebagian (Meta saja). Lolos
+  penuh Fase 0 tetap menunggu pernyataan Patria sendiri.
+- Setara kredit pada kurs 28 Okt: $150 = **Rp2.722.200**
+  (kreditnya sendiri tetap berdenominasi USD).
+
 ## Yang masih berdenominasi USD (pengecualian)
 
 1. Harga resmi provider (Meta, Google) — sumbernya USD; laporan
