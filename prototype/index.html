@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aplikasi Konten — Prototype (DUMMY TEST)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 15px; color: #1a1a1a; background: #f4f4f4; }
+  .banner { background: #fff3cd; border-bottom: 2px solid #e6a817; padding: 10px 20px; font-size: 14px; }
+  .banner b { color: #7a5b00; }
+  .layout { display: flex; min-height: calc(100vh - 41px); }
+  nav { width: 230px; flex-shrink: 0; background: #1f2937; color: #fff; padding: 16px 0; }
+  nav .app { padding: 0 16px 14px; font-size: 18px; font-weight: 700; border-bottom: 1px solid #374151; }
+  nav .app small { display: block; font-size: 12px; font-weight: 400; color: #9ca3af; margin-top: 4px; }
+  nav button { display: block; width: 100%; text-align: left; background: none; border: none; color: #d1d5db; padding: 12px 16px; font-size: 15px; cursor: pointer; }
+  nav button:hover { background: #374151; color: #fff; }
+  nav button.active { background: #2563eb; color: #fff; }
+  nav .progress { padding: 14px 16px; font-size: 13px; color: #9ca3af; border-top: 1px solid #374151; margin-top: 14px; line-height: 1.7; }
+  main { flex: 1; padding: 24px 28px; max-width: 980px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  h2 { font-size: 20px; margin: 24px 0 10px; }
+  h3 { font-size: 16px; margin: 0 0 6px; }
+  p, li { line-height: 1.6; }
+  .sub { color: #555; margin: 0 0 20px; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 18px; margin-bottom: 16px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+  .b-draft { background: #e5e7eb; color: #374151; }
+  .b-wait { background: #fef3c7; color: #92400e; }
+  .b-ok { background: #d1fae5; color: #065f46; }
+  .b-no { background: #fee2e2; color: #991b1b; }
+  .b-block { background: #e5e7eb; color: #6b7280; }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; }
+  input[type=text], textarea { width: 100%; padding: 11px 12px; font-size: 15px; border: 1px solid #bbb; border-radius: 6px; font-family: inherit; }
+  textarea { min-height: 70px; }
+  .btn { display: inline-block; padding: 12px 20px; min-height: 44px; font-size: 15px; border-radius: 6px; border: 1px solid #bbb; background: #fff; cursor: pointer; margin-right: 10px; margin-top: 10px; }
+  .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 600; }
+  .btn-danger { color: #991b1b; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .notice { background: #eff6ff; border: 1px solid #93c5fd; border-radius: 6px; padding: 12px 14px; margin-top: 14px; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .daycard { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 14px; cursor: pointer; text-align: left; font-size: 15px; }
+  .daycard:hover { border-color: #2563eb; }
+  .imgbox { background: #e5e7eb; border: 2px dashed #9ca3af; border-radius: 8px; min-height: 220px; display: flex; align-items: center; justify-content: center; text-align: center; color: #4b5563; padding: 20px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .itemnav button { margin: 0 6px 8px 0; padding: 10px 14px; font-size: 14px; border-radius: 6px; border: 1px solid #bbb; background: #fff; cursor: pointer; }
+  .itemnav button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #ddd; }
+  td.num, th.num { text-align: right; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  @media (max-width: 700px) { .layout { flex-direction: column; } nav { width: 100%; } .two { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="banner"><b>PROTOTYPE — DATA DUMMY TEST.</b> Proyek di bawah ini fiktif (TEST Kopi Surabaya, bukan klien nyata). Tombol Setujui / Revisi / Tolak di prototype ini hanya mengubah tampilan simulasi — <b>tidak menyimpan approval sungguhan</b> ke backend atau ke record gerbang. Approval sungguhan tetap dicatat terpisah oleh Patria.</div>
+<div class="layout">
+  <nav>
+    <div class="app">Aplikasi Konten<small>Prototype klik — Draf UI</small></div>
+    <button data-go="proyek" class="active">Proyek</button>
+    <button data-go="intake">Intake</button>
+    <button data-go="riset">Riset &amp; Strategi</button>
+    <button data-go="stp">STP (GSTP)</button>
+    <button data-go="kalender">Kalender 7 Hari</button>
+    <button data-go="brief">Brief &amp; QC (GKonten)</button>
+    <button data-go="distribusi">Distribusi &amp; Biaya</button>
+    <div class="progress">Alur: Intake &rarr; Riset &rarr; STP &bull; Kalender &rarr; Brief &rarr; Distribusi<br>Tahap saat ini: <b style="color:#fff">Brief &amp; QC</b><br>Gerbang: GSTP disetujui, GKonten disetujui (simulasi)</div>
+  </nav>
+  <main>
+    <!-- 1. PROYEK -->
+    <section id="proyek" class="screen active">
+      <h1>Proyek</h1>
+      <p class="sub">Pilih proyek untuk dibuka, atau buat proyek baru.</p>
+      <div class="card">
+        <h3>TEST Kopi Surabaya <span class="badge b-draft">TEST — brand uji</span></h3>
+        <p>Es kopi susu Rp15.000 untuk mahasiswa dan pekerja muda Surabaya. Status gerbang terakhir: <span class="badge b-ok">GKonten disetujui (simulasi)</span></p>
+        <p style="color:#555">Terakhir diperbarui: 27 Okt 2026. Trace Fase 2: trace-fase2-1793077740478.</p>
+        <button class="btn btn-primary" data-go="intake">Buka Proyek</button>
+      </div>
+      <div class="card">
+        <h3>Proyek Baru</h3>
+        <p>Mulai dari form Intake: nama brand, audiens, masalah, dan tawaran.</p>
+        <button class="btn" onclick="showNotice(this, 'Simulasi: proyek baru akan dibuat lewat form Intake. Di prototype ini, form Intake sudah terisi data dummy TEST.')">+ Proyek Baru</button>
+        <div class="notice" style="display:none"></div>
+      </div>
+    </section>
+
+    <!-- 2. INTAKE -->
+    <section id="intake" class="screen">
+      <h1>Intake — ProductBrief</h1>
+      <p class="sub">Satu kolom, label di atas field. Simpan sebagai draf sebelum lanjut ke Riset.</p>
+      <div class="card">
+        <label>Nama produk / brand</label>
+        <input type="text" value="TEST Kopi Surabaya (FIKSI — brand uji, bukan klien nyata)">
+        <label>Audiens</label>
+        <input type="text" value="Mahasiswa dan pekerja muda Surabaya, 18–30 tahun, yang mencari es kopi susu terjangkau untuk sehari-hari">
+        <label>Masalah</label>
+        <textarea>Kopi kafe terasa mahal untuk konsumsi harian, sementara warung kopi tradisional sering tidak konsisten rasa dan kebersihannya</textarea>
+        <label>Tawaran</label>
+        <input type="text" value="Es kopi susu Rp15.000, rasa konsisten, disajikan cepat, bisa dipesan lewat chat">
+        <button class="btn btn-primary" onclick="showNotice(this, 'Simulasi: brief tersimpan sebagai draf. Di aplikasi sungguhan, brief ini masuk ke antrean Riset.')">Simpan Brief</button>
+        <button class="btn" data-go="riset">Lihat Riset &rarr;</button>
+        <div class="notice" style="display:none"></div>
+      </div>
+    </section>
+
+    <!-- 3. RISET -->
+    <section id="riset" class="screen">
+      <h1>Riset &amp; Strategi</h1>
+      <p class="sub"><span class="badge b-draft">DRAF — belum terverifikasi manusia</span> &nbsp; Fakta di bawah ini hasil model dan wajib diverifikasi sebelum dikutip sebagai data resmi.</p>
+      <div class="card">
+        <h2 style="margin-top:0">Fakta riset (draf)</h2>
+        <ul>
+          <li>Target audiens di Surabaya memiliki preferensi tinggi terhadap minuman berbasis susu yang manis dan creamy untuk konsumsi harian.</li>
+          <li>Terdapat kesenjangan pasar antara kopi kafe kelas menengah ke atas yang mahal dengan warung kopi tradisional yang kurang memiliki standarisasi kualitas.</li>
+          <li>Pemesanan melalui aplikasi chat (WhatsApp) merupakan metode transaksi yang dominan dan dianggap praktis oleh mahasiswa serta pekerja muda di Surabaya.</li>
+          <li>Kecepatan penyajian menjadi penentu utama loyalitas pelanggan di segmen harga Rp15.000.</li>
+          <li>Kebersihan tempat dan konsistensi rasa menjadi pain point utama saat pelanggan beralih dari warung kopi konvensional ke opsi yang lebih modern.</li>
+        </ul>
+        <h2>Behaviour digital</h2>
+        <ul>
+          <li>Ponsel hampir selalu dalam genggaman sepanjang hari; durasi on-screen panjang, terutama untuk video pendek di sela aktivitas (kualitatif, tanpa angka jam).</li>
+          <li><b>Paparan media:</b> video pendek gaya hidup/kuliner lokal, status WhatsApp teman/rekan kerja, rekomendasi berbasis lokasi Surabaya, influencer mikro lokal.</li>
+          <li><b>Jenis konten yang direspons:</b> visual pesan cepat + konsistensi, testimoni singkat rekan sebaya, promo bundling ekonomis, edukasi/hiburan ringan.</li>
+          <li><b>Cara transaksi:</b> pesan via WhatsApp, bayar QRIS/e-wallet, tanpa verifikasi berbelit.</li>
+          <li><b>Touch points:</b> penemuan (status WA/sosmed) &rarr; eksplorasi (chat tanya menu) &rarr; transaksi (chat + QRIS) &rarr; konsumsi &rarr; loyalitas (share/rekomendasi).</li>
+          <li><b>Spending bulanan:</b> transaksi kecil berulang terakumulasi menjadi signifikan; sensitivitas harga sangat tinggi; trade-off-nya mengurangi frekuensi atau pindah ke opsi lebih ekonomis.</li>
+          <li><b>Spending digital:</b> uang digital terasa lebih ringan dikeluarkan; cashback e-wallet mendorong loyalitas; friction-nya sinyal dan saldo tidak cukup.</li>
+        </ul>
+        <h2>Pain point + solusi</h2>
+        <ul>
+          <li>Harga kafe terlalu mahal untuk harian &rarr; diselesaikan dengan harga terjangkau.</li>
+          <li>Rasa warkop tidak konsisten &rarr; diselesaikan dengan standarisasi produk.</li>
+          <li>Keraguan higienitas warkop &rarr; diselesaikan dengan citra brand bersih dan terstandar.</li>
+          <li>Antrean pagi &rarr; diselesaikan dengan pesan chat yang mempercepat ambil/delivery.</li>
+          <li>Ribet aplikasi pihak ketiga &rarr; diselesaikan dengan pesan langsung via chat.</li>
+        </ul>
+        <h2>Strategi</h2>
+        <p><b>Positioning:</b> TEST Kopi menjadi solusi es kopi susu harian yang konsisten, higienis, dan terjangkau bagi mahasiswa serta pekerja muda Surabaya melalui akses pemesanan instan via WhatsApp yang anti-ribet.</p>
+        <ul>
+          <li><b>Digital Convenience:</b> ekosistem WhatsApp sebagai hub pemesanan cepat dan transaksi QRIS tanpa instalasi aplikasi tambahan.</li>
+          <li><b>Quality Consistency:</b> standar higienitas dan rasa konsisten di setiap cup.</li>
+          <li><b>Urban Efficiency:</b> layanan pesan-ambil responsif untuk mobilitas tinggi pagi hari.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 4. STP -->
+    <section id="stp" class="screen">
+      <h1>STP &amp; Gerbang GSTP</h1>
+      <p class="sub">Baca STP selengkapnya, lalu putuskan. Keputusan di prototype ini hanya simulasi tampilan.</p>
+      <div class="card">
+        <p>Status: <span id="stpStatus" class="badge b-ok">Disetujui (simulasi — GSTP sungguhan tercatat terpisah)</span></p>
+        <h2>Segmen</h2>
+        <p>Mahasiswa dan pekerja muda di Surabaya (usia 18–28 tahun) yang memiliki intensitas penggunaan ponsel tinggi, sangat bergantung pada WhatsApp untuk aktivitas harian, memiliki gaya hidup urban dengan mobilitas tinggi, serta menunjukkan pola konsumsi budget-conscious yang sensitif terhadap harga namun loyal pada metode pembayaran digital (QRIS) demi efisiensi.</p>
+        <h2>Targeting</h2>
+        <p>Fokus pada audiens Urban Hustlers di area kampus dan pusat perkantoran Surabaya dengan strategi akuisisi melalui WhatsApp Business dan konten video pendek (Reels/TikTok) yang mengarahkan langsung ke chat, serta memanfaatkan skema promosi e-wallet/QRIS untuk menjaga retensi di tengah perilaku konsumen yang sangat sensitif terhadap selisih harga.</p>
+        <h2>Positioning</h2>
+        <p>TEST Kopi adalah penyedia es kopi susu harian paling praktis di Surabaya yang menjamin konsistensi rasa dan higienitas melalui akses pemesanan WhatsApp yang instan dan pembayaran QRIS tanpa hambatan bagi gaya hidup sibuk Anda.</p>
+        <label>Catatan revisi / alasan tolak (wajib bila Revisi/Tolak)</label>
+        <textarea id="stpNote" placeholder="Tulis catatan revisi atau alasan tolak di sini…"></textarea>
+        <button class="btn btn-primary" onclick="setStp('ok')">Setujui STP (GSTP)</button>
+        <button class="btn" onclick="setStp('rev')">Minta Revisi</button>
+        <button class="btn btn-danger" onclick="setStp('no')">Tolak</button>
+        <div class="notice" id="stpNotice" style="display:none"></div>
+      </div>
+    </section>
+
+    <!-- 5. KALENDER -->
+    <section id="kalender" class="screen">
+      <h1>Kalender 7 Hari</h1>
+      <p class="sub">Klik kartu hari untuk membuka Brief &amp; QC hari itu.</p>
+      <div class="grid" id="calGrid"></div>
+    </section>
+
+    <!-- 6. BRIEF -->
+    <section id="brief" class="screen">
+      <h1>Brief &amp; QC (GKonten)</h1>
+      <p class="sub">Pilih item, periksa visual prompt, overlay, dan QC-nya, lalu putuskan GKonten per item.</p>
+      <div class="itemnav" id="briefNav"></div>
+      <div class="two">
+        <div class="card">
+          <h3 id="briefTitle">item-01 — Hari 1</h3>
+          <div class="imgbox" id="briefImg">Gambar menunggu provider<br>(Muse Image belum aktif)<br><small>Placeholder abu-abu ini BUKAN hasil generate.</small></div>
+          <h2>Visual prompt (text-free)</h2>
+          <p id="briefVisual"></p>
+          <h2>Overlay template</h2>
+          <p id="briefOverlay"></p>
+          <p id="briefSizes" style="color:#555"></p>
+        </div>
+        <div class="card">
+          <h3>QC (rule — bukan penilaian model live)</h3>
+          <p>Skor: <b>100 / 100</b> &nbsp; <span class="badge b-ok">Lolos</span></p>
+          <p>Pelanggaran: tidak ada. Catatan produksi: untuk item-03, QR harus menjadi overlay QR asli saat produksi (bukan digambar model); item-01 diperlakukan sebagai gambar statis satu adegan.</p>
+          <p>Status GKonten item ini: <span id="briefGk" class="badge b-ok">Disetujui (simulasi)</span></p>
+          <label>Catatan revisi / alasan tolak</label>
+          <textarea id="briefNote" placeholder="Tulis catatan revisi atau alasan tolak di sini…"></textarea>
+          <button class="btn btn-primary" onclick="setGk('ok')">Setujui Konten (GKonten)</button>
+          <button class="btn" onclick="setGk('rev')">Minta Revisi</button>
+          <button class="btn btn-danger" onclick="setGk('no')">Tolak</button>
+          <div class="notice" id="briefNotice" style="display:none"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. DISTRIBUSI -->
+    <section id="distribusi" class="screen">
+      <h1>Distribusi Draf &amp; Biaya / Jejak</h1>
+      <p class="sub">Distribusi berhenti di DRAF pada slice ini. Tidak ada tombol Terbitkan.</p>
+      <div class="card">
+        <h2 style="margin-top:0">Distribusi Draf (Postiz — DRAF saja)</h2>
+        <table>
+          <tr><th>Item</th><th>Hari / Tema</th><th>Channel</th><th>Status</th></tr>
+          <tr><td>item-01</td><td>Hari 1 — Kemudahan Pesan via WhatsApp</td><td>Reels/TikTok</td><td><span class="badge b-wait">Postiz DRAF</span></td></tr>
+          <tr><td>item-02</td><td>Hari 2 — Standarisasi Rasa</td><td>WhatsApp Status</td><td><span class="badge b-wait">Postiz DRAF</span></td></tr>
+          <tr><td>item-03</td><td>Hari 3 — Efisiensi QRIS</td><td>Reels/TikTok</td><td><span class="badge b-wait">Postiz DRAF</span></td></tr>
+          <tr><td>item-04</td><td>Hari 4 — Higienitas Kopi Harian</td><td>WhatsApp Status</td><td><span class="badge b-wait">Postiz DRAF</span></td></tr>
+          <tr><td>item-05</td><td>Hari 5 — Promo Bundling Hemat</td><td>Reels/TikTok</td><td><span class="badge b-wait">Postiz DRAF</span></td></tr>
+          <tr><td>item-06</td><td>Hari 6 — Kecepatan Layanan</td><td>WhatsApp Status</td><td><span class="badge b-wait">Postiz DRAF</span></td></tr>
+          <tr><td>item-07</td><td>Hari 7 — Lifestyle &amp; Refuel</td><td>Reels/TikTok</td><td><span class="badge b-wait">Postiz DRAF</span></td></tr>
+        </table>
+        <button class="btn" onclick="showNotice(this, 'Simulasi: 7 item akan dikirim ke Postiz sebagai DRAF (bukan terbit). Di aplikasi sungguhan, langkah ini menunggu Postiz berjalan.')">Kirim ke Postiz sebagai DRAF</button>
+        <div class="notice" style="display:none"></div>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0">Biaya &amp; Jejak (Rupiah dulu)</h2>
+        <p>Kurs referensi: Rp18.137 per USD (27 Okt 2026, Finnhub). Biaya yang harganya belum diketahui tampil "Belum diketahui", bukan Rp0 yang menyesatkan.</p>
+        <table>
+          <tr><th>Tahap</th><th>Model</th><th class="num">Token</th><th>Biaya</th></tr>
+          <tr><td>Fase 1 v2 (Riset + Behaviour + Strategi + STP)</td><td>Gemini 3.1-flash-lite</td><td class="num">4.660</td><td>Belum diketahui (harga belum di-baseline)</td></tr>
+          <tr><td>Fase 2 (Kalender + Brief)</td><td>Gemini 3.1-flash-lite</td><td class="num">3.604</td><td>Belum diketahui (harga belum di-baseline)</td></tr>
+          <tr><td>Ollama lokal (DeepSeek 1.5b / Qwen 3b)</td><td>Lokal MacBook</td><td class="num">—</td><td>Rp0 (marginal)</td></tr>
+          <tr><td>Hard limit ledger</td><td>—</td><td class="num">—</td><td>Rp90.685 (setara $5)</td></tr>
+        </table>
+        <h2>Jejak pekerjaan</h2>
+        <ul>
+          <li>trace-fase1-1793077341157 — Fase 1 v2 — selesai (4 panggilan live, non-mock)</li>
+          <li>trace-fase2-1793077740478 — Fase 2 — selesai (2 panggilan live, non-mock)</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+  var days = [
+    { day: 1, theme: "Kemudahan Pesan via WhatsApp", pillar: "Kenyamanan Digital", type: "Video Pendek (Reels/TikTok)", channel: "Instagram/TikTok", touch: "Penemuan", hook: "Capek antre kopi saat buru-buru ke kampus/kantor?", cta: "Klik link di bio buat pesan via WA sekarang!" },
+    { day: 2, theme: "Standarisasi Rasa yang Konsisten", pillar: "Konsistensi Kualitas", type: "Behind the Scenes (Video)", channel: "WhatsApp Status", touch: "Eksplorasi", hook: "Rasa kopi pagi ini sama enaknya dengan kemarin, fix nggak pakai drama.", cta: "Chat 'Mau' ke nomor ini buat order kopi favoritmu." },
+    { day: 3, theme: "Efisiensi QRIS untuk Urban Hustler", pillar: "Efisiensi Urban", type: "Ulasan Jujur/Testimoni", channel: "Instagram/TikTok", touch: "Transaksi", hook: "Dompet ketinggalan? Tenang, bayar pakai QRIS tinggal scan langsung beres.", cta: "Klik link di bio untuk pesan dan bayar instan." },
+    { day: 4, theme: "Solusi Higienitas Kopi Harian", pillar: "Konsistensi Kualitas", type: "Foto Produk (High Quality)", channel: "WhatsApp Status", touch: "Eksplorasi", hook: "Higienis itu wajib, apalagi untuk kopi yang diminum tiap hari.", cta: "Chat admin sekarang buat tanya menu hari ini." },
+    { day: 5, theme: "Promo Bundling Hemat", pillar: "Efisiensi Urban", type: "Konten Edukasi/Info Promo", channel: "Instagram/TikTok", touch: "Penemuan", hook: "Ngopi enak tiap hari tanpa bikin saldo menipis.", cta: "Cek promo bundling terbaru di chat WA kita!" },
+    { day: 6, theme: "Kecepatan Layanan", pillar: "Kenyamanan Digital", type: "Video POV/Interaksi Admin", channel: "WhatsApp Status", touch: "Transaksi", hook: "Admin kita siap bales chat secepat itu buat kopi kamu.", cta: "Buktikan kecepatan balas admin di chat sekarang." },
+    { day: 7, theme: "Lifestyle & Refuel", pillar: "Efisiensi Urban", type: "Video Estetik/Reels", channel: "Instagram/TikTok", touch: "Loyalitas/Advokasi", hook: "Siap hadapi deadline minggu depan bareng segelas TEST Kopi.", cta: "Order via WA, siap antar sampai depan kantor/kampus." }
+  ];
+  var briefs = [
+    { id: "item-01", day: 1, visual: "A busy young professional looking stressed while checking a watch in a crowded Surabaya street, transition to a happy face holding a coffee cup, blurred background of a modern office or campus.", overlay: "Antre kopi kelamaan? Pesan via WhatsApp di TEST Kopi sekarang!", sizes: ["1080x1920"] },
+    { id: "item-02", day: 2, visual: "Close-up cinematic shot of a barista precisely measuring ingredients and pouring espresso, bright and clean workspace, emphasis on professional coffee gear.", overlay: "Rasa konsisten tiap hari. Chat TEST Kopi buat order!", sizes: ["1080x1920"] },
+    { id: "item-03", day: 3, visual: "A person in an urban setting holding only a smartphone, scanning a small QR code sticker on a coffee counter with a smile, blurred city buildings in the background.", overlay: "Bayar pakai QRIS di TEST Kopi, simpel dan praktis!", sizes: ["1080x1920"] },
+    { id: "item-04", day: 4, visual: "High-quality macro shot of a sealed, clean coffee bottle/cup resting on a minimalist white surface, natural morning sunlight filtering through.", overlay: "TEST Kopi: Higienis untuk rutinitas harianmu. Chat admin!", sizes: ["1080x1920"] },
+    { id: "item-05", day: 5, visual: "Flat lay photography of two cups of coffee side by side with a small snack, vibrant and inviting colors, minimalist workspace setup.", overlay: "Promo bundling hemat di TEST Kopi. Klik link di bio!", sizes: ["1080x1920"] },
+    { id: "item-06", day: 6, visual: "Split screen showing a person typing 'pesan kopi' on a phone and a smiling barista immediately starting to prepare the drink, fast-paced atmosphere.", overlay: "Admin gercep! Pesan TEST Kopi via WA sekarang.", sizes: ["1080x1920"] },
+    { id: "item-07", day: 7, visual: "Esthetic shot of an iced coffee cup on a wooden desk near a laptop with a sunset or soft afternoon light, clean office/study environment.", overlay: "Siap hadapi minggu depan? Order TEST Kopi via WA!", sizes: ["1080x1920"] }
+  ];
+  function go(id) {
+    document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
+    document.getElementById(id).classList.add("active");
+    document.querySelectorAll("nav button").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-go") === id); });
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll("[data-go]").forEach(function (el) {
+    el.addEventListener("click", function () { go(el.getAttribute("data-go")); });
+  });
+  function showNotice(btn, text) {
+    var box = btn.parentElement.querySelector(".notice");
+    if (box) { box.style.display = "block"; box.textContent = text; }
+  }
+  function setStp(kind) {
+    var badge = document.getElementById("stpStatus");
+    var note = document.getElementById("stpNote").value.trim();
+    var box = document.getElementById("stpNotice");
+    box.style.display = "block";
+    if (kind === "ok") { badge.className = "badge b-ok"; badge.textContent = "Disetujui (simulasi)"; box.textContent = "Simulasi: STP ditandai Disetujui di prototype ini saja. Approval GSTP sungguhan tetap tercatat terpisah."; }
+    else if (kind === "rev") { badge.className = "badge b-wait"; badge.textContent = "Menunggu Revisi (simulasi)"; box.textContent = "Simulasi: revisi diminta dengan catatan: " + (note || "(tanpa catatan)"); }
+    else { badge.className = "badge b-no"; badge.textContent = "Ditolak (simulasi)"; box.textContent = "Simulasi: STP ditandai Ditolak dengan alasan: " + (note || "(tanpa alasan)"); }
+  }
+  var calGrid = document.getElementById("calGrid");
+  days.forEach(function (d) {
+    var b = document.createElement("button");
+    b.className = "daycard";
+    b.innerHTML = "<b>Hari " + d.day + " — " + d.theme + "</b><br>" + d.pillar + " &bull; " + d.type + "<br>Channel: " + d.channel + " &bull; Touch: " + d.touch + "<br><i>" + d.hook + "</i><br>CTA: " + d.cta;
+    b.addEventListener("click", function () { showBrief(d.day - 1); go("brief"); });
+    calGrid.appendChild(b);
+  });
+  var briefNav = document.getElementById("briefNav");
+  briefs.forEach(function (br, i) {
+    var b = document.createElement("button");
+    b.textContent = br.id;
+    b.addEventListener("click", function () { showBrief(i); });
+    briefNav.appendChild(b);
+  });
+  function showBrief(i) {
+    var br = briefs[i];
+    document.getElementById("briefTitle").textContent = br.id + " — Hari " + br.day;
+    document.getElementById("briefVisual").textContent = br.visual;
+    document.getElementById("briefOverlay").textContent = br.overlay;
+    document.getElementById("briefSizes").textContent = "Ukuran channel: " + br.sizes.join(", ") + " • Gambar: menunggu provider (pending-provider)";
+    document.querySelectorAll("#briefNav button").forEach(function (b, j) { b.classList.toggle("active", j === i); });
+  }
+  function setGk(kind) {
+    var badge = document.getElementById("briefGk");
+    var note = document.getElementById("briefNote").value.trim();
+    var box = document.getElementById("briefNotice");
+    box.style.display = "block";
+    if (kind === "ok") { badge.className = "badge b-ok"; badge.textContent = "Disetujui (simulasi)"; box.textContent = "Simulasi: item ini ditandai Disetujui di prototype ini saja."; }
+    else if (kind === "rev") { badge.className = "badge b-wait"; badge.textContent = "Menunggu Revisi (simulasi)"; box.textContent = "Simulasi: revisi diminta dengan catatan: " + (note || "(tanpa catatan)"); }
+    else { badge.className = "badge b-no"; badge.textContent = "Ditolak (simulasi)"; box.textContent = "Simulasi: item ini ditandai Ditolak dengan alasan: " + (note || "(tanpa alasan)"); }
+  }
+  showBrief(0);
+</script>
+</body>
+</html>

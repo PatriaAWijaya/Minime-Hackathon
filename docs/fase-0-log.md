@@ -374,3 +374,19 @@ dokumen lama yang dipakai.
   teknologi usulan Tauri 2 + Svelte 5 (PROVISIONAL, dibangun dari
   nol di repo ini — bukan salinan proyek lama; alternatif Electron
   dicatat). Gerbang fase ini = persetujuan draf oleh Patria.
+
+- 27 Okt siang (perintah Patria "buatkan prototype dulu dengan
+  project dummy, kita revisi dari sana"): PROTOTYPE KLIK DIBUAT di
+  prototype/index.html (satu file HTML mandiri, tanpa dependensi
+  eksternal, tanpa backend). Isi: 7 layar sesuai draf UI (Proyek,
+  Intake, Riset & Strategi, STP/GSTP, Kalender 7 Hari, Brief &
+  QC/GKonten, Distribusi & Biaya), proyek dummy TEST Kopi Surabaya
+  dengan data draf Fase 1 v2 + Fase 2 (kalender, brief, QC, token,
+  biaya Rp), navigasi sidebar, klik kartu kalender -> brief hari
+  itu, tombol gerbang Setujui/Revisi/Tolak yang mengubah status
+  TAMPILAN saja. Penanda kejujuran: banner atas prototype
+  menyatakan klik TIDAK menyimpan approval sungguhan; approval
+  GSTP/GKonten sungguhan tetap di record docs terpisah. Verifikasi:
+  7 layar, semua target navigasi valid, 7 hari + 7 brief, JS lolos
+  node --check, tanpa referensi eksternal. Status: MENUNGGU REVISI
+  Patria dari prototype ini (bukan persetujuan gerbang).
