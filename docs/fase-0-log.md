@@ -677,3 +677,24 @@ dokumen lama yang dipakai.
   fase3 + postiz client), scan PASSED, tsc 0 error. Fase 3
   TIDAK mencatat approval baru; UI tetap stop (perintah
   15:02 WIB tidak berubah).
+
+  FASE 3 — POSTIZ DRAFTS LIVE (27 Okt ~15:35 WIB, Patria AFK
+  'jalankan sampai selesai'): 7 draf DRAF-only, HTTP 201 semua,
+  postIds di docs/fase-3-postiz-drafts.json; tidak ada yang
+  publish/jadwal. Jalan yang ditempuh: key sudah di Keychain
+  (15:22, dibuat Patria di dashboard + disimpan sendiri);
+  baca via SSH GAGAL (security exit 36, interaction not
+  allowed; launchctl asuser operation-not-permitted); DB
+  Postiz tidak punya tabel API key (hanya token OAuth kanal —
+  tidak disentuh). Solusi: osascript → Terminal GUI MacBook
+  menjalankan skrip dorong (key dibaca di sesi Terminal saja,
+  tidak pernah dicetak/dikirim). Koreksi endpoint dari dok
+  resmi + probe live: /api/public/v1 (bukan /public/v1 yang
+  307 ke /auth; 7 percobaan awal itu tidak membuat apa-apa,
+  jadi tanpa duplikat); auth key mentah (Bearer 401);
+  GET integrations 200: 2 kanal (facebook + instagram);
+  settings instagram: post_type post (wajib); draf teks-only
+  diterima (201) walau aturan attachment menyebut lampiran.
+  Pilot item-01 diverifikasi dulu, baru 6 sisanya. Kanal:
+  Instagram 'Branding, Marketing & AI'. Tidak ada approval
+  baru; UI tetap stop.

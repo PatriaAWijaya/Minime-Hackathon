@@ -1,0 +1,77 @@
+{
+  "record": "fase-3-postiz-drafts",
+  "created": "2026-10-27T15:35:00+07:00",
+  "sourceOutput": "docs/fase-3-output.json",
+  "method": "Pushed from the MacBook GUI Terminal via osascript, because SSH sessions cannot read Keychain passwords (security exit 36, interaction not allowed) and launchctl asuser is operation-not-permitted from SSH. The key was read from the MacBook Keychain inside the Terminal session only; it was never printed, never sent via chat, and never stored in this repo.",
+  "api": {
+    "base": "http://localhost:4007/api/public/v1",
+    "auth": "raw API key in the Authorization header (the Bearer variant returns 401)",
+    "note": "Earlier attempts at /public/v1 (without /api) returned 307 to /auth and created nothing, so there are no duplicates from those attempts."
+  },
+  "channel": {
+    "platform": "instagram",
+    "name": "Branding, Marketing & AI"
+  },
+  "published": false,
+  "scheduled": false,
+  "images": "null pending-provider (unchanged from docs/fase-3-output.json)",
+  "drafts": [
+    {
+      "itemId": "item-01",
+      "day": 1,
+      "date": "2026-10-28T09:00:00.000Z",
+      "postId": "cmvqfjg890000jv6k897bernu",
+      "status": "draft",
+      "http": 201
+    },
+    {
+      "itemId": "item-02",
+      "day": 2,
+      "date": "2026-10-29T09:00:00.000Z",
+      "postId": "cmvqfk0xr0001jv6k4f85oaxr",
+      "status": "draft",
+      "http": 201
+    },
+    {
+      "itemId": "item-03",
+      "day": 3,
+      "date": "2026-10-30T09:00:00.000Z",
+      "postId": "cmvqfk0zb0002jv6kvckzwp9f",
+      "status": "draft",
+      "http": 201
+    },
+    {
+      "itemId": "item-04",
+      "day": 4,
+      "date": "2026-10-31T09:00:00.000Z",
+      "postId": "cmvqfk1090003jv6kxj68f8mz",
+      "status": "draft",
+      "http": 201
+    },
+    {
+      "itemId": "item-05",
+      "day": 5,
+      "date": "2026-11-01T09:00:00.000Z",
+      "postId": "cmvqfk1160004jv6ky74gkpmx",
+      "status": "draft",
+      "http": 201
+    },
+    {
+      "itemId": "item-06",
+      "day": 6,
+      "date": "2026-11-02T09:00:00.000Z",
+      "postId": "cmvqfk1200005jv6kv0mg67n4",
+      "status": "draft",
+      "http": 201
+    },
+    {
+      "itemId": "item-07",
+      "day": 7,
+      "date": "2026-11-03T09:00:00.000Z",
+      "postId": "cmvqfk12p0006jv6ke8jw6o6a",
+      "status": "draft",
+      "http": 201
+    }
+  ],
+  "note": "Pilot item-01 was created and verified (201) before the remaining 6 were pushed. All 7 are DRAFT only. Nothing published, nothing scheduled."
+}

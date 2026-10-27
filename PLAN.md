@@ -119,16 +119,18 @@ copied from the main Minime repository.
   review), approved items enter Postiz as DRAFT only (never live
   publish in this demo). Executed 27 Oct sore via Gemini (1 call,
   2.595 tokens): 7 carousels x 3 slides, QC rule 100/100 all
-  21 slides, images null pending-provider. Postiz leg PARTIAL:
-  MacBook awake, Docker started via SSH, postiz/postgres/redis
-  containers UP, API answers 307 (alive) — but the pos_ API key
-  is NOT in the MacBook Keychain, so all 7 drafts are saved with
-  status pending-postiz (published false, postizLive false).
-  Unlock step (Patria): create the API key in the Postiz dashboard
-  (localhost:4007) + store it in Keychain per INTEGRASI_MINIME.md
-  §2, then the saved drafts can be pushed as DRAFTS from the
-  MacBook via SSH (the key never leaves the MacBook). Output
-  docs/fase-3-output.json. Code: src/fase3.ts + src/postiz.ts
+  21 slides, images null pending-provider. Postiz leg COMPLETED
+  27 Oct ~15:35 WIB (Patria AFK: 'jalankan sampai selesai'):
+  all 7 drafts pushed as DRAFT only (HTTP 201 each, postIds in
+  docs/fase-3-postiz-drafts.json; nothing published, nothing
+  scheduled). Corrections found live: correct self-host path is
+  /api/public/v1 (not /public/v1, which 307-redirects to /auth
+  and creates nothing); auth is the raw key in Authorization
+  (Bearer variant 401s); channel = Instagram 'Branding,
+  Marketing & AI'; key read from MacBook Keychain inside a GUI
+  Terminal session (SSH cannot read Keychain passwords, exit 36)
+  and never printed or sent via chat. Output
+  docs/fase-3-output.json (+ record above). Code: src/fase3.ts + src/postiz.ts
   (draft-only client: no publish/schedule method). Negative gate
   tests pass (no GKonten/GSTP → GateError; payload always draft).
 - **Phase 4 — Loop proof, Thu 29 Oct (morning):** public Form → CRM
