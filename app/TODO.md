@@ -60,6 +60,10 @@
 - [x] Tier 2 (1/3): probe + asset library + log + push
   (video_probe + video_asset_hash + panel Aset; rebuild MacBook rantai v15 sukses, app jalan PID 31841;
   bukti live klik panel Aset menunggu Patria; Tier 2 (2/3) + (3/3) antre berikutnya)
+- [x] Tier 2 (2/3): audio mix/ducking + caption ASS sidecar + log + push
+  (ducking sidechaincompress/amix via asplit + Simpan ASS; rebuild MacBook rantai v16 sukses, app jalan PID 32865;
+  bukti live klik ducking + Simpan ASS menunggu Patria; burn-in caption BLOKIR ffmpeg tanpa subtitles/drawtext;
+  Tier 2 (3/3) transkripsi antre berikutnya)
 
 ## Parked (Patria's call)
 - [ ] `.dmg` distribution build
