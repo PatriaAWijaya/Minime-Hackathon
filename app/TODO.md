@@ -54,6 +54,9 @@
   bukti live menunggu VoiceStudio.app dibuka Patria)
 - [x] Hapus 6 kalimat catatan (perintah Patria 20:35) + log + push
   (bundle terverifikasi 0 kemunculan; rebuild MacBook rantai v13 sukses, app jalan PID 29831)
+- [x] Video engine Tier 1 (perintah Patria 20:40) + audit detail (perintah Patria 20:49) + log + push
+  (semua gerbang hijau; rebuild MacBook rantai v14 sukses, app jalan PID 30714;
+  bukti live klik Render menunggu Patria; Tier 2-3 antre berikutnya)
 
 ## Parked (Patria's call)
 - [ ] `.dmg` distribution build
