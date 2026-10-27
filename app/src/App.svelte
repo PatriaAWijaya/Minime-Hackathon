@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, addGraphEdge, doSearch, filterAgents, mediaTab, primeCurate, quickChat, refreshBackendData, renderAgents, renderDetail, renderKanban, renderMedia, renderPlanner, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, primeCurate, quickChat, refreshBackendData, renderAgents, renderDetail, renderKanban, renderMedia, renderPlanner, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
   import { createPostizDraftFromComposer } from "./lib/postiz.js";
@@ -287,18 +287,6 @@
       <button class="btn btn-primary" onclick={() => { runGraphSim() }}>{t('graph.run', lang)}</button></div>
       <div class="scroll">
         <div class="n8n-canvas" id="graphBox"><svg id="graphEdges"></svg><div id="graphNodes"></div></div>
-        <div style="background:#1f1f1f;border:1px solid #2a2a2a;border-radius:8px;padding:12px;margin-top:12px">
-          <h3 style="margin:0 0 6px" id="gnodeInfo">{t('graph.nodedetail', lang)}</h3>
-          <p id="gnodeDetail" style="color:#a1a1a1;margin:0">{t('graph.detail', lang)}</p>
-        </div>
-        <label>{t('settings.addconn', lang)}</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <select id="gFrom" style="flex:1"></select>
-          <select id="gTo" style="flex:1"></select>
-          <input type="text" id="gLabel" placeholder={t('flow.ph', lang)} style="flex:1">
-          <button class="btn btn-primary" onclick={() => { addGraphEdge() }}>+ Tambah</button>
-        </div>
-        <ul id="graphList"></ul>
         <div class="notice" id="graphNotice" style="display:none"></div>
       </div>
     </div>

@@ -291,13 +291,6 @@ export function renderGraph() {
         dragStart = { x: e.clientX, y: e.clientY };
         e.preventDefault();
       });
-      el.addEventListener("click", function () {
-        if (dragMoved) return;
-        var outs = GEDGES.filter(function (e) { return e.f === k; }).map(function (e) { return GNODES[e.t].name + (e.l ? " (" + e.l + ")" : ""); }).join(", ") || "tidak ada";
-        var ins = GEDGES.filter(function (e) { return e.t === k; }).map(function (e) { return GNODES[e.f].name + (e.l ? " (" + e.l + ")" : ""); }).join(", ") || "tidak ada";
-        document.getElementById("gnodeInfo").textContent = nd.name;
-        document.getElementById("gnodeDetail").textContent = nd.desc + " Keluar: " + outs + ". Masuk: " + ins + ".";
-      });
       wrap.appendChild(el);
     });
     var rects = nodeRects();
@@ -337,29 +330,6 @@ export function renderGraph() {
         svg.appendChild(t);
       }
     });
-    document.getElementById("graphList").innerHTML = GEDGES.map(function (e) {
-      return "<li>" + GNODES[e.f].name + " → " + GNODES[e.t].name + (e.l ? " — " + e.l : "") + (e.dashed ? " (putus-putus)" : "") + "</li>";
-    }).join("");
-  }
-
-export function buildEdgeOptions() {
-    var gf = document.getElementById("gFrom"), gt = document.getElementById("gTo");
-    gf.innerHTML = ""; gt.innerHTML = "";
-    Object.keys(GNODES).forEach(function (k) {
-      var o1 = document.createElement("option"); o1.value = k; o1.textContent = GNODES[k].name; gf.appendChild(o1);
-      var o2 = document.createElement("option"); o2.value = k; o2.textContent = GNODES[k].name; gt.appendChild(o2);
-    });
-  }
-
-export function addGraphEdge() {
-    var f = document.getElementById("gFrom").value, t = document.getElementById("gTo").value;
-    var label = document.getElementById("gLabel").value.trim() || "";
-    if (f === t) { alert("Sumber dan tujuan tidak boleh sama."); return; }
-    GEDGES.push({ f: f, t: t, l: label });
-    renderGraph();
-    var n = document.getElementById("graphNotice");
-    n.style.display = "block";
-    n.textContent = "Simulasi: koneksi " + GNODES[f].name + " → " + GNODES[t].name + (label ? " (" + label + ")" : "") + " ditambahkan (tampilan saja).";
   }
 
 export function addNodeAfter(key) {
@@ -368,7 +338,6 @@ export function addNodeAfter(key) {
     var nk = "baru" + nodeCounter;
     GNODES[nk] = { name: "Node Baru " + nodeCounter, sub: "simulasi", icon: "＋", x: Math.min(90, src.x + 14), y: src.y, w: 150, kind: "output", desc: "Node baru dari tombol ＋ (simulasi) — di aplikasi sungguhan, node ini bisa diisi agen/tool lain." };
     GEDGES.push({ f: key, t: nk, l: "" });
-    buildEdgeOptions();
     renderGraph();
     var n = document.getElementById("graphNotice");
     n.style.display = "block";
@@ -732,7 +701,6 @@ export function initV5() {
       renderGraph();
     });
   document.addEventListener("mouseup", function () { dragNode = null; });
-  buildEdgeOptions();
   document.querySelectorAll("[data-filter]").forEach(function (b) {
       b.addEventListener("click", function () {
         document.querySelectorAll("[data-filter]").forEach(function (x) { x.classList.remove("active"); });
@@ -782,5 +750,5 @@ export function initV5() {
   waInputChanged();
   var _ms = document.getElementById('msScript');
   if (_ms) { try { _ms.value = localStorage.getItem('minime.script') || ''; } catch (_) {} }
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addGraphEdge, addKanbanList, addNodeAfter, agentKeyByName, buildEdgeOptions, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libRevise, libSave, libUse, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addKanbanList, addNodeAfter, agentKeyByName, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libRevise, libSave, libUse, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }
