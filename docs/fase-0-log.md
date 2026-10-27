@@ -206,3 +206,23 @@ dokumen lama yang dipakai.
   Kedua model sudah terbukti live terpisah di MacBook (1.5b GPU 4,2 detik;
   qwen2.5:3b 2,5 detik), jadi rantai ini berdiri di atas bukti live,
   bukan sekadar struktur.
+
+- 27 Okt ~11:30 WIB (perintah Patria "lanjut kerjakan yang belum selesai"):
+  (1) fase-0-gate-results.md diperbarui ke status terkini (vonis tetap
+  TIDAK LOLOS PENUH; kaki Ollama lolos, Gemini live lewat konektor lolos,
+  router-code Gemini + Muse tertunda). (2) Status Postiz tercatat:
+  terinstal di ~/postiz-mac/postiz-mac/ (v2.25.1, 17 Okt) + Postiz.app di
+  Desktop, TETAPI tidak berjalan (port 4007 kosong, Docker daemon tidak
+  jalan; port 5000 adalah Control Center/AirPlay, bukan Postiz) — verifikasi
+  API Postiz menunggu Docker + start Postiz di Fase 3. (3) Temuan auth
+  Gemini: router memakai header x-goog-api-key, sementara kredensial
+  Secure Vault hanya berlaku lewat ?key= + surrogate yang ditukar
+  Sentinel di egress (cara kerja konektor CLI) — jadi tes live lewat
+  kode router tertunda sampai plumbing auth diadaptasi; live lewat
+  konektor terbukti (gemini-3.1-flash-lite, 21 input + 65 output token,
+  ~3 detik). Re-baseline parsial: Ollama Rp0; Gemini ~$0,0001 per tugas
+  singkat pada tarif publikasi sekunder (perlu konfirmasi pricing
+  resmi Google). (4) Draf Fase 1 dibuat di docs/fase-1-draft.md
+  (TEST-BRAND-001, tanpa approval GS/GSTP atas nama Patria).
+  Tetap terblokir Patria-only: klaim/kartu/Spend Limit Meta, harga
+  Muse Image, keputusan final brand/provider/Postiz, GSTP.
