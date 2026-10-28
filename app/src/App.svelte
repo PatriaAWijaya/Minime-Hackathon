@@ -1,17 +1,19 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, primeCurate, quickChat, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderMedia, renderPlanner, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, primeCurate, quickChat, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderPlanner, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
   import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
   import { sherpaSetup, sherpaTtsFromTab, sherpaRenderStatus, sherpaRefreshUI } from "./lib/sherpa.js";
   import { initScriptEditor, setSeMenu, seRefreshUI } from "./lib/script-editor.js";
+  import { initImageFlow, imgRefreshUI, readImgSpend } from "./lib/image-flow.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtInt, fmtUsd } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
   import { invoke } from "@tauri-apps/api/core";
 
   let lang = $state(getLang());
+  let imgSpend = $state(readImgSpend());
 
   function applyLanguage(value: string) {
     const next = value === 'en' || value === 'zh' ? value : 'id';
@@ -21,7 +23,7 @@
     renderAgents();
     renderKanban();
     renderPlanner();
-    renderMedia();
+    imgRefreshUI();
     renderCampaign();
     renderDetail();
     vsRefreshVoiceUI();
@@ -36,6 +38,8 @@
     setSendChatImpl(sendChatReal);
     vsRenderStatus();
     initScriptEditor();
+    initImageFlow();
+    (window as unknown as Record<string, unknown>).refreshImgSpend = () => { imgSpend = readImgSpend(); };
     updateKeyStatus();
   });
 
@@ -325,16 +329,26 @@
           </div>
         </div>
         <div id="ms-tab-image" style="display:none">
-          <div class="filters">
-          <button class="active" data-filter="semua">{t('filter.all', lang)}</button>
-          <button data-filter="gambar">{t('filter.gambar', lang)}</button>
-          <button data-filter="carousel">{t('filter.carousel', lang)}</button>
-          <button data-filter="reels">{t('filter.reels', lang)}</button>
-          <button data-filter="talking">{t('filter.talking', lang)}</button>
-          </div>
-          <div class="mediagrid" id="mediaGrid"></div>
-          <div class="notice" id="mediaNotice" style="display:none"></div>
-          <p style="color:#a1a1a1;font-size:13px">{t('ms.image.note', lang)}</p>
+          <h3>{t('img.title', lang)}</h3>
+          <div class="se-group"><label>{t('img.brief', lang)}<textarea id="img-brief" rows="4" class="se-field" placeholder={t('img.brief.ph', lang)}></textarea></label></div>
+          <div class="se-group"><label>{t('img.ratio', lang)}<select id="img-ratio" class="se-field">
+            <option value="1:1">1:1</option><option value="4:5">4:5</option><option value="9:16">9:16</option><option value="16:9">16:9</option><option value="3:4">3:4</option><option value="3:2">3:2</option><option value="2:3">2:3</option>
+          </select></label></div>
+          <div class="se-group"><label>{t('img.style', lang)}<select id="img-style" class="se-field">
+            <option value="product photography">product photography</option><option value="illustration">illustration</option><option value="flat design">flat design</option><option value="poster design">poster design</option><option value="photorealistic">photorealistic</option>
+          </select></label></div>
+          <div class="se-group"><label><input type="checkbox" id="img-textfree" checked> {t('img.textfree', lang)}</label></div>
+          <div class="se-group"><label>{t('img.n', lang)}<select id="img-n" class="se-field">
+            <option value="1">1</option><option value="2">2</option><option value="4">4</option>
+          </select></label></div>
+          <div id="img-preview" class="se-note"></div>
+          <div class="se-group"><button id="img-generate" class="se-btn">{t('img.generate', lang)}</button> <button id="img-load-script" class="se-btn2">{t('img.loadscript', lang)}</button></div>
+          <div id="img-status" class="se-note"></div>
+          <div id="img-cost" class="se-note"></div>
+          <div id="img-loaded" class="img-card" style="display:none"></div>
+          <div id="img-variants" class="mediagrid"></div>
+          <h4>{t('img.gallery', lang)}</h4>
+          <div id="img-gallery" class="mediagrid"></div>
         </div>
         <div id="ms-tab-voice" style="display:none">
           <h3>{t('ms.tab.voice', lang)}</h3>
@@ -526,6 +540,12 @@
             <div>{t('cost.col.usd', lang)}: {fmtUsd(r, lang)} · {t('cost.col.idr', lang)}: {fmtIdr(r, lang)}</div>
           </div>
           {/each}
+          {#if imgSpend.images > 0}
+          <div style="margin-bottom:12px">
+            <div><b>muse-image-1.0</b> <span style="color:#a1a1a1">Meta</span></div>
+            <div>{t('img.billing', lang, { n: imgSpend.images })} · ${imgSpend.usd.toFixed(2)} ≈ Rp{imgSpend.idr.toLocaleString('id-ID')}</div>
+          </div>
+          {/if}
           <div style="border-top:1px solid #2a2a2a;padding-top:12px"><b>{t('cost.total', lang)}</b>: {COST_TOTAL.calls} {t('cost.col.calls', lang)} · {fmtInt(COST_TOTAL.tokens, lang)} {t('cost.col.tokens', lang)} · {fmtUsd(COST_TOTAL, lang)} · {fmtIdr(COST_TOTAL, lang)}</div>
         </div>
         <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px">

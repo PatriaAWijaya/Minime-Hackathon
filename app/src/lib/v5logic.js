@@ -427,9 +427,26 @@ export function renderLib() {
 /* Recall ke Media Studio: muat isi (atau judul bila tanpa isi) ke
    output Script Editor yang bisa diedit, lalu buka tab Script.
    Jembatan window.seLoadOutput dipasang modul script-editor saat init. */
+export function libAddImage(title, prompt, imageFile, costUsd) {
+  var all = libAll();
+  for (var k = 0; k < all.length; k++) {
+    if (all[k].imageFile && all[k].imageFile === imageFile) return { index: k, added: false };
+  }
+  LIB_ADDED.push({ o: title, a: "Kreatif", s: "Disetujui", badge: "b-ok", content: prompt, kind: "image", imageFile: imageFile, costUsd: costUsd });
+  saveLibAdded();
+  renderLib();
+  return { index: all.length, added: true };
+}
+
 export function libMedia(i) {
     var item = libAll()[i];
     if (!item) return;
+    if (item.kind === "image" && item.imageFile) {
+      showView("media");
+      mediaTab("image");
+      if (typeof window.imgLoadSaved === "function") window.imgLoadSaved(item);
+      return;
+    }
     var text = item.content || item.o;
     if (typeof window.seLoadOutput === "function") window.seLoadOutput(text);
     showView("media");
@@ -459,46 +476,6 @@ export function libRevise(i) {
 
 export function mediaBadge(s) { return s === "Siap untuk Post" ? "b-ok" : (s === "Menunggu GKonten" || s === "Menunggu provider" ? "b-wait" : "b-idle"); }
 
-export function renderMedia() {
-    var grid = document.getElementById("mediaGrid");
-    grid.innerHTML = "";
-    MEDIA.filter(function (m) { return mediaFilter === "semua" || m.type === mediaFilter; }).forEach(function (m) {
-      var idx = MEDIA.indexOf(m);
-      var card = document.createElement("div"); card.className = "mediacard";
-      var visual = "";
-      if (m.type === "gambar") visual = '<div class="ph">Placeholder gambar dummy<br><small>Bukan hasil generate</small></div>';
-      if (m.type === "carousel") visual = '<div class="ph">Placeholder carousel dummy<br><b>' + m.slides[m.cur] + '</b><br><small>Slide ' + (m.cur + 1) + ' dari ' + m.slides.length + '</small></div>'
-        + '<button class="btn btn-sm" onclick="carSlide(' + idx + ',-1)">← Slide</button><button class="btn btn-sm" onclick="carSlide(' + idx + ',1)">Slide →</button>';
-      if (m.type === "reels") visual = '<div class="ph tall"><div><div style="font-size:42px">▶</div>Placeholder reels dummy<br><small>9:16 — bukan video sungguhan</small></div></div>';
-      if (m.type === "talking") visual = '<div class="ph"><div>Avatar dummy<br><small>Talking head — bukan video sungguhan</small></div></div>'
-        + '<label>Naskah (bisa diedit)</label><textarea id="script' + idx + '">' + m.script + '</textarea><button class="btn btn-sm" onclick="saveScript(' + idx + ')">Simpan Naskah (simulasi)</button>';
-      card.innerHTML = "<span class='badge " + mediaBadge(m.status) + "'>" + m.status + "</span> <span class='badge b-idle'>" + m.type + "</span><h3 style='margin-top:10px;font-size:15px'>" + m.title + "</h3>" + visual + "<p style='font-size:14px;color:#555'>" + m.desc + "</p>"
-        + "<button class='btn btn-sm' onclick='mediaToPlanner(" + idx + ")'>Siapkan untuk Post → Planner</button>";
-      grid.appendChild(card);
-    });
-  }
-
-export function carSlide(idx, dir) {
-    var m = MEDIA[idx];
-    m.cur = (m.cur + dir + m.slides.length) % m.slides.length;
-    renderMedia();
-  }
-
-export function saveScript(idx) {
-    var v = document.getElementById("script" + idx).value;
-    MEDIA[idx].script = v;
-    var n = document.getElementById("mediaNotice"); n.style.display = "block";
-    n.textContent = "Simulasi: naskah '" + MEDIA[idx].title + "' diperbarui (tampilan saja). Render ulang sungguhan adalah pekerjaan build.";
-  }
-
-export function mediaToPlanner(idx) {
-    var m = MEDIA[idx];
-    m.status = "Siap untuk Post";
-    PLANNER.push({ item: m.title, ch: "Instagram / Postiz", when: tr('planner.when.session'), st: tr('planner.status.local'), postId: "—" });
-    renderMedia(); renderPlanner();
-    var n = document.getElementById("mediaNotice"); n.style.display = "block";
-    n.textContent = tr('media.toplanner.note', {title: m.title});
-  }
 
 export function renderPlanner() {
     document.getElementById("plannerBody").innerHTML = PLANNER.map(function (p) {
@@ -727,7 +704,7 @@ var PROJECTS = {
     ]}
   };
 
-var currentProj = "kopi", selectedAgent = "prime", mediaFilter = "semua";
+var currentProj = "kopi", selectedAgent = "prime";
 
 /* Collapsible project groups (28 Okt): status buka/tutup per project
    disimpan di localStorage agar bertahan antar restart; default semua
@@ -786,15 +763,6 @@ var LIB = [
   ];
 
 /* ---------- Media Studio ---------- */
-var MEDIA = [
-    { type: "gambar", title: "Gambar Hari 1 — Kemudahan Pesan via WA", status: "Siap untuk Post", desc: "Gambar statis text-free. Placeholder dummy — bukan hasil generate." },
-    { type: "gambar", title: "Gambar Hari 4 — Higienitas Kopi Harian", status: "Menunggu provider", desc: "Placeholder dummy — bukan hasil generate." },
-    { type: "carousel", title: "Carousel Hari 3 — Efisiensi QRIS", status: "Siap untuk Post", desc: "Slide hook → isi → CTA. Tombol geser slide di bawah (simulasi).", slides: ["Hook: Dompet ketinggalan?", "Isi: Scan QRIS, beres.", "CTA: Pesan via WA"], cur: 0 },
-    { type: "carousel", title: "Carousel Hari 5 — Promo Bundling Hemat", status: "Menunggu GKonten", desc: "Slide hook → bundling → CTA. Placeholder dummy.", slides: ["Hook: Ngopi hemat tiap hari", "Isi: Bundling hemat", "CTA: Cek promo di WA"], cur: 0 },
-    { type: "reels", title: "Reels Hari 1 — Capek antre kopi? (9:16)", status: "Siap untuk Post", desc: "Video pendek vertikal. Placeholder dummy — bukan video sungguhan." },
-    { type: "talking", title: "Talking Head — Promo Bundling", status: "Menunggu GKonten", desc: "Avatar + naskah. Edit naskah di bawah, lalu Simpan (simulasi).", script: "Ngopi enak tiap hari tanpa bikin saldo menipis — cek promo bundling TEST Kopi di chat WA kita!" },
-    { type: "talking", title: "Talking Head — Kenapa QRIS?", status: "Draf", desc: "Avatar + naskah edukasi QRIS. Placeholder dummy.", script: "Dompet ketinggalan bukan masalah — bayar pakai QRIS, scan langsung beres." }
-  ];
 
 var PLANNER = plannerReal();
 
@@ -820,14 +788,6 @@ export function initV5() {
       renderGraph();
     });
   document.addEventListener("mouseup", function () { dragNode = null; });
-  document.querySelectorAll("[data-filter]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        document.querySelectorAll("[data-filter]").forEach(function (x) { x.classList.remove("active"); });
-        b.classList.add("active");
-        mediaFilter = b.getAttribute("data-filter");
-        renderMedia();
-      });
-    });
   document.querySelectorAll(".sidebar button").forEach(function (b) {
       b.addEventListener("click", function () { showView(b.getAttribute("data-view")); });
     });
@@ -839,7 +799,6 @@ export function initV5() {
   renderKanban();
   renderGraph();
   renderLib();
-  renderMedia();
   renderPlanner();
   (function () {
     document.querySelectorAll('[data-kbtab]').forEach(function (b) {
@@ -869,5 +828,5 @@ export function initV5() {
   waInputChanged();
   var _ms = document.getElementById('msScript');
   if (_ms) { try { _ms.value = localStorage.getItem('minime.script') || ''; } catch (_) {} }
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddScript, libAll, libChat, libMedia, libRevise, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libChat, libMedia, libRevise, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

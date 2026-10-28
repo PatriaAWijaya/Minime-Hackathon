@@ -59,3 +59,7 @@ h3 { font-size: 18px; }
 .colhead h2 { font-size: 18px; }
 .agent-scope { font-size: 15px; }
 .cur-label { font-size: 12px; }
+
+/* Kartu gambar (flow Image + galeri): gambar mengisi kartu. */
+.img-card { background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.img-card img { width: 100%; border-radius: 8px; display: block; }

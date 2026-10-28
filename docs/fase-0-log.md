@@ -1556,3 +1556,12 @@ dokumen lama yang dipakai.
 - Delegasi = peta kata kunci PROVISIONAL (riset/strategi/kreatif/distribusi/media-sempit, urutan pertama menang; tanpa kecocokan -> Prime menjawab langsung). "Aktif" = terpilih & terlihat di list, BUKAN mengubah toggle Nonaktif (kontrol eksplisit user). Kunci i18n: 378 x 3 (6 baru, chat.you yang mati dihapus).
 - Gerbang: root+app tsc 0, svelte-check 0/43, vite build OK, rig-chat BARU 18/18 + rig-script/rig-vs/rig-sherpa tetap PASS.
 - MENUNGGU: commit/push -> rantai (digabung dengan v34 saat Mac dibuka Patria).
+
+## Flow gambar lengkap (28 Okt, perintah Patria 19:30 WIB)
+- PROBE LIVE dulu (langkah 0): POST /v1/images/generations, STATUS 200, respons {data:[{b64_json}]}, 1 gambar WebP 210.454 byte, $0,01 — kontrak API TERVERIFIKASI (bukan tebakan integrator). File probe di /tmp saja, bukan repo.
+- Tab Image baru (menggantikan grid dummy TOTAL): brief bisa diedit + rasio (1:1/4:5/9:16/16:9/3:4/3:2/2:3) + gaya + text-free (default ON) + jumlah varian (1/2/4) + baris "Prompt terkirim" + Generate (async, tombol dikunci) + grid varian + biaya Rp + galeri tersimpan. Tanpa kunci -> ditolak jujur tanpa fetch; error API -> status HTTP, tanpa gambar palsu.
+- Simpan per varian: file ke ~/minime-images/ via command Rust baru image_save/image_read (std-only, tanpa dep baru, nama divalidasi anti-traversal) + baris Library persisten (kind 'image') + galeri dibaca balik. Recall Library (Media Studio) -> tab Image + gambar + brief terisi. "Muat dari Script terakhir" mengisi brief dari output Script Editor. Biaya dihitung saat GENERATE; spend kumulatif di minime.imageSpend + baris muse-image-1.0 di kartu Billing bila > 0.
+- Dihapus: renderMedia/carSlide/saveScript/mediaToPlanner + array MEDIA + kunci filter.*/ms.image.note/media.toplanner.note/planner.status.local/planner.when.session (9 kunci mati). i18n: 397 kunci x 3 (27 img.* baru, 0 selisih, 0 duplikat).
+- Keputusan eksplisit: "Perbaiki" = generate ulang (endpoint edits belum terverifikasi encoding-nya); kontrol reasoning TIDAK ada (param belum terverifikasi; kontrol mati melanggar rule.md no.13); rasio selain 1:1 PROVISIONAL; lampiran ke draf Postiz DITUNDA (verifikasi API Postiz); hapus gambar follow-up. Dokumen: docs/image-flow.md.
+- Gerbang: root+app tsc 0, svelte-check 0/43, vite build OK, gate-test 14/14, scan PASSED, cargo fmt/check/clippy 0, rig-image BARU 11/11 + rig-script/chat/vs/sherpa tetap PASS.
+- MENUNGGU: commit/push -> rantai (digabung dengan v34 + chat saat Mac dibuka Patria). Bukti live di app (klik Generate di Mac) masih menunggu Patria.
