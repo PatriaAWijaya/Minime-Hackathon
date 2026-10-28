@@ -35,8 +35,10 @@ function makeResp({ ok = true, status = 200, jsonData = null, blobData = null, c
   };
 }
 
-async function invokeStub(cmd) {
+let lastArgs = null;
+async function invokeStub(cmd, args) {
   log.push('invoke:' + cmd);
+  lastArgs = args;
   if (cmd === 'sherpa_setup') {
     return { installed: true, modelPath: '/Users/mac/minime-voices/sherpa-id/id_ID-news_tts-medium.onnx', tokensPath: '/Users/mac/minime-voices/sherpa-id/tokens.txt' };
   }
@@ -113,6 +115,7 @@ try {
   [...panel.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Generate via Sherpa').click();
   await tick(500);
   check('Generate Sherpa memanggil sherpa_tts', log.includes('invoke:sherpa_tts'), log.join(','));
+  check('arg sherpa_tts berbentuk {req:{text,speed}} (bukan flat)', !!(lastArgs && lastArgs.req && lastArgs.req.text === 'Halo, ini uji suara Sherpa native.' && lastArgs.req.speed === 1), JSON.stringify(lastArgs));
   check('tanpa vs_launch / fetch (jalur native murni)', !log.some((x) => x.includes('vs_launch') || x.startsWith('fetch:')), log.join(','));
   check('audio Sherpa kembali ke player yang sama', document.getElementById('vsAudio')?.src === 'blob:sherpa-test', document.getElementById('vsAudio')?.src || '');
   check('note menyebut Sherpa + 22050 Hz', (document.getElementById('sherpaNote')?.textContent || '').includes('Sherpa') && (document.getElementById('sherpaNote')?.textContent || '').includes('22050'), document.getElementById('sherpaNote')?.textContent || '');

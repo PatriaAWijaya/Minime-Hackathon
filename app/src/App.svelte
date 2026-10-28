@@ -86,11 +86,11 @@
     t1Status = t('t1.rendering', lang);
     t1Qc = ''; t1Frame = '';
     try {
-      const r = await invoke<T1RenderResult>('video_render', { args: compiled.args, output: compiled.output });
+      const r = await invoke<T1RenderResult>('video_render', { req: { args: compiled.args, output: compiled.output } });
       if (!r.success) { t1Status = `${t('t1.fail', lang)} ${r.stderr_tail}`; return; }
-      const qc = await invoke<T1QcResult>('video_qc', { path: compiled.output, expectedDuration: compiled.expectedDuration });
+      const qc = await invoke<T1QcResult>('video_qc', { req: { path: compiled.output, expectedDuration: compiled.expectedDuration } });
       t1Qc = t1QcText(qc);
-      const cap = await invoke<T1CaptureResult>('video_capture', { path: compiled.output, at: compiled.expectedDuration / 2 });
+      const cap = await invoke<T1CaptureResult>('video_capture', { req: { path: compiled.output, at: compiled.expectedDuration / 2 } });
       t1Frame = cap.data_url;
       t1Status = `${t('t1.done', lang)} ${qc.passed ? t('t1.qc.pass', lang) : t('t1.qc.fail', lang)}`;
     } catch (e) {
@@ -127,7 +127,7 @@
     t1CapStatus = '';
     try {
       const ass = assFromCaptions(caps, Number(t1W), Number(t1H));
-      const r = await invoke<{ path: string }>('video_write_ass', { content: ass });
+      const r = await invoke<{ path: string }>('video_write_ass', { req: { content: ass } });
       t1CapPath = r.path;
       t1CapAss = ass;
       t1CapStatus = `${t('t2.cap.saved', lang)} ${r.path}`;
@@ -163,11 +163,11 @@
     t2Busy = true;
     t2Status = t('t2.assets.loading', lang);
     try {
-      const probe = await invoke<T2ProbeResult>('video_probe', { path: src });
-      const hash = await invoke<T2HashResult>('video_asset_hash', { path: src });
+      const probe = await invoke<T2ProbeResult>('video_probe', { req: { path: src } });
+      const hash = await invoke<T2HashResult>('video_asset_hash', { req: { path: src } });
       let thumb = '';
       try {
-        const cap = await invoke<T1CaptureResult>('video_capture', { path: src, at: Math.min(1, probe.duration / 2) });
+        const cap = await invoke<T1CaptureResult>('video_capture', { req: { path: src, at: Math.min(1, probe.duration / 2) } });
         thumb = cap.data_url;
       } catch { thumb = ''; }
       const name = src.split('/').pop() || src;

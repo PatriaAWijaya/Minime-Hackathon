@@ -29,7 +29,8 @@ use sherpa_onnx::{
     OfflineTtsVitsModelConfig,
 };
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 use crate::video::find_tool;
 use crate::voicestudio::download_file;
@@ -39,6 +40,50 @@ const VOICE_JSON_URL: &str = "https://huggingface.co/rhasspy/piper-voices/resolv
 const VOICE_FILE: &str = "id_ID-news_tts-medium.onnx";
 const VOICE_JSON_FILE: &str = "id_ID-news_tts-medium.onnx.json";
 const ESPEAK_VOICE: &str = "id";
+
+// Metadata ONNX yang wajib ada agar sherpa-onnx VITS mau init
+// (file Piper mentah TIDAK memilikinya — terbukti error C++
+// "'sample_rate' does not exist in the metadata"). Nilainya sama
+// persis dengan skrip konversi resmi sherpa (model_type, comment,
+// language, voice, has_espeak, n_speakers, sample_rate).
+// Trik protobuf: field boleh muncul dalam urutan apa pun dan field
+// berulang (map) digabung dengan nilai terakhir menang — jadi cukup
+// APPEND entri field 14 (metadata_props) di akhir file, tanpa
+// pustaka protobuf dan tanpa Python. Total tambahan: 131 byte.
+const ONNX_METADATA: &[(&str, &str)] = &[
+    ("model_type", "vits"),
+    ("comment", "piper"),
+    ("language", "Indonesian"),
+    ("voice", "id"),
+    ("has_espeak", "1"),
+    ("n_speakers", "1"),
+    ("sample_rate", "22050"),
+];
+
+fn append_onnx_metadata(path: &Path) -> Result<usize, String> {
+    let mut buf: Vec<u8> = Vec::new();
+    for (k, v) in ONNX_METADATA {
+        let kb = k.as_bytes();
+        let vb = v.as_bytes();
+        let mut entry: Vec<u8> = Vec::new();
+        entry.push(0x0A);
+        entry.push(kb.len() as u8);
+        entry.extend_from_slice(kb);
+        entry.push(0x12);
+        entry.push(vb.len() as u8);
+        entry.extend_from_slice(vb);
+        buf.push(0x72);
+        buf.push(entry.len() as u8);
+        buf.extend_from_slice(&entry);
+    }
+    let mut f = std::fs::OpenOptions::new()
+        .append(true)
+        .open(path)
+        .map_err(|e| format!("gagal membuka {}: {e}", path.display()))?;
+    f.write_all(&buf)
+        .map_err(|e| format!("gagal menambah metadata {}: {e}", path.display()))?;
+    Ok(buf.len())
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -154,6 +199,16 @@ pub fn sherpa_setup() -> Result<SherpaSetupResult, String> {
     if n == 0 {
         return Err("tokens.txt kosong".to_string());
     }
+    // Konversi sekali: tambah metadata ONNX (file Piper mentah tidak
+    // memilikinya). Marker mencegah append ganda pada setup berikutnya
+    // (append ganda pun tak merusak — map protobuf menang nilai terakhir
+    // yang identik — tapi tetap dihindari).
+    let marker = dir.join(".metadata-appended");
+    if !marker.is_file() {
+        append_onnx_metadata(&onnx)?;
+        std::fs::write(&marker, "vits piper id 22050\n")
+            .map_err(|e| format!("gagal menulis {}: {e}", marker.display()))?;
+    }
     Ok(SherpaSetupResult {
         installed: true,
         model_path: onnx.to_string_lossy().to_string(),
@@ -260,6 +315,27 @@ pub fn sherpa_tts(req: SherpaTtsRequest) -> Result<SherpaTtsResult, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Uji TANPA aset: append metadata harus menambah tepat 131 byte
+    // dan memuat ketujuh kunci (format protobuf field 14). Jalan di
+    // gate default (bukan ignor).
+    #[test]
+    fn onnx_metadata_append_is_exact() {
+        let tmp =
+            std::env::temp_dir().join(format!("minime-meta-test-{}.onnx", std::process::id()));
+        std::fs::write(&tmp, b"fake-onnx").expect("tulis temp");
+        let n = append_onnx_metadata(&tmp).expect("append metadata");
+        assert_eq!(n, 131, "total byte metadata");
+        let bytes = std::fs::read(&tmp).expect("baca temp");
+        assert_eq!(bytes.len(), 9 + 131, "ukuran akhir");
+        for (k, _) in ONNX_METADATA {
+            assert!(
+                bytes.windows(k.len()).any(|w| w == k.as_bytes()),
+                "kunci {k} hilang"
+            );
+        }
+        let _ = std::fs::remove_file(&tmp);
+    }
 
     // Uji IGNOR (tidak jalan di gate default): butuh aset Setup Sherpa
     // di ~/minime-voices/sherpa-id. Dijalankan di MacBook:

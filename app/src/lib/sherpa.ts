@@ -70,7 +70,7 @@ export async function sherpaTtsFromTab(): Promise<void> {
   const speed = parseFloat((document.getElementById('vsSpeed') as HTMLInputElement | null)?.value || '1') || 1;
   setNote(tr('vs.generating'));
   try {
-    const r = await invoke<SherpaTtsResult>('sherpa_tts', { text, speed });
+    const r = await invoke<SherpaTtsResult>('sherpa_tts', { req: { text, speed } });
     showAudio('vsAudio', 'vsDownload', r.dataUrl, 'voice-sherpa.wav');
     setNote(tr('vs.done') + ' (Sherpa, ' + r.sampleRate + ' Hz, ' + r.durationSecs.toFixed(2) + ' dtk)');
   } catch (e) {
