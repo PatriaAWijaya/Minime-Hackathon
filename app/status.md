@@ -81,6 +81,8 @@
 
 - Fase 4 SELESAI 28 Okt: 12 lead FIKSI -> 10 deduped, skor 1-5 rule-based, pipeline, 6 draf Outreach (0 kirim, 0 model call); gate-test 14/14.
 
+- Menu Campaign LIVE rantai v28 PID 61514: tombol rail ikon megafon + 4 tab (Leads Generator, Leads & CRM PROVISIONAL, Outreach, Follow Up); CRM/Outreach dari data Fase 4 asli; i18n 280 kunci x 3; rig-campaign 17/17 (kode lokal 48ce788 <-> remote 344a27f).
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.
