@@ -72,6 +72,8 @@
 
 - FASE 0 LOLOS PENUH (pernyataan Patria 28 Okt ~11:20 WIB, 'Fase 0 lengkap'). Pembersihan audit: export mati createPostizDraft dihapus + cargo fmt video.rs; i18n 269 kunci x 3. Rantai v23 live PID 46181 (HEAD remote 27e9e68).
 
+- Ikon rail: Home -> Chat + ikon terlampir Kanban/Media Studio LIVE rantai v24 PID 47306 (kode lokal c94eaeb <-> remote 759fe33; bundle 186.92 kB; rig-icons 8/8).
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.
