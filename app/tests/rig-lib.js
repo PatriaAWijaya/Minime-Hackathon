@@ -23,7 +23,6 @@ if (!modMatch) throw new Error('script module dist tidak ditemukan');
 html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch[1]}"></script></body>`);
 
 const store = new Map();
-let confirmVal = false;
 const log = [];
 
 async function invokeStub(cmd) {
@@ -40,7 +39,6 @@ const dom = new JSDOM(html, {
     window.__TAURI_INTERNALS__ = { invoke: invokeStub };
     window.fetch = async () => ({ ok: true, status: 200, headers: { get: () => '' }, json: async () => ({}), text: async () => '' });
     window.URL.createObjectURL = () => 'blob:lib-test';
-    window.confirm = () => confirmVal;
     const ls = {
       getItem: (k) => (store.has(k) ? store.get(k) : null),
       setItem: (k, v) => store.set(k, String(v)),
@@ -84,7 +82,13 @@ try {
   // 2. Filter: jenis, agen, project, periode (item baru = hari ini).
   dom.window.libSetFilter('kind', 'script');
   await tick(100);
-  check('filter jenis naskah menyaring ke 0', cards().length === 0, 'cards=' + cards().length);
+  check('filter jenis naskah menyaring ke 1 (Kalender)', cards().length === 1 && cards()[0].textContent.includes('Kalender 7 hari'), 'cards=' + cards().length);
+  dom.window.libSetFilter('kind', 'image');
+  await tick(100);
+  check('filter jenis gambar menyaring ke 1 (Gambar Hari 1-7)', cards().length === 1 && cards()[0].textContent.includes('Gambar Hari 1'), 'cards=' + cards().length);
+  dom.window.libSetFilter('kind', 'doc');
+  await tick(100);
+  check('filter jenis dokumen menyaring ke 3', cards().length === 3, 'cards=' + cards().length);
   dom.window.libSetFilter('kind', 'all');
   dom.window.libSetFilter('agent', 'Riset');
   await tick(100);
@@ -109,9 +113,27 @@ try {
   first.dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true }));
   await tick(100);
   check('klik 2x membuka dialog detail', document.getElementById('libDetailDlg')?.style.display === 'block' && (document.getElementById('libDetailDlg')?.textContent || '').includes(first.querySelector('.lib-title')?.textContent || ''));
+  check('detail baris bawaan memuat konten asli Fase', (document.getElementById('libDetailDlg')?.textContent || '').includes('Positioning'));
   [...document.querySelectorAll('#libDetailDlg button')].find((b) => b.textContent.trim() === 'Tutup').click();
   await tick(100);
   check('tombol Tutup menutup dialog', document.getElementById('libDetailDlg')?.style.display === 'none');
+
+  // 3b. Media Studio baris bawaan memuat konten asli (bukan judul saja).
+  const stp = cards().find((c) => c.textContent.includes('STP v2'));
+  [...stp.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Media Studio').click();
+  await tick(150);
+  check('Media Studio baris bawaan membuka tab Script', document.getElementById('ms-tab-script')?.style.display !== 'none');
+  check('Media Studio baris bawaan memuat isi asli', (document.getElementById('se-output')?.value || '').includes('higienis'));
+  dom.window.showView('library');
+  await tick(100);
+
+  // 3c. Media Studio pada gambar tanpa file membuka dialog status (bukan editor kosong).
+  const gambar = cards().find((c) => c.textContent.includes('Gambar Hari 1'));
+  [...gambar.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Media Studio').click();
+  await tick(100);
+  check('Media Studio gambar tanpa file membuka dialog status', document.getElementById('libDetailDlg')?.style.display === 'block' && (document.getElementById('libDetailDlg')?.textContent || '').includes('pending-provider'));
+  [...document.querySelectorAll('#libDetailDlg button')].find((b) => b.textContent.trim() === 'Tutup').click();
+  await tick(100);
 
   // 4. Media Studio + Revisi dari kartu.
   const added = cards().find((c) => c.textContent.includes('NASKAH-LIB-UJI'));
@@ -125,27 +147,31 @@ try {
   await waitFor(() => bodyText().includes('Perbaikan dibuka'), 'pesan revisi di chat', 120);
   check('Revisi kembali ke menu chat', document.getElementById('view-home')?.classList.contains('active') && bodyText().includes('Perbaikan dibuka'));
 
-  // 5. Hapus: batal (confirm=false) lalu hapus (confirm=true).
+  // 5. Hapus via dialog in-app: Batal membatalkan, Ya menghapus.
   dom.window.showView('library');
   await tick(100);
   const victim = cards().find((c) => c.textContent.includes('NASKAH-LIB-UJI'));
-  confirmVal = false;
   [...victim.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hapus').click();
   await tick(100);
-  check('confirm=false tidak menghapus', cards().some((c) => c.textContent.includes('NASKAH-LIB-UJI')));
+  check('klik Hapus membuka dialog konfirmasi', document.getElementById('libConfirmDlg')?.style.display === 'block' && (document.getElementById('libConfirmDlg')?.textContent || '').includes('NASKAH-LIB-UJI'));
+  [...document.querySelectorAll('#libConfirmDlg button')].find((b) => b.textContent.trim() === 'Batal').click();
+  await tick(100);
+  check('Batal tidak menghapus', cards().some((c) => c.textContent.includes('NASKAH-LIB-UJI')) && document.getElementById('libConfirmDlg')?.style.display === 'none');
   const victim2 = cards().find((c) => c.textContent.includes('NASKAH-LIB-UJI'));
-  confirmVal = true;
   [...victim2.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hapus').click();
   await tick(100);
-  check('confirm=true menghapus kartu', !cards().some((c) => c.textContent.includes('NASKAH-LIB-UJI')) && cards().length === 5, 'cards=' + cards().length);
+  [...document.querySelectorAll('#libConfirmDlg button')].find((b) => b.textContent.trim() === 'Ya, hapus').click();
+  await tick(100);
+  check('Ya, hapus menghapus kartu', !cards().some((c) => c.textContent.includes('NASKAH-LIB-UJI')) && cards().length === 5, 'cards=' + cards().length);
   check('hapus baris user persist di localStorage', (store.get('minime.library.added') || '') === '[]');
   check('kartu Kanban Revisi ikut terhapus', !bodyText().includes('Revisi: NASKAH-LIB-UJI'));
 
   // 6. Hapus baris bawaan -> tombstone persist + tetap hilang setelah render ulang.
   const builtin = cards()[0];
   const builtinTitle = builtin.querySelector('.lib-title')?.textContent || '';
-  confirmVal = true;
   [...builtin.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hapus').click();
+  await tick(100);
+  [...document.querySelectorAll('#libConfirmDlg button')].find((b) => b.textContent.trim() === 'Ya, hapus').click();
   await tick(100);
   check('hapus baris bawaan mengurangi kartu', cards().length === 4, 'cards=' + cards().length);
   check('tombstone baris bawaan tersimpan', (store.get('minime.library.deleted') || '').includes(builtinTitle));

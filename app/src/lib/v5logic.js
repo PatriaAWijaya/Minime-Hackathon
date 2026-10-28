@@ -586,10 +586,33 @@ export function libDetailClose() {
    galeri membaca langsung dari minime.library.added). Riwayat chat dan
    baris snapshot Planner TIDAK dihapus (rekaman, bukan referensi hidup);
    draf Script Editor yang sedang dibuka juga dibiarkan (draf kerja). */
+var libPendingDelete = -1;
 export function libDelete(i) {
   var item = libAll()[i];
   if (!item) return;
-  if (!window.confirm(tr('lib.delete.confirm', { title: item.o }))) return;
+  var dlg = document.getElementById("libConfirmDlg");
+  if (!dlg) return;
+  libPendingDelete = i;
+  dlg.innerHTML = "<div class='lib-dialog-backdrop' onclick='libConfirmClose()'></div><div class='lib-dialog-card'>"
+    + "<div class='lib-title'>" + esc(tr('lib.confirm.title')) + "</div>"
+    + "<div class='lib-detail-pre'>" + esc(tr('lib.confirm.text', { title: item.o })) + "</div>"
+    + "<div class='lib-actions'>"
+    + "<button class='btn btn-sm' onclick='libConfirmDelete()'>" + esc(tr('lib.confirm.yes')) + "</button>"
+    + "<button class='btn btn-sm' onclick='libConfirmClose()'>" + esc(tr('lib.confirm.no')) + "</button>"
+    + "</div></div>";
+  dlg.style.display = "block";
+}
+export function libConfirmClose() {
+  var dlg = document.getElementById("libConfirmDlg");
+  if (dlg) { dlg.innerHTML = ""; dlg.style.display = "none"; }
+  libPendingDelete = -1;
+}
+export function libConfirmDelete() {
+  var i = libPendingDelete;
+  libConfirmClose();
+  if (i < 0) return;
+  var item = libAll()[i];
+  if (!item) return;
   var bi = LIB.indexOf(item);
   if (bi !== -1) {
     if (LIB_DELETED.indexOf("b:" + item.o) === -1) LIB_DELETED.push("b:" + item.o);
@@ -632,10 +655,16 @@ export function libAddImage(title, prompt, imageFile, costUsd) {
 export function libMedia(i) {
     var item = libAll()[i];
     if (!item) return;
-    if (item.kind === "image" && item.imageFile) {
-      showView("media");
-      mediaTab("image");
-      if (typeof window.imgLoadSaved === "function") window.imgLoadSaved(item);
+    if (item.kind === "image") {
+      if (item.imageFile) {
+        showView("media");
+        mediaTab("image");
+        if (typeof window.imgLoadSaved === "function") window.imgLoadSaved(item);
+        return;
+      }
+      // Gambar tanpa file (mis. snapshot Fase 3 pending-provider): buka
+      // dialog detail yang menjelaskan statusnya, bukan editor kosong.
+      libDetail(i);
       return;
     }
     var text = item.content || item.o;
@@ -978,11 +1007,16 @@ var nodeCounter = 0;
 /* ---------- Library ---------- */
 var LIB_ADDED = loadLibAdded();
 var LIB = [
-    { o: "STP v2 — TEST Kopi Surabaya", a: "Strategi", s: "Disetujui (GSTP)", badge: "b-ok", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27" },
-    { o: "Riset behaviour digital + spending", a: "Riset", s: "Disetujui", badge: "b-ok", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27" },
-    { o: "Kalender 7 hari + 7 brief", a: "Kreatif", s: "Disetujui (GKonten)", badge: "b-ok", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27" },
-    { o: "Gambar Hari 1–7 (menunggu provider)", a: "Media", s: "Menunggu provider", badge: "b-wait", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27" },
-    { o: "Brief produk digital (draf)", a: "Produk Digital", s: "DRAF", badge: "b-idle", proj: "TEST Produk Digital" }
+    { o: "STP v2 — TEST Kopi Surabaya", a: "Strategi", s: "Disetujui (GSTP)", badge: "b-ok", kind: "doc", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27",
+      content: "Ringkasan snapshot Fase 1 (file lengkap: docs/fase-1-output.json, brand TEST-BRAND-001 / TEST Kopi Surabaya, FIKSI).\n\nPositioning: TEST Kopi menjadi solusi es kopi susu harian yang konsisten, higienis, dan terjangkau bagi mahasiswa serta pekerja muda Surabaya melalui akses pemesanan instan via WhatsApp yang anti-ribet.\n\nPilar: Digital Convenience (WhatsApp + QRIS tanpa instalasi aplikasi), Quality Consistency (standar higienitas dan rasa konsisten tiap cup), dan keterjangkauan harian (es kopi susu Rp15.000).\n\nStatus: Disetujui Patria 27 Okt 2026 (GSTP)." },
+    { o: "Riset behaviour digital + spending", a: "Riset", s: "Disetujui", badge: "b-ok", kind: "doc", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27",
+      content: "Ringkasan snapshot Fase 1 (file lengkap: docs/fase-1-output.json, research.facts = 5 fakta).\n\nBrief: audiens mahasiswa dan pekerja muda Surabaya 18–30 tahun; masalah: kopi kafe terasa mahal untuk harian, sementara warkop tradisional sering tidak konsisten rasa dan kebersihannya; tawaran: es kopi susu Rp15.000, rasa konsisten, disajikan cepat, bisa dipesan lewat chat.\n\nTemuan: preferensi kuat pada titik harga di bawah Rp20.000 untuk konsumsi harian, dan pemesanan lewat aplikasi pesan singkat lebih dipilih daripada mengunduh aplikasi khusus." },
+    { o: "Kalender 7 hari + 7 brief", a: "Kreatif", s: "Disetujui (GKonten)", badge: "b-ok", kind: "script", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27",
+      content: "Ringkasan snapshot Fase 2 (file lengkap: docs/fase-2-output.json; 7 hari + 7 brief, GKonten disetujui Patria).\n\nHari 1 — Kemudahan Pesan via WhatsApp (Video Pendek, IG/TikTok). Hook: \u201cCapek antre kopi saat buru-buru ke kampus/kantor?\u201d\nHari 2 — Standarisasi Rasa yang Konsisten (Behind the Scenes, WA Status).\nHari 3 — Efisiensi QRIS untuk Urban Hustler (Testimoni, IG/TikTok).\nHari 4 — Solusi Higienitas Kopi Harian (Foto Produk, WA Status).\nHari 5 — Promo Bundling Hemat (Edukasi/Info Promo, IG/TikTok).\nHari 6 — Kecepatan Layanan (Video POV/Interaksi Admin, WA Status).\nHari 7 — Lifestyle & Refuel (Video Estetik/Reels, IG/TikTok).\n\nCatatan Fase 2: tidak ada gambar yang dihasilkan — provider gambar menunggu aktivasi Meta; tidak ada placeholder yang diklaim sebagai hasil generate." },
+    { o: "Gambar Hari 1–7 (menunggu provider)", a: "Media", s: "Menunggu provider", badge: "b-wait", kind: "image", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27",
+      content: "Ringkasan snapshot Fase 3 (file lengkap: docs/fase-3-output.json; 7 carousel x 3 slide, QC 100/100 semua item, tanpa pelanggaran keras).\n\nTema per hari sama dengan kalender Fase 2 (Hari 1: Kemudahan Pesan via WhatsApp s.d. Hari 7: Lifestyle & Refuel).\n\nStatus gambar: pending-provider — image null di semua slide. File gambar belum ada; tombol Media Studio pada kartu ini membuka dialog ini, bukan editor gambar kosong." },
+    { o: "Brief produk digital (draf)", a: "Produk Digital", s: "DRAF", badge: "b-idle", kind: "doc", proj: "TEST Produk Digital",
+      content: "Draf placeholder — belum ada isi dan belum bertanggal (karena itu hanya muncul di filter periode \u201cSemua\u201d). Isi di sini setelah brief produk digital ditulis." }
   ];
 
 /* ---------- Media Studio ---------- */
@@ -1047,5 +1081,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizReload, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizReload, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

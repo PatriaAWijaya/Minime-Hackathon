@@ -339,6 +339,7 @@
         <div class="notice" id="libNotice" style="display:none"></div>
       </div>
       <div id="libDetailDlg" style="display:none"></div>
+      <div id="libConfirmDlg" style="display:none"></div>
     </div>
     <div class="view" id="view-media">
       <div class="colhead"><h2>{t('view.media.title', lang)}</h2></div>
