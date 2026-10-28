@@ -1618,3 +1618,8 @@ dokumen lama yang dipakai.
 - CSS (layout-scroll.css): header agen di dalam bubble = rata kiri, warna #A6EBB1, bold (ukuran/bold dasar tetap dari app.css .who); header user = rata kanan, warna mengikuti bubble pink (teks gelap #262626); jarak header-isi 4px. Isi pesan user tetap rata kiri agar mudah dibaca.
 - Gerbang: tsc 0, svelte-check 0 error, vite OK, gate-test 14/14, scan PASSED, rig-chat 26/26 (3 cek baru: header user/agen di dalam .bubble + aturan CSS-nya), rig-image/brand/batch PASS. Satu galat rig selama gerbang: cek baru memakai agentMsgs sebelum deklarasi -> urutan cek diperbaiki, bukan bug app.
 - Push 394e1d3 <-> fde203f, rantai v38: CHAIN_EXIT 0, MH_BUILD38_OK, PID baru 76506, HEAD fde203f, aturan "bubble .who" ada 3x di CSS bundle.
+
+## Isi bubble user rata kanan penuh + rantai v39 (28 Okt, perintah Patria 21:38 WIB)
+- Koreksi atas v38: di v38 saya sengaja menahan isi pesan user tetap rata kiri atas alasan keterbacaan; perintah ini membatalkannya — kini SELURUH isi bubble user rata kanan (header + teks), sesuai perintah eksplisit. Aturan: .msg.user .bubble { text-align: right } di layout-scroll.css, menimpa dua aturan lama app.css (text-align:left) karena berkas diimpor sesudahnya.
+- Gerbang: tsc 0, svelte-check 0 error, vite OK, gate-test 14/14, scan PASSED, rig-chat 27/27 (cek baru: aturan .msg.user .bubble yang menang memuat text-align:right, dicocokkan per-aturan bukan sekadar string), rig-image/brand/batch PASS.
+- Push 8670496 <-> 4e39c24, rantai v39: CHAIN_EXIT 0, MH_BUILD39_OK, PID baru 76765, HEAD 4e39c24, kaskade bundle terverifikasi (tiga aturan .msg.user .bubble berurutan, yang terakhir text-align:right).
