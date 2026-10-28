@@ -50,7 +50,7 @@ export function setLang(lang: Lang): void {
 type Dict = Record<string, string>;
 
 const ID: Dict = {
-  'nav.home': 'Home — kembali ke UI utama',
+  'nav.home': 'Chat',
   'nav.search': 'Search — cari tugas / kata kunci',
   'nav.kanban': 'Kanban — semua proses tugas',
   'nav.graph': 'Graph — node koneksi antar agen',
@@ -322,7 +322,7 @@ const ID: Dict = {
 };
 
 const EN: Dict = {
-  'nav.home': 'Home — back to main UI',
+  'nav.home': 'Chat',
   'nav.search': 'Search — find tasks / keywords',
   'nav.kanban': 'Kanban — all task processes',
   'nav.graph': 'Graph — agent connection nodes',
@@ -594,7 +594,7 @@ const EN: Dict = {
 };
 
 const ZH: Dict = {
-  'nav.home': '首页 — 返回主界面',
+  'nav.home': '聊天',
   'nav.search': '搜索 — 查找任务 / 关键词',
   'nav.kanban': '看板 — 全部任务流程',
   'nav.graph': '关系图 — 智能体连接节点',
