@@ -146,8 +146,45 @@ try {
   log.length = 0;
   document.getElementById('se-generate').click();
   await waitFor(() => document.getElementById('se-output'), 'output script', 120);
-  const out = document.getElementById('se-output')?.textContent || '';
+  const out = document.getElementById('se-output')?.value || '';
   check('hasil generate tampil di window utama', out.includes('NASKAH-UJI'), out);
+  check('output bisa diedit (textarea)', document.getElementById('se-output')?.tagName === 'TEXTAREA');
+
+  // Edit langsung di output -> tersimpan ke state (localStorage mock).
+  const outEl = document.getElementById('se-output');
+  outEl.value = 'NASKAH-UJI-EDIT: Hook kopi susu, isi 5W1H, CTA order via chat.';
+  outEl.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  check('edit output tersimpan', (store.get('minime.scriptEditor') || '').includes('NASKAH-UJI-EDIT'), store.get('minime.scriptEditor') || '');
+
+  // Simpan ke Library -> baris baru di libBody; simpan ulang -> dedup.
+  const rows = () => document.getElementById('libBody')?.querySelectorAll('tr').length || 0;
+  [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Simpan ke Library').click();
+  await tick(100);
+  check('simpan menambah 1 baris Library', rows() === 7, 'rows=' + rows());
+  check('catatan tersimpan tampil', (document.getElementById('se-note')?.textContent || '').includes('Tersimpan'), document.getElementById('se-note')?.textContent || '');
+  [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Simpan ke Library').click();
+  await tick(100);
+  check('simpan ulang tidak menduplikasi', rows() === 7, 'rows=' + rows());
+
+  // Gunakan -> tetap 1 baris (dedup) + pindah ke editor berikutnya (Image).
+  [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Gunakan').click();
+  await tick(150);
+  check('gunakan tidak menduplikasi Library', rows() === 7, 'rows=' + rows());
+  check('gunakan beralih ke Image Editor', document.getElementById('ms-tab-image')?.style.display !== 'none', document.getElementById('ms-tab-image')?.style.display || '');
+
+  // Recall Library -> Media Studio: muat isi ke output Script Editor.
+  const addedRow = [...document.querySelectorAll('#libBody tr')].pop();
+  [...addedRow.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Media Studio').click();
+  await tick(150);
+  check('recall Media Studio membuka tab Script', document.getElementById('ms-tab-script')?.style.display !== 'none');
+  check('recall Media Studio memuat isi ke output', (document.getElementById('se-output')?.value || '').includes('NASKAH-UJI-EDIT'), document.getElementById('se-output')?.value || '');
+
+  // Recall Library -> Chat: brief terkirim ke chat agen (AI beneran via stub).
+  [...addedRow.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Chat').click();
+  await waitFor(() => document.body.textContent.includes('Lanjutkan brief'), 'bubble brief di chat', 120);
+  check('recall Chat mengirim brief ke chat agen', document.body.textContent.includes('Lanjutkan brief'));
+  check('input chat terkonsumsi (kosong)', document.getElementById('chatInput')?.value === '', document.getElementById('chatInput')?.value || '');
   check('generate memanggil router (fetch chat-completions)', log.some((x) => x.includes('chat/completions')), log.join(','));
   const notes = [...document.querySelectorAll('#se-main .se-note')].map((n) => n.textContent).join(' ');
   check('footer menyebut provider meta', notes.includes('meta'), notes);

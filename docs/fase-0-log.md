@@ -1540,3 +1540,11 @@ dokumen lama yang dipakai.
 - Font diseragamkan (28 Okt, perintah Patria "sebelum jauh: cek font"): audit menemukan jenis font SUDAH seragam (satu stack system di body app.css, sisanya inherit, tanpa shorthand lain) — yang tidak seragam hanya ukuran: 12 nilai (11-28px). Skala teks ditetapkan 5 nilai (18 judul / 15 dasar / 14 konten / 13 sekunder / 12 kecil); glyph avatar/ikon (28/22/18/16/12px, ▶ 42px, ☆ 18px) TIDAK diubah karena proporsional terhadap wadahnya. Perubahan hanya override di layout-scroll.css (app.css TIDAK diubah, verbatim v5): .cur-label 11->12px, .colhead h2 17->18px, .agent-scope 16->15px, h3 18px (kartu media tetap 15px via inline-size). Gerbang: vite build OK, rig-script PASS.
 - MENUNGGU: commit/push -> rantai v33 -> cek visual Patria.
 - Rantai v33 LIVE (PID 72699, HEAD 259f151): skala font sudah di aplikasi. MENUNGGU cek visual Patria.
+
+## Script -> Library -> Media Studio/Chat (28 Okt, perintah Patria 18:07 WIB)
+- Output Script Editor kini TEXTAREA yang bisa diedit langsung (edit tersimpan live ke minime.scriptEditor; tombol Salin tetap).
+- "Simpan ke Library": naskah masuk Library sebagai baris baru (judul "Naskah {Platform} · {Jenis} · {Framework}" / "Artikel: {topik}" / "Naskah film: {premis}", agen Kreatif, status Draf) + PERSISTEN di localStorage 'minime.library.added'. Simpan ulang isi sama -> dedup (catatan "Sudah ada di Library"), tanpa baris ganda.
+- "Gunakan": simpan otomatis (dedup) + beralih ke editor berikutnya = Image Editor (urutan tab Script -> Image -> Voice -> Video). Hanya simpan + pindah, tanpa injeksi ke editor tujuan (belum diminta).
+- Library: tombol simulasi lama (libSave/libUse, "tampilan saja") DIHAPUS; aksi per baris kini: "Media Studio" (muat isi/judul ke output Script Editor yang bisa diedit + buka tab Script, lewat jembatan window.seLoadOutput — tanpa siklus import) dan "Chat" (kirim "Lanjutkan brief ini: ..." ke chat agen lewat delegasi sendChat -> AI beneran) + "Perbaiki Lanjut" tetap (kartu Kanban Revisi). Baris bawaan artefak fase tetap tampil di atas baris simpanan user.
+- i18n: 373 kunci x 3 (9 baru, 0 selisih, 0 duplikat). Gerbang: root+app tsc 0, svelte-check 0/43, vite build OK, rig-script 25/25 (edit/simpan/dedup/gunakan/recall Media+Chat), rig-vs + rig-sherpa tetap PASS.
+- MENUNGGU: commit/push -> rantai v34 -> uji Patria (edit + simpan + gunakan + recall).

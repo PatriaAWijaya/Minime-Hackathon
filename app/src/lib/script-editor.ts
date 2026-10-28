@@ -8,6 +8,7 @@
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { readKeys } from './chat.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
+import { libAddScript, mediaTab } from './v5logic.js';
 
 export type SeMenu = 'social' | 'artikel' | 'movie';
 type SePlatform = 'instagram' | 'facebook' | 'whatsapp' | 'tiktok' | 'thread' | 'linkedin';
@@ -144,7 +145,28 @@ function wField(id: string, key: string, value: string): string {
 
 function outputBlock(): string {
   if (!state.output && !state.note) return '';
-  return `<div class="se-group">${state.output ? `<h4>${esc(tr('se.output.title'))}</h4><div id="se-output" class="se-output">${esc(state.output)}</div>${state.outputMeta ? `<div class="se-note">${esc(state.outputMeta)}</div>` : ''}<button id="se-copy" class="se-btn2">${esc(tr('se.output.copy'))}</button>` : ''}${state.note ? `<div id="se-note" class="se-note">${esc(state.note)}</div>` : ''}</div>`;
+  return `<div class="se-group">${state.output ? `<h4>${esc(tr('se.output.title'))}</h4><textarea id="se-output" rows="10" class="se-field">${esc(state.output)}</textarea>${state.outputMeta ? `<div class="se-note">${esc(state.outputMeta)}</div>` : ''}<button id="se-copy" class="se-btn2">${esc(tr('se.output.copy'))}</button> <button id="se-save" class="se-btn2">${esc(tr('se.btn.save'))}</button> <button id="se-use" class="se-btn2">${esc(tr('se.btn.use'))}</button>` : ''}${state.note ? `<div id="se-note" class="se-note">${esc(state.note)}</div>` : ''}</div>`;
+}
+
+function titleFor(st: SeState): string {
+  if (st.menu === 'artikel') return `${tr('se.menu.artikel')}: ${st.topic}`.slice(0, 60);
+  if (st.menu === 'movie') return `${tr('se.menu.movie')}: ${st.premise}`.slice(0, 60);
+  const fw = fwLabel(st.framework).split(' — ')[0];
+  return `Naskah ${tr('se.platform.' + st.platform)} · ${tr('se.mode.' + st.mode)} · ${fw}`;
+}
+
+function seSave(): void {
+  const r = libAddScript(titleFor(state), state.output);
+  state.note = tr(r.added ? 'se.note.saved' : 'se.note.already');
+  renderSeMain();
+}
+
+function seUse(): void {
+  libAddScript(titleFor(state), state.output);
+  state.note = tr('se.note.used');
+  saveState();
+  renderSeMain();
+  mediaTab('image');
 }
 
 function paneHtml(): string {
@@ -247,8 +269,17 @@ function renderSeMain(): void {
       saveState();
     });
   }
+  bind('se-output', 'input', (el) => {
+    // Edit langsung di output: tanpa re-render (karet teks aman).
+    state.output = el.value;
+    saveState();
+  });
   const gen = document.getElementById('se-generate');
   if (gen) gen.addEventListener('click', () => void seGenerate());
+  const saveBtn = document.getElementById('se-save');
+  if (saveBtn) saveBtn.addEventListener('click', () => seSave());
+  const useBtn = document.getElementById('se-use');
+  if (useBtn) useBtn.addEventListener('click', () => seUse());
   const copy = document.getElementById('se-copy');
   if (copy) {
     copy.addEventListener('click', async () => {
@@ -353,4 +384,13 @@ export function seRefreshUI(): void {
 export function initScriptEditor(): void {
   loadState();
   renderSeMain();
+  // Jembatan untuk recall Library (v5logic.libMedia): muat isi ke
+  // output Script Editor yang bisa diedit. Satu fungsi window, bukan
+  // import balik (menghindari siklus script-editor <-> v5logic).
+  (window as unknown as Record<string, unknown>).seLoadOutput = (text: string) => {
+    state.output = text;
+    state.note = tr('se.note.loaded');
+    saveState();
+    renderSeMain();
+  };
 }

@@ -370,30 +370,72 @@ export function runGraphSim() {
     step();
   }
 
+/* Library: baris bawaan (artefak fase) + baris yang disimpan user.
+   Baris user PERSISTEN di localStorage 'minime.library.added' — bukan
+   lagi simulasi. libSave/libUse simulasi lama DIHAPUS (tidak ada
+   pemakai lain); diganti aksi recall nyata: Media Studio + Chat. */
+var LIB_LS = "minime.library.added";
+function loadLibAdded() {
+  try {
+    var raw = window.localStorage.getItem(LIB_LS);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter(function (x) { return x && typeof x.o === "string"; }) : [];
+  } catch (_) { return []; }
+}
+function saveLibAdded() {
+  try { window.localStorage.setItem(LIB_LS, JSON.stringify(LIB_ADDED)); } catch (_) {}
+}
+function libAll() { return LIB.concat(LIB_ADDED); }
+
+export function libAddScript(title, content) {
+  var all = libAll();
+  for (var k = 0; k < all.length; k++) {
+    if (all[k].content && all[k].content === content) return { index: k, added: false };
+  }
+  LIB_ADDED.push({ o: title, a: "Kreatif", s: "Draf", badge: "b-idle", content: content, kind: "script" });
+  saveLibAdded();
+  renderLib();
+  return { index: all.length, added: true };
+}
+
 export function renderLib() {
-    document.getElementById("libBody").innerHTML = "<tr><th>Output</th><th>Agen</th><th>Status</th><th>Aksi</th></tr>" + LIB.map(function (item, i) {
+    document.getElementById("libBody").innerHTML = "<tr><th>Output</th><th>Agen</th><th>Status</th><th>Aksi</th></tr>" + libAll().map(function (item, i) {
       return "<tr><td>" + item.o + "</td><td>" + item.a + "</td><td><span class='badge " + item.badge + "'>" + item.s + "</span></td>"
-        + "<td><button class='btn btn-sm' onclick='libUse(" + i + ")'>Gunakan</button><button class='btn btn-sm' onclick='libSave(" + i + ")'>Simpan</button><button class='btn btn-sm' onclick='libRevise(" + i + ")'>Perbaiki Lanjut</button></td></tr>";
+        + "<td><button class='btn btn-sm' onclick='libMedia(" + i + ")'>" + tr('lib.btn.media') + "</button><button class='btn btn-sm' onclick='libChat(" + i + ")'>" + tr('lib.btn.chat') + "</button><button class='btn btn-sm' onclick='libRevise(" + i + ")'>Perbaiki Lanjut</button></td></tr>";
     }).join("");
   }
 
-export function libUse(i) {
-    showView("home");
-    postChat("prime", "Prime Agent", "#FFD1DC", "Output '" + LIB[i].o + "' digunakan sebagai bahan tahap berikutnya di " + PROJECTS[currentProj].name + " (simulasi).", true);
-    var n = document.getElementById("libNotice"); n.style.display = "block";
-    n.textContent = "Simulasi: pesan Prime Agent terkirim ke chat proyek aktif.";
+/* Recall ke Media Studio: muat isi (atau judul bila tanpa isi) ke
+   output Script Editor yang bisa diedit, lalu buka tab Script.
+   Jembatan window.seLoadOutput dipasang modul script-editor saat init. */
+export function libMedia(i) {
+    var item = libAll()[i];
+    if (!item) return;
+    var text = item.content || item.o;
+    if (typeof window.seLoadOutput === "function") window.seLoadOutput(text);
+    showView("media");
+    mediaTab("script");
   }
 
-export function libSave(i) {
-    var n = document.getElementById("libNotice"); n.style.display = "block";
-    n.textContent = "Simulasi: '" + LIB[i].o + "' ditandai tersimpan (tampilan saja).";
+/* Recall ke chat agen: kirim brief ke Prime Agent lewat delegasi chat
+   yang sama dengan tombol kirim (AI beneran, bukan simulasi). */
+export function libChat(i) {
+    var item = libAll()[i];
+    if (!item) return;
+    var brief = tr('lib.chat.brief') + "\n\n" + (item.content || item.o);
+    showView("home");
+    var inp = document.getElementById("chatInput");
+    if (inp) inp.value = brief;
+    sendChat();
   }
 
 export function libRevise(i) {
-    PROJECTS[currentProj].kanban.push({ t: "Revisi: " + LIB[i].o, a: LIB[i].a, c: 3 });
+    var item = libAll()[i];
+    if (!item) return;
+    PROJECTS[currentProj].kanban.push({ t: "Revisi: " + item.o, a: item.a, c: 3 });
     renderKanban();
     showView("home");
-    postChat("prime", "Prime Agent", "#FFD1DC", "Perbaikan dibuka untuk '" + LIB[i].o + "' — kartunya masuk kolom Revisi di Kanban, menunggu catatanmu (simulasi).", true);
+    postChat("prime", "Prime Agent", "#FFD1DC", "Perbaikan dibuka untuk '" + item.o + "' — kartunya masuk kolom Revisi di Kanban, menunggu catatanmu (simulasi).", true);
   }
 
 export function mediaBadge(s) { return s === "Siap untuk Post" ? "b-ok" : (s === "Menunggu GKonten" || s === "Menunggu provider" ? "b-wait" : "b-idle"); }
@@ -715,6 +757,7 @@ var dragNode = null, dragMoved = false, dragStart = null, grabDX = 0, grabDY = 0
 var nodeCounter = 0;
 
 /* ---------- Library ---------- */
+var LIB_ADDED = loadLibAdded();
 var LIB = [
     { o: "STP v2 — TEST Kopi Surabaya", a: "Strategi", s: "Disetujui (GSTP)", badge: "b-ok" },
     { o: "Riset behaviour digital + spending", a: "Riset", s: "Disetujui", badge: "b-ok" },
@@ -807,5 +850,5 @@ export function initV5() {
   waInputChanged();
   var _ms = document.getElementById('msScript');
   if (_ms) { try { _ms.value = localStorage.getItem('minime.script') || ''; } catch (_) {} }
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libRevise, libSave, libUse, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddScript, libAll, libChat, libMedia, libRevise, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }
