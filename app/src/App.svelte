@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, postizReload, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, postizOpenBrowser, postizReload, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
-  import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
+  import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
   import { sherpaSetup, sherpaTtsFromTab, sherpaRenderStatus, sherpaRefreshUI } from "./lib/sherpa.js";
   import { initScriptEditor, setSeMenu, seRefreshUI } from "./lib/script-editor.js";
   import { initImageFlow, imgRefreshUI } from "./lib/image-flow.js";
@@ -45,6 +45,7 @@
     vsRenderStatus();
     sherpaRefreshUI();
     vsCheck();
+    vsEmbedCheck();
     initScriptEditor();
     initImageFlow();
     initBrand();
@@ -401,6 +402,12 @@
           <h4>{t('vs.setup.title', lang)}</h4>
           <p><button class="btn btn-primary" onclick={() => { vsSetupInstall() }}>{t('vs.setup.install', lang)}</button> <button class="btn btn-sm" onclick={() => { vsSetupLaunch() }}>{t('vs.setup.launch', lang)}</button> <span id="vsSetupNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span></p>
           <p style="color:#a1a1a1;font-size:13px">{t('vs.setup.note', lang)}</p>
+          <h4>{t('vs.embed.title', lang)}</h4>
+          <div class="vs-embed">
+            <div class="vs-bar"><b>VoiceStudio</b> <span id="vsEmbedStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { vsEmbedReload() }}>{t('vs.embed.reload', lang)}</button> <button class="btn btn-sm" onclick={() => { vsSetupLaunch() }}>{t('vs.embed.open', lang)}</button></div>
+            <iframe id="vsEmbedFrame" title="VoiceStudio" onload={() => { vsEmbedCheck() }} style="display:none"></iframe>
+            <p class="se-note" id="vsEmbedNote"></p>
+          </div>
           <h4>{t('vs.clone.title', lang)}</h4>
           <label>{t('vs.voice.label', lang)}</label>
           <select id="vsVoiceSel"><option value="">{t('vs.voice.empty', lang)}</option></select>
@@ -544,7 +551,7 @@
       <div class="scroll">
         <table><thead><tr><th>{t('word.item', lang)}</th><th>{t('word.channel', lang)}</th><th>{t('planner.header.date', lang)}</th><th>{t('word.status', lang)}</th><th>{t('planner.header.postiz', lang)}</th></tr></thead><tbody id="plannerBody"></tbody></table>
         <div class="postiz-embed">
-          <div class="postiz-bar"><b>Postiz</b> <span id="postizStatus"></span> <button class="btn btn-sm" onclick={() => postizReload()}>{t('planner.postiz.reload', lang)}</button></div>
+          <div class="postiz-bar"><b>Postiz</b> <span id="postizStatus"></span> <button class="btn btn-sm" onclick={() => postizReload()}>{t('planner.postiz.reload', lang)}</button> <button class="btn btn-sm" onclick={() => postizOpenBrowser()}>{t('planner.postiz.open', lang)}</button></div>
           <iframe id="postizFrame" src="http://127.0.0.1:4007" title="Postiz"></iframe>
           <p class="se-note" id="postizNote"></p>
         </div>

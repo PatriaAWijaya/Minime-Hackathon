@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { esc, jsEsc } from './esc.js';
 import { readThumb } from './image-api.js';
 // Mechanical migration of prototype-v5/index.html <script> blocks.
@@ -726,6 +727,17 @@ export function postizCheck() {
     if (note) note.textContent = tr('planner.postiz.note.offline');
   });
 }
+export async function postizOpenBrowser() {
+  // Login Google tidak bisa di dalam panel (Google memblokir frame +
+  // webview tidak membuka popup OAuth) -> buka Postiz di browser sistem,
+  // tempat login Google berjalan normal. Gagal -> catatan eksplisit.
+  try {
+    await invoke('open_browser', { url: POSTIZ_UI });
+  } catch (_) {
+    var note = document.getElementById("postizNote");
+    if (note) note.textContent = tr('planner.postiz.open.failed');
+  }
+}
 export function postizReload() {
   var f = document.getElementById("postizFrame");
   if (f) f.src = POSTIZ_UI;
@@ -1081,5 +1093,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizReload, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizOpenBrowser, postizReload, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

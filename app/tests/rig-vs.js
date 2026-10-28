@@ -65,6 +65,15 @@ async function fetchStub(url) {
     if (!backendAlive) throw new Error('fetch failed');
     return makeResp({ contentType: 'audio/wav' });
   }
+  if (p === '/health') {
+    if (!backendAlive) throw new Error('fetch failed');
+    return makeResp({ jsonData: { status: 'ok', device: 'mps', version: '0.5.6' } });
+  }
+  if (u.startsWith('http://localhost:3901/')) {
+    // Probe UI embed (no-cors di app asli): resolve = port menjawab.
+    if (!backendAlive) throw new Error('fetch failed');
+    return makeResp({});
+  }
   throw new Error('unexpected fetch ' + u);
 }
 
@@ -129,6 +138,15 @@ try {
   check('vs_launch SEBELUM fetch speech (urutan agen)', launchIdx >= 0 && speechIdx > launchIdx, log.join(','));
   check('audio kembali ke MiniMe (player terisi)', document.getElementById('vsAudio')?.src === 'blob:vs-test', document.getElementById('vsAudio')?.src || '');
   check('note TTS selesai', (document.getElementById('vsNote')?.textContent || '').includes('siap'), document.getElementById('vsNote')?.textContent || '');
+
+  // Panel embed VoiceStudio: probe :3901 + cek koneksi API.
+  backendAlive = true;
+  check('panel embed ada (iframe + status + catatan)', !!document.getElementById('vsEmbedFrame') && !!document.getElementById('vsEmbedStatus') && !!document.getElementById('vsEmbedNote'));
+  [...document.querySelectorAll('.vs-embed button')].find((b) => b.textContent.trim() === 'Muat ulang').click();
+  await tick(300);
+  check('embed: iframe terpasang saat :3901 menjawab', document.getElementById('vsEmbedFrame')?.getAttribute('src') === 'http://localhost:3901', document.getElementById('vsEmbedFrame')?.getAttribute('src') || '');
+  check('embed: status Terhubung', (document.getElementById('vsEmbedStatus')?.textContent || '').includes('Terhubung'), document.getElementById('vsEmbedStatus')?.textContent || '');
+  check('embed: koneksi API terverifikasi (versi + device)', (document.getElementById('vsEmbedNote')?.textContent || '').includes('0.5.6') && (document.getElementById('vsEmbedNote')?.textContent || '').includes('mps'), document.getElementById('vsEmbedNote')?.textContent || '');
 
   // Backend sudah hidup -> Generate tidak launch lagi.
   log.length = 0;

@@ -11,6 +11,9 @@ import { tr } from './i18n.js';
 // panggil API, kembalikan audio ke MiniMe (player + unduh = "import").
 
 export const VS_BASE = 'http://127.0.0.1:3900';
+// UI web VoiceStudio: server Vite di :3901 (tujuan redirect root :3900).
+// Pada install produksi server itu TIDAK berjalan (terbukti: tidak ada
+// listener :3901) — UI produksi ada di dalam app.asar Electron.
 
 export interface VsVoice {
   id: string;
@@ -101,6 +104,98 @@ export function vsRenderStatus(): void {
         ? tr('vs.status.offline')
         : tr('vs.status.unknown');
   el.className = 'badge ' + (vsState.status === 'online' ? 'b-ok' : vsState.status === 'offline' ? 'b-warn' : '');
+}
+
+// Panel VoiceStudio di Voice Editor (pola sama dengan embed Postiz di
+// Planner, disesuaikan dengan kenyataan VoiceStudio):
+// - Backend :3900 HANYA API; UI web :3901 hanya ada bila server Vite-nya
+//   berjalan. Karena itu iframe HANYA dipasang bila probe :3901 menjawab;
+//   bila tidak, iframe disembunyikan dan panel menampilkan pemeriksaan
+//   koneksi API + panduan buka aplikasi (tanpa panel kosong yang diam).
+// - Cek koneksi berjalan SETELAH embed termuat (onload iframe) dan saat
+//   Muat ulang / mount: /health (versi + device) + vsCheck (model + suara).
+export const VS_UI = 'http://localhost:3901';
+
+let vsEmbedCSPWatched = false;
+function vsEmbedWatchCSP(): void {
+  if (vsEmbedCSPWatched) return;
+  vsEmbedCSPWatched = true;
+  document.addEventListener('securitypolicyviolation', (ev) => {
+    const d = (ev as SecurityPolicyViolationEvent).violatedDirective || '';
+    if (d.includes('frame-src')) {
+      const note = document.getElementById('vsEmbedNote');
+      if (note) note.textContent = tr('vs.embed.blocked');
+    }
+  });
+}
+
+export async function vsEmbedCheck(): Promise<void> {
+  vsEmbedWatchCSP();
+  const frame = document.getElementById('vsEmbedFrame') as HTMLIFrameElement | null;
+  const status = document.getElementById('vsEmbedStatus');
+  const note = document.getElementById('vsEmbedNote');
+  if (status) {
+    status.textContent = tr('vs.embed.checking');
+    status.className = 'badge';
+  }
+  // 1. Probe UI :3901 (no-cors: resolve = port menjawab).
+  let uiAlive = false;
+  try {
+    await fetch(VS_UI + '/', { mode: 'no-cors' });
+    uiAlive = true;
+  } catch {
+    uiAlive = false;
+  }
+  if (frame) {
+    if (uiAlive) {
+      // Guard: set src hanya bila berubah, agar onload -> check tidak
+      // memicu reload -> onload tanpa henti.
+      if (frame.getAttribute('src') !== VS_UI) frame.src = VS_UI;
+      frame.style.display = '';
+    } else {
+      frame.removeAttribute('src');
+      frame.style.display = 'none';
+    }
+  }
+  // 2. Koneksi API: /health (versi + device) + vsCheck (model + suara).
+  let version = '?';
+  let device = '?';
+  try {
+    const r = await vsFetch('/health', {}, 4000);
+    if (r.ok) {
+      const j = (await r.json()) as Record<string, unknown>;
+      version = String(j.version ?? '?');
+      device = String(j.device ?? '?');
+    }
+  } catch {
+    /* health gagal -> status dari vsCheck yang menentukan */
+  }
+  await vsCheck();
+  const apiOnline = vsState.status === 'online';
+  if (status) {
+    status.textContent = apiOnline ? tr('vs.embed.online') : tr('vs.embed.offline');
+    status.className = 'badge ' + (apiOnline ? 'b-ok' : 'b-warn');
+  }
+  if (note) {
+    const parts = [uiAlive ? tr('vs.embed.ui.online') : tr('vs.embed.ui.offline')];
+    if (apiOnline) {
+      parts.push(
+        tr('vs.embed.conn', {
+          version,
+          device,
+          models: String(vsState.models.length),
+          voices: String(vsState.voices.length),
+        }),
+      );
+    }
+    note.textContent = parts.join(' ');
+  }
+}
+
+export async function vsEmbedReload(): Promise<void> {
+  const frame = document.getElementById('vsEmbedFrame') as HTMLIFrameElement | null;
+  if (frame) frame.removeAttribute('src');
+  await vsEmbedCheck();
 }
 
 export function vsRenderVoices(): void {

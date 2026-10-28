@@ -104,12 +104,13 @@ function check(name, ok, extra = '') {
 
 const bodyText = () => document.body.textContent || '';
 // Hitung hanya MODEL call: onMount menjalankan vsCheck() (ping
-// localhost:3900: status + model + voice) dan renderPlanner()
-// menjalankan postizCheck() (ping localhost:4007). Itu cek status
+// localhost:3900: status + model + voice), renderPlanner() menjalankan
+// postizCheck() (ping localhost:4007), dan panel VoiceStudio menjalankan
+// vsEmbedCheck() (probe UI localhost:3901 + /health). Itu cek status
 // lokal, bukan model call — dikecualikan agar asersi '1 model call' /
 // 'tanpa fetch' tetap bermakna.
 const fetchCount = () =>
-  log.filter((l) => l.startsWith('fetch:') && !l.includes('127.0.0.1:3900') && !l.includes('127.0.0.1:4007')).length;
+  log.filter((l) => l.startsWith('fetch:') && !l.includes('127.0.0.1:3900') && !l.includes('127.0.0.1:4007') && !l.includes('localhost:3901')).length;
 const libRows = () => document.getElementById('libGrid')?.querySelectorAll('.lib-card').length || 0;
 
 try {

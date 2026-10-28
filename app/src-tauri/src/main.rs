@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod browser;
 mod image;
 mod sherpa;
 mod video;
@@ -21,7 +22,8 @@ fn main() {
             sherpa::sherpa_tts,
             image::image_save,
             image::image_read,
-            image::image_delete
+            image::image_delete,
+            browser::open_browser
         ])
         .run(tauri::generate_context!())
     {
