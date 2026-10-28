@@ -273,8 +273,9 @@ pub fn video_render(req: RenderRequest) -> Result<RenderResult, String> {
     if req.output.is_empty() {
         return Err("output kosong".to_string());
     }
-    let ffmpeg = find_tool("ffmpeg")
-        .ok_or_else(|| "ffmpeg tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string())?;
+    let ffmpeg = find_tool("ffmpeg").ok_or_else(|| {
+        "ffmpeg tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string()
+    })?;
     let started = std::time::Instant::now();
     let out = Command::new(&ffmpeg)
         .args(&req.args)
@@ -305,10 +306,12 @@ pub fn video_qc(req: QcRequest) -> Result<QcResult, String> {
     if !Path::new(&req.path).is_file() {
         return Err(format!("file tidak ditemukan: {}", req.path));
     }
-    let ffprobe = find_tool("ffprobe")
-        .ok_or_else(|| "ffprobe tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string())?;
-    let ffmpeg = find_tool("ffmpeg")
-        .ok_or_else(|| "ffmpeg tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string())?;
+    let ffprobe = find_tool("ffprobe").ok_or_else(|| {
+        "ffprobe tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string()
+    })?;
+    let ffmpeg = find_tool("ffmpeg").ok_or_else(|| {
+        "ffmpeg tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string()
+    })?;
     // Durasi + jenis stream lewat probe_file (dipakai bersama video_probe).
     let info = probe_file(&ffprobe, &req.path)?;
     let duration = info.duration;
@@ -414,8 +417,9 @@ pub fn video_capture(req: CaptureRequest) -> Result<CaptureResult, String> {
     if !Path::new(&req.path).is_file() {
         return Err(format!("file tidak ditemukan: {}", req.path));
     }
-    let ffmpeg = find_tool("ffmpeg")
-        .ok_or_else(|| "ffmpeg tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string())?;
+    let ffmpeg = find_tool("ffmpeg").ok_or_else(|| {
+        "ffmpeg tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string()
+    })?;
     let tmp = std::env::temp_dir().join(format!("minime-capture-{}.jpg", std::process::id()));
     let tmp_str = tmp.to_string_lossy().to_string();
     let status = Command::new(&ffmpeg)
@@ -443,10 +447,10 @@ pub fn video_capture(req: CaptureRequest) -> Result<CaptureResult, String> {
     let bytes = std::fs::read(&tmp).map_err(|e| format!("gagal membaca frame: {e}"))?;
     let _ = std::fs::remove_file(&tmp);
     Ok(CaptureResult {
-        data_url: format!("data:image/jpeg;base64,{}", base64::Engine::encode(
-            &base64::engine::general_purpose::STANDARD,
-            &bytes
-        )),
+        data_url: format!(
+            "data:image/jpeg;base64,{}",
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes)
+        ),
     })
 }
 
@@ -457,8 +461,9 @@ pub fn video_probe(req: ProbeRequest) -> Result<ProbeResult, String> {
     if !meta.is_file() {
         return Err(format!("bukan file: {}", req.path));
     }
-    let ffprobe = find_tool("ffprobe")
-        .ok_or_else(|| "ffprobe tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string())?;
+    let ffprobe = find_tool("ffprobe").ok_or_else(|| {
+        "ffprobe tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string()
+    })?;
     let info = probe_file(&ffprobe, &req.path)?;
     Ok(ProbeResult {
         duration: info.duration,
@@ -470,8 +475,8 @@ pub fn video_probe(req: ProbeRequest) -> Result<ProbeResult, String> {
 
 #[tauri::command]
 pub fn video_asset_hash(req: HashRequest) -> Result<HashResult, String> {
-    let mut file =
-        std::fs::File::open(&req.path).map_err(|_| format!("file tidak ditemukan: {}", req.path))?;
+    let mut file = std::fs::File::open(&req.path)
+        .map_err(|_| format!("file tidak ditemukan: {}", req.path))?;
     let size = file.metadata().map(|m| m.len()).unwrap_or(0);
     let mut hasher = Sha256::new();
     let mut buf = [0u8; 65536];
