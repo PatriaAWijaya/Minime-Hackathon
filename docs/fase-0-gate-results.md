@@ -1,5 +1,21 @@
 # Hasil Gerbang Fase 0 (checklist rencana kegiatan)
 
+## Addendum 28 Okt 2026 11:20 WIB — LOLOS PENUH (pernyataan Patria)
+
+Patria menyatakan "Fase 0 lengkap". Pernyataan ini dicatat Mimi dari
+kata-kata Patria sendiri — bukan persetujuan Mimi atas nama Patria.
+Kedua kondisi dari lolos bersyarat 27 Okt 15:04 kini tertutup:
+(1) tes live Muse — DINYATAKAN LOLOS oleh Patria 28 Okt ~03:42 WIB
+(uji live 28 Okt ~03:36 WIB: muse-spark-1.3, 34 token input + 684
+output, $0,00295); (2) re-baseline biaya — DITUTUP atas keputusan
+Patria 28 Okt ~04:36 WIB (Gemini Fase 1–3 tertagih $0 free tier,
+total tercatat $0,00295, rincian input/output dicatat tak dapat
+direkonstruksi). Vonis 11:30 WIB dan addendum 15:04 WIB di bawah ini
+adalah riwayat dan tetap tercatat apa adanya; yang berubah adalah
+status gerbang: Fase 0 kini LOLOS PENUH. Fase-fase berikutnya tidak
+lagi berjalan di bawah status bersyarat.
+
+
 ## Addendum 27 Okt 2026 15:04 WIB — LOLOS BERSYARAT
 
 Patria memutuskan Fase 0 LOLOS BERSYARAT (bukan lolos penuh). Vonis di

@@ -70,6 +70,8 @@
 
 - Cost jadi Billing (perintah Patria + screenshot Billing Meta 28 Okt 04:37): menu rail Billing dengan ikon kartu kredit SVG (cost-icon.png dihapus); view tabel diganti 3 kartu — Pemakaian tercatat, Kredit & pembayaran ($150.00 / Rp 0 / belum ditambahkan), Batas belanja (hard limit $5 + pemakaian $0,00295); tanpa tombol aksi palsu. i18n 270 kunci x 3. Rantai v22 live PID 44647 (HEAD remote f75f9b0).
 
+- FASE 0 LOLOS PENUH (pernyataan Patria 28 Okt ~11:20 WIB, 'Fase 0 lengkap'). Pembersihan audit: export mati createPostizDraft dihapus + cargo fmt video.rs; i18n 269 kunci x 3. Rantai v23 live PID 46181 (HEAD remote 27e9e68).
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.

@@ -65,8 +65,8 @@ Kurs: ~Rp18.148 per USD (Finnhub, 28 Okt 2026).
 - Status re-baseline: Meta kini punya angka aktual (satu panggilan).
   Re-baseline PENUH selesai per keputusan Patria 28 Okt ~04:36 WIB
   (lihat seksi penutup di bawah). Kondisi Fase 0 (1) dan (2)
-  keduanya tertutup. Lolos penuh Fase 0 tetap menunggu pernyataan
-  Patria sendiri.
+  keduanya tertutup. Lolos penuh Fase 0 DINYATAKAN Patria 28 Okt
+  2026 ~11:20 WIB ("Fase 0 lengkap").
 - Setara kredit pada kurs 28 Okt: $150 = **Rp2.722.200**
   (kreditnya sendiri tetap berdenominasi USD).
 
