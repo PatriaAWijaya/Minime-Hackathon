@@ -1,9 +1,10 @@
 # Rencana Pekerjaan Selanjutnya (DRAF — menunggu persetujuan Patria)
 
 Disusun 28 Okt 2026. Status saat ini: Fase 0 LOLOS PENUH (pernyataan
-Patria 28 Okt ~11:20 WIB); app live rantai v23 PID 46181; i18n 269
-kunci x 3; deviasi kompatibilitas hackathon 0/10 (cek ulang tiap
-gerbang fase).
+Patria 28 Okt ~11:20 WIB); app live rantai v27 PID 58260; i18n 267
+kunci x 3; audit ke-2 0 temuan; deviasi kompatibilitas hackathon
+0/10 (cek ulang tiap gerbang fase; dicek 28 Okt 13:19 WIB — Fase 4
+siap, tanpa penghambat).
 
 ## 0. Ikon rail — hari ini, 28 Okt (perintah Patria 28 Okt ~11:38 WIB)
 
@@ -69,8 +70,8 @@ produk Meta, alasan pentingnya model Meta, checkbox izin publikasi.
   5-vs-3, tab default Media Studio (Video PROVISIONAL), upgrade
   VoiceStudio v0.5.7 (perhatian: lisensi OmniVoice), kartu + Spend
   Limit Meta, hapus cron hapus-cron-posting-hackathon 5 Nov (sudah
-  tanpa tujuan), ketahanan rig harness (/tmp sudah 2x terhapus —
+  tanpa tujuan), ketahanan rig harness (/tmp sudah 4x terhapus —
   pindahkan rig ke repo).
 - Posting harian: hanya atas perintah langsung Patria (kedua cron
   posting sudah dihapus 28 Okt).
-Terlaksana 28 Okt (di luar urutan rencana, atas perintah langsung): langkah 0b list agen collapsible per project (rantai v25) + ikon macOS (icon.icns di repo, bundel debug ditambal di rantai v26, PID 55237; konfirmasi visual Dock ditunggu).
+Terlaksana 28 Okt (di luar urutan rencana, atas perintah langsung): langkah 0b list agen collapsible per project (rantai v25) + ikon macOS (icon.icns di repo, bundel debug ditambal di rantai v26, PID 55237; konfirmasi visual Dock ditunggu) + pembersihan audit ke-2 (2 kunci i18n mati, rantai v27 PID 58260; audit ke-2 0 temuan).
