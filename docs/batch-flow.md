@@ -20,7 +20,9 @@ Media Studio kini 6 tab: Script, Image, **Brand, Batch**, Voice, Video
 - Font: daftar (nama + peran teks bebas) + tambah/hapus.
 - Warna korporat: daftar (color picker <-> hex + nama) + tambah/hapus.
 - Header: teks + slot gambar. Footer: teks + slot gambar.
-- Preview "Sufiks prompt dari brand" (read-only).
+- (Preview "Sufiks prompt dari brand" + catatan binding DIHAPUS atas
+  perintah Patria 28 Okt 20:53 — sufiks tetap bekerja di balik layar
+  untuk generate Image & Batch.)
 
 Binding v1 (JUJUR): prompt-level saja. Endpoint generations Meta hanya
 menerima teks — yang masuk ke prompt: nama, warna (hex), font (nama),

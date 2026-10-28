@@ -190,9 +190,6 @@ function renderBrand(): void {
     (b.footerFile ? '<img data-footerimg alt="' + esc(b.footerFile) + '">' : '') +
     '<input type="file" accept="image/*" id="brand-footer-file">' +
     (b.footerFile ? '<button class="se-btn2" id="brand-footer-clear">' + tr('brand.logo.clear') + '</button>' : '') + '</div>' +
-    '<h4>' + tr('brand.prompt.title') + '</h4>' +
-    '<div class="se-output" id="brand-prompt">' + esc(brandSuffix() || tr('brand.prompt.empty')) + '</div>' +
-    '<div class="se-note">' + tr('brand.prompt.note') + '</div>' +
     '<div class="se-note" id="brand-note"></div>';
 
   // Muat preview gambar dari disk (async; gagal -> kartu tetap tampil).
@@ -227,8 +224,6 @@ function renderBrand(): void {
     const cur = readBrand();
     fn(cur);
     saveBrand(cur);
-    const pr = document.getElementById('brand-prompt');
-    if (pr) pr.textContent = brandSuffix() || tr('brand.prompt.empty');
   };
 
   const nameEl = document.getElementById('brand-name') as HTMLInputElement | null;

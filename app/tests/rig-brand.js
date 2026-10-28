@@ -5,7 +5,9 @@
 //     yang merusak input.
 //  3. Unggah logo varian normal via file input (FileReader + invoke
 //     stub image_save/image_read) -> preview tampil.
-//  4. Centang "pakai brand" -> preview sufiks prompt memuat nama+hex.
+//  4. Centang "pakai brand" -> sufiks mengalir ke preview prompt Image
+//     (preview sufiks di tab Brand dihapus atas perintah Patria
+//     28 Okt 20:53 — yang diuji kini jalur sebenarnya: prompt Image).
 //  5. Hapus logo -> slot kosong + image_delete dipanggil.
 // Jalankan: npm run rig:brand (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
@@ -134,13 +136,23 @@ try {
   }, 'preview logo tampil', 120);
   check('preview logo tampil', !!(document.querySelector('[data-logoimg="normal"]')?.src || '').startsWith('data:image'));
 
-  // 6. Centang pakai brand -> sufiks prompt memuat nama + hex.
+  // 6. Centang pakai brand -> sufiks mengalir ke preview prompt Image.
   const useEl = document.getElementById('brand-use');
   useEl.checked = true;
   useEl.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
   await tick(100);
-  const promptText = document.getElementById('brand-prompt')?.textContent || '';
-  check('sufiks prompt memuat nama + hex', promptText.includes('TEST Kopi Surabaya') && promptText.includes('#123456'), promptText);
+  check('centang pakai brand tersimpan', brand().useBrand === true, JSON.stringify(brand().useBrand));
+  check('preview sufiks Brand sudah dihapus', !document.getElementById('brand-prompt'));
+  dom.window.mediaTab('image');
+  await tick(100);
+  const brief = document.getElementById('img-brief');
+  brief.value = 'kopi susu';
+  brief.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(100);
+  const preview = document.getElementById('img-preview')?.textContent || '';
+  check('sufiks brand mengalir ke prompt Image', preview.includes('TEST Kopi Surabaya') && preview.includes('#123456'), preview);
+  dom.window.mediaTab('brand');
+  await tick(100);
 
   // 7. Hapus logo -> slot kosong + image_delete.
   document.querySelector('[data-logoclear="normal"]').click();

@@ -1582,3 +1582,9 @@ dokumen lama yang dipakai.
 - Verifikasi: HEAD b2583c2 (batch+brand) + riwayat 34c5bda (gambar) + 7988084 (chat) di bawahnya; proses baru PID 73584 hidup; bundle dist memuat brand-main (3x), batch-main (3x), ms-tabbtn-brand — UI baru TERKIRIM ke app.
 - Isi yang kini LIVE di app: orkestrasi chat (Prime ack -> delegasi -> approve studio), flow gambar Meta (Generate + galeri + spend), tab Brand (7 varian logo + warna + font + header/footer), tab Batch (skrip batch -> kartu draf x3 -> Canva -> jadwal Postiz).
 - MENUNGGU (kini BISA dilakukan karena Mac nyala + app baru jalan): klik bukti Patria — Generate gambar di tab Image; delegasi chat ("buatkan riset pasar kopi", "buatkan naskah video kopi"); Simpan/Gunakan Script; tab Brand (unggah logo); batch end-to-end + jadwal Postiz pertama (Postiz harus berjalan di MacBook).
+
+## Hapus preview sufiks Brand (28 Okt, perintah Patria 20:53 WIB)
+- Dihapus dari tab Brand: blok "Sufiks prompt dari brand" (preview + teks "(brand belum aktif atau kosong)") + catatan binding v1. Fungsi sufiks TIDAK dihapus — brandSuffix() tetap dipakai generate Image & Batch; yang hilang hanya tampilannya.
+- Kunci i18n mati dihapus (brand.prompt.title/empty/note, 3 dict): kini 483 kunci x 3, 0 duplikat, 0 selisih.
+- Rig-brand diperbarui: cek preview diganti cek jalur sebenarnya (centang pakai-brand -> sufiks mengalir ke baris preview prompt tab Image) + cek elemen preview sudah tidak ada. Gerbang: tsc 0, svelte-check 0 error, vite OK, rig-brand 14/14, rig-batch + rig-image tetap PASS, gate-test 14/14, scan PASSED, cargo check 0.
+- MENUNGGU: commit/push -> rantai berikutnya (Mac sedang nyala; rantai hanya atas sinyal Patria agar tidak mengganggu uji kliknya).
