@@ -1600,3 +1600,8 @@ dokumen lama yang dipakai.
 - Rantai /tmp/mh-build35.sh (turunan v34, marker MH_BUILD35_OK): pull --ff-only (b2583c2 -> 1ab1cac), vite + cargo debug, tambal ikon, pkill + open. CHAIN_EXIT 0, MH_BUILD35_OK.
 - Verifikasi: HEAD 1ab1cac; PID baru 74393 hidup; marker bundle TERBALIK sesuai harapan (ms-tabbtn-brand 0, brand-prompt 0, img-brand-side 1, img-main 1) — UI baru TERKIRIM.
 - Kini LIVE: tab Brand sudah hilang sebagai tab; Brand tampil sebagai sidebar kiri di tab Image; preview sufiks + catatan binding sudah tidak ada.
+
+## Hapus header "Buat Gambar" + rantai v36 (28 Okt, perintah Patria 21:15 WIB)
+- Dihapus: h3 {t('img.title')} di panel Image saja (tab lain tidak disentuh). Kunci img.title jadi mati -> dihapus dari 3 dict: kini 482 kunci x 3, 0 duplikat, 0 selisih.
+- Gerbang: tsc 0, svelte-check 0 error, vite OK, rig-image + rig-brand PASS.
+- Push 6407265 <-> e346ab4, lalu rantai v36 LANGSUNG (belajar dari laporan "ui belum berubah" sebelumnya: perubahan kecil ini ikut dirantai supaya bisa diverifikasi saat itu juga): pull -> e346ab4, CHAIN_EXIT 0, MH_BUILD36_OK, PID baru 75310, string "Buat Gambar" di bundle = 0.
