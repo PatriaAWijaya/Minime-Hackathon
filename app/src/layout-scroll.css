@@ -117,3 +117,9 @@ h3 { font-size: 18px; }
 .msg .body { display: flex; flex-direction: column; align-items: flex-start; }
 .msg.user .body { align-items: flex-end; }
 .msg.user .bubble { background: #EB87B4; color: #262626; }
+
+/* Header nama DI DALAM bubble (revisi 28 Okt): agen kiri hijau bold,
+   user kanan (warna mengikuti bubble pink = teks gelap). */
+.msg .bubble .who { margin-bottom: 4px; }
+.msg .bubble .who { text-align: left; color: #A6EBB1; font-weight: 700; }
+.msg.user .bubble .who { text-align: right; color: #262626; }

@@ -112,7 +112,7 @@ export function renderChat() {
       var who = String(m.name || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
       div.innerHTML = m.curation
         ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + m.text + '</div></div>'
-        : '<div class="body"><div class="who">' + who + '</div><div class="bubble">' + m.text + '</div></div>';
+        : '<div class="body"><div class="bubble"><div class="who">' + who + '</div>' + m.text + '</div></div>';
       box.appendChild(div);
     });
     box.scrollTop = box.scrollHeight;
