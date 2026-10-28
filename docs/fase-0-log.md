@@ -1536,3 +1536,4 @@ dokumen lama yang dipakai.
 - i18n: 364 kunci x 3 (70 kunci se.* baru, 0 selisih, 0 duplikat). CSS baru hanya di layout-scroll.css (app.css tetap verbatim v5).
 - Gerbang: root+app tsc 0, svelte-check 0 error/43 warning (baseline a11y sama), vite build 224.92 kB, rig-script.js baru ALL PASSED (14 cek incl. generate end-to-end via stub fetch chat-completions).
 - MENUNGGU: commit/push -> rantai v32 -> klik Patria di tab Script.
+- Rantai v32 LIVE (PID 72142, HEAD a20ea1f): Script Editor 2 panel sudah di aplikasi. MENUNGGU klik Patria di tab Script (Media Studio).
