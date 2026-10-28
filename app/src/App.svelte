@@ -244,11 +244,6 @@
       </div>
       <div class="scroll" id="chatBox"></div>
       <div class="composer">
-        <div>
-          <span class="chip" onclick={() => { quickChat(t('chip.1', lang)) }}>Riset kompetitor + carousel</span>
-          <span class="chip" onclick={() => { quickChat(t('chip.2', lang)) }}>Talking head promo</span>
-          <button class="btn btn-sm" onclick={() => { primeCurate() }}>{t('composer.curate', lang)}</button>
-        </div>
         <div class="wa-pop" id="attachMenu">
           <button onclick={() => { waAttach('Gambar') }}>{t('composer.attach.img', lang)}</button>
           <button onclick={() => { waAttach('Dokumen') }}>{t('composer.attach.doc', lang)}</button>

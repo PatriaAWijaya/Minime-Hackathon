@@ -1623,3 +1623,7 @@ dokumen lama yang dipakai.
 - Koreksi atas v38: di v38 saya sengaja menahan isi pesan user tetap rata kiri atas alasan keterbacaan; perintah ini membatalkannya — kini SELURUH isi bubble user rata kanan (header + teks), sesuai perintah eksplisit. Aturan: .msg.user .bubble { text-align: right } di layout-scroll.css, menimpa dua aturan lama app.css (text-align:left) karena berkas diimpor sesudahnya.
 - Gerbang: tsc 0, svelte-check 0 error, vite OK, gate-test 14/14, scan PASSED, rig-chat 27/27 (cek baru: aturan .msg.user .bubble yang menang memuat text-align:right, dicocokkan per-aturan bukan sekadar string), rig-image/brand/batch PASS.
 - Push 8670496 <-> 4e39c24, rantai v39: CHAIN_EXIT 0, MH_BUILD39_OK, PID baru 76765, HEAD 4e39c24, kaskade bundle terverifikasi (tiga aturan .msg.user .bubble berurutan, yang terakhir text-align:right).
+
+## Chip composer disembunyikan (28 Okt, perintah Patria 21:40 WIB)
+- Composer chat: baris chip di atas kolom input dihapus — "Riset kompetitor + carousel", "Talking head promo", dan tombol "Kurasi Prime (simulasi)" tidak lagi ditampilkan. Fungsi quickChat/primeCurate dan kunci i18n terkait dibiarkan (tidak ada pemakaian lain yang rusak; primeCurate tetap diekspor untuk alur demo).
+- Gerbang: tsc 0, svelte-check 0 error (39 warnings lama), vite OK.
