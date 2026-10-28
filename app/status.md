@@ -85,6 +85,8 @@
 
 - Whisper TERPASANG di MacBook 28 Okt: whisper-cpp (brew) + model ggml-small di ~/whisper-models/ggml-small.bin; bukti transkripsi ID live (~2 dtk, timestamp segmen terbukti). Sisa chunk 3: adaptor + verifikasi penutup Tier 2.
 
+- VoiceStudio satu paket + auto-launch agen LIVE rantai v29 (PID 67531) 28 Okt: Setup di tab Voice (vs_install: unduh v0.5.7 + checksum + ~/Applications, lewati bila sudah ada) + agentVoice (vs_launch otomatis bila backend mati) + rig-vs 11/11 di repo.
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.
