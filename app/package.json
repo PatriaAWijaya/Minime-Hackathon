@@ -19,7 +19,8 @@
     "preview": "vite preview",
     "check": "svelte-check",
     "rig:vs": "node tests/rig-vs.js",
-    "rig:sherpa": "node tests/rig-sherpa.js"
+    "rig:sherpa": "node tests/rig-sherpa.js",
+    "rig:script": "node tests/rig-script.js"
   },
   "type": "module",
   "version": "0.1.0"

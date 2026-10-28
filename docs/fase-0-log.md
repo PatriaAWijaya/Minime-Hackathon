@@ -1527,3 +1527,12 @@ dokumen lama yang dipakai.
 - Gerbang VM: fmt clean, cargo check 0, clippy 0, meta-test ok; vite build 206.98 kB; rig-sherpa ALL PASSED. Insiden: cargo test membuat OUT_DIR piper-phonemize-sys baru tanpa seed espeak -> gagal TLS; diperbaiki dengan seed ulang (pelajaran AGENTS.md: tiap OUT_DIR baru butuh seed).
 - MENUNGGU: commit/push perbaikan ini -> rantai v31 -> klik ulang Patria di kolom TTS atas (Generate via Sherpa).
 - Rantai v31 LIVE (PID 70697, HEAD d2b3d16): perbaikan metadata + invoke {req} sudah di aplikasi. MENUNGGU klik ulang Patria di kolom TTS atas (Generate via Sherpa) = bukti live terakhir tahap 2.
+
+## Script Editor 2 panel (28 Okt 2026, perintah Patria 17:53 WIB: perbaiki script editor dulu)
+- Tab Script Media Studio dirombak: sidebar kiri (Social Media / Artikel / Movie Script) + window utama yang isinya mengikuti menu aktif. Textarea lama dihapus (kunci ms.script.placeholder ikut dihapus; pemuatan #msScript di v5logic sudah null-guarded).
+- Social Media: radio platform (Instagram, Facebook, WhatsApp, TikTok, Threads, LinkedIn) + radio jenis (Content, Caption, Keduanya) + radio format (Image, Carousel, Reels) HANYA untuk Instagram + dropdown 8 framework (AIDA, PAS, BAB, FAB, 4P, ACCA, Hook-Story-Offer, Golden Circle + deskripsi 1 baris) + form 5W1H (Apa wajib, sisanya opsional) + Generate -> hasil tampil di window utama di bawah form (footer provider/model/latensi + tombol Salin). State + hasil tersimpan (minime.scriptEditor; hasil dicerminkan ke minime.script).
+- Artikel & Movie Script PROVISIONAL (struktur menunggu arahan Patria): Artikel = topik + target pembaca + panjang + framework; Movie = premis + genre + tokoh utama. Keduanya memakai Generate yang sama.
+- Generate memakai router AI yang sama dengan chat (Meta -> Gemini -> Ollama) dengan prompt deterministik dari form (bukan template tempel); tanpa kunci -> error jujur, tanpa jawaban karangan. Keputusan ini + daftar framework + struktur 2 panel non-sosial = PROVISIONAL, bisa dikoreksi Patria satu kata.
+- i18n: 364 kunci x 3 (70 kunci se.* baru, 0 selisih, 0 duplikat). CSS baru hanya di layout-scroll.css (app.css tetap verbatim v5).
+- Gerbang: root+app tsc 0, svelte-check 0 error/43 warning (baseline a11y sama), vite build 224.92 kB, rig-script.js baru ALL PASSED (14 cek incl. generate end-to-end via stub fetch chat-completions).
+- MENUNGGU: commit/push -> rantai v32 -> klik Patria di tab Script.

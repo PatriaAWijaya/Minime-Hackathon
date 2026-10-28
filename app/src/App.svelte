@@ -5,6 +5,7 @@
   import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
   import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
   import { sherpaSetup, sherpaTtsFromTab, sherpaRenderStatus, sherpaRefreshUI } from "./lib/sherpa.js";
+  import { initScriptEditor, setSeMenu, seRefreshUI } from "./lib/script-editor.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtInt, fmtUsd } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
@@ -25,6 +26,7 @@
     renderDetail();
     vsRefreshVoiceUI();
     sherpaRefreshUI();
+    seRefreshUI();
     updateKeyStatus();
   }
 
@@ -33,6 +35,7 @@
     renderCampaign();
     setSendChatImpl(sendChatReal);
     vsRenderStatus();
+    initScriptEditor();
     updateKeyStatus();
   });
 
@@ -312,7 +315,14 @@
       <div class="scroll">
         <div id="ms-tab-script" style="display:none">
           <h3>{t('ms.tab.script', lang)}</h3>
-          <textarea id="msScript" rows="12" style="width:100%;box-sizing:border-box" placeholder={t('ms.script.placeholder', lang)} oninput={(e) => { try { localStorage.setItem('minime.script', e.currentTarget.value); } catch (_) {} }}></textarea>
+          <div class="se-wrap">
+            <div class="se-side">
+              <button class="se-menubtn" data-se-menu="social" onclick={() => setSeMenu('social')}>{t('se.menu.social', lang)}</button>
+              <button class="se-menubtn" data-se-menu="artikel" onclick={() => setSeMenu('artikel')}>{t('se.menu.artikel', lang)}</button>
+              <button class="se-menubtn" data-se-menu="movie" onclick={() => setSeMenu('movie')}>{t('se.menu.movie', lang)}</button>
+            </div>
+            <div id="se-main" class="se-main"></div>
+          </div>
         </div>
         <div id="ms-tab-image" style="display:none">
           <div class="filters">

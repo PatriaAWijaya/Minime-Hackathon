@@ -16,3 +16,20 @@ html, body { overflow: hidden; }
 .sidebar { overflow-y: auto; min-height: 0; }
 #agentList .group { cursor: pointer; user-select: none; }
 #agentList .group:hover { color: #d4d4d4; }
+
+/* Script Editor 2 panel (28 Okt): sidebar kiri + window utama. */
+.se-wrap { display: flex; gap: 16px; align-items: flex-start; }
+.se-side { display: flex; flex-direction: column; gap: 8px; min-width: 150px; flex-shrink: 0; }
+.se-menubtn { text-align: left; padding: 10px 12px; border-radius: 8px; border: 1px solid #2a2a2a; background: #1e1e1e; color: #ececec; cursor: pointer; }
+.se-menubtn.active { background: #FFD1DC; color: #262626; border-color: #FFD1DC; font-weight: 700; }
+.se-main { flex: 1; min-width: 0; }
+.se-group { margin-bottom: 14px; }
+.se-radios { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.se-radios label { display: inline-flex; align-items: center; gap: 5px; }
+.se-field { width: 100%; box-sizing: border-box; background: #171717; color: #ececec; border: 1px solid #2a2a2a; border-radius: 8px; padding: 8px; margin-top: 4px; }
+.se-group label { display: block; margin-bottom: 8px; }
+.se-btn { background: #FFD1DC; color: #262626; border: 0; border-radius: 999px; padding: 10px 18px; font-weight: 700; cursor: pointer; }
+.se-btn:disabled { opacity: 0.6; cursor: default; }
+.se-btn2 { background: #1e1e1e; color: #ececec; border: 1px solid #2a2a2a; border-radius: 8px; padding: 6px 12px; cursor: pointer; margin-top: 8px; }
+.se-output { white-space: pre-wrap; background: #171717; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; }
+.se-note { color: #aaa; font-size: 13px; margin-top: 6px; }
