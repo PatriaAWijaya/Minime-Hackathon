@@ -163,3 +163,22 @@ tahap 4 lolos.
   ~/minime-voices/sherpa-id, TIDAK masuk git), sherpa_tts (memakai
   naskah & kecepatan yang sama dengan tab Voice). Uji unit IGNOR
   di sherpa.rs (butuh aset) + rig-sherpa.js untuk wiring UI.
+
+## 6. Vonis Kaggle (28 Okt 2026 sore, hasil baca browser)
+Halaman MODEL_CARD ternyata menunjuk NOTEBOOK Kaggle (bukan halaman
+dataset): "Indic TTS Malayalam Speech Corpus" oleh Marília Prata
+(mpwolke), 18 Jun 2020. Isinya: eksplorasi dataset Malayalam untuk
+TTS (folder mono_female_1 / mono_male_1 + license.pdf di dalam
+dataset 4,83 GB) dan model LSTM TensorFlow di atas transkrip aksara
+Malayalam. Lisensi "Apache 2.0" yang tampil di halaman itu adalah
+lisensi KODE NOTEBOOK — bukan lisensi dataset, bukan lisensi voice.
+license.pdf dataset TIDAK terbaca (hanya terlihat namanya).
+VONIS: jejak Kaggle TIDAK membersihkan voice ini — malah
+mengonfirmasi kejanggalan (materi tertaut = Malayalam, bukan
+Indonesia; kemungkinan besar MODEL_CARD salah tempel). Dataset
+latih voice yang sebenarnya TIDAK diketahui dari kartu ini.
+Konsekuensi: voice id_ID-news_tts-medium TETAP HANYA untuk uji
+lokal (prototipe + bukti engine). Untuk distribusi, voice harus
+diganti dengan yang lisensinya terverifikasi, atau lisensinya
+ditetapkan lewat jalur lain — keputusan itu masuk tahap packaging,
+bukan tahap prototipe.
