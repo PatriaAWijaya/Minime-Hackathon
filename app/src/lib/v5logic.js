@@ -663,7 +663,28 @@ export function mediaBadge(s) { return s === "Siap untuk Post" ? "b-ok" : (s ===
    (X-Frame-Options) panel akan kosong: catatan di bawah menjelaskan
    fallback-nya (penjadwalan native Batch tetap jalan). */
 var POSTIZ_UI = "http://127.0.0.1:4007";
+/* Akar masalah panel kosong 29 Okt: CSP app (tauri.conf.json) tidak punya
+   frame-src, sehingga frame jatuh ke default-src 'self' dan iframe
+   127.0.0.1:4007 diblokir app sendiri — padahal Postiz tidak memasang
+   X-Frame-Options/CSP (terbukti via curl: root 307 -> /auth 200, tanpa
+   header framing) dan probe connect-src lolos ("Online"). Perbaikan:
+   frame-src 'self' http://127.0.0.1:4007 di tauri.conf.json.
+   Pengawas di bawah mengubah panel kosong yang diam menjadi pesan
+   eksplisit bila pemblokiran frame terjadi lagi. */
+var postizCSPWatched = false;
+function postizWatchCSP() {
+  if (postizCSPWatched) return;
+  postizCSPWatched = true;
+  document.addEventListener("securitypolicyviolation", function (ev) {
+    var d = ev && ev.violatedDirective ? ev.violatedDirective : "";
+    if (d.indexOf("frame-src") !== -1) {
+      var note = document.getElementById("postizNote");
+      if (note) note.textContent = tr('planner.postiz.blocked');
+    }
+  });
+}
 export function postizCheck() {
+  postizWatchCSP();
   var st = document.getElementById("postizStatus");
   var note = document.getElementById("postizNote");
   if (!st) return;
