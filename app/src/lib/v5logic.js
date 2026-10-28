@@ -15,7 +15,9 @@ export function renderAgents() {
     var html = "", rowNo = -1;
     Object.keys(PROJECTS).forEach(function (pid) {
       var proj = PROJECTS[pid];
-      html += '<div class="group">' + proj.name + (pid === currentProj ? ' • PROYEK AKTIF' : '') + '</div>';
+      var collapsed = !!collapsedGroups[pid];
+      html += '<div class="group" onclick="toggleGroup(\'' + pid + '\')">' + (collapsed ? '▸' : '▾') + ' ' + proj.name + (pid === currentProj ? ' • PROYEK AKTIF' : '') + '</div>';
+      html += '<div class="gagents" data-pid="' + pid + '"' + (collapsed ? ' style="display:none"' : '') + '>';
       proj.agents.forEach(function (a, i) {
         var ag = AGENTS[a.key], off = a.status === "Nonaktif";
         rowNo++;
@@ -26,6 +28,7 @@ export function renderAgents() {
           + (ag.always ? '' : '<button class="toggle" onclick="event.stopPropagation();toggleAgent(' + i + ',\'' + pid + '\')">' + (off ? 'Aktifkan' : 'Nonaktifkan') + '</button>')
           + '</div>';
       });
+      html += '</div>';
     });
     document.getElementById("agentList").innerHTML = html;
   }
@@ -539,9 +542,17 @@ export function makeResizer(handleId, colId, minW, maxW) {
 
 export function filterAgents(q) {
   q = (q || "").toLowerCase();
-  document.querySelectorAll('#agentList .agent').forEach(function (el) {
-    var t = el.textContent.toLowerCase();
-    el.style.display = (!q || t.indexOf(q) !== -1) ? '' : 'none';
+  if (!q) { renderAgents(); return; }
+  document.querySelectorAll('#agentList .gagents').forEach(function (wrap) {
+    var any = false;
+    wrap.querySelectorAll('.agent').forEach(function (el) {
+      var show = el.textContent.toLowerCase().indexOf(q) !== -1;
+      el.style.display = show ? '' : 'none';
+      if (show) any = true;
+    });
+    wrap.style.display = any ? '' : 'none';
+    var g = wrap.previousElementSibling;
+    if (g && g.classList.contains('group')) g.style.display = any ? '' : 'none';
   });
 }
 
@@ -621,6 +632,17 @@ var PROJECTS = {
   };
 
 var currentProj = "kopi", selectedAgent = "prime", mediaFilter = "semua";
+
+/* Collapsible project groups (28 Okt): status buka/tutup per project
+   disimpan di localStorage agar bertahan antar restart; default semua
+   terbuka. renderAgents() menggambar ulang seluruh list tiap ada
+   perubahan, jadi statusnya tinggal di variabel ini, bukan di DOM. */
+var collapsedGroups = (function () { try { return JSON.parse(window.localStorage.getItem('minime.agentGroups') || '{}'); } catch (e) { return {}; } })();
+export function toggleGroup(pid) {
+  collapsedGroups[pid] = !collapsedGroups[pid];
+  try { window.localStorage.setItem('minime.agentGroups', JSON.stringify(collapsedGroups)); } catch (e) {}
+  renderAgents();
+}
 
 function kcols() { return [tr('kcol.0'), tr('kcol.1'), tr('kcol.2'), tr('kcol.3'), tr('kcol.4')]; }
 
@@ -750,5 +772,5 @@ export function initV5() {
   waInputChanged();
   var _ms = document.getElementById('msScript');
   if (_ms) { try { _ms.value = localStorage.getItem('minime.script') || ''; } catch (_) {} }
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addKanbanList, addNodeAfter, agentKeyByName, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libRevise, libSave, libUse, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addKanbanList, addNodeAfter, agentKeyByName, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libRevise, libSave, libUse, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }
