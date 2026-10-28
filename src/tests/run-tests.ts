@@ -17,6 +17,7 @@ import { runSample } from '../pipeline';
 import { runFase1 } from '../fase1';
 import { runFase2 } from '../fase2';
 import { runFase3 } from '../fase3';
+import { runFase4 } from '../fase4';
 import { PostizDraftClient } from '../postiz';
 import { toIdr, formatIdr, parseUsdIdrRate } from '../currency';
 
@@ -167,6 +168,36 @@ async function main() {
   await assert.rejects(() => runFase3({ allowMock: true, dataDir: 'data', gkontenApprovalPath: 'data/no-such-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json', fase2Path: 'docs/fase-2-output.json' }), GateError, 'Fase 3 without GKonten record must be blocked');
   await assert.rejects(() => runFase3({ allowMock: true, dataDir: 'data', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/no-such-gstp.json', fase2Path: 'docs/fase-2-output.json' }), GateError, 'Fase 3 without GSTP record must be blocked');
   ok('fase3: 7 carousels x 3 slides, QC pass, image pending, drafts pending-postiz, unpublished, no-gate blocked');
+
+  // Phase 4 (rule-based, no model calls) — requires approved GSTP +
+  // GKonten records, captures 12 fictional TEST leads, dedupes to
+  // 10 (2 merges), flags 1 name-only candidate pair without
+  // merging, scores 1-5 with auditable reasons, stages by score,
+  // and emits draft Outreach only (score >= 3, never sent).
+  const fase4 = await runFase4({ dataDir: 'data', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json' });
+  assert.strictEqual((fase4.counts as Record<string, unknown>).raw, 12, 'Fase 4 must capture 12 raw leads');
+  assert.strictEqual((fase4.counts as Record<string, unknown>).deduped, 10, 'Fase 4 must dedupe to 10 leads');
+  assert.strictEqual((fase4.counts as Record<string, unknown>).merged, 2, 'Fase 4 must merge exactly 2 duplicates');
+  assert.deepStrictEqual((fase4.dedupeLog as Array<Record<string, unknown>>).map((d) => [d.mergedId, d.intoId, d.rule]), [['L02', 'L01', 'phone'], ['L04', 'L03', 'email+name']], 'dedupe log must match the fixture pairs');
+  assert.strictEqual((fase4.candidates as unknown[]).length, 1, 'Fase 4 must flag exactly 1 name-only candidate pair');
+  assert.deepStrictEqual((fase4.candidates as Array<Record<string, unknown>>)[0].leadIds, ['L05', 'L06'], 'candidate pair must be the two Andi leads');
+  const leads4 = fase4.leads as Array<Record<string, unknown>>;
+  assert.ok(leads4.every((l) => (l.score as number) >= 1 && (l.score as number) <= 5), 'all scores must be within 1-5');
+  const byId4 = new Map(leads4.map((l) => [l.id as string, l]));
+  assert.strictEqual(byId4.get('L07')?.score, 5, 'Dewi must score 5');
+  assert.strictEqual(byId4.get('L07')?.stage, 'Prioritas', 'score 5 must stage Prioritas');
+  assert.deepStrictEqual((fase4.pipeline as Record<string, string[]>).Prioritas, ['L07'], 'pipeline Prioritas must hold only L07');
+  assert.strictEqual((fase4.counts as Record<string, unknown>).drafts, 6, 'Fase 4 must emit 6 outreach drafts (score >= 3)');
+  assert.ok((fase4.outreachDrafts as Array<Record<string, unknown>>).every((d) => d.status === 'draft' && d.published === false && d.sent === false), 'all outreach drafts must be unsent drafts');
+  assert.ok(!(fase4.outreachDrafts as Array<Record<string, unknown>>).some((d) => (d.stage as string) === 'Dingin'), 'no outreach draft for Dingin leads');
+  assert.strictEqual(fase4.published, false, 'Fase 4 must never publish');
+  assert.strictEqual(fase4.sent, false, 'Fase 4 must never send');
+  assert.strictEqual(fase4.liveModelCalls, 0, 'Fase 4 must use zero model calls');
+  assert.strictEqual(fase4.gtemplateApproval, null, 'Fase 4 must not invent a GTemplate approval');
+  assert.strictEqual(fase4.gbatchApproved, false, 'GBatch must stay locked in the test run');
+  await assert.rejects(() => runFase4({ dataDir: 'data', gkontenApprovalPath: 'data/no-such-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json' }), GateError, 'Fase 4 without GKonten record must be blocked');
+  await assert.rejects(() => runFase4({ dataDir: 'data', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/no-such-gstp.json' }), GateError, 'Fase 4 without GSTP record must be blocked');
+  ok('fase4: 12 raw -> 10 deduped, 2 merges, 1 candidate pair, scores 1-5, pipeline, 6 drafts unsent, 0 model calls, no-gate blocked');
 
   // Postiz draft-only client: live draft shape against a capture
   // server; no publish/schedule method may exist on the client.

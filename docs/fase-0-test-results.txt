@@ -8,6 +8,7 @@ PASS sample job end-to-end (mock, draft-only, trace + ledger)
 PASS fase1 draft: STP draft, no approval, production blocked
 PASS fase2: 7-day calendar + 7 briefs, QC pass, image pending, GKonten pending, no-GSTP blocked
 PASS fase3: 7 carousels x 3 slides, QC pass, image pending, drafts pending-postiz, unpublished, no-gate blocked
+PASS fase4: 12 raw -> 10 deduped, 2 merges, 1 candidate pair, scores 1-5, pipeline, 6 drafts unsent, 0 model calls, no-gate blocked
 PASS postiz client: draft-only shape, no publish/schedule method, key required
 PASS rupiah reporting: conversion, format, null-rate honesty, ledger IDR
 PASS qc scoring: pass and hard-violation rejection

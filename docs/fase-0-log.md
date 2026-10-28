@@ -1477,3 +1477,9 @@ dokumen lama yang dipakai.
 ## Pembersihan 2 kunci i18n mati (28 Okt 2026, temuan audit ke-2)
 - Atas persetujuan Patria ('Bersihkan 2 kunci mati', 28 Okt ~13:16 WIB): cost.col.provider + cost.col.model x3 dihapus (sisa tabel Cost lama; sejak kartu Billing v22, provider/model dirender sebagai nilai mentah). i18n 269 -> 267 kunci x 3, 0 duplikat, 0 selisih. Commit: lokal 0befc8b <-> remote 3fd091c. Verifikasi: build, svelte-check 0 error/43 warning, app tsc 0, root tsc 0, gate-test 13/13, scan PASSED, rig-billing 4/4. Rantai v27 SUKSES (MH_BUILD27_OK, diturunkan dari skrip v26 agar tambalan ikon tetap ada; PID 58260). Audit ke-2 kini 0 temuan.
 - Catatan: /tmp terhapus lagi (ke-4x) sebelum rig — harness jsdom dibuat ulang di /tmp/jsdom-del untuk rig ini.
+
+## Fase 4 — Form -> CRM Leads (28 Okt 2026, atas perintah Patria 13:22 WIB)
+- Scope: capture, dedupe, scoring 1-5 (rule-based), pipeline, draf Outreach batch. TANPA kirim nyata: modul tanpa Postiz/WA API/fetch dan tanpa fungsi send/publish/schedule; draf WA hanya tautan klik-chat manual (Fase A), draf IG hanya teks manual.
+- Gerbang: butuh GSTP + GKonten (diimpor, tidak diciptakan); tanpa keduanya GateError. GTemplate dicatat null (menunggu persetujuan Patria, tidak diciptakan); GBatch terkunci (false).
+- Hasil (fixture FIKSI TEST Kopi, 12 lead): 12 mentah -> 10 deduped; merge L02->L01 (aturan phone, varian format +62) dan L04->L03 (aturan email+name, varian kapital); pasangan nama-saja L05/L06 TIDAK digabung, hanya ditandai kandidat review manusia. Skor: Prioritas [L07=5], Prospek [L01, L03, L08, L10=4], Nurture [L12=3], Dingin [L05=1, L06=2, L09=2, L11=1]. Draf Outreach 6 (skor >= 3): 3 tautan wa.me (L01, L07, L12), 3 teks saja (L03, L08, L10). 0 model call, ledger tidak berubah.
+- File: src/fase4.ts + src/fase4-run.ts (npm run fase4), output docs/fase-4-output.json, grup gate-test ke-14. Verifikasi: tsc 0, gate-test 14/14, scan PASSED, grep jalur kirim kosong.

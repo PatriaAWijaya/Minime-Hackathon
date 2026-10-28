@@ -79,6 +79,8 @@
 
 - Pembersihan audit ke-2: 2 kunci i18n mati dihapus, i18n 267 kunci x 3, LIVE rantai v27 PID 58260 (kode lokal 0befc8b <-> remote 3fd091c; rig-billing 4/4).
 
+- Fase 4 SELESAI 28 Okt: 12 lead FIKSI -> 10 deduped, skor 1-5 rule-based, pipeline, 6 draf Outreach (0 kirim, 0 model call); gate-test 14/14.
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.

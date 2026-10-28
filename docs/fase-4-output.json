@@ -1,0 +1,496 @@
+{
+  "traceId": "trace-fase4-1793168711816",
+  "productId": "TEST-BRAND-001",
+  "jobId": "job-1793168711842-2721",
+  "stages": [
+    "queued",
+    "capture-dedupe",
+    "scoring-pipeline",
+    "outreach-drafts",
+    "done"
+  ],
+  "gstpApproval": {
+    "gate": "GSTP",
+    "decision": "approved",
+    "approver": "Patria A. Wijaya",
+    "source": "docs/fase-1-gstp-approval.json"
+  },
+  "gkontenApproval": {
+    "gate": "GKonten",
+    "decision": "approved",
+    "approver": "Patria A. Wijaya",
+    "source": "docs/fase-2-gkonten-approval.json"
+  },
+  "gtemplateApproval": null,
+  "gtemplateNote": "Template Outreach (GTemplate-v1) emitted as a draft for Patria review; approval is Patria-only and is NOT recorded here.",
+  "gbatchApproved": false,
+  "gbatchNote": "GBatch NOT approved (locked) — the batch is draft-only by construction; no send path exists in this module.",
+  "leadsRaw": [
+    {
+      "id": "L01",
+      "name": "Budi",
+      "phone": "0812-0000-0001",
+      "email": null,
+      "channel": "WhatsApp",
+      "message": "Halo, berapa harga es kopi susu?",
+      "firstContact": "2026-10-28T09:00:00+07:00",
+      "repeatContact": false,
+      "referredBy": null,
+      "test": true
+    },
+    {
+      "id": "L02",
+      "name": "Budi",
+      "phone": "+62812-0000-0001",
+      "email": null,
+      "channel": "WhatsApp",
+      "message": "Bisa pesan 2 gelas?",
+      "firstContact": "2026-10-28T09:40:00+07:00",
+      "repeatContact": false,
+      "referredBy": null,
+      "test": true
+    },
+    {
+      "id": "L03",
+      "name": "Sari",
+      "phone": null,
+      "email": "sari@contoh.test",
+      "channel": "Form",
+      "message": "Mau tanya menu dan lokasi gerai",
+      "firstContact": "2026-10-28T10:05:00+07:00",
+      "repeatContact": false,
+      "referredBy": null,
+      "test": true
+    },
+    {
+      "id": "L04",
+      "name": "Sari",
+      "phone": null,
+      "email": "SARI@contoh.test",
+      "channel": "Form",
+      "message": "Ada promo?",
+      "firstContact": "2026-10-28T10:30:00+07:00",
+      "repeatContact": false,
+      "referredBy": null,
+      "test": true
+    },
+    {
+      "id": "L05",
+      "name": "Andi",
+      "phone": null,
+      "email": null,
+      "channel": "Instagram",
+      "message": "Kak, es kopinya ready jam berapa?",
+      "firstContact": "2026-10-28T11:00:00+07:00",
+      "repeatContact": false,
+      "referredBy": null,
+      "test": true
+    },
+    {
+      "id": "L06",
+      "name": "Andi",
+      "phone": null,
+      "email": null,
+      "channel": "Instagram",
+      "message": "Bisa kirim ke kos saya?",
+      "firstContact": "2026-10-28T11:20:00+07:00",
+      "repeatContact": false,
+      "referredBy": null,
+      "test": true
+    },
+    {
+      "id": "L07",
+      "name": "Dewi",
+      "phone": "0812-0000-0007",
+      "email": null,
+      "channel": "WhatsApp",
+      "message": "Saya mau pesan sekarang 3 gelas, bayar QRIS, antar ke Jl. Kenanga 12",
+      "firstContact": "2026-10-28T12:00:00+07:00",
+      "repeatContact": true,
+      "referredBy": null,
+      "test": true
+    },
+    {
+      "id": "L08",
+      "name": "Rina",
+      "phone": "0812-0000-0008",
+      "email": null,
+      "channel": "Referral",
+      "message": "Teman saya rekomen es kopi susu ini, berapa harganya?",
+      "firstContact": "2026-10-28T13:00:00+07:00",
+      "repeatContact": false,
+      "referredBy": "Teman",
+      "test": true
+    },
+    {
+      "id": "L09",
+      "name": "Fajar",
+      "phone": "0812-0000-0009",
+      "email": null,
+      "channel": "WhatsApp",
+      "message": "Ok",
+      "firstContact": "2026-10-28T14:00:00+07:00",
+      "repeatContact": false,
+      "referredBy": null,
+      "test": true
+    },
+    {
+      "id": "L10",
+      "name": "Maya",
+      "phone": null,
+      "email": "maya@contoh.test",
+      "channel": "Form",
+      "message": "Saya mau pesan sekarang untuk acara kantor, 20 gelas, bisa kirim?",
+      "firstContact": "2026-10-28T15:00:00+07:00",
+      "repeatContact": false,
+      "referredBy": null,
+      "test": true
+    },
+    {
+      "id": "L11",
+      "name": "Gilang",
+      "phone": null,
+      "email": null,
+      "channel": "Instagram",
+      "message": "Keren konsepnya",
+      "firstContact": "2026-10-28T16:00:00+07:00",
+      "repeatContact": false,
+      "referredBy": null,
+      "test": true
+    },
+    {
+      "id": "L12",
+      "name": "Putri",
+      "phone": "0812-0000-0012",
+      "email": null,
+      "channel": "WhatsApp",
+      "message": "Harga? Lokasi? Buka jam berapa?",
+      "firstContact": "2026-10-28T17:00:00+07:00",
+      "repeatContact": false,
+      "referredBy": null,
+      "test": true
+    }
+  ],
+  "dedupeLog": [
+    {
+      "mergedId": "L02",
+      "intoId": "L01",
+      "rule": "phone"
+    },
+    {
+      "mergedId": "L04",
+      "intoId": "L03",
+      "rule": "email+name"
+    }
+  ],
+  "candidates": [
+    {
+      "leadIds": [
+        "L05",
+        "L06"
+      ],
+      "reason": "same normalized name, no shared phone/email — requires human review, NOT auto-merged"
+    }
+  ],
+  "leads": [
+    {
+      "id": "L01",
+      "name": "Budi",
+      "phone": "0812-0000-0001",
+      "phoneNormalized": "081200000001",
+      "email": null,
+      "channel": "WhatsApp",
+      "firstContact": "2026-10-28T09:00:00+07:00",
+      "score": 4,
+      "scoreReasons": [
+        "completeness: nama + kontak (telepon/email) tersedia",
+        "intent: pesan mengandung kata niat beli (harga/pesan/order/beli/antar/kirim/lokasi/buka/menu)",
+        "repeat: kontak berulang"
+      ],
+      "stage": "Prospek",
+      "mergedFrom": [
+        "L02"
+      ],
+      "test": true
+    },
+    {
+      "id": "L03",
+      "name": "Sari",
+      "phone": null,
+      "phoneNormalized": null,
+      "email": "sari@contoh.test",
+      "channel": "Form",
+      "firstContact": "2026-10-28T10:05:00+07:00",
+      "score": 4,
+      "scoreReasons": [
+        "completeness: nama + kontak (telepon/email) tersedia",
+        "intent: pesan mengandung kata niat beli (harga/pesan/order/beli/antar/kirim/lokasi/buka/menu)",
+        "repeat: kontak berulang"
+      ],
+      "stage": "Prospek",
+      "mergedFrom": [
+        "L04"
+      ],
+      "test": true
+    },
+    {
+      "id": "L05",
+      "name": "Andi",
+      "phone": null,
+      "phoneNormalized": null,
+      "email": null,
+      "channel": "Instagram",
+      "firstContact": "2026-10-28T11:00:00+07:00",
+      "score": 1,
+      "scoreReasons": [],
+      "stage": "Dingin",
+      "mergedFrom": [],
+      "test": true
+    },
+    {
+      "id": "L06",
+      "name": "Andi",
+      "phone": null,
+      "phoneNormalized": null,
+      "email": null,
+      "channel": "Instagram",
+      "firstContact": "2026-10-28T11:20:00+07:00",
+      "score": 2,
+      "scoreReasons": [
+        "intent: pesan mengandung kata niat beli (harga/pesan/order/beli/antar/kirim/lokasi/buka/menu)"
+      ],
+      "stage": "Dingin",
+      "mergedFrom": [],
+      "test": true
+    },
+    {
+      "id": "L07",
+      "name": "Dewi",
+      "phone": "0812-0000-0007",
+      "phoneNormalized": "081200000007",
+      "email": null,
+      "channel": "WhatsApp",
+      "firstContact": "2026-10-28T12:00:00+07:00",
+      "score": 5,
+      "scoreReasons": [
+        "completeness: nama + kontak (telepon/email) tersedia",
+        "intent: pesan mengandung kata niat beli (harga/pesan/order/beli/antar/kirim/lokasi/buka/menu)",
+        "repeat: kontak berulang",
+        "high-intent: pesan mengandung aksi beli (pesan sekarang/QRIS/bayar/antar ke/alamat)"
+      ],
+      "stage": "Prioritas",
+      "mergedFrom": [],
+      "test": true
+    },
+    {
+      "id": "L08",
+      "name": "Rina",
+      "phone": "0812-0000-0008",
+      "phoneNormalized": "081200000008",
+      "email": null,
+      "channel": "Referral",
+      "firstContact": "2026-10-28T13:00:00+07:00",
+      "score": 4,
+      "scoreReasons": [
+        "completeness: nama + kontak (telepon/email) tersedia",
+        "intent: pesan mengandung kata niat beli (harga/pesan/order/beli/antar/kirim/lokasi/buka/menu)",
+        "referral: datang lewat referensi"
+      ],
+      "stage": "Prospek",
+      "mergedFrom": [],
+      "test": true
+    },
+    {
+      "id": "L09",
+      "name": "Fajar",
+      "phone": "0812-0000-0009",
+      "phoneNormalized": "081200000009",
+      "email": null,
+      "channel": "WhatsApp",
+      "firstContact": "2026-10-28T14:00:00+07:00",
+      "score": 2,
+      "scoreReasons": [
+        "completeness: nama + kontak (telepon/email) tersedia"
+      ],
+      "stage": "Dingin",
+      "mergedFrom": [],
+      "test": true
+    },
+    {
+      "id": "L10",
+      "name": "Maya",
+      "phone": null,
+      "phoneNormalized": null,
+      "email": "maya@contoh.test",
+      "channel": "Form",
+      "firstContact": "2026-10-28T15:00:00+07:00",
+      "score": 4,
+      "scoreReasons": [
+        "completeness: nama + kontak (telepon/email) tersedia",
+        "intent: pesan mengandung kata niat beli (harga/pesan/order/beli/antar/kirim/lokasi/buka/menu)",
+        "high-intent: pesan mengandung aksi beli (pesan sekarang/QRIS/bayar/antar ke/alamat)"
+      ],
+      "stage": "Prospek",
+      "mergedFrom": [],
+      "test": true
+    },
+    {
+      "id": "L11",
+      "name": "Gilang",
+      "phone": null,
+      "phoneNormalized": null,
+      "email": null,
+      "channel": "Instagram",
+      "firstContact": "2026-10-28T16:00:00+07:00",
+      "score": 1,
+      "scoreReasons": [],
+      "stage": "Dingin",
+      "mergedFrom": [],
+      "test": true
+    },
+    {
+      "id": "L12",
+      "name": "Putri",
+      "phone": "0812-0000-0012",
+      "phoneNormalized": "081200000012",
+      "email": null,
+      "channel": "WhatsApp",
+      "firstContact": "2026-10-28T17:00:00+07:00",
+      "score": 3,
+      "scoreReasons": [
+        "completeness: nama + kontak (telepon/email) tersedia",
+        "intent: pesan mengandung kata niat beli (harga/pesan/order/beli/antar/kirim/lokasi/buka/menu)"
+      ],
+      "stage": "Nurture",
+      "mergedFrom": [],
+      "test": true
+    }
+  ],
+  "pipeline": {
+    "Prioritas": [
+      "L07"
+    ],
+    "Prospek": [
+      "L01",
+      "L03",
+      "L08",
+      "L10"
+    ],
+    "Nurture": [
+      "L12"
+    ],
+    "Dingin": [
+      "L05",
+      "L06",
+      "L09",
+      "L11"
+    ]
+  },
+  "outreachDrafts": [
+    {
+      "leadId": "L01",
+      "leadName": "Budi",
+      "stage": "Prospek",
+      "score": 4,
+      "channel": "WhatsApp",
+      "template": "GTemplate-v1 (draft, pending Patria approval)",
+      "text": "Halo Budi, terima kasih sudah menghubungi TEST Kopi Surabaya! Es kopi susu kami Rp15.000 — pesan lewat chat ini, bayar pakai QRIS. Mau saya bantu pesan sekarang?",
+      "waLink": "https://wa.me/6281200000001?text=Halo%20Budi%2C%20terima%20kasih%20sudah%20menghubungi%20TEST%20Kopi%20Surabaya!%20Es%20kopi%20susu%20kami%20Rp15.000%20%E2%80%94%20pesan%20lewat%20chat%20ini%2C%20bayar%20pakai%20QRIS.%20Mau%20saya%20bantu%20pesan%20sekarang%3F",
+      "status": "draft",
+      "published": false,
+      "sent": false,
+      "test": true
+    },
+    {
+      "leadId": "L03",
+      "leadName": "Sari",
+      "stage": "Prospek",
+      "score": 4,
+      "channel": "Form",
+      "template": "GTemplate-v1 (draft, pending Patria approval)",
+      "text": "Halo Sari, terima kasih sudah menghubungi TEST Kopi Surabaya! Es kopi susu kami Rp15.000 — pesan lewat chat ini, bayar pakai QRIS. Mau saya bantu pesan sekarang?",
+      "waLink": null,
+      "status": "draft",
+      "published": false,
+      "sent": false,
+      "test": true
+    },
+    {
+      "leadId": "L07",
+      "leadName": "Dewi",
+      "stage": "Prioritas",
+      "score": 5,
+      "channel": "WhatsApp",
+      "template": "GTemplate-v1 (draft, pending Patria approval)",
+      "text": "Halo Dewi, terima kasih sudah menghubungi TEST Kopi Surabaya! Es kopi susu kami Rp15.000 — pesan lewat chat ini, bayar pakai QRIS. Mau saya bantu pesan sekarang?",
+      "waLink": "https://wa.me/6281200000007?text=Halo%20Dewi%2C%20terima%20kasih%20sudah%20menghubungi%20TEST%20Kopi%20Surabaya!%20Es%20kopi%20susu%20kami%20Rp15.000%20%E2%80%94%20pesan%20lewat%20chat%20ini%2C%20bayar%20pakai%20QRIS.%20Mau%20saya%20bantu%20pesan%20sekarang%3F",
+      "status": "draft",
+      "published": false,
+      "sent": false,
+      "test": true
+    },
+    {
+      "leadId": "L08",
+      "leadName": "Rina",
+      "stage": "Prospek",
+      "score": 4,
+      "channel": "Referral",
+      "template": "GTemplate-v1 (draft, pending Patria approval)",
+      "text": "Halo Rina, terima kasih sudah menghubungi TEST Kopi Surabaya! Es kopi susu kami Rp15.000 — pesan lewat chat ini, bayar pakai QRIS. Mau saya bantu pesan sekarang?",
+      "waLink": null,
+      "status": "draft",
+      "published": false,
+      "sent": false,
+      "test": true
+    },
+    {
+      "leadId": "L10",
+      "leadName": "Maya",
+      "stage": "Prospek",
+      "score": 4,
+      "channel": "Form",
+      "template": "GTemplate-v1 (draft, pending Patria approval)",
+      "text": "Halo Maya, terima kasih sudah menghubungi TEST Kopi Surabaya! Es kopi susu kami Rp15.000 — pesan lewat chat ini, bayar pakai QRIS. Mau saya bantu pesan sekarang?",
+      "waLink": null,
+      "status": "draft",
+      "published": false,
+      "sent": false,
+      "test": true
+    },
+    {
+      "leadId": "L12",
+      "leadName": "Putri",
+      "stage": "Nurture",
+      "score": 3,
+      "channel": "WhatsApp",
+      "template": "GTemplate-v1 (draft, pending Patria approval)",
+      "text": "Halo Putri, terima kasih sudah menghubungi TEST Kopi Surabaya! Es kopi susu kami Rp15.000 — pesan lewat chat ini, bayar pakai QRIS. Mau saya bantu pesan sekarang?",
+      "waLink": "https://wa.me/6281200000012?text=Halo%20Putri%2C%20terima%20kasih%20sudah%20menghubungi%20TEST%20Kopi%20Surabaya!%20Es%20kopi%20susu%20kami%20Rp15.000%20%E2%80%94%20pesan%20lewat%20chat%20ini%2C%20bayar%20pakai%20QRIS.%20Mau%20saya%20bantu%20pesan%20sekarang%3F",
+      "status": "draft",
+      "published": false,
+      "sent": false,
+      "test": true
+    }
+  ],
+  "counts": {
+    "raw": 12,
+    "deduped": 10,
+    "merged": 2,
+    "candidates": 1,
+    "drafts": 6
+  },
+  "ledger": {
+    "records": 3,
+    "totalUsd": 0,
+    "totalIdr": null,
+    "usdIdrRate": null,
+    "hardLimitIdr": null,
+    "mockRecords": 3
+  },
+  "modelCalls": {},
+  "liveModelCalls": 0,
+  "scoring": "rule-based (no model calls; every point traceable to a documented rule)",
+  "published": false,
+  "sent": false,
+  "gateStatus": "FASE 4 DRAF SAJA — lead ditangkap, didedupe, diskor, dan dipetakan ke pipeline; batch Outreach hanya draf (status draft, TIDAK dipublish, TIDAK dikirim); tidak ada jalur kirim di modul ini."
+}
