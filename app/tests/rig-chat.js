@@ -99,7 +99,9 @@ async function sendMsg(text) {
 }
 
 try {
-  await tick(500);
+  // Mount Svelte di jsdom kini ~585 ms (bundle membesar sejak
+  // brand+batch+image): tunggu kondisi nyata, bukan tick buta.
+  await waitFor(() => document.getElementById('chatInput'), 'mount chatInput', 200);
   store.set('minime.metaKey', 'rig-key');
 
   // 1. Pesan langsung: ack Prime + jawaban, tanpa delegasi.
@@ -148,6 +150,19 @@ try {
   check('semua bubble punya header nama', msgs.length > 0 && msgs.every((m) => m.querySelector('.who')), 'bubble=' + msgs.length);
   const whos = [...document.querySelectorAll('#chatBox .who')].map((e) => e.textContent.trim());
   check('header memuat Patria + Prime + agen', whos.includes('Patria') && whos.includes('Prime Agent') && whos.includes('Riset') && whos.includes('Kreatif'), whos.join(','));
+
+  // 6. Palet revisi 28 Okt: user kanan (class user), agen kiri
+  //    (class msg/prime), + token warna baru di CSS ter-build.
+  const userMsgs = [...document.querySelectorAll('#chatBox .msg.user')];
+  check('bubble user ber-class user (kanan)', userMsgs.length > 0 && userMsgs.every((m) => m.querySelector('.who')?.textContent.trim() === 'Patria'), 'user=' + userMsgs.length);
+  const agentMsgs = [...document.querySelectorAll('#chatBox .msg:not(.user):not(.curation)')];
+  check('bubble agen ber-class msg/prime (kiri)', agentMsgs.length > 0, 'agen=' + agentMsgs.length);
+  const cssLink = html.match(/<link[^>]*href="([^"]+\.css)"[^>]*>/);
+  // Minifier CSS menurunkan huruf hex (EB87B4 -> eb87b4): bandingkan lower-case.
+  const cssText = (cssLink ? fs.readFileSync(path.join(distDir, cssLink[1]), 'utf-8') : '').toLowerCase();
+  check('CSS ter-build memuat pink #EB87B4', cssText.includes('#eb87b4'));
+  check('CSS ter-build memuat hijau #A6EBB1', cssText.includes('#a6ebb1'));
+  check('CSS ter-build memuat aturan bubble user', cssText.includes('.msg.user .body') && cssText.includes('.msg.user .bubble'));
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-chat exception :: ' + (e && e.stack ? e.stack : e));

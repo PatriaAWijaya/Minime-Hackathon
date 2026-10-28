@@ -37,8 +37,9 @@ that specific case, recorded in the log.
     self-heal.
 11. **Rupiah first.** Costs are shown in IDR whenever a rate
     exists; when no rate exists, IDR is null — never guessed.
-12. **Theme + nav are locked.** Monochrome + pastel pink `#FFD1DC`
-    (dark text on accent surfaces); agent list + Detail panel
+12. **Theme + nav are locked.** Monochrome + pink accent `#EB87B4`
+    + complementary green `#A6EBB1` for active/selected/connected
+    states (dark text on accent surfaces); agent list + Detail panel
     only in the Home window. Changes need Patria's order.
 13. **Bahasa: Indonesia, Inggris, Mandarin.** Model AI dan UI
     memakai tiga bahasa ini (ID/EN/ZH); pengguna mengganti

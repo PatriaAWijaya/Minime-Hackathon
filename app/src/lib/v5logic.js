@@ -158,11 +158,11 @@ export function sendChat() {
     input.value = "";
     var saved = text;
     setTimeout(function () {
-      postChat("prime", "Prime Agent", "#FFD1DC", "Diterima. Saya pecah arahanmu dan tugaskan agen yang dibutuhkan — hasilnya muncul di chat ini dan kartunya di Kanban (simulasi).");
+      postChat("prime", "Prime Agent", "#EB87B4", "Diterima. Saya pecah arahanmu dan tugaskan agen yang dibutuhkan — hasilnya muncul di chat ini dan kartunya di Kanban (simulasi).");
     }, 700);
     setTimeout(function () {
       var low = saved.toLowerCase();
-      var agent = "Riset", color = "#FFD1DC", reply = "Saya mulai risetnya dari behaviour digital dan spending audiens (simulasi).";
+      var agent = "Riset", color = "#EB87B4", reply = "Saya mulai risetnya dari behaviour digital dan spending audiens (simulasi).";
       if (low.indexOf("gambar") !== -1 || low.indexOf("carousel") !== -1 || low.indexOf("reels") !== -1 || low.indexOf("talking") !== -1) { agent = "Media"; color = "#5b5b5b"; reply = "Saya siapkan medianya — gambar/carousel/reels/talking head tampil di Media Studio setelah lolos GKonten (simulasi)."; }
       else if (low.indexOf("produk") !== -1) { agent = "Produk Digital"; color = "#666666"; reply = "Saya susun brief produk dan struktur fitur MVP-nya (simulasi)."; }
       postChat("x", agent, color, reply);
@@ -170,7 +170,7 @@ export function sendChat() {
   }
 
 export function primeCurate() {
-    postChat("prime", "Prime Agent", "#FFD1DC", "Kurasi Prime (simulasi): semua hasil agen di atas sudah saya periksa konsistensinya terhadap STP dan riset. Yang masih menunggu keputusanmu: gerbang GKonten untuk media dan gerbang distribusi untuk draf Postiz.", true);
+    postChat("prime", "Prime Agent", "#EB87B4", "Kurasi Prime (simulasi): semua hasil agen di atas sudah saya periksa konsistensinya terhadap STP dan riset. Yang masih menunggu keputusanmu: gerbang GKonten untuk media dan gerbang distribusi untuk draf Postiz.", true);
   }
 
 export function doSearch() {
@@ -192,7 +192,7 @@ export function cardComments(card) { return 0; } // B4: no comment backend yet �
 
 export function colName(ci) { var kc = kcols(); return ci < kc.length ? kc[ci] : extraCols[ci - kc.length]; }
 
-export function colColor(ci) { return ["#525252", "#6b7280", "#FFD1DC", "#737373", "#404040"][ci] || "#737373"; }
+export function colColor(ci) { return ["#525252", "#6b7280", "#EB87B4", "#737373", "#404040"][ci] || "#737373"; }
 
 export function renderKanban() {
     document.getElementById("kanbanTitle").textContent = PROJECTS[currentProj].name;
@@ -471,7 +471,7 @@ export function libRevise(i) {
     PROJECTS[currentProj].kanban.push({ t: "Revisi: " + item.o, a: item.a, c: 3 });
     renderKanban();
     showView("home");
-    postChat("prime", "Prime Agent", "#FFD1DC", "Perbaikan dibuka untuk '" + item.o + "' — kartunya masuk kolom Revisi di Kanban, menunggu catatanmu (simulasi).", true);
+    postChat("prime", "Prime Agent", "#EB87B4", "Perbaikan dibuka untuk '" + item.o + "' — kartunya masuk kolom Revisi di Kanban, menunggu catatanmu (simulasi).", true);
   }
 
 export function mediaBadge(s) { return s === "Siap untuk Post" ? "b-ok" : (s === "Menunggu GKonten" || s === "Menunggu provider" ? "b-wait" : "b-idle"); }
@@ -663,7 +663,7 @@ export function viewBack() { if (viewHistIdx > 0) { navJump = true; viewHistIdx-
 export function viewForward() { if (viewHistIdx < viewHist.length - 1) { navJump = true; viewHistIdx++; _sv2(viewHist[viewHistIdx]); navJump = false; } }
 
 export var AGENTS = {
-    prime: { name: "Prime Agent", color: "#FFD1DC", role: "Personal Assistant — orkestrasi & kurasi", goal: "Memastikan setiap arahan menjadi tugas yang jelas, didelegasikan ke agen yang tepat, dan hasilnya dikurasi sebelum final.", skills: ["Orkestrasi delegasi", "Kurasi hasil agen", "Penegakan gerbang GSTP/GKonten/GBatch"], model: "Meta (Muse) → Gemini → Ollama", always: true },
+    prime: { name: "Prime Agent", color: "#EB87B4", role: "Personal Assistant — orkestrasi & kurasi", goal: "Memastikan setiap arahan menjadi tugas yang jelas, didelegasikan ke agen yang tepat, dan hasilnya dikurasi sebelum final.", skills: ["Orkestrasi delegasi", "Kurasi hasil agen", "Penegakan gerbang GSTP/GKonten/GBatch"], model: "Meta (Muse) → Gemini → Ollama", always: true },
     riset: { name: "Riset", color: "#525252", role: "Riset pasar & audiens", goal: "Riset pasar, behaviour digital, dan pola spending yang terverifikasi — tanpa mengarang angka/URL.", skills: ["riset-pasar", "behaviour-digital", "spending-digital", "verifikasi-fakta"], model: "Gemini (fallback dari Meta)", always: false },
     strategi: { name: "Strategi", color: "#404040", role: "Positioning & STP", goal: "Mengubah riset menjadi positioning, pilar, dan STP yang spesifik dan bisa diuji.", skills: ["positioning-stp", "pak-bi-branding", "segmentasi-spending"], model: "Gemini (fallback dari Meta)", always: false },
     kreatif: { name: "Kreatif", color: "#5b5b5b", role: "Naskah & Brief", goal: "Kalender, hook, CTA, dan CreativeBrief text-free yang siap diproduksi Media.", skills: ["copywriting-hook-cta", "brief-text-free", "overlay-template"], model: "Gemini (fallback dari Meta)", always: false },
@@ -682,10 +682,10 @@ var PROJECTS = {
       { key: "distribusi", status: "Idle", task: "—" }
     ], chat: [
       { who: "user", name: "Patria", color: "#374151", text: "Riset pasar es kopi Surabaya untuk mahasiswa, lalu buatkan konten 7 hari beserta gambarnya." },
-      { who: "prime", name: "Prime Agent", color: "#FFD1DC", text: "Siap. Saya pecah jadi: Riset → Strategi (STP, menunggu GSTP darimu) → Kreatif (kalender + brief) → Media (gambar) → Distribusi (draf Postiz). Saya tugaskan Riset sekarang." },
+      { who: "prime", name: "Prime Agent", color: "#EB87B4", text: "Siap. Saya pecah jadi: Riset → Strategi (STP, menunggu GSTP darimu) → Kreatif (kalender + brief) → Media (gambar) → Distribusi (draf Postiz). Saya tugaskan Riset sekarang." },
       { who: "riset", name: "Riset", color: "#525252", text: "Riset selesai: audiens mahasiswa/pekerja muda Surabaya, behaviour digital tinggi (on-screen panjang, video pendek), spending sensitif harga, transaksi dominan via WhatsApp + QRIS." },
       { who: "strategi", name: "Strategi", color: "#404040", text: "STP draf: segmen mahasiswa/pekerja muda 18–28, targeting Urban Hustlers via WhatsApp Business + Reels/TikTok, positioning es kopi susu harian paling praktis via WA + QRIS. Menunggu GSTP." },
-      { who: "prime", name: "Prime Agent", color: "#FFD1DC", text: "Kurasi Prime: STP di atas sudah saya periksa — segmen dan targetingnya konsisten dengan riset behaviour dan spending. Saya rekomendasikan untuk disetujui di gerbang GSTP, tetapi keputusan tetap di tanganmu.", curation: true },
+      { who: "prime", name: "Prime Agent", color: "#EB87B4", text: "Kurasi Prime: STP di atas sudah saya periksa — segmen dan targetingnya konsisten dengan riset behaviour dan spending. Saya rekomendasikan untuk disetujui di gerbang GSTP, tetapi keputusan tetap di tanganmu.", curation: true },
       { who: "kreatif", name: "Kreatif", color: "#5b5b5b", text: "Kalender 7 hari + 7 brief selesai (setelah GSTP). Tema mencakup kenyamanan digital, konsistensi kualitas, dan efisiensi urban; semua CTA mengarah ke WA/QRIS." },
       { who: "media", name: "Media", color: "#5b5b5b", text: "Gambar Hari 1–7 masih menunggu provider (Meta Image belum aktif). Saya tidak membuat gambar palsu — statusnya pending-provider sampai generator aktif atau fallback Canva dipakai." }
     ], kanban: kopiKanban() },
@@ -695,7 +695,7 @@ var PROJECTS = {
       { key: "produk", status: "Mengerjakan", task: "Struktur fitur MVP" }
     ], chat: [
       { who: "user", name: "Patria", color: "#374151", text: "Buatkan brief produk digital untuk aplikasi pemesanan kopi via WhatsApp." },
-      { who: "prime", name: "Prime Agent", color: "#FFD1DC", text: "Siap. Saya tugaskan Riset untuk riset pengguna, lalu Produk Digital menyusun brief dan struktur fitur MVP." },
+      { who: "prime", name: "Prime Agent", color: "#EB87B4", text: "Siap. Saya tugaskan Riset untuk riset pengguna, lalu Produk Digital menyusun brief dan struktur fitur MVP." },
       { who: "riset", name: "Riset", color: "#525252", text: "Riset pengguna berjalan: pemesanan via chat sudah jadi kebiasaan, hambatan utamanya antre dan pembayaran tunai (simulasi)." }
     ], kanban: [
       { t: "Riset pengguna aplikasi kopi", a: "Riset", c: 1 },

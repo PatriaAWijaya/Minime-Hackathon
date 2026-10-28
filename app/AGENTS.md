@@ -46,12 +46,15 @@ Ollama) → human approval gates → live evaluation harness.
 - `docs/` — canon docs, gate records, engine list, master log.
 
 ## Standing decisions the build must respect
-- Theme: monochrome + pastel pink accent `#FFD1DC` (dark `#262626`
+- Theme: monochrome + pink accent `#EB87B4` + complementary green
+  `#A6EBB1` for active/selected/connected states (dark `#262626`
   text on accent surfaces). Logo/icon MiniMe used as-is.
 - Navigation: agent list + Detail panel ONLY in the Home window;
   other windows use full width (`.no-nav` toggled by showView).
-- Postiz: draft-only. No publish/schedule path exists by
-  construction; adding one needs Patria's explicit order.
+- Postiz: draft-only by default. The single exception is the batch
+  schedule step, explicitly ordered by Patria 28 Okt 2026
+  ("jadwalkan otomatis ke postiz dengan persetujuan user"):
+  per-card upload + schedule with double-confirm approval.
 - Costs: report in Rupiah whenever possible; null when no rate
   (never guessed). Hard limit $5 enforced by the ledger.
 - Compact but powerful: no unused dependencies, no duplicate

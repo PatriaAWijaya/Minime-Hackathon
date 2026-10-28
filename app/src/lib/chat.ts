@@ -148,7 +148,7 @@ export async function sendChatReal(): Promise<void> {
   if (!text) return;
   postChat('user', 'Patria', '#374151', esc(text));
   input.value = '';
-  postChat('prime', 'Prime Agent', '#FFD1DC', tr('chat.prime.ack'));
+  postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.prime.ack'));
   const keys = readKeys();
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
@@ -164,15 +164,15 @@ export async function sendChatReal(): Promise<void> {
         ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
         (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '');
       const studio = mediaNeeded(text) ? studioButton(r.text, 'prime') : '';
-      postChat('prime', 'Prime Agent', '#FFD1DC', esc(r.text) + footer + studio);
+      postChat('prime', 'Prime Agent', '#EB87B4', esc(r.text) + footer + studio);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      postChat('prime', 'Prime Agent', '#FFD1DC', tr('chat.error') + esc(msg) + tr('chat.error.hint'));
+      postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.error') + esc(msg) + tr('chat.error.hint'));
     }
     return;
   }
   const ag = (AGENTS as Record<string, { name: string; color: string; role: string }>)[delegate];
-  postChat('prime', 'Prime Agent', '#FFD1DC', tr('chat.delegate.announce', { agent: ag.name, task: esc(taskShort(text)) }));
+  postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.delegate.announce', { agent: ag.name, task: esc(taskShort(text)) }));
   activateAgent(delegate);
   postChat(delegate, ag.name, ag.color, tr('chat.delegate.agentack'));
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').';

@@ -224,7 +224,7 @@
     </div>
     <div class="add-menu" id="addMenu"></div>
     <div class="agent-searchbox"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a1a1a1" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg><input type="text" id="navSearch" placeholder={t('word.search', lang)} oninput={(e) => { filterAgents(e.currentTarget.value) }}></div>
-    <div style="padding:0 14px;flex-shrink:0"><div class="mainchat" onclick={() => { showView('home') }}><div class="av" style="background:#FFD1DC">P</div><div><b>Main chat</b><br><small style="color:#a1a1a1">{t('nav.prime', lang)}</small></div></div></div>
+    <div style="padding:0 14px;flex-shrink:0"><div class="mainchat" onclick={() => { showView('home') }}><div class="av" style="background:#EB87B4">P</div><div><b>Main chat</b><br><small style="color:#a1a1a1">{t('nav.prime', lang)}</small></div></div></div>
     <div class="scroll" id="agentList"></div>
     <div style="padding:0 14px 12px;flex-shrink:0"><div class="notice" id="addNotice" style="display:none"></div></div>
   </div>
@@ -275,11 +275,11 @@
     <div class="view" id="view-kanban">
       <div class="colhead">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <div class="av" style="background:#FFD1DC">P</div>
-          <h2 id="kanbanTitle" style="margin:0">TEST Kopi Surabaya</h2><span style="color:#FFD1DC;font-size:18px">☆</span>
+          <div class="av" style="background:#EB87B4">P</div>
+          <h2 id="kanbanTitle" style="margin:0">TEST Kopi Surabaya</h2><span style="color:#EB87B4;font-size:18px">☆</span>
           <div style="margin-left:auto;display:flex;align-items:center">
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#FFD1DC">P</div>
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#FFD1DC;margin-left:-8px">R</div>
+            <div class="av" style="width:28px;height:28px;font-size:12px;background:#EB87B4">P</div>
+            <div class="av" style="width:28px;height:28px;font-size:12px;background:#EB87B4;margin-left:-8px">R</div>
             <div class="av" style="width:28px;height:28px;font-size:12px;background:#404040;margin-left:-8px">S</div>
             <div class="av" style="width:28px;height:28px;font-size:12px;background:#5b5b5b;margin-left:-8px">K</div>
             <div class="av" style="width:28px;height:28px;font-size:12px;background:#5b5b5b;margin-left:-8px">M</div>
@@ -448,7 +448,7 @@
           <div class="timeline">
           <div class="playhead" id="playhead2" style="left:0%"></div>
           <div class="ve-ruler"><span>00:00</span><span>00:10</span><span>00:20</span><span>00:30</span></div>
-          <div class="track"><span class="tlabel">{t('word.video', lang)}</span><div class="bar ve-clip" style="background:#FFD1DC;width:27%" onclick={(e) => { ve2Select(e.currentTarget,'Hook (0–8 dtk)',0,8,'Video') }}>Hook (0–8 dtk)</div><div class="bar ve-clip" style="background:#5b5b5b;width:47%" onclick={(e) => { ve2Select(e.currentTarget,'Isi (8–22 dtk)',8,14,'Video') }}>Isi (8–22 dtk)</div><div class="bar ve-clip" style="background:#404040;width:26%" onclick={(e) => { ve2Select(e.currentTarget,'CTA (22–30 dtk)',22,8,'Video') }}>CTA</div></div>
+          <div class="track"><span class="tlabel">{t('word.video', lang)}</span><div class="bar ve-clip" style="background:#EB87B4;width:27%" onclick={(e) => { ve2Select(e.currentTarget,'Hook (0–8 dtk)',0,8,'Video') }}>Hook (0–8 dtk)</div><div class="bar ve-clip" style="background:#5b5b5b;width:47%" onclick={(e) => { ve2Select(e.currentTarget,'Isi (8–22 dtk)',8,14,'Video') }}>Isi (8–22 dtk)</div><div class="bar ve-clip" style="background:#404040;width:26%" onclick={(e) => { ve2Select(e.currentTarget,'CTA (22–30 dtk)',22,8,'Video') }}>CTA</div></div>
           <div class="track"><span class="tlabel">B-Roll</span><div class="bar ve-clip" style="background:#5b5b5b;margin-left:27%;width:47%" onclick={(e) => { ve2Select(e.currentTarget,'B-Roll: seduh kopi',8,14,'B-Roll') }}>B-Roll: seduh kopi</div></div>
           <div class="track"><span class="tlabel">{t('word.audio', lang)}</span><div class="bar ve-clip" style="background:#5b5b5b;width:80%" onclick={(e) => { ve2Select(e.currentTarget,'Voice-over promo bundling',0,30,'Audio') }}>Voice-over promo bundling</div><div class="bar ve-clip" style="background:#4a4a4a;width:20%" onclick={(e) => { ve2Select(e.currentTarget,'Musik: akustik ringan',0,30,'Audio') }}>Musik</div></div>
           <div class="track"><span class="tlabel">{t('word.teks', lang)}</span><div class="bar ve-clip" style="background:#5b5b5b;width:30%" onclick={(e) => { ve2Select(e.currentTarget,'Overlay: TEST Kopi — Rp15.000',0,9,'Teks') }}>Overlay: TEST Kopi — Rp15.000</div><div class="bar ve-clip" style="background:#4a4a4a;margin-left:10%;width:30%" onclick={(e) => { ve2Select(e.currentTarget,'Overlay: Pesan via WA',12,9,'Teks') }}>Overlay: Pesan via WA</div></div>

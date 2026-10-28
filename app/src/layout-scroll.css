@@ -21,14 +21,14 @@ html, body { overflow: hidden; }
 .se-wrap { display: flex; gap: 16px; align-items: flex-start; }
 .se-side { display: flex; flex-direction: column; gap: 8px; min-width: 150px; flex-shrink: 0; }
 .se-menubtn { text-align: left; padding: 10px 12px; border-radius: 8px; border: 1px solid #2a2a2a; background: #1e1e1e; color: #ececec; cursor: pointer; }
-.se-menubtn.active { background: #FFD1DC; color: #262626; border-color: #FFD1DC; font-weight: 700; }
+.se-menubtn.active { background: #A6EBB1; color: #262626; border-color: #A6EBB1; font-weight: 700; }
 .se-main { flex: 1; min-width: 0; }
 .se-group { margin-bottom: 14px; }
 .se-radios { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .se-radios label { display: inline-flex; align-items: center; gap: 5px; }
 .se-field { width: 100%; box-sizing: border-box; background: #171717; color: #ececec; border: 1px solid #2a2a2a; border-radius: 8px; padding: 8px; margin-top: 4px; }
 .se-group label { display: block; margin-bottom: 8px; }
-.se-btn { background: #FFD1DC; color: #262626; border: 0; border-radius: 999px; padding: 10px 18px; font-weight: 700; cursor: pointer; }
+.se-btn { background: #EB87B4; color: #262626; border: 0; border-radius: 999px; padding: 10px 18px; font-weight: 700; cursor: pointer; }
 .se-btn:disabled { opacity: 0.6; cursor: default; }
 .se-btn2 { background: #1e1e1e; color: #ececec; border: 1px solid #2a2a2a; border-radius: 8px; padding: 6px 12px; cursor: pointer; margin-top: 8px; }
 .se-output { white-space: pre-wrap; background: #171717; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; }
@@ -68,7 +68,7 @@ h3 { font-size: 18px; }
 .batch-card { border: 1px solid #2a2a2a; border-radius: 10px; padding: 12px; margin: 10px 0; background: #1a1a1a; }
 .choices-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
 .choice { border: 2px solid #2a2a2a; border-radius: 8px; padding: 6px; cursor: pointer; max-width: 220px; }
-.choice.sel { border-color: #FFD1DC; }
+.choice.sel { border-color: #A6EBB1; }
 .choice-thumbs { display: flex; gap: 4px; flex-wrap: wrap; }
 .choice-thumbs img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; }
 
@@ -76,3 +76,44 @@ h3 { font-size: 18px; }
 .img-layout { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
 .img-brand-side { width: 320px; flex-shrink: 0; }
 .img-main { flex: 1; min-width: 0; }
+
+/* REVISI PALET 28 Okt (perintah Patria): monokrom + aksen pink #EB87B4
+   + hijau komplementer #A6EBB1. app.css VERBATIM (tak boleh diedit) —
+   blok ini menimpa dengan selektor yang sama, karena layout-scroll.css
+   diimpor SETELAH app.css di main.ts. Aturan: pink = aksen/primer/
+   bubble user; hijau = status aktif/terpilih/terhubung. Header chat
+   (.who) SUDAH bold di app.css — tidak perlu aturan baru. */
+/* Pink: aksen & aksi primer. */
+.banner { border-bottom: 2px solid #EB87B4; }
+.banner b { color: #EB87B4; }
+.resizer:hover { background: #EB87B4; }
+.profileav { background: #EB87B4; }
+.mainchat:hover { border-color: #EB87B4; }
+.agent:hover { border-color: #EB87B4; }
+.agent.curproj { border-left-color: #EB87B4; }
+.msg.curation .bubble { border-color: #EB87B4; }
+.b-wait { background: #EB87B4; }
+.btn-primary { background: #EB87B4; border-color: #EB87B4; }
+.chip { border-color: #EB87B4; }
+.notice { border-color: #EB87B4; }
+.kcol.over { outline-color: #EB87B4; }
+.gnode { border-color: #EB87B4; }
+.gnode.prime { border-color: #EB87B4; }
+.playhead { background: #EB87B4; }
+#chatInput { caret-color: #EB87B4; }
+.scope-dot { background: #EB87B4; }
+.cur-label { color: #EB87B4; }
+.pill-send { background: #EB87B4; }
+.av[style*="#EB87B4"], .detail-avatar[style*="#EB87B4"] { color: #262626; }
+.track .bar[style*="#EB87B4"] { color: #262626; }
+/* Hijau: status aktif / terpilih / terhubung. */
+.filters button.active { background: #A6EBB1; color: #262626; border-color: #A6EBB1; }
+.agent.sel { border-color: #A6EBB1; }
+.gnode.sel { box-shadow: 0 0 0 4px #A6EBB1; }
+.track .bar.ve-clip.selected { outline-color: #A6EBB1; }
+.n8n-node.exec { box-shadow: 0 0 0 3px #A6EBB1; border-color: #A6EBB1; }
+.b-ok { background: #A6EBB1; color: #262626; }
+/* Chat: agen kiri (default), user kanan + bubble pink. */
+.msg .body { display: flex; flex-direction: column; align-items: flex-start; }
+.msg.user .body { align-items: flex-end; }
+.msg.user .bubble { background: #EB87B4; color: #262626; }

@@ -298,7 +298,7 @@ function renderBrand(): void {
   });
 
   // Warna: tambah, edit (picker <-> hex), hapus.
-  document.getElementById('brand-color-add')?.addEventListener('click', () => mutate((cur) => { cur.colors.push({ hex: '#FFD1DC', name: '' }); }));
+  document.getElementById('brand-color-add')?.addEventListener('click', () => mutate((cur) => { cur.colors.push({ hex: '#EB87B4', name: '' }); }));
   b.colors.forEach((_c, i) => {
     const pick = root.querySelector('[data-colorpick="' + i + '"]') as HTMLInputElement | null;
     const hex = root.querySelector('[data-colorhex="' + i + '"]') as HTMLInputElement | null;
