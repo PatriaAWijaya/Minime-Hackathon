@@ -3,7 +3,7 @@
   import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, primeCurate, quickChat, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderMedia, renderPlanner, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
-  import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
+  import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtInt, fmtUsd } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
@@ -327,6 +327,9 @@
         <div id="ms-tab-voice" style="display:none">
           <h3>{t('ms.tab.voice', lang)}</h3>
           <p><span id="vsStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { vsCheck() }}>{t('vs.status.check', lang)}</button></p>
+          <h4>{t('vs.setup.title', lang)}</h4>
+          <p><button class="btn btn-primary" onclick={() => { vsSetupInstall() }}>{t('vs.setup.install', lang)}</button> <button class="btn btn-sm" onclick={() => { vsSetupLaunch() }}>{t('vs.setup.launch', lang)}</button> <span id="vsSetupNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span></p>
+          <p style="color:#a1a1a1;font-size:13px">{t('vs.setup.note', lang)}</p>
           <h4>{t('vs.clone.title', lang)}</h4>
           <label>{t('vs.voice.label', lang)}</label>
           <select id="vsVoiceSel"><option value="">{t('vs.voice.empty', lang)}</option></select>

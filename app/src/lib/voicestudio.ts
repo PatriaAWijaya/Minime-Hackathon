@@ -1,9 +1,14 @@
+import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
 
 // Klien VoiceStudio lokal (proses terpisah, TIDAK di-bundle — aturan AGPL).
 // API terverifikasi dari backend v0.5.6 di MacBook + pemakaian terbukti 22 Okt:
 //   GET  /v1/models, GET /v1/audio/voices, POST /v1/audio/speech (JSON),
-//   POST /generate (multipart). Engine hanya jalan saat VoiceStudio.app dibuka.
+//   POST /generate (multipart). Engine jalan saat VoiceStudio.app dibuka;
+//   sejak v29 MiniMe membukanya OTOMATIS (vs_launch) bila backend mati,
+//   dan Setup satu paket (vs_install) mengunduh + memasang + membukanya.
+// Perintah agen: agentVoiceTts/agentVoiceClone — pastikan backend dulu,
+// panggil API, kembalikan audio ke MiniMe (player + unduh = "import").
 
 export const VS_BASE = 'http://127.0.0.1:3900';
 
@@ -180,6 +185,70 @@ async function readErr(resp: Response): Promise<string> {
   }
 }
 
+export interface VsInstallResult {
+  installed: boolean;
+  skippedDownload: boolean;
+  appPath: string;
+  backendUp: boolean;
+  version: string;
+}
+
+// Perintah agen: pastikan backend VoiceStudio hidup (buka otomatis bila
+// mati), lalu kembalikan status. Melempar bila backend tetap mati.
+export async function vsEnsureBackend(): Promise<VsStatus> {
+  if ((await vsCheck()) === 'online') return 'online';
+  await invoke('vs_launch', {});
+  if ((await vsCheck()) === 'online') return 'online';
+  throw new Error('backend VoiceStudio tidak merespons setelah diluncurkan otomatis');
+}
+
+// Perintah agen (TTS): pastikan backend, panggil API, kembalikan audio
+// ke MiniMe (URL + nama file) — inilah "import hasil kembali ke MiniMe".
+export async function agentVoiceTts(
+  text: string,
+  voice = 'default',
+  speed = 1,
+): Promise<{ url: string; filename: string }> {
+  await vsEnsureBackend();
+  const resp = await vsFetch(
+    '/v1/audio/speech',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'omnivoice',
+        input: text,
+        voice,
+        response_format: 'wav',
+        speed,
+        language: 'id',
+      }),
+    },
+    120000,
+  );
+  if (!resp.ok) throw new Error(await readErr(resp));
+  return { url: await audioBlobToUrl(resp), filename: 'voice.wav' };
+}
+
+// Perintah agen (clone): sama, lewat /generate multipart.
+export async function agentVoiceClone(
+  text: string,
+  file: File,
+  refText = '',
+  speed = 1,
+): Promise<{ url: string; filename: string }> {
+  await vsEnsureBackend();
+  const fd = new FormData();
+  fd.append('text', text);
+  fd.append('language', 'id');
+  fd.append('ref_audio', file);
+  if (refText) fd.append('ref_text', refText);
+  fd.append('speed', String(speed));
+  const resp = await vsFetch('/generate', { method: 'POST', body: fd }, 180000);
+  if (!resp.ok) throw new Error(await readErr(resp));
+  return { url: await audioBlobToUrl(resp), filename: 'voice-clone.wav' };
+}
+
 export async function vsGenerateTts(): Promise<void> {
   const text = (document.getElementById('vsText') as HTMLTextAreaElement | null)?.value.trim() || '';
   if (!text) {
@@ -190,25 +259,8 @@ export async function vsGenerateTts(): Promise<void> {
   const speed = parseFloat((document.getElementById('vsSpeed') as HTMLInputElement | null)?.value || '1') || 1;
   setNote('vsNote', tr('vs.generating'));
   try {
-    const resp = await vsFetch(
-      '/v1/audio/speech',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'omnivoice',
-          input: text,
-          voice,
-          response_format: 'wav',
-          speed,
-          language: 'id',
-        }),
-      },
-      120000,
-    );
-    if (!resp.ok) throw new Error(await readErr(resp));
-    const url = await audioBlobToUrl(resp);
-    showAudio('vsAudio', 'vsDownload', url, 'voice.wav');
+    const { url, filename } = await agentVoiceTts(text, voice, speed);
+    showAudio('vsAudio', 'vsDownload', url, filename);
     setNote('vsNote', tr('vs.done'));
   } catch (e) {
     setNote('vsNote', tr('vs.error') + (e instanceof Error ? e.message : String(e)));
@@ -228,20 +280,38 @@ export async function vsGenerateClone(): Promise<void> {
   }
   const speed = parseFloat((document.getElementById('vsCloneSpeed') as HTMLInputElement | null)?.value || '1') || 1;
   const refText = (document.getElementById('vsRefText') as HTMLTextAreaElement | null)?.value.trim() || '';
-  const fd = new FormData();
-  fd.append('text', text);
-  fd.append('language', 'id');
-  fd.append('ref_audio', file);
-  if (refText) fd.append('ref_text', refText);
-  fd.append('speed', String(speed));
   setNote('vsCloneNote', tr('vs.generating'));
   try {
-    const resp = await vsFetch('/generate', { method: 'POST', body: fd }, 180000);
-    if (!resp.ok) throw new Error(await readErr(resp));
-    const url = await audioBlobToUrl(resp);
-    showAudio('vsCloneAudio', 'vsCloneDownload', url, 'voice-clone.wav');
+    const { url, filename } = await agentVoiceClone(text, file, refText, speed);
+    showAudio('vsCloneAudio', 'vsCloneDownload', url, filename);
     setNote('vsCloneNote', tr('vs.done'));
   } catch (e) {
     setNote('vsCloneNote', tr('vs.error') + (e instanceof Error ? e.message : String(e)));
+  }
+}
+
+// Setup satu paket: unduh + pasang + buka + verifikasi backend.
+export async function vsSetupInstall(): Promise<void> {
+  setNote('vsSetupNote', tr('vs.setup.working'));
+  try {
+    const r = await invoke<VsInstallResult>('vs_install', {});
+    setNote(
+      'vsSetupNote',
+      tr('vs.setup.done') + ' ' + r.appPath + (r.skippedDownload ? ' (' + tr('vs.setup.skipped') + ')' : ' (v' + r.version + ')'),
+    );
+    await vsCheck();
+  } catch (e) {
+    setNote('vsSetupNote', tr('vs.error') + (e instanceof Error ? e.message : String(e)));
+  }
+}
+
+export async function vsSetupLaunch(): Promise<void> {
+  setNote('vsSetupNote', tr('vs.setup.working'));
+  try {
+    await invoke('vs_launch', {});
+    setNote('vsSetupNote', tr('vs.setup.done'));
+    await vsCheck();
+  } catch (e) {
+    setNote('vsSetupNote', tr('vs.error') + (e instanceof Error ? e.message : String(e)));
   }
 }

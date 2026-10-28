@@ -126,7 +126,7 @@ fn is_executable(p: &Path) -> bool {
     }
 }
 
-fn find_tool(name: &str) -> Option<PathBuf> {
+pub(crate) fn find_tool(name: &str) -> Option<PathBuf> {
     let mut dirs: Vec<PathBuf> = Vec::new();
     if let Ok(path) = std::env::var("PATH") {
         for d in path.split(':') {
