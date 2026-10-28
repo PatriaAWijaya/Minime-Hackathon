@@ -496,7 +496,7 @@ export function refreshBackendData() {
 }
 
 export function mediaTab(id) {
-  ['script', 'image', 'brand', 'batch', 'voice', 'video'].forEach(function (k) {
+  ['script', 'image', 'batch', 'voice', 'video'].forEach(function (k) {
     var p = document.getElementById('ms-tab-' + k);
     if (p) p.style.display = (k === id) ? 'block' : 'none';
     var b = document.getElementById('ms-tabbtn-' + k);

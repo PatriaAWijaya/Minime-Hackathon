@@ -1,4 +1,4 @@
-// Rig Brand Identity (jsdom, test-only): membuktikan tab Brand —
+// Rig Brand Identity (jsdom, test-only): membuktikan sidebar Brand di tab Image —
 // BUKAN mock logika bisnis:
 //  1. Tab render (nama, 7 slot varian logo, warna, font, visual).
 //  2. Nama + warna + font tersimpan ke localStorage tanpa re-render
@@ -88,11 +88,11 @@ const brand = () => JSON.parse(store.get('minime.brand') || '{}');
 try {
   await tick(500);
   dom.window.showView('media');
-  dom.window.mediaTab('brand');
+  dom.window.mediaTab('image');
   await tick(100);
 
-  // 1. Tab render: nama + 7 slot logo + tombol tambah.
-  check('tab Brand render', !!document.getElementById('brand-name') && document.querySelectorAll('[data-logo]').length === 7,
+  // 1. Sidebar Brand di dalam tab Image: nama + 7 slot logo + tombol tambah.
+  check('sidebar Brand render di tab Image', !!document.getElementById('brand-name') && !!document.querySelector('#ms-tab-image #brand-main') && document.querySelectorAll('[data-logo]').length === 7,
     'logo slots=' + document.querySelectorAll('[data-logo]').length);
   check('tombol tambah warna/font/visual ada', !!document.getElementById('brand-color-add') && !!document.getElementById('brand-font-add') && !!document.getElementById('brand-visual-addbtn'));
 
@@ -143,16 +143,12 @@ try {
   await tick(100);
   check('centang pakai brand tersimpan', brand().useBrand === true, JSON.stringify(brand().useBrand));
   check('preview sufiks Brand sudah dihapus', !document.getElementById('brand-prompt'));
-  dom.window.mediaTab('image');
-  await tick(100);
   const brief = document.getElementById('img-brief');
   brief.value = 'kopi susu';
   brief.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   await tick(100);
   const preview = document.getElementById('img-preview')?.textContent || '';
   check('sufiks brand mengalir ke prompt Image', preview.includes('TEST Kopi Surabaya') && preview.includes('#123456'), preview);
-  dom.window.mediaTab('brand');
-  await tick(100);
 
   // 7. Hapus logo -> slot kosong + image_delete.
   document.querySelector('[data-logoclear="normal"]').click();

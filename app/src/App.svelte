@@ -320,7 +320,6 @@
       <div class="filters" style="flex-shrink:0;margin:0 14px 12px">
         <button id="ms-tabbtn-script" onclick={() => { mediaTab('script') }}>{t('ms.tab.script', lang)}</button>
         <button id="ms-tabbtn-image" onclick={() => { mediaTab('image') }}>{t('ms.tab.image', lang)}</button>
-        <button id="ms-tabbtn-brand" onclick={() => { mediaTab('brand') }}>{t('ms.tab.brand', lang)}</button>
         <button id="ms-tabbtn-batch" onclick={() => { mediaTab('batch') }}>{t('ms.tab.batch', lang)}</button>
         <button id="ms-tabbtn-voice" onclick={() => { mediaTab('voice') }}>{t('ms.tab.voice', lang)}</button>
         <button id="ms-tabbtn-video" class="active" onclick={() => { mediaTab('video') }}>{t('ms.tab.video', lang)}</button>
@@ -339,6 +338,12 @@
         </div>
         <div id="ms-tab-image" style="display:none">
           <h3>{t('img.title', lang)}</h3>
+          <div class="img-layout">
+          <div class="img-brand-side">
+          <h4>{t('ms.tab.brand', lang)}</h4>
+          <div id="brand-main"></div>
+          </div>
+          <div class="img-main">
           <div class="se-group"><label>{t('img.brief', lang)}<textarea id="img-brief" rows="4" class="se-field" placeholder={t('img.brief.ph', lang)}></textarea></label></div>
           <div class="se-group"><label>{t('img.ratio', lang)}<select id="img-ratio" class="se-field">
             <option value="1:1">1:1</option><option value="4:5">4:5</option><option value="9:16">9:16</option><option value="16:9">16:9</option><option value="3:4">3:4</option><option value="3:2">3:2</option><option value="2:3">2:3</option>
@@ -358,10 +363,8 @@
           <div id="img-variants" class="mediagrid"></div>
           <h4>{t('img.gallery', lang)}</h4>
           <div id="img-gallery" class="mediagrid"></div>
-        </div>
-        <div id="ms-tab-brand" style="display:none">
-          <h3>{t('ms.tab.brand', lang)}</h3>
-          <div id="brand-main"></div>
+          </div>
+          </div>
         </div>
         <div id="ms-tab-batch" style="display:none">
           <h3>{t('ms.tab.batch', lang)}</h3>

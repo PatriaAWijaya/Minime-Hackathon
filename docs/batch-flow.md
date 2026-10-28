@@ -6,8 +6,11 @@ Identity di Media Studio, 19:45 varian logo, 19:46 legal + commercial.
 
 ## Arsitektur
 
-Media Studio kini 6 tab: Script, Image, **Brand, Batch**, Voice, Video
-(mediaTab diperluas; default tetap Video PROVISIONAL).
+Media Studio kini 5 tab: Script, Image, Batch, Voice, Video
+(mediaTab; default tetap Video PROVISIONAL). Brand TIDAK lagi tab
+sendiri — sejak 28 Okt 20:55 atas perintah Patria, Brand menjadi
+sidebar kiri di dalam tab Image (`.img-layout`: sidebar 320px +
+form gambar fleksibel; `.mediagrid` 1 kolom di lebar sidebar).
 
 ### Brand (`app/src/lib/brand.ts`, state `minime.brand`)
 

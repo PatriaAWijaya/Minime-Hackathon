@@ -1588,3 +1588,9 @@ dokumen lama yang dipakai.
 - Kunci i18n mati dihapus (brand.prompt.title/empty/note, 3 dict): kini 483 kunci x 3, 0 duplikat, 0 selisih.
 - Rig-brand diperbarui: cek preview diganti cek jalur sebenarnya (centang pakai-brand -> sufiks mengalir ke baris preview prompt tab Image) + cek elemen preview sudah tidak ada. Gerbang: tsc 0, svelte-check 0 error, vite OK, rig-brand 14/14, rig-batch + rig-image tetap PASS, gate-test 14/14, scan PASSED, cargo check 0.
 - MENUNGGU: commit/push -> rantai berikutnya (Mac sedang nyala; rantai hanya atas sinyal Patria agar tidak mengganggu uji kliknya).
+
+## Brand jadi sidebar Image editor (28 Okt, perintah Patria 20:55 WIB)
+- Tab Brand DIHAPUS sebagai tab Media Studio; panel Brand (#brand-main, modul brand.ts tak berubah) pindah menjadi sidebar kiri di dalam tab Image (.img-layout: sidebar 320px + form gambar fleksibel, wrap bila sempit; grid logo 1 kolom di lebar sidebar karena .mediagrid minmax 230px).
+- Media Studio kembali 5 tab (Script, Image, Batch, Voice, Video). Kunci ms.tab.brand tetap dipakai sebagai judul sidebar — tidak ada kunci mati baru. Svelte: tombol + panel Brand dihapus; form Image dibungkus .img-main.
+- Gerbang: tsc 0, svelte-check 0 error, vite OK, rig-brand (diperbarui: Brand diuji di dalam tab Image) + rig-image + rig-batch tetap PASS. Catatan proses: satu skrip edit gagal di tengah (assert urutan panel keliru — panel Batch ada di antara Image dan Voice); App.svelte belum tertulis saat itu sehingga tidak ada state setengah jadi; perbaikan dilakukan dengan edit eksak + verifikasi grep.
+- MENUNGGU: commit/push -> rantai berikutnya atas sinyal Patria.
