@@ -33,3 +33,29 @@ html, body { overflow: hidden; }
 .se-btn2 { background: #1e1e1e; color: #ececec; border: 1px solid #2a2a2a; border-radius: 8px; padding: 6px 12px; cursor: pointer; margin-top: 8px; }
 .se-output { white-space: pre-wrap; background: #171717; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; }
 .se-note { color: #aaa; font-size: 13px; margin-top: 6px; }
+
+/* Skala font (28 Okt, perintah Patria: seragamkan jenis + ukuran).
+   AUDIT: jenis font SUDAH seragam — satu stack di body app.css
+   (-apple-system, "Segoe UI", Roboto, Arial, sans-serif), sisanya
+   inherit, tanpa shorthand lain di repo. Yang tidak seragam hanya
+   ukuran: 12 nilai (11-28px) untuk peran yang tumpang tindih.
+   SKALA TEKS (5 nilai, satu peran satu ukuran):
+     18px = judul (h3 view + .colhead h2)
+     15px = dasar (body, tombol, input besar, judul kartu)
+     14px = konten (meta kartu, tabel, label, input)
+     13px = sekunder (subjudul, pratinjau, chip)
+     12px = kecil (badge, caption, stempel waktu)
+   GLYPH (bukan teks — TIDAK diseragamkan, ukurannya proporsional
+   terhadap wadahnya): huruf avatar (28/22/18/16/12px), ikon
+   (22/24/20px), ▶ 42px, ☆ 18px. Mengubahnya merusak wadahnya.
+   PERUBAHAN (override di file ini; app.css TIDAK diubah, verbatim
+   v5 — file ini diimpor setelah app.css jadi menang seri):
+     .cur-label 11px -> 12px (satu-satunya 11px)
+     .colhead h2 17px -> 18px (judul)
+     .agent-scope 16px -> 15px (label header, bukan judul)
+     h3 tanpa inline-size -> 18px (sebelumnya default UA ~17,5px);
+       h3 kartu media tetap 15px karena inline-size menang. */
+h3 { font-size: 18px; }
+.colhead h2 { font-size: 18px; }
+.agent-scope { font-size: 15px; }
+.cur-label { font-size: 12px; }

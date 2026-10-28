@@ -1537,3 +1537,5 @@ dokumen lama yang dipakai.
 - Gerbang: root+app tsc 0, svelte-check 0 error/43 warning (baseline a11y sama), vite build 224.92 kB, rig-script.js baru ALL PASSED (14 cek incl. generate end-to-end via stub fetch chat-completions).
 - MENUNGGU: commit/push -> rantai v32 -> klik Patria di tab Script.
 - Rantai v32 LIVE (PID 72142, HEAD a20ea1f): Script Editor 2 panel sudah di aplikasi. MENUNGGU klik Patria di tab Script (Media Studio).
+- Font diseragamkan (28 Okt, perintah Patria "sebelum jauh: cek font"): audit menemukan jenis font SUDAH seragam (satu stack system di body app.css, sisanya inherit, tanpa shorthand lain) — yang tidak seragam hanya ukuran: 12 nilai (11-28px). Skala teks ditetapkan 5 nilai (18 judul / 15 dasar / 14 konten / 13 sekunder / 12 kecil); glyph avatar/ikon (28/22/18/16/12px, ▶ 42px, ☆ 18px) TIDAK diubah karena proporsional terhadap wadahnya. Perubahan hanya override di layout-scroll.css (app.css TIDAK diubah, verbatim v5): .cur-label 11->12px, .colhead h2 17->18px, .agent-scope 16->15px, h3 18px (kartu media tetap 15px via inline-size). Gerbang: vite build OK, rig-script PASS.
+- MENUNGGU: commit/push -> rantai v33 -> cek visual Patria.
