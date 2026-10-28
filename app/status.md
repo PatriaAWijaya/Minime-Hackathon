@@ -77,6 +77,8 @@
 - List agen collapsible per project LIVE rantai v25 (kode lokal 8457991 <-> remote 36ca072; rig-groups 12/12).
 - Ikon macOS: icon.icns di repo (lokal 527ff61 <-> remote e671d8e); bundel debug ditambal icon.icns + CFBundleIconFile di rantai v26, LIVE PID 55237 (bundler debug tidak menyertakan ikon secara native).
 
+- Pembersihan audit ke-2: 2 kunci i18n mati dihapus, i18n 267 kunci x 3, LIVE rantai v27 PID 58260 (kode lokal 0befc8b <-> remote 3fd091c; rig-billing 4/4).
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.
