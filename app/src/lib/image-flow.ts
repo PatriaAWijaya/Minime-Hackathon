@@ -25,7 +25,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
 import { readKeys } from './chat.js';
 import { libAddImage } from './v5logic.js';
-import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, addImgSpend, readImgSpend } from './image-api.js';
+import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, addImgSpend, readImgSpend, readThumb } from './image-api.js';
 import { brandSuffix } from './brand.js';
 import { esc } from './esc.js';
 
@@ -125,8 +125,9 @@ async function renderGallery(): Promise<void> {
   const cards: string[] = [];
   for (const item of added) {
     try {
-      const res = await invoke<{ b64: string }>('image_read', { req: { name: item.imageFile } });
-      cards.push(`<div class="img-card"><img src="data:image/webp;base64,${res.b64}" alt="">`
+      const url = item.imageFile ? await readThumb(item.imageFile) : null;
+      if (!url) throw new Error('nofile');
+      cards.push(`<div class="img-card"><img src="${url}" alt="">`
         + `<div class="se-note">${esc(item.o)}</div>`
         + `<button class="se-btn2" data-img-brief="${esc(item.content || '')}">${esc(tr('img.loadbrief'))}</button></div>`);
     } catch {

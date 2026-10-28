@@ -43,6 +43,8 @@
     renderCampaign();
     setSendChatImpl(sendChatReal);
     vsRenderStatus();
+    sherpaRefreshUI();
+    vsCheck();
     initScriptEditor();
     initImageFlow();
     initBrand();

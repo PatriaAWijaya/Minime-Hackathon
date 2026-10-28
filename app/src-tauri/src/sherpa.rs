@@ -41,6 +41,12 @@ const VOICE_JSON_FILE: &str = "id_ID-news_tts-medium.onnx.json";
 // Ukuran penuh yang diketahui (lihat gerbang ukuran di sherpa_setup).
 const VOICE_ONNX_BYTES: u64 = 62_950_044;
 const VOICE_JSON_BYTES: u64 = 5_050;
+// SHA-256 resmi file upstream (diambil dari unduhan HuggingFace yang sama
+// persis dengan yang diunduh setup, 29 Okt 2026). ONNX diverifikasi
+// hanya saat PRISTINE (marker belum ada); varian +131 byte pasca-append
+// dilewati lewat marker. JSON tidak pernah di-append: selalu diverifikasi.
+const VOICE_ONNX_SHA256: &str = "ed8f02aa593f7af6b19acbdb8142e0da0dd72f46194eb33d38e0eb10a52597e8";
+const VOICE_JSON_SHA256: &str = "1ef677072668a5e172e0759b1d3871f129009d1167f093325a17607f7add5ad7";
 const ESPEAK_VOICE: &str = "id";
 
 // Metadata ONNX yang wajib ada agar sherpa-onnx VITS mau init
@@ -206,10 +212,35 @@ pub fn sherpa_setup() -> Result<SherpaSetupResult, String> {
         let _ = std::fs::remove_file(&marker);
         download_file(&curl, VOICE_ONNX_URL, &onnx, 600)?;
     }
+    // Verifikasi integritas file PRISTINE (marker belum ada = metadata
+    // belum di-append, jadi hash harus sama persis dengan upstream).
+    // Bila marker sudah ada, file adalah varian +131 byte pasca-append
+    // dan pengecekan hash dilewati (marker adalah jangkar kepercayaannya).
+    // File yang gagal hash dihapus agar setup berikutnya mengunduh ulang.
+    if !marker.is_file() {
+        let h = crate::voicestudio::sha256_file(&onnx)?;
+        if h != VOICE_ONNX_SHA256 {
+            let _ = std::fs::remove_file(&onnx);
+            let _ = std::fs::remove_file(&marker);
+            return Err(
+                "SHA-256 model Sherpa tidak cocok dengan upstream — unduhan dihapus, ulangi Setup"
+                    .to_string(),
+            );
+        }
+    }
     let json_len = json.metadata().map(|m| m.len()).unwrap_or(0);
     if !json.is_file() || json_len < VOICE_JSON_BYTES {
         let _ = std::fs::remove_file(&json);
         download_file(&curl, VOICE_JSON_URL, &json, 120)?;
+    }
+    // JSON tidak pernah di-append: hash-nya harus selalu sama persis.
+    let hj = crate::voicestudio::sha256_file(&json)?;
+    if hj != VOICE_JSON_SHA256 {
+        let _ = std::fs::remove_file(&json);
+        return Err(
+            "SHA-256 JSON fonem Sherpa tidak cocok dengan upstream — unduhan dihapus, ulangi Setup"
+                .to_string(),
+        );
     }
     let tokens = dir.join("tokens.txt");
     write_tokens(&json, &tokens)?;
@@ -327,6 +358,9 @@ fn run_sherpa_tts(text: &str, speed: f32) -> Result<TtsData, String> {
 
 #[tauri::command]
 pub fn sherpa_tts(req: SherpaTtsRequest) -> Result<SherpaTtsResult, String> {
+    if req.text.chars().count() > 20_000 {
+        return Err("naskah melebihi 20.000 karakter".to_string());
+    }
     let d = run_sherpa_tts(&req.text, req.speed.unwrap_or(1.0))?;
     Ok(SherpaTtsResult {
         data_url: d.data_url,

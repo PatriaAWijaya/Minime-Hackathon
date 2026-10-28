@@ -102,8 +102,11 @@
    Postiz drafts) in gated sub-phases. NOT one giant commit.
 
 ## Open items (Patria's decisions, not the agent's)
-- Final test brand, image provider + price, submission team
-  name/composition, Kanban 5 vs 3 columns, `.dmg` distribution.
-- Meta $150 credit verification (blocked on Patria's dashboard
-  check), live Muse test, full cost re-baseline, Fase 0 full pass.
+- Final test brand, submission team name/composition, Kanban 5 vs 3
+  columns, `.dmg` distribution.
 - Video editor engines build order (`docs/video-editor-engines.md`).
+- Catatan: log berjalan file ini berhenti di rantai v21 (28 Okt dini
+  hari); rekaman kanon sejak itu adalah `docs/fase-0-log.md`.
+  Item yang sudah ditutup dan dicoret dari daftar ini: verifikasi
+  kredit Meta $150, live Muse test, full cost re-baseline, Fase 0
+  full pass, image provider + harga (Meta, $0,01/gambar).

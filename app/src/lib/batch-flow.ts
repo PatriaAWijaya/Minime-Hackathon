@@ -30,7 +30,7 @@ import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { readKeys } from './chat.js';
 import { readBrand, brandSuffix } from './brand.js';
 import { readPostizKey } from './postiz.js';
-import { metaGenerateImage, addImgSpend, RATIO_SIZE } from './image-api.js';
+import { metaGenerateImage, addImgSpend, RATIO_SIZE, readThumb } from './image-api.js';
 import { esc } from './esc.js';
 
 export const BATCH_LS = 'minime.batch';
@@ -129,10 +129,8 @@ function saveBatch(b: BatchState): void {
 
 let inited = false;
 let cancelled = false;
-// Cache data-URL thumbnail per file: renderBatch() jalan tiap tugas
-// selesai dan membangun ulang panel — tanpa cache, tiap render
-// me-image_read ulang SEMUA file (O(tugas^2) invoke + transfer base64).
-const thumbCache = new Map<string, string>();
+// Thumbnail memakai cache bersama image-api (readThumb) — satu Map
+// untuk batch + galeri + brand, bukan cache per modul.
 
 export function initBatchFlow(): void {
   const root = document.getElementById('batch-main');
@@ -255,19 +253,10 @@ function renderBatch(): void {
   // Muat thumbnail dari disk (async; elemen hilang setelah re-render
   // diabaikan — render berikutnya memuat ulang).
   const loadThumb = async (file: string, sel: string) => {
-    const cached = thumbCache.get(file);
-    if (cached) {
-      const el0 = root.querySelector(sel) as HTMLImageElement | null;
-      if (el0) el0.src = cached;
-      return;
-    }
-    try {
-      const res = await invoke<{ b64: string }>('image_read', { req: { name: file } });
-      const url = 'data:image/webp;base64,' + res.b64;
-      thumbCache.set(file, url);
-      const el = root.querySelector(sel) as HTMLImageElement | null;
-      if (el) el.src = url;
-    } catch { /* abaikan */ }
+    const url = await readThumb(file);
+    if (!url) return;
+    const el = root.querySelector(sel) as HTMLImageElement | null;
+    if (el) el.src = url;
   };
   b.cards.forEach((c, i) => c.choices.forEach((ch, j) => ch.files.forEach((f) => {
     void loadThumb(f, '[data-thumb="' + i + '-' + j + '-' + f + '"]');

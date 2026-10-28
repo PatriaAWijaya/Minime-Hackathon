@@ -50,6 +50,9 @@ pub fn image_save(req: ImageSaveReq) -> Result<ImageSaveRes, String> {
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(&req.b64)
         .map_err(|e| e.to_string())?;
+    if bytes.len() > 20_000_000 {
+        return Err("gambar melebihi 20 MB".to_string());
+    }
     let dir = images_dir()?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     std::fs::write(dir.join(&name), &bytes).map_err(|e| e.to_string())?;

@@ -30,7 +30,7 @@ Home → Kanban → Graph → Home shows the columns rule working.
 
 ## Uji konsistensi (after Tahap A, before any wiring)
 Full zero-error audit: repo checks (tsc, gate-test, scan) +
-app checks (config validity, frontendDist == current v5 build,
+app checks (config validity, frontendDist == current v5 build (saat itu; kini ../dist),
 bundle, launch, nav/columns/theme). Log + push. Wiring starts
 only on a clean audit.
 

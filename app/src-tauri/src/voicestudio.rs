@@ -150,6 +150,27 @@ pub(crate) fn sha256_file(path: &PathBuf) -> Result<String, String> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
+// Varian sha256_file yang sekaligus menghitung byte yang di-hash,
+// dipakai video_asset_hash agar ukuran yang dilaporkan persis sama
+// dengan byte yang masuk hash (tanpa metadata terpisah yang bisa usang).
+pub(crate) fn sha256_file_counted(path: &PathBuf) -> Result<(String, u64), String> {
+    let mut f = File::open(path).map_err(|e| format!("gagal membuka {}: {e}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 65536];
+    let mut total: u64 = 0;
+    loop {
+        let n = f
+            .read(&mut buf)
+            .map_err(|e| format!("gagal membaca {}: {e}", path.display()))?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+        total += n as u64;
+    }
+    Ok((format!("{:x}", hasher.finalize()), total))
+}
+
 pub(crate) fn download_file(
     curl: &PathBuf,
     url: &str,

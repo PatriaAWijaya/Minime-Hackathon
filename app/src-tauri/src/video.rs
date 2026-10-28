@@ -5,6 +5,11 @@
 // Pencarian ffmpeg/ffprobe: PATH, lalu /opt/homebrew/bin (Homebrew Mac),
 // /usr/local/bin, ~/bin — karena app yang dibuka dari Finder tidak mewarisi
 // PATH shell user.
+// Batas kepercayaan (audit 29 Okt): pemanggil adalah compiler lokal
+// tepercaya (video.ts), BUKAN argv bebas — video_render memakai allowlist
+// flag + output yang dikurung; probe/qc/capture memakai timeout keras.
+// Path BACA dibiarkan apa adanya (compiler membaca aset user di mana
+// saja); path TULIS dikurung ke temp/Movies/minime-* (output_allowed).
 
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -174,7 +179,8 @@ pub(crate) fn unique_suffix() -> String {
 // Probe ffprobe JSON sekali, dipakai video_qc dan video_probe (tanpa duplikasi
 // parser). Mengembalikan durasi, jenis stream, daftar stream, dan nama format.
 fn probe_file(ffprobe: &PathBuf, path: &str) -> Result<ProbeInfo, String> {
-    let probe = Command::new(ffprobe)
+    let mut probe_cmd = Command::new(ffprobe);
+    probe_cmd
         .args([
             "-v",
             "error",
@@ -188,8 +194,8 @@ fn probe_file(ffprobe: &PathBuf, path: &str) -> Result<ProbeInfo, String> {
         ])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
+        .stderr(Stdio::piped());
+    let probe = output_timeout(&mut probe_cmd, 120)
         .map_err(|e| format!("gagal menjalankan ffprobe: {e}"))?;
     let pj: serde_json::Value = serde_json::from_slice(&probe.stdout)
         .map_err(|e| format!("ffprobe JSON tidak bisa dibaca: {e}"))?;
@@ -279,25 +285,154 @@ fn segments_from_stderr(stderr: &str, start_label: &str, end_label: &str) -> Vec
     out
 }
 
-#[tauri::command]
-pub fn video_render(req: RenderRequest) -> Result<RenderResult, String> {
-    if req.args.is_empty() {
+// Jalankan proses dengan timeout keras. Pipa dibaca di thread terpisah
+// (agar anak tidak menggantung saat pipa penuh), thread utama mem-poll
+// try_wait; bila lewat batas, anak di-kill dan di-reap. Tanpa ini, satu
+// FFmpeg menggantung = invoke menggantung selamanya.
+fn output_timeout(cmd: &mut Command, secs: u64) -> Result<std::process::Output, String> {
+    use std::io::Read;
+    use std::sync::mpsc;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("gagal menjalankan proses: {e}"))?;
+    let out_pipe = child.stdout.take();
+    let err_pipe = child.stderr.take();
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        if let Some(mut s) = out_pipe {
+            let _ = s.read_to_end(&mut out);
+        }
+        if let Some(mut s) = err_pipe {
+            let _ = s.read_to_end(&mut err);
+        }
+        let _ = tx.send((out, err));
+    });
+    let start = std::time::Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                // Anak selesai; tunggu drainer membaca sisa pipa.
+                let (stdout, stderr) = rx.recv().unwrap_or_default();
+                return Ok(std::process::Output {
+                    status,
+                    stdout,
+                    stderr,
+                });
+            }
+            Ok(None) => {
+                if start.elapsed().as_secs() >= secs {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    let _ = rx.recv_timeout(std::time::Duration::from_secs(5));
+                    return Err(format!("proses melebihi timeout {secs} detik — dibatalkan"));
+                }
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            Err(e) => return Err(format!("gagal menunggu proses: {e}")),
+        }
+    }
+}
+
+// Output render hanya boleh ke temp dir, ~/Movies, atau file bernama
+// minime-* (konvensi bukti manual app). Path relatif dan direktori lain
+// ditolak — cegah WebView yang terkompromi menimpa file sembarang.
+// (HOME dibaca dari env, bukan helper voicestudio yang privat.)
+fn output_allowed(p: &str) -> bool {
+    let path = Path::new(p);
+    if !path.is_absolute() {
+        return false;
+    }
+    if let Ok(tmp) = std::env::temp_dir().canonicalize() {
+        if path.starts_with(&tmp) {
+            return true;
+        }
+    }
+    if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+        if path.starts_with(home.join("Movies")) {
+            return true;
+        }
+        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+            if name.starts_with("minime-") {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+// Allowlist flag ffmpeg = kosakata PERSIS yang diemisikan compiler
+// video.ts (compileTimeline: -nostdin -y -i -filter_complex -map -c:v
+// -pix_fmt -r -c:a -b:a). Flag di luar daftar = error jujur, bukan
+// dibiarkan lolos — cegah opsi eksotis (tee, protocol, filter script).
+const FFMPEG_FLAGS: [&str; 10] = [
+    "-nostdin",
+    "-y",
+    "-i",
+    "-filter_complex",
+    "-map",
+    "-c:v",
+    "-pix_fmt",
+    "-r",
+    "-c:a",
+    "-b:a",
+];
+fn validate_render_args(args: &[String], output: &str) -> Result<(), String> {
+    if args.is_empty() {
         return Err("argv ffmpeg kosong".to_string());
     }
-    if req.output.is_empty() {
+    if output.is_empty() {
         return Err("output kosong".to_string());
+    }
+    if args[args.len() - 1] != output {
+        return Err("arg terakhir harus output".to_string());
+    }
+    let mut i = 0;
+    while i < args.len() - 1 {
+        let a = &args[i];
+        if !a.starts_with('-') {
+            return Err(format!("arg posisi tak terduga: {a}"));
+        }
+        if !FFMPEG_FLAGS.contains(&a.as_str()) {
+            return Err(format!("flag ffmpeg tidak diizinkan: {a}"));
+        }
+        // Flag bernilai wajib diikuti nilai (nilai tidak boleh diawali
+        // '-' dan tidak boleh menempati posisi output).
+        if matches!(
+            a.as_str(),
+            "-i" | "-filter_complex" | "-map" | "-c:v" | "-pix_fmt" | "-r" | "-c:a" | "-b:a"
+        ) {
+            if i + 1 >= args.len() - 1 || args[i + 1].starts_with('-') {
+                return Err(format!("flag {a} tanpa nilai"));
+            }
+            i += 2;
+        } else {
+            i += 1;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn video_render(req: RenderRequest) -> Result<RenderResult, String> {
+    validate_render_args(&req.args, &req.output)?;
+    if !output_allowed(&req.output) {
+        return Err(
+            "output di luar direktori yang diizinkan (temp, Movies, atau minime-*)".to_string(),
+        );
     }
     let ffmpeg = find_tool("ffmpeg").ok_or_else(|| {
         "ffmpeg tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string()
     })?;
     let started = std::time::Instant::now();
-    let out = Command::new(&ffmpeg)
-        .args(&req.args)
+    let mut cmd = Command::new(&ffmpeg);
+    cmd.args(&req.args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| format!("gagal menjalankan ffmpeg: {e}"))?;
+        .stderr(Stdio::piped());
+    let out =
+        output_timeout(&mut cmd, 600).map_err(|e| format!("gagal menjalankan ffmpeg: {e}"))?;
     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
     let file_ok = Path::new(&req.output).is_file();
     let success = out.status.success() && file_ok;
@@ -332,7 +467,8 @@ pub fn video_qc(req: QcRequest) -> Result<QcResult, String> {
     let has_video = info.has_video;
     let has_audio = info.has_audio;
     // Black detect (hitam >= 0.5 dtk, ambang 10%) + silence detect (hening >= 2 dtk).
-    let black = Command::new(&ffmpeg)
+    let mut black_cmd = Command::new(&ffmpeg);
+    black_cmd
         .args([
             "-nostdin",
             "-i",
@@ -346,15 +482,16 @@ pub fn video_qc(req: QcRequest) -> Result<QcResult, String> {
         ])
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| format!("gagal blackdetect: {e}"))?;
+        .stderr(Stdio::piped());
+    let black =
+        output_timeout(&mut black_cmd, 120).map_err(|e| format!("gagal blackdetect: {e}"))?;
     let black_segs = segments_from_stderr(
         &String::from_utf8_lossy(&black.stderr),
         "black_start:",
         "black_end:",
     );
-    let silent = Command::new(&ffmpeg)
+    let mut silent_cmd = Command::new(&ffmpeg);
+    silent_cmd
         .args([
             "-nostdin",
             "-i",
@@ -368,9 +505,9 @@ pub fn video_qc(req: QcRequest) -> Result<QcResult, String> {
         ])
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .output()
-        .map_err(|e| format!("gagal silencedetect: {e}"))?;
+        .stderr(Stdio::piped());
+    let silent =
+        output_timeout(&mut silent_cmd, 120).map_err(|e| format!("gagal silencedetect: {e}"))?;
     let silent_segs = segments_from_stderr(
         &String::from_utf8_lossy(&silent.stderr),
         "silence_start:",
@@ -436,7 +573,8 @@ pub fn video_capture(req: CaptureRequest) -> Result<CaptureResult, String> {
     })?;
     let tmp = std::env::temp_dir().join(format!("minime-capture-{}.jpg", unique_suffix()));
     let tmp_str = tmp.to_string_lossy().to_string();
-    let status = Command::new(&ffmpeg)
+    let mut cap_cmd = Command::new(&ffmpeg);
+    cap_cmd
         .args([
             "-nostdin",
             "-ss",
@@ -452,10 +590,10 @@ pub fn video_capture(req: CaptureRequest) -> Result<CaptureResult, String> {
         ])
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .status()
+        .stderr(Stdio::piped());
+    let status = output_timeout(&mut cap_cmd, 120)
         .map_err(|e| format!("gagal menjalankan ffmpeg capture: {e}"))?;
-    if !status.success() || !tmp.is_file() {
+    if !status.status.success() || !tmp.is_file() {
         let _ = std::fs::remove_file(&tmp);
         return Err("capture frame gagal".to_string());
     }
@@ -496,8 +634,10 @@ pub fn video_probe(req: ProbeRequest) -> Result<ProbeResult, String> {
 
 #[tauri::command]
 pub fn video_asset_hash(req: HashRequest) -> Result<HashResult, String> {
-    let size = std::fs::metadata(&req.path).map(|m| m.len()).unwrap_or(0);
-    let sha256 = crate::voicestudio::sha256_file(&PathBuf::from(&req.path))?;
+    // Satu pass: hash + hitung byte yang di-hash. Ukuran yang dilaporkan
+    // adalah persis byte yang masuk hash (bukan metadata sebelum/sesudah
+    // yang bisa berubah di tengah jalan).
+    let (sha256, size) = crate::voicestudio::sha256_file_counted(&PathBuf::from(&req.path))?;
     Ok(HashResult { sha256, size })
 }
 
@@ -505,6 +645,9 @@ pub fn video_asset_hash(req: HashRequest) -> Result<HashResult, String> {
 pub fn video_write_ass(req: WriteAssRequest) -> Result<WriteAssResult, String> {
     if req.content.trim().is_empty() {
         return Err("konten ASS kosong".to_string());
+    }
+    if req.content.len() > 1_000_000 {
+        return Err("konten ASS melebihi 1 MB".to_string());
     }
     // Sidecar: file menetap di temp dir (dipakai player/editor + ffmpeg penuh
     // nanti), ditimpa tiap simpan baru dari proses yang sama.

@@ -1,6 +1,6 @@
 // B3 — real chat wiring for the Tauri frontend.
 //
-// The composer, quickChat chips, and Enter key all funnel through
+// The composer and Enter key all funnel through
 // v5logic's sendChat(), which B3 turns into a delegate: when
 // setSendChatImpl() has installed this module's sendChatReal, every
 // path calls the real router instead of the v5 dummy replies.
@@ -169,7 +169,7 @@ export async function sendChatReal(): Promise<void> {
     return;
   }
   const ag = (AGENTS as Record<string, { name: string; color: string; role: string }>)[delegate];
-  postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.delegate.announce', { agent: ag.name, task: esc(taskShort(text)) }));
+  postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.delegate.announce', { agent: esc(ag.name), task: esc(taskShort(text)) }));
   activateAgent(delegate);
   postChat(delegate, ag.name, ag.color, tr('chat.delegate.agentack'));
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').';

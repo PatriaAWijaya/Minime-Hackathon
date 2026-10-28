@@ -65,7 +65,14 @@
   bukti live klik ducking + Simpan ASS menunggu Patria; burn-in caption BLOKIR ffmpeg tanpa subtitles/drawtext;
   Tier 2 (3/3) transkripsi antre berikutnya)
 
+- Audit lanjutan 29 Okt: esc renderer v5logic + jsEsc argumen inline,
+  cache thumbnail bersama (batch/galeri/brand), onMount Sherpa +
+  VoiceStudio, timeout proses + allowlist render + SHA Sherpa +
+  cap input (Rust), koreksi docs engines/status/biaya/TODO/PLAN.
+  Live proof tetap menunggu klik Patria (gambar, delegasi chat,
+  Sherpa, render Tier 1/2, batch end-to-end).
+
 ## Parked (Patria's call)
 - [ ] `.dmg` distribution build
 - [ ] Video editor engines (see `docs/video-editor-engines.md`)
-- [ ] Images for the 7 Postiz drafts (needs image provider decision)
+- [ ] Images for the 7 Postiz drafts (provider diputuskan: Meta; tertunda: keputusan menempel/generate gambar untuk draf lama)

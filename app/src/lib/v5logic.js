@@ -1,4 +1,4 @@
-import { esc } from './esc.js';
+import { esc, jsEsc } from './esc.js';
 // Mechanical migration of prototype-v5/index.html <script> blocks.
 // Logic is UNCHANGED: declarations kept at module level, executable
 // top-level statements moved into initV5() in original order.
@@ -17,15 +17,15 @@ export function renderAgents() {
     Object.keys(PROJECTS).forEach(function (pid) {
       var proj = PROJECTS[pid];
       var collapsed = !!collapsedGroups[pid];
-      html += '<div class="group" onclick="toggleGroup(\'' + pid + '\')">' + (collapsed ? '▸' : '▾') + ' ' + proj.name + (pid === currentProj ? ' • PROYEK AKTIF' : '') + '</div>';
+      html += '<div class="group" onclick="toggleGroup(\'' + pid + '\')">' + (collapsed ? '▸' : '▾') + ' ' + esc(proj.name) + (pid === currentProj ? ' • PROYEK AKTIF' : '') + '</div>';
       html += '<div class="gagents" data-pid="' + pid + '"' + (collapsed ? ' style="display:none"' : '') + '>';
       proj.agents.forEach(function (a, i) {
         var ag = AGENTS[a.key], off = a.status === "Nonaktif";
         rowNo++;
         var times = ["2:32 PM", "1:47 PM", "12:05 PM", "11:20 AM", "10:02 AM", "9:15 AM", "8:40 AM", "7:55 AM"];
         html += '<div class="agent ' + (selectedAgent === a.key && pid === currentProj ? 'sel' : '') + (off ? ' off' : '') + (pid === currentProj ? ' curproj' : '') + '" onclick="selectAgent(\'' + a.key + '\',\'' + pid + '\')">'
-          + '<div class="av" style="background:' + ag.color + '">' + ag.name.charAt(0) + '</div>'
-          + '<div class="meta"><b>' + ag.name + '</b> <span class="badge ' + (off ? 'b-no' : 'b-ok') + '">' + a.status + '</span><br><small>' + a.task + '</small></div>'
+          + '<div class="av" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div>'
+          + '<div class="meta"><b>' + esc(ag.name) + '</b> <span class="badge ' + (off ? 'b-no' : 'b-ok') + '">' + esc(a.status) + '</span><br><small>' + esc(a.task) + '</small></div>'
           + (ag.always ? '' : '<button class="toggle" onclick="event.stopPropagation();toggleAgent(' + i + ',\'' + pid + '\')">' + (off ? 'Aktifkan' : 'Nonaktifkan') + '</button>')
           + '</div>';
       });
@@ -65,25 +65,25 @@ export function selectAgent(key, pid) {
 export function renderDetail() {
     var ag = AGENTS[selectedAgent], proj = PROJECTS[currentProj];
     var ins = ag.instructions || (selectedAgent === "prime" ? "General-purpose assistant" : ag.goal);
-    var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox" checked onchange="detailNote(\'' + tr('detail.note.skill', {s: s}) + '\')"> <span>' + s + '</span></div>'; }).join("");
+    var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox" checked onchange="detailNote(\'' + jsEsc(tr('detail.note.skill', {s: s})) + '\')"> <span>' + s + '</span></div>'; }).join("");
     document.getElementById("detailBody").innerHTML =
-      '<div class="detail-avatar-wrap"><div class="detail-avatar" style="background:' + ag.color + '">' + ag.name.charAt(0) + '</div><button class="avatar-edit" onclick="detailNote(\'' + tr('detail.note.avatar', {name: ag.name}) + '\')" title="Ubah avatar">✎</button></div>'
-      + '<div class="d-label">' + tr('detail.name') + '</div><input type="text" class="d-field" value="' + ag.name + '" onchange="renameAgent(this.value)">'
-      + '<div class="d-label">' + tr('detail.title') + '</div><input type="text" class="d-field" placeholder="Describe what your agent does" value="' + ag.role + '" onchange="retitleAgent(this.value)">'
-      + '<div class="d-label">' + tr('detail.instructions') + '</div><textarea class="d-field d-area" onchange="setInstructions(this.value)">' + ins + '</textarea>'
+      '<div class="detail-avatar-wrap"><div class="detail-avatar" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div><button class="avatar-edit" onclick="detailNote(\'' + jsEsc(tr('detail.note.avatar', {name: ag.name})) + '\')" title="Ubah avatar">✎</button></div>'
+      + '<div class="d-label">' + tr('detail.name') + '</div><input type="text" class="d-field" value="' + esc(ag.name) + '" onchange="renameAgent(this.value)">'
+      + '<div class="d-label">' + tr('detail.title') + '</div><input type="text" class="d-field" placeholder="Describe what your agent does" value="' + esc(ag.role) + '" onchange="retitleAgent(this.value)">'
+      + '<div class="d-label">' + tr('detail.instructions') + '</div><textarea class="d-field d-area" onchange="setInstructions(this.value)">' + esc(ins) + '</textarea>'
       + '<div class="d-label">' + tr('detail.brain') + '</div><div class="d-rows">'
-      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.model') + '\')"><span>' + tr('detail.model') + '</span><span class="d-val">' + ag.model + ' ›</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.reasoning') + '\')"><span>' + tr('detail.reasoning') + '</span><span class="d-val">' + tr('detail.val.low') + '</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.backup') + '\')"><span>' + tr('detail.backup') + '</span><span class="d-val">' + tr('detail.val.askfirst') + '</span></div></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.model')) + '\')"><span>' + tr('detail.model') + '</span><span class="d-val">' + ag.model + ' ›</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.reasoning')) + '\')"><span>' + tr('detail.reasoning') + '</span><span class="d-val">' + tr('detail.val.low') + '</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.backup')) + '\')"><span>' + tr('detail.backup') + '</span><span class="d-val">' + tr('detail.val.askfirst') + '</span></div></div>'
       + '<div class="d-label">' + tr('detail.knows') + '</div><div class="d-rows">'
-      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.memories', {name: ag.name}) + '\')"><span>' + tr('detail.memories') + '</span><span class="d-val">' + tr('detail.val.saved') + '</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.memories', {name: ag.name})) + '\')"><span>' + tr('detail.memories') + '</span><span class="d-val">' + tr('detail.val.saved') + '</span></div>'
       + '<div class="d-row" onclick="toggleSkillList()"><span>' + tr('detail.skills') + '</span><span class="d-val">' + ag.skills.length + ' assigned ›</span></div>'
       + '<div id="skillList" style="display:none">' + skills + '</div>'
-      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.files', {name: ag.name}) + '\')"><span>' + tr('detail.files') + '</span><span class="d-val">17 KB ›</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.tables', {name: ag.name}) + '\')"><span>' + tr('detail.tables') + '</span><span class="d-val">' + tr('detail.val.tables') + '</span></div></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.files', {name: ag.name})) + '\')"><span>' + tr('detail.files') + '</span><span class="d-val">17 KB ›</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.tables', {name: ag.name})) + '\')"><span>' + tr('detail.tables') + '</span><span class="d-val">' + tr('detail.val.tables') + '</span></div></div>'
       + '<div class="d-label">' + tr('detail.does') + '</div><div class="d-rows">'
-      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.routines', {name: ag.name}) + '\')"><span>' + tr('detail.routines') + '</span><span class="d-val">' + tr('detail.val.configured') + '</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + tr('detail.note.usage', {name: ag.name}) + '\')"><span>' + tr('detail.usage') + '</span><span class="d-val">— ›</span></div></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.routines', {name: ag.name})) + '\')"><span>' + tr('detail.routines') + '</span><span class="d-val">' + tr('detail.val.configured') + '</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.usage', {name: ag.name})) + '\')"><span>' + tr('detail.usage') + '</span><span class="d-val">— ›</span></div></div>'
       + '<div class="notice" id="detailNotice" style="display:none"></div>';
   }
 
@@ -110,7 +110,7 @@ export function renderChat() {
     PROJECTS[currentProj].chat.forEach(function (m) {
       var div = document.createElement("div");
       div.className = "msg " + (m.who === "user" ? "user" : (m.curation ? "curation" : (m.who === "prime" ? "prime" : "")));
-      var who = String(m.name || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      var who = esc(String(m.name || ""));
       div.innerHTML = m.curation
         ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + m.text + '</div></div>'
         : '<div class="body"><div class="bubble"><div class="who">' + who + '</div>' + m.text + '</div></div>';
@@ -176,7 +176,7 @@ export function doSearch() {
     if (!q) { results.innerHTML = ""; document.getElementById("searchCount").textContent = ""; return; }
     var hits = PROJECTS[currentProj].chat.filter(function (m) { return m.text.toLowerCase().indexOf(q) !== -1 || m.name.toLowerCase().indexOf(q) !== -1; });
     document.getElementById("searchCount").textContent = tr('search.count', {n: hits.length, q: q, proj: PROJECTS[currentProj].name});
-    results.innerHTML = hits.map(function (m) { return '<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:8px"><b>' + m.name + ':</b> ' + m.text + '</div>'; }).join("") || "<p>" + tr('search.empty') + "</p>";
+    results.innerHTML = hits.map(function (m) { return '<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:8px"><b>' + esc(m.name) + ':</b> ' + m.text + '</div>'; }).join("") || "<p>" + tr('search.empty') + "</p>";
   }
 
 export function agentKeyByName(n) {
@@ -199,14 +199,14 @@ export function renderKanban() {
     function vis(card) { return !filter || card.a === filter; }
     if (kanbanTab === "table") {
       var rows = cards.filter(vis).map(function (card) {
-        return "<tr><td><b>" + card.t + "</b></td><td>" + card.a + "</td><td>" + colName(card.c) + "</td><td>💬 " + cardComments(card) + "</td></tr>";
+        return "<tr><td><b>" + esc(card.t) + "</b></td><td>" + esc(card.a) + "</td><td>" + colName(card.c) + "</td><td>💬 " + cardComments(card) + "</td></tr>";
       }).join("");
       wrap.innerHTML = "<table><tr><th>Tugas</th><th>Agen</th><th>Status</th><th>Komentar</th></tr>" + rows + "</table>";
       return;
     }
     if (kanbanTab === "list") {
       wrap.innerHTML = cards.filter(vis).map(function (card) {
-        return "<div class='todayitem'><b>" + card.t + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + card.a + " • " + colName(card.c) + " • 💬 " + cardComments(card) + "</small></div>";
+        return "<div class='todayitem'><b>" + esc(card.t) + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + esc(card.a) + " • " + colName(card.c) + " • 💬 " + cardComments(card) + "</small></div>";
       }).join("") || "<p>Tidak ada tugas untuk filter ini.</p>";
       return;
     }
@@ -227,8 +227,8 @@ export function renderKanban() {
           if (card.c !== ci || !vis(card)) return;
           var key = agentKeyByName(card.a), ag = AGENTS[key];
           var k = document.createElement("div"); k.className = "kcard"; k.draggable = true;
-          k.innerHTML = "<div class='accent' style='background:" + colColor(ci) + "'></div><b>" + card.t + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + card.a + "</small>"
-            + "<div class='kb-cardfoot'><span>💬 " + cardComments(card) + "</span><span class='av' style='width:26px;height:26px;font-size:12px;background:" + ag.color + "'>" + ag.name.charAt(0) + "</span></div>";
+          k.innerHTML = "<div class='accent' style='background:" + colColor(ci) + "'></div><b>" + esc(card.t) + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + esc(card.a) + "</small>"
+            + "<div class='kb-cardfoot'><span>💬 " + cardComments(card) + "</span><span class='av' style='width:26px;height:26px;font-size:12px;background:" + ag.color + "'>" + esc(ag.name.charAt(0)) + "</span></div>";
           k.addEventListener("dragstart", function () { dragCard = i; });
           if (ci < totalCols - 1) {
             var b = document.createElement("button"); b.className = "btn btn-sm"; b.textContent = tr('kanban.advance');
@@ -468,7 +468,7 @@ export function libRevise(i) {
     PROJECTS[currentProj].kanban.push({ t: "Revisi: " + item.o, a: item.a, c: 3 });
     renderKanban();
     showView("home");
-    postChat("prime", "Prime Agent", "#EB87B4", "Perbaikan dibuka untuk '" + item.o + "' — kartunya masuk kolom Revisi di Kanban, menunggu catatanmu (simulasi).", true);
+    postChat("prime", "Prime Agent", "#EB87B4", "Perbaikan dibuka untuk '" + esc(item.o) + "' — kartunya masuk kolom Revisi di Kanban, menunggu catatanmu (simulasi).", true);
   }
 
 export function mediaBadge(s) { return s === "Siap untuk Post" ? "b-ok" : (s === "Menunggu GKonten" || s === "Menunggu provider" ? "b-wait" : "b-idle"); }

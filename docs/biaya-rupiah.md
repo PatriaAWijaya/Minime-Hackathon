@@ -84,6 +84,7 @@ Kurs: ~Rp18.148 per USD (Finnhub, 28 Okt 2026).
    aktual; biaya aktual per tugas tetap null sampai ada token live
    dari pemakaian Meta. Muse Image ($0,01/gambar per katalog 23 Okt)
    tetap provisional sampai keputusan provider final + live call.
+   UPDATE 28 Okt: DITUTUP — tarif Muse Spark terkonfirmasi lewat live test 28 Okt 03:36 ($0,00295 dihitung dari tarif ini); Muse Image diputuskan Meta + live probe 19:32 ($0,01/gambar).
 
 ## Re-baseline selesai — bagian 2 ditutup (keputusan Patria, 28 Okt 2026 ~04:36 WIB)
 

@@ -18,6 +18,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
 import { esc } from './esc.js';
+import { readThumb } from './image-api.js';
 
 export const BRAND_LS = 'minime.brand';
 
@@ -191,11 +192,10 @@ function renderBrand(): void {
 
   // Muat preview gambar dari disk (async; gagal -> kartu tetap tampil).
   const loadImg = async (file: string, sel: string) => {
-    try {
-      const res = await invoke<{ b64: string }>('image_read', { req: { name: file } });
-      const el = root.querySelector(sel) as HTMLImageElement | null;
-      if (el) el.src = 'data:image/webp;base64,' + res.b64;
-    } catch { /* abaikan: file mungkin terhapus manual */ }
+    const url = await readThumb(file);
+    if (!url) return; // abaikan: file mungkin terhapus manual
+    const el = root.querySelector(sel) as HTMLImageElement | null;
+    if (el) el.src = url;
   };
   for (const v of LOGO_VARIANTS) {
     if (b.logos[v]) void loadImg(b.logos[v] as string, '[data-logoimg="' + v + '"]');

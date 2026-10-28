@@ -8,6 +8,8 @@
 // bertanggal, BUKAN kurs live: record spend menyimpan kurs + tanggalnya
 // supaya konversi Rp tidak basi diam-diam.
 
+import { invoke } from '@tauri-apps/api/core';
+
 export const IMG_MODEL = 'muse-image-1.0';
 export const IMG_PRICE_USD = 0.01;
 export const IMG_USD_RATE = 18148;
@@ -77,4 +79,22 @@ export async function metaGenerateImage(key: string, prompt: string, n: number, 
   return data
     .filter((d: { b64_json?: string }) => typeof d.b64_json === 'string' && d.b64_json.length > 0)
     .map((d: { b64_json: string }) => d.b64_json);
+}
+
+// Cache data-URL thumbnail BERSAMA (dipakai batch-flow, image-flow,
+// brand): satu Map, satu jalur invoke. Tanpa cache, tiap render ulang
+// (ganti bahasa, mutasi brand, tugas batch selesai) me-image_read ulang
+// SEMUA file — transfer base64 berulang yang sama.
+export const thumbCache = new Map<string, string>();
+export async function readThumb(file: string): Promise<string | null> {
+  const cached = thumbCache.get(file);
+  if (cached) return cached;
+  try {
+    const res = await invoke<{ b64: string }>('image_read', { req: { name: file } });
+    const url = 'data:image/webp;base64,' + res.b64;
+    thumbCache.set(file, url);
+    return url;
+  } catch {
+    return null;
+  }
 }

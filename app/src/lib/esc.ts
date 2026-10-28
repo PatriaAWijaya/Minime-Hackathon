@@ -10,3 +10,21 @@ export function esc(s: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+
+// Escape untuk string JS kutip-tunggal di dalam atribut HTML kutip-ganda
+// (mis. onclick="detailNote('...')"): parser HTML mendekode entitas DULU,
+// lalu JS mem-parse escape-nya — jadi \' \" \\ \n \x3c \x3e \x26
+// kembali ke karakter aslinya saat tampil (textContent), tanpa bisa
+// breakout dari string maupun atribut. BEDA dari esc(): esc() saja TIDAK
+// cukup di konteks JS karena entitasnya didekode sebelum JS jalan.
+export function jsEsc(s: string): string {
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/</g, '\\x3c')
+    .replace(/>/g, '\\x3e')
+    .replace(/&/g, '\\x26');
+}
