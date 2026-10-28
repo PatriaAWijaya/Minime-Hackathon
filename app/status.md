@@ -83,6 +83,8 @@
 
 - Menu Campaign LIVE rantai v28 PID 61514: tombol rail ikon megafon + 4 tab (Leads Generator, Leads & CRM PROVISIONAL, Outreach, Follow Up); CRM/Outreach dari data Fase 4 asli; i18n 280 kunci x 3; rig-campaign 17/17 (kode lokal 48ce788 <-> remote 344a27f).
 
+- Whisper TERPASANG di MacBook 28 Okt: whisper-cpp (brew) + model ggml-small di ~/whisper-models/ggml-small.bin; bukti transkripsi ID live (~2 dtk, timestamp segmen terbukti). Sisa chunk 3: adaptor + verifikasi penutup Tier 2.
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.
