@@ -7,7 +7,7 @@
 
 // B4: Kanban (TEST Kopi) + Planner now come from real artifacts via
 // backend-data.js; the dummy literals below were replaced, not kept.
-import { kopiKanban, plannerReal } from './backend-data.js';
+import { campaignCounts, campaignDrafts, campaignLeads, campaignPipeline, kopiKanban, plannerReal } from './backend-data.js';
 import { tr } from './i18n.js';
 
 /* ---------- Agen ---------- */
@@ -466,6 +466,41 @@ export function mediaTab(id) {
   });
 }
 
+export function campaignTab(id) {
+  ['leads', 'crm', 'outreach', 'followup'].forEach(function (k) {
+    var p = document.getElementById('cp-tab-' + k);
+    if (p) p.style.display = (k === id) ? 'block' : 'none';
+    var b = document.getElementById('cp-tabbtn-' + k);
+    if (b) b.classList.toggle('active', k === id);
+  });
+}
+
+/** Campaign tab bodies, DERIVED from the real Fase 4 artifact via
+ *  backend-data (build-time snapshot, like Kanban/Planner). CRM
+ *  lists pipeline counts + every deduped lead with score/stage;
+ *  Outreach lists the 6 draft records (draft-only, never sent).
+ *  Called on init and on language switch (like renderPlanner). */
+export function renderCampaign() {
+  var counts = campaignCounts();
+  var pipe = campaignPipeline();
+  var crm = document.getElementById('cp-crm-body');
+  if (crm) {
+    var rows = campaignLeads().map(function (l) {
+      return '<tr><td><b>' + l.id + '</b> ' + l.name + '</td><td>' + l.channel + '</td><td>' + tr('cp.score') + ' ' + l.score + '</td><td>' + l.stage + '</td></tr>';
+    }).join('');
+    var summary = pipe.map(function (s) { return s.stage + ': ' + s.ids.length; }).join(' · ');
+    crm.innerHTML = '<p>' + counts.raw + ' → ' + counts.deduped + ' lead (' + tr('cp.crm.dedupe', { merged: counts.merged }) + ') · ' + summary + '</p><table><tr><th>Lead</th><th>' + tr('word.channel') + '</th><th>' + tr('cp.score') + '</th><th>' + tr('cp.stage') + '</th></tr>' + rows + '</table>';
+  }
+  var out = document.getElementById('cp-outreach-body');
+  if (out) {
+    var drafts = campaignDrafts().map(function (d) {
+      var link = d.waLink ? ' · <a href="' + d.waLink + '" target="_blank" rel="noreferrer">wa.me</a>' : '';
+      return '<div style="margin-bottom:12px"><b>' + d.leadId + ' ' + d.leadName + '</b> (' + d.stage + ', ' + tr('cp.score') + ' ' + d.score + ', ' + d.channel + ') <span class="badge b-wait">' + tr('cp.status.draft') + '</span><div style="color:#a1a1a1;font-size:13px">' + d.text + link + '</div></div>';
+    }).join('');
+    out.innerHTML = drafts;
+  }
+}
+
 export function veTool(tool) {
   document.querySelectorAll(".veToolNote").forEach(function (n) { n.textContent = "Simulasi: '" + tool + "' belum terhubung ke Diffusion (tampilan saja)."; });
 }
@@ -772,5 +807,5 @@ export function initV5() {
   waInputChanged();
   var _ms = document.getElementById('msScript');
   if (_ms) { try { _ms.value = localStorage.getItem('minime.script') || ''; } catch (_) {} }
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addKanbanList, addNodeAfter, agentKeyByName, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libRevise, libSave, libUse, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libRevise, libSave, libUse, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }
