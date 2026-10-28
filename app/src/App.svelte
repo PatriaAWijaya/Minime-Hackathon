@@ -551,7 +551,7 @@
       <div class="scroll">
         <table><thead><tr><th>{t('word.item', lang)}</th><th>{t('word.channel', lang)}</th><th>{t('planner.header.date', lang)}</th><th>{t('word.status', lang)}</th><th>{t('planner.header.postiz', lang)}</th></tr></thead><tbody id="plannerBody"></tbody></table>
         <div class="postiz-embed">
-          <div class="postiz-bar"><b>Postiz</b> <span id="postizStatus"></span> <button class="btn btn-sm" onclick={() => postizReload()}>{t('planner.postiz.reload', lang)}</button> <button class="btn btn-sm" onclick={() => postizOpenBrowser()}>{t('planner.postiz.open', lang)}</button></div>
+          <div class="postiz-bar"><b>Postiz</b> <span id="postizStatus"></span> <button id="postizReloadBtn" class="btn btn-sm" onclick={() => postizReload()}>{t('planner.postiz.reload', lang)}</button> <button class="btn btn-sm" onclick={() => postizOpenBrowser()}>{t('planner.postiz.open', lang)}</button></div>
           <iframe id="postizFrame" src="http://127.0.0.1:4007" title="Postiz"></iframe>
           <p class="se-note" id="postizNote"></p>
         </div>

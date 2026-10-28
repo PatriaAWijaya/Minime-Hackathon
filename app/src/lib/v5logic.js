@@ -717,13 +717,21 @@ export function postizCheck() {
   postizWatchCSP();
   var st = document.getElementById("postizStatus");
   var note = document.getElementById("postizNote");
+  var btn = document.getElementById("postizReloadBtn");
   if (!st) return;
+  st.style.display = "";
   st.textContent = tr('planner.postiz.checking');
+  if (btn) { btn.textContent = tr('planner.postiz.reload'); btn.classList.remove("btn-connected"); }
   fetch(POSTIZ_UI, { mode: "no-cors" }).then(function () {
-    st.textContent = tr('planner.postiz.online');
+    // Terkoneksi: teks status TIDAK ditampilkan (perintah Patria) —
+    // tombol sendiri yang menjadi indikator: "Terhubung" hijau.
+    st.style.display = "none";
+    if (btn) { btn.textContent = tr('planner.postiz.connected'); btn.classList.add("btn-connected"); }
     if (note) note.textContent = tr('planner.postiz.note.online');
   }).catch(function () {
+    st.style.display = "";
     st.textContent = tr('planner.postiz.offline');
+    if (btn) { btn.textContent = tr('planner.postiz.reload'); btn.classList.remove("btn-connected"); }
     if (note) note.textContent = tr('planner.postiz.note.offline');
   });
 }
