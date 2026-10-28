@@ -166,6 +166,8 @@ try {
   check('CSS ter-build memuat hijau #A6EBB1', cssText.includes('#a6ebb1'));
   check('CSS ter-build memuat aturan bubble user', cssText.includes('.msg.user .body') && cssText.includes('.msg.user .bubble'));
   check('CSS ter-build memuat aturan header dalam bubble', cssText.includes('.msg.user .bubble .who') && cssText.includes('.msg .bubble .who'));
+  const userBubbleRules = cssText.match(/\.msg\.user \.bubble\{[^}]*\}/g) || [];
+  check('isi bubble user rata kanan', userBubbleRules.some((r) => r.includes('text-align:right')), userBubbleRules.join(' | ').slice(0, 200));
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-chat exception :: ' + (e && e.stack ? e.stack : e));

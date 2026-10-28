@@ -116,7 +116,7 @@ h3 { font-size: 18px; }
 /* Chat: agen kiri (default), user kanan + bubble pink. */
 .msg .body { display: flex; flex-direction: column; align-items: flex-start; }
 .msg.user .body { align-items: flex-end; }
-.msg.user .bubble { background: #EB87B4; color: #262626; }
+.msg.user .bubble { background: #EB87B4; color: #262626; text-align: right; }
 
 /* Header nama DI DALAM bubble (revisi 28 Okt): agen kiri hijau bold,
    user kanan (warna mengikuti bubble pink = teks gelap). */
