@@ -109,12 +109,31 @@ export function renderChat() {
     PROJECTS[currentProj].chat.forEach(function (m) {
       var div = document.createElement("div");
       div.className = "msg " + (m.who === "user" ? "user" : (m.curation ? "curation" : (m.who === "prime" ? "prime" : "")));
+      var who = String(m.name || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
       div.innerHTML = m.curation
         ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + m.text + '</div></div>'
-        : '<div class="bubble">' + m.text + '</div>';
+        : '<div class="body"><div class="who">' + who + '</div><div class="bubble">' + m.text + '</div></div>';
       box.appendChild(div);
     });
     box.scrollTop = box.scrollHeight;
+  }
+
+/* Orkestrasi chat: agen penerima tugas otomatis AKTIF di list —
+   terpilih + panel Detail-nya tampil bila ia ada di proyek aktif,
+   atau grup proyeknya dibuka (tanpa memindah proyek/chat) bila ia
+   ada di proyek lain. "Aktif" di sini = terpilih & terlihat, BUKAN
+   mengubah toggle Nonaktif (itu kontrol eksplisit user di Tools). */
+export function activateAgent(key) {
+    var pid = null;
+    if (PROJECTS[currentProj].agents.some(function (a) { return a.key === key; })) pid = currentProj;
+    else Object.keys(PROJECTS).forEach(function (p) {
+      if (!pid && PROJECTS[p].agents.some(function (a) { return a.key === key; })) pid = p;
+    });
+    if (!pid) return;
+    if (pid === currentProj) { selectAgent(key, pid); return; }
+    collapsedGroups[pid] = false;
+    try { window.localStorage.setItem('minime.agentGroups', JSON.stringify(collapsedGroups)); } catch (e) {}
+    renderAgents();
   }
 
 export function postChat(who, name, color, text, curation) {
@@ -135,7 +154,7 @@ export function sendChat() {
     var input = document.getElementById("chatInput");
     var text = input.value.trim();
     if (!text) return;
-    postChat("user", "Kamu", "#374151", text.replace(/</g, "&lt;"));
+    postChat("user", "Patria", "#374151", text.replace(/</g, "&lt;"));
     input.value = "";
     var saved = text;
     setTimeout(function () {
@@ -666,7 +685,7 @@ export function viewBack() { if (viewHistIdx > 0) { navJump = true; viewHistIdx-
 
 export function viewForward() { if (viewHistIdx < viewHist.length - 1) { navJump = true; viewHistIdx++; _sv2(viewHist[viewHistIdx]); navJump = false; } }
 
-var AGENTS = {
+export var AGENTS = {
     prime: { name: "Prime Agent", color: "#FFD1DC", role: "Personal Assistant — orkestrasi & kurasi", goal: "Memastikan setiap arahan menjadi tugas yang jelas, didelegasikan ke agen yang tepat, dan hasilnya dikurasi sebelum final.", skills: ["Orkestrasi delegasi", "Kurasi hasil agen", "Penegakan gerbang GSTP/GKonten/GBatch"], model: "Meta (Muse) → Gemini → Ollama", always: true },
     riset: { name: "Riset", color: "#525252", role: "Riset pasar & audiens", goal: "Riset pasar, behaviour digital, dan pola spending yang terverifikasi — tanpa mengarang angka/URL.", skills: ["riset-pasar", "behaviour-digital", "spending-digital", "verifikasi-fakta"], model: "Gemini (fallback dari Meta)", always: false },
     strategi: { name: "Strategi", color: "#404040", role: "Positioning & STP", goal: "Mengubah riset menjadi positioning, pilar, dan STP yang spesifik dan bisa diuji.", skills: ["positioning-stp", "pak-bi-branding", "segmentasi-spending"], model: "Gemini (fallback dari Meta)", always: false },
@@ -685,7 +704,7 @@ var PROJECTS = {
       { key: "media", status: "Menunggu provider", task: "Gambar Hari 1–7" },
       { key: "distribusi", status: "Idle", task: "—" }
     ], chat: [
-      { who: "user", name: "Kamu", color: "#374151", text: "Riset pasar es kopi Surabaya untuk mahasiswa, lalu buatkan konten 7 hari beserta gambarnya." },
+      { who: "user", name: "Patria", color: "#374151", text: "Riset pasar es kopi Surabaya untuk mahasiswa, lalu buatkan konten 7 hari beserta gambarnya." },
       { who: "prime", name: "Prime Agent", color: "#FFD1DC", text: "Siap. Saya pecah jadi: Riset → Strategi (STP, menunggu GSTP darimu) → Kreatif (kalender + brief) → Media (gambar) → Distribusi (draf Postiz). Saya tugaskan Riset sekarang." },
       { who: "riset", name: "Riset", color: "#525252", text: "Riset selesai: audiens mahasiswa/pekerja muda Surabaya, behaviour digital tinggi (on-screen panjang, video pendek), spending sensitif harga, transaksi dominan via WhatsApp + QRIS." },
       { who: "strategi", name: "Strategi", color: "#404040", text: "STP draf: segmen mahasiswa/pekerja muda 18–28, targeting Urban Hustlers via WhatsApp Business + Reels/TikTok, positioning es kopi susu harian paling praktis via WA + QRIS. Menunggu GSTP." },
@@ -698,7 +717,7 @@ var PROJECTS = {
       { key: "riset", status: "Mengerjakan", task: "Riset pengguna aplikasi kopi" },
       { key: "produk", status: "Mengerjakan", task: "Struktur fitur MVP" }
     ], chat: [
-      { who: "user", name: "Kamu", color: "#374151", text: "Buatkan brief produk digital untuk aplikasi pemesanan kopi via WhatsApp." },
+      { who: "user", name: "Patria", color: "#374151", text: "Buatkan brief produk digital untuk aplikasi pemesanan kopi via WhatsApp." },
       { who: "prime", name: "Prime Agent", color: "#FFD1DC", text: "Siap. Saya tugaskan Riset untuk riset pengguna, lalu Produk Digital menyusun brief dan struktur fitur MVP." },
       { who: "riset", name: "Riset", color: "#525252", text: "Riset pengguna berjalan: pemesanan via chat sudah jadi kebiasaan, hambatan utamanya antre dan pembayaran tunai (simulasi)." }
     ], kanban: [
@@ -850,5 +869,5 @@ export function initV5() {
   waInputChanged();
   var _ms = document.getElementById('msScript');
   if (_ms) { try { _ms.value = localStorage.getItem('minime.script') || ''; } catch (_) {} }
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddScript, libAll, libChat, libMedia, libRevise, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, MEDIA, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, carSlide, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddScript, libAll, libChat, libMedia, libRevise, makeResizer, mediaBadge, mediaFilter, mediaTab, mediaToPlanner, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderMedia, renderPlanner, retitleAgent, runGraphSim, saveScript, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }
