@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod sherpa;
 mod video;
 mod voicestudio;
 
@@ -14,7 +15,10 @@ fn main() {
             video::video_write_ass,
             voicestudio::vs_status,
             voicestudio::vs_launch,
-            voicestudio::vs_install
+            voicestudio::vs_install,
+            sherpa::sherpa_status,
+            sherpa::sherpa_setup,
+            sherpa::sherpa_tts
         ])
         .run(tauri::generate_context!())
     {

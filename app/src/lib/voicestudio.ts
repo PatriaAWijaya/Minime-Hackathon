@@ -148,7 +148,7 @@ function setNote(id: string, text: string): void {
   if (el) el.textContent = text;
 }
 
-function showAudio(audioId: string, dlId: string, url: string, filename: string): void {
+export function showAudio(audioId: string, dlId: string, url: string, filename: string): void {
   const a = document.getElementById(audioId) as HTMLAudioElement | null;
   if (a) {
     a.src = url;

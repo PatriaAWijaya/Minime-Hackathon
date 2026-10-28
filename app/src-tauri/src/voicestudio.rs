@@ -164,7 +164,12 @@ fn sha256_file(path: &PathBuf) -> Result<String, String> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
-fn download(curl: &PathBuf, url: &str, dest: &PathBuf, max_time: u64) -> Result<(), String> {
+pub(crate) fn download_file(
+    curl: &PathBuf,
+    url: &str,
+    dest: &PathBuf,
+    max_time: u64,
+) -> Result<(), String> {
     let out = Command::new(curl)
         .arg("-L")
         .arg("--fail")
@@ -237,8 +242,8 @@ pub fn vs_install() -> Result<VsInstallResult, String> {
     let _ = std::fs::remove_file(&zip_path);
     let _ = std::fs::remove_file(&sums_path);
     let result = (|| -> Result<PathBuf, String> {
-        download(&curl, &zip_url, &zip_path, 1200)?;
-        download(&curl, &sums_url, &sums_path, 120)?;
+        download_file(&curl, &zip_url, &zip_path, 1200)?;
+        download_file(&curl, &sums_url, &sums_path, 120)?;
         let sums = std::fs::read_to_string(&sums_path)
             .map_err(|e| format!("gagal membaca SHA256SUMS.txt: {e}"))?;
         let mut expected: Option<String> = None;

@@ -134,3 +134,32 @@ tahap 4 lolos.
    membesar; butuh analisis asar + upgrade Node yang disetujui).
 5. Kualitas perseptual pelafalan Indonesia voice baru (butuh telinga
    Patria di tahap 4 — tidak bisa diputus dari angka saja).
+
+## 5. Adendum tahap 2 (28 Okt 2026, sesudah keputusan bundle Patria)
+- Keputusan Patria: **espeak-ng-data ikut di-bundle**. Implementasi di
+  sherpa-onnx v2.0.1 ternyata LEBIH SEDERHANA dari perkiraan: sherpa
+  sendiri TIDAK lagi memakai espeak-ng-data (data_dir deprecated /
+  diabaikan sejak v2.0.0). Teks di-phonemize di luar sherpa oleh crate
+  piper-phonemize, dan codepoint fonem dilewatkan via
+  GenerationConfig::phoneme_codepoints (contoh resmi
+  vits_tts_phonemize.rs). Data phonemize ikut DI DALAM crate
+  piper-phonemize (ter-embed, diinisialisasi otomatis) — jadi tidak
+  ada lagi unduhan espeak-ng-data terpisah, dan keputusan bundle
+  Patria terpenuhi dalam bentuk yang lebih bersih: data ikut bersama
+  dependensi, bukan diunduh saat setup. Voice yang dipakai tetap
+  id_ID-news_tts-medium.onnx (22050 Hz, espeak voice "id").
+- tokens.txt: format resmi sherpa ("fonem id" per baris, dari skrip
+  konversi piper→sherpa). Derivasi dari phoneme_id_map .onnx.json
+  terverifikasi: 161 fonem, id 0-160, tanpa lubang/tabrakan.
+- Catatan lisensi yang BERPINDAH (bukan hilang): metadata crates.io
+  piper-phonemize v1.5.9 kosong (tanpa lisensi/repo/dokumentasi) —
+  lisensi crate itu belum diverifikasi; catatan GPL-data kini
+  menempel pada crate tersebut, bukan pada unduhan terpisah. Yang
+  terverifikasi Apache = sherpa-onnx. Lisensi dataset voice tetap
+  BELUM terverifikasi (halaman Kaggle dibaca via browser — hasil
+  menyusul); prototipe hanya untuk uji lokal, bukan distribusi voice.
+- Perintah baru (berdampingan dengan VoiceStudio): sherpa_status,
+  sherpa_setup (unduh voice + buat tokens.txt, idempotent, aset di
+  ~/minime-voices/sherpa-id, TIDAK masuk git), sherpa_tts (memakai
+  naskah & kecepatan yang sama dengan tab Voice). Uji unit IGNOR
+  di sherpa.rs (butuh aset) + rig-sherpa.js untuk wiring UI.

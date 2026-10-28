@@ -4,6 +4,7 @@
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
   import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
+  import { sherpaSetup, sherpaTtsFromTab, sherpaRenderStatus, sherpaRefreshUI } from "./lib/sherpa.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtInt, fmtUsd } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
@@ -23,6 +24,7 @@
     renderCampaign();
     renderDetail();
     vsRefreshVoiceUI();
+    sherpaRefreshUI();
     updateKeyStatus();
   }
 
@@ -341,6 +343,9 @@
           <span id="vsNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
           <audio id="vsAudio" controls style="display:none;width:100%;margin-top:8px"></audio>
           <a id="vsDownload" style="display:none">{t('vs.download', lang)}</a>
+          <h4>{t('sherpa.title', lang)}</h4>
+          <p><span id="sherpaStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { sherpaRenderStatus() }}>{t('vs.status.check', lang)}</button> <button class="btn btn-primary" onclick={() => { sherpaSetup() }}>{t('sherpa.setup', lang)}</button> <button class="btn btn-primary" onclick={() => { sherpaTtsFromTab() }}>{t('sherpa.tts', lang)}</button> <span id="sherpaNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span></p>
+          <p style="color:#a1a1a1;font-size:13px">{t('sherpa.note', lang)}</p>
           <h4>{t('vs.ref.title', lang)}</h4>
           <label>{t('vs.ref.label', lang)}</label>
           <input id="vsRefFile" type="file" accept="audio/*">
