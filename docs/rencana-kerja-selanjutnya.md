@@ -73,3 +73,4 @@ produk Meta, alasan pentingnya model Meta, checkbox izin publikasi.
   pindahkan rig ke repo).
 - Posting harian: hanya atas perintah langsung Patria (kedua cron
   posting sudah dihapus 28 Okt).
+Terlaksana 28 Okt (di luar urutan rencana, atas perintah langsung): langkah 0b list agen collapsible per project (rantai v25) + ikon macOS (icon.icns di repo, bundel debug ditambal di rantai v26, PID 55237; konfirmasi visual Dock ditunggu).

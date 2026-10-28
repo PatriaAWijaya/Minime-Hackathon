@@ -74,6 +74,9 @@
 
 - Ikon rail: Home -> Chat + ikon terlampir Kanban/Media Studio LIVE rantai v24 PID 47306 (kode lokal c94eaeb <-> remote 759fe33; bundle 186.92 kB; rig-icons 8/8).
 
+- List agen collapsible per project LIVE rantai v25 (kode lokal 8457991 <-> remote 36ca072; rig-groups 12/12).
+- Ikon macOS: icon.icns di repo (lokal 527ff61 <-> remote e671d8e); bundel debug ditambal icon.icns + CFBundleIconFile di rantai v26, LIVE PID 55237 (bundler debug tidak menyertakan ikon secara native).
+
 ## Phase recommendations (see PLAN.md for acceptance criteria)
 1. **Tahap A — shell (now):** Tauri 2 shell + v5 static frontend,
    debug `.app` on the MacBook, launch + click live test.
