@@ -1594,3 +1594,9 @@ dokumen lama yang dipakai.
 - Media Studio kembali 5 tab (Script, Image, Batch, Voice, Video). Kunci ms.tab.brand tetap dipakai sebagai judul sidebar — tidak ada kunci mati baru. Svelte: tombol + panel Brand dihapus; form Image dibungkus .img-main.
 - Gerbang: tsc 0, svelte-check 0 error, vite OK, rig-brand (diperbarui: Brand diuji di dalam tab Image) + rig-image + rig-batch tetap PASS. Catatan proses: satu skrip edit gagal di tengah (assert urutan panel keliru — panel Batch ada di antara Image dan Voice); App.svelte belum tertulis saat itu sehingga tidak ada state setengah jadi; perbaikan dilakukan dengan edit eksak + verifikasi grep.
 - MENUNGGU: commit/push -> rantai berikutnya atas sinyal Patria.
+
+## Deploy rantai v35 (28 Okt ~21:05 WIB, atas laporan Patria "ui belum berubah")
+- Diagnosis sebelum rantai: MacBook masih HEAD b2583c2 + PID 73584 (v34); bundle dist masih memuat ms-tabbtn-brand (1x) + brand-prompt (2x) dan BELUM memuat img-brand-side/img-main (0x). Penyebab: dua push terakhir (62fc9f4 hapus preview, 8f587a4 sidebar) memang belum pernah dirantai — rantai sengaja ditahan agar tidak mengganggu uji klik Patria. Bukan bundle basi, bukan build gagal.
+- Rantai /tmp/mh-build35.sh (turunan v34, marker MH_BUILD35_OK): pull --ff-only (b2583c2 -> 1ab1cac), vite + cargo debug, tambal ikon, pkill + open. CHAIN_EXIT 0, MH_BUILD35_OK.
+- Verifikasi: HEAD 1ab1cac; PID baru 74393 hidup; marker bundle TERBALIK sesuai harapan (ms-tabbtn-brand 0, brand-prompt 0, img-brand-side 1, img-main 1) — UI baru TERKIRIM.
+- Kini LIVE: tab Brand sudah hilang sebagai tab; Brand tampil sebagai sidebar kiri di tab Image; preview sufiks + catatan binding sudah tidak ada.
