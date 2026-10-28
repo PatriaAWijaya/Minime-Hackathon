@@ -25,43 +25,15 @@ import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
 import { readKeys } from './chat.js';
 import { libAddImage } from './v5logic.js';
+import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, addImgSpend, readImgSpend } from './image-api.js';
+import { brandSuffix } from './brand.js';
 
-const IMG_MODEL = 'muse-image-1.0';
-const IMG_PRICE_USD = 0.01;
-const IMG_USD_RATE = 18148;
-const SPEND_LS = 'minime.imageSpend';
 const FLOW_LS = 'minime.imageFlow';
-
-export type ImgSpend = { images: number; usd: number; idr: number };
-
-export function readImgSpend(): ImgSpend {
-  try {
-    const raw = window.localStorage.getItem(SPEND_LS);
-    const o = raw ? JSON.parse(raw) : null;
-    if (o && typeof o.images === 'number' && typeof o.usd === 'number') {
-      return { images: o.images, usd: o.usd, idr: typeof o.idr === 'number' ? o.idr : Math.round(o.usd * IMG_USD_RATE) };
-    }
-  } catch { /* abaikan, pakai default */ }
-  return { images: 0, usd: 0, idr: 0 };
-}
-
-function saveImgSpend(s: ImgSpend): void {
-  try { window.localStorage.setItem(SPEND_LS, JSON.stringify(s)); } catch { /* abaikan */ }
-  const fn = (window as unknown as Record<string, unknown>).refreshImgSpend;
-  if (typeof fn === 'function') (fn as () => void)();
-}
 
 type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number };
 const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1 };
 let state: FlowState = { ...DEFAULTS };
 
-// Rasio -> size "WxH". HANYA 1024x1024 terverifikasi live; rasio lain
-// memakai pola param yang sama (size dibaca model sebagai rasio, bukan
-// piksel persis, per dokumentasi integrator) — PROVISIONAL sampai diuji.
-const RATIO_SIZE: Record<string, string> = {
-  '1:1': '1024x1024', '4:5': '1024x1280', '9:16': '1024x1820', '16:9': '1820x1024',
-  '3:4': '1024x1365', '3:2': '1536x1024', '2:3': '1024x1536',
-};
 
 const STYLES = ['product photography', 'illustration', 'flat design', 'poster design', 'photorealistic'];
 
@@ -77,6 +49,8 @@ function sentPrompt(): string {
   let p = state.brief.trim();
   if (state.style) p += ', in ' + state.style + ' style';
   if (state.textfree) p += ', no text, no words, no letters, no watermark';
+  const b = brandSuffix();
+  if (b) p += b;
   return p;
 }
 
@@ -198,41 +172,17 @@ async function generate(): Promise<void> {
   if (btn) btn.disabled = true;
   setNote(tr('img.status.gen', { n: state.n }));
   try {
-    const r = await fetch('https://api.meta.ai/v1/images/generations', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: IMG_MODEL,
-        prompt: sentPrompt(),
-        n: state.n,
-        size: RATIO_SIZE[state.ratio],
-        response_format: 'b64_json',
-        output_format: 'webp',
-      }),
-    });
-    if (!r.ok) {
-      const head = (await r.text()).slice(0, 200);
-      setNote(tr('img.err.api') + ' HTTP ' + r.status + ' ' + head);
-      return;
-    }
-    const j = await r.json();
-    const data = Array.isArray(j.data) ? j.data : [];
+    const b64s = await metaGenerateImage(key, sentPrompt(), state.n, RATIO_SIZE[state.ratio]);
     genBrief = brief;
     const ts = Date.now();
-    variants = data
-      .filter((d: { b64_json?: string }) => typeof d.b64_json === 'string' && d.b64_json.length > 0)
-      .map((d: { b64_json: string }, k: number) => ({
-        b64: d.b64_json,
-        url: 'data:image/webp;base64,' + d.b64_json,
-        name: `img-${ts}-${k}.webp`,
-      }));
+    variants = b64s.map((b64, k) => ({
+      b64,
+      url: 'data:image/webp;base64,' + b64,
+      name: `img-${ts}-${k}.webp`,
+    }));
     if (variants.length === 0) { setNote(tr('img.err.api') + ' (respons tanpa gambar)'); return; }
     const usd = variants.length * IMG_PRICE_USD;
-    const spend = readImgSpend();
-    spend.images += variants.length;
-    spend.usd = Math.round((spend.usd + usd) * 100) / 100;
-    spend.idr = Math.round(spend.usd * IMG_USD_RATE);
-    saveImgSpend(spend);
+    addImgSpend(variants.length);
     renderVariants();
     renderCost();
     setNote(tr('img.status.done', { n: variants.length })

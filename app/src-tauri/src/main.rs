@@ -21,7 +21,8 @@ fn main() {
             sherpa::sherpa_setup,
             sherpa::sherpa_tts,
             image::image_save,
-            image::image_read
+            image::image_read,
+            image::image_delete
         ])
         .run(tauri::generate_context!())
     {

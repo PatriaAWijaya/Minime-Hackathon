@@ -83,3 +83,32 @@ pub fn image_read(req: ImageReadReq) -> Result<ImageReadRes, String> {
         bytes: bytes.len() as u64,
     })
 }
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageDeleteReq {
+    pub name: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageDeleteRes {
+    pub file: String,
+    pub deleted: bool,
+}
+
+#[tauri::command]
+pub fn image_delete(req: ImageDeleteReq) -> Result<ImageDeleteRes, String> {
+    let name = safe_name(&req.name).ok_or("nama file tidak valid")?;
+    match std::fs::remove_file(images_dir().join(&name)) {
+        Ok(()) => Ok(ImageDeleteRes {
+            file: name,
+            deleted: true,
+        }),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(ImageDeleteRes {
+            file: name,
+            deleted: false,
+        }),
+        Err(e) => Err(e.to_string()),
+    }
+}

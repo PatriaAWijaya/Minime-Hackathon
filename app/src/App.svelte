@@ -6,7 +6,10 @@
   import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
   import { sherpaSetup, sherpaTtsFromTab, sherpaRenderStatus, sherpaRefreshUI } from "./lib/sherpa.js";
   import { initScriptEditor, setSeMenu, seRefreshUI } from "./lib/script-editor.js";
-  import { initImageFlow, imgRefreshUI, readImgSpend } from "./lib/image-flow.js";
+  import { initImageFlow, imgRefreshUI } from "./lib/image-flow.js";
+  import { initBrand, brandRefreshUI } from "./lib/brand.js";
+  import { initBatchFlow, batchRefreshUI } from "./lib/batch-flow.js";
+  import { readImgSpend } from "./lib/image-api.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtInt, fmtUsd } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
@@ -24,6 +27,8 @@
     renderKanban();
     renderPlanner();
     imgRefreshUI();
+    brandRefreshUI();
+    batchRefreshUI();
     renderCampaign();
     renderDetail();
     vsRefreshVoiceUI();
@@ -39,6 +44,8 @@
     vsRenderStatus();
     initScriptEditor();
     initImageFlow();
+    initBrand();
+    initBatchFlow();
     (window as unknown as Record<string, unknown>).refreshImgSpend = () => { imgSpend = readImgSpend(); };
     updateKeyStatus();
   });
@@ -313,6 +320,8 @@
       <div class="filters" style="flex-shrink:0;margin:0 14px 12px">
         <button id="ms-tabbtn-script" onclick={() => { mediaTab('script') }}>{t('ms.tab.script', lang)}</button>
         <button id="ms-tabbtn-image" onclick={() => { mediaTab('image') }}>{t('ms.tab.image', lang)}</button>
+        <button id="ms-tabbtn-brand" onclick={() => { mediaTab('brand') }}>{t('ms.tab.brand', lang)}</button>
+        <button id="ms-tabbtn-batch" onclick={() => { mediaTab('batch') }}>{t('ms.tab.batch', lang)}</button>
         <button id="ms-tabbtn-voice" onclick={() => { mediaTab('voice') }}>{t('ms.tab.voice', lang)}</button>
         <button id="ms-tabbtn-video" class="active" onclick={() => { mediaTab('video') }}>{t('ms.tab.video', lang)}</button>
       </div>
@@ -349,6 +358,14 @@
           <div id="img-variants" class="mediagrid"></div>
           <h4>{t('img.gallery', lang)}</h4>
           <div id="img-gallery" class="mediagrid"></div>
+        </div>
+        <div id="ms-tab-brand" style="display:none">
+          <h3>{t('ms.tab.brand', lang)}</h3>
+          <div id="brand-main"></div>
+        </div>
+        <div id="ms-tab-batch" style="display:none">
+          <h3>{t('ms.tab.batch', lang)}</h3>
+          <div id="batch-main"></div>
         </div>
         <div id="ms-tab-voice" style="display:none">
           <h3>{t('ms.tab.voice', lang)}</h3>
