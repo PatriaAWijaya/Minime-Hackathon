@@ -337,7 +337,6 @@
           </div>
         </div>
         <div id="ms-tab-image" style="display:none">
-          <h3>{t('img.title', lang)}</h3>
           <div class="img-layout">
           <div class="img-brand-side">
           <h4>{t('ms.tab.brand', lang)}</h4>
