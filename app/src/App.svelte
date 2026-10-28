@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, postizReload, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
   import { vsCheck, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
@@ -308,10 +308,37 @@
     </div>
     <div class="view" id="view-library">
       <div class="colhead"><h2>{t('view.library.title', lang)}</h2></div>
+      <div class="lib-filters">
+        <label>{t('lib.filter.kind', lang)}
+          <select id="libFilterKind" onchange={(e) => libSetFilter('kind', (e.target as HTMLSelectElement).value)}>
+            <option value="all">{t('lib.filter.all', lang)}</option>
+            <option value="script">{t('lib.kind.script', lang)}</option>
+            <option value="image">{t('lib.kind.image', lang)}</option>
+            <option value="doc">{t('lib.kind.doc', lang)}</option>
+          </select>
+        </label>
+        <label>{t('lib.filter.period', lang)}
+          <select id="libFilterPeriod" onchange={(e) => libSetFilter('period', (e.target as HTMLSelectElement).value)}>
+            <option value="all">{t('lib.filter.all', lang)}</option>
+            <option value="today">{t('lib.filter.period.today', lang)}</option>
+            <option value="d7">{t('lib.filter.period.d7', lang)}</option>
+            <option value="d30">{t('lib.filter.period.d30', lang)}</option>
+            <option value="d90">{t('lib.filter.period.d90', lang)}</option>
+          </select>
+        </label>
+        <label>{t('lib.filter.agent', lang)}
+          <select id="libFilterAgent" onchange={(e) => libSetFilter('agent', (e.target as HTMLSelectElement).value)}></select>
+        </label>
+        <label>{t('lib.filter.proj', lang)}
+          <select id="libFilterProj" onchange={(e) => libSetFilter('proj', (e.target as HTMLSelectElement).value)}></select>
+        </label>
+        <span id="libFilterCount"></span>
+      </div>
       <div class="scroll">
-        <table><tbody id="libBody"></tbody></table>
+        <div id="libGrid"></div>
         <div class="notice" id="libNotice" style="display:none"></div>
       </div>
+      <div id="libDetailDlg" style="display:none"></div>
     </div>
     <div class="view" id="view-media">
       <div class="colhead"><h2>{t('view.media.title', lang)}</h2></div>
@@ -515,6 +542,11 @@
       <div class="colhead"><h2>{t('view.planner.title', lang)}</h2></div>
       <div class="scroll">
         <table><thead><tr><th>{t('word.item', lang)}</th><th>{t('word.channel', lang)}</th><th>{t('planner.header.date', lang)}</th><th>{t('word.status', lang)}</th><th>{t('planner.header.postiz', lang)}</th></tr></thead><tbody id="plannerBody"></tbody></table>
+        <div class="postiz-embed">
+          <div class="postiz-bar"><b>Postiz</b> <span id="postizStatus"></span> <button class="btn btn-sm" onclick={() => postizReload()}>{t('planner.postiz.reload', lang)}</button></div>
+          <iframe id="postizFrame" src="http://127.0.0.1:4007" title="Postiz"></iframe>
+          <p class="se-note" id="postizNote"></p>
+        </div>
       </div>
     </div>
     <div class="view" id="view-campaign">

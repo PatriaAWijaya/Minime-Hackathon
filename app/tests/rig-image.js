@@ -103,14 +103,14 @@ function check(name, ok, extra = '') {
 }
 
 const bodyText = () => document.body.textContent || '';
-// Hitung hanya MODEL call: sejak 29 Okt, onMount menjalankan vsCheck()
-// (perbaikan MINOR-2: status VoiceStudio tidak lagi kosong saat load),
-// yang mem-ping localhost:3900 (status + daftar model + voice = 3 fetch
-// lokal). Itu cek status lokal, bukan model call — dikecualikan agar
-// asersi '1 model call' / 'tanpa fetch' tetap bermakna.
+// Hitung hanya MODEL call: onMount menjalankan vsCheck() (ping
+// localhost:3900: status + model + voice) dan renderPlanner()
+// menjalankan postizCheck() (ping localhost:4007). Itu cek status
+// lokal, bukan model call — dikecualikan agar asersi '1 model call' /
+// 'tanpa fetch' tetap bermakna.
 const fetchCount = () =>
-  log.filter((l) => l.startsWith('fetch:') && !l.includes('127.0.0.1:3900')).length;
-const libRows = () => document.getElementById('libBody')?.querySelectorAll('tr').length || 0;
+  log.filter((l) => l.startsWith('fetch:') && !l.includes('127.0.0.1:3900') && !l.includes('127.0.0.1:4007')).length;
+const libRows = () => document.getElementById('libGrid')?.querySelectorAll('.lib-card').length || 0;
 
 try {
   await tick(500);
@@ -145,8 +145,8 @@ try {
   // 4. Simpan varian -> Library + galeri.
   const rowsBefore = libRows();
   [...document.querySelectorAll('#img-variants button')].find((b) => b.textContent.trim() === 'Simpan ke Library').click();
-  await waitFor(() => libRows() === rowsBefore + 1, 'baris Library bertambah', 120);
-  check('simpan menambah baris Library', libRows() === rowsBefore + 1, 'rows=' + libRows());
+  await waitFor(() => libRows() === rowsBefore + 1, 'kartu Library bertambah', 120);
+  check('simpan menambah kartu Library', libRows() === rowsBefore + 1, 'rows=' + libRows());
   await waitFor(() => document.querySelectorAll('#img-gallery img').length === 1, 'galeri tampil', 120);
   check('galeri menampilkan gambar tersimpan', document.querySelectorAll('#img-gallery img').length === 1);
 
@@ -157,7 +157,7 @@ try {
   check('muat Script mengisi brief', (document.getElementById('img-brief')?.value || '').includes('NASKAH-TEST-KOPI'));
 
   // 6. Recall Library -> panel Image memuat gambar tersimpan.
-  const addedRow = [...document.querySelectorAll('#libBody tr')].pop();
+  const addedRow = [...document.querySelectorAll('#libGrid .lib-card')].pop();
   [...addedRow.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Media Studio').click();
   await waitFor(() => (document.getElementById('img-loaded')?.querySelector('img') ? true : false), 'gambar recall tampil', 120);
   check('recall Library memuat gambar ke panel', !!document.getElementById('img-loaded')?.querySelector('img'));

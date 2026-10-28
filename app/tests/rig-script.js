@@ -157,34 +157,36 @@ try {
   await tick(50);
   check('edit output tersimpan', (store.get('minime.scriptEditor') || '').includes('NASKAH-UJI-EDIT'), store.get('minime.scriptEditor') || '');
 
-  // Simpan ke Library -> baris baru di libBody; simpan ulang -> dedup.
-  const rows = () => document.getElementById('libBody')?.querySelectorAll('tr').length || 0;
+  // Simpan ke Library -> kartu baru di libGrid; simpan ulang -> dedup.
+  const rows = () => document.getElementById('libGrid')?.querySelectorAll('.lib-card').length || 0;
   [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Simpan ke Library').click();
   await tick(100);
-  check('simpan menambah 1 baris Library', rows() === 7, 'rows=' + rows());
+  check('simpan menambah 1 kartu Library', rows() === 6, 'rows=' + rows());
   check('catatan tersimpan tampil', (document.getElementById('se-note')?.textContent || '').includes('Tersimpan'), document.getElementById('se-note')?.textContent || '');
   [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Simpan ke Library').click();
   await tick(100);
-  check('simpan ulang tidak menduplikasi', rows() === 7, 'rows=' + rows());
+  check('simpan ulang tidak menduplikasi', rows() === 6, 'rows=' + rows());
 
   // Gunakan -> tetap 1 baris (dedup) + pindah ke editor berikutnya (Image).
   [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Gunakan').click();
   await tick(150);
-  check('gunakan tidak menduplikasi Library', rows() === 7, 'rows=' + rows());
+  check('gunakan tidak menduplikasi Library', rows() === 6, 'rows=' + rows());
   check('gunakan beralih ke Image Editor', document.getElementById('ms-tab-image')?.style.display !== 'none', document.getElementById('ms-tab-image')?.style.display || '');
 
   // Recall Library -> Media Studio: muat isi ke output Script Editor.
-  const addedRow = [...document.querySelectorAll('#libBody tr')].pop();
+  const addedRow = [...document.querySelectorAll('#libGrid .lib-card')].pop();
   [...addedRow.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Media Studio').click();
   await tick(150);
   check('recall Media Studio membuka tab Script', document.getElementById('ms-tab-script')?.style.display !== 'none');
   check('recall Media Studio memuat isi ke output', (document.getElementById('se-output')?.value || '').includes('NASKAH-UJI-EDIT'), document.getElementById('se-output')?.value || '');
 
-  // Recall Library -> Chat: brief terkirim ke chat agen (AI beneran via stub).
-  [...addedRow.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Chat').click();
-  await waitFor(() => document.body.textContent.includes('Lanjutkan brief'), 'bubble brief di chat', 120);
-  check('recall Chat mengirim brief ke chat agen', document.body.textContent.includes('Lanjutkan brief'));
-  check('input chat terkonsumsi (kosong)', document.getElementById('chatInput')?.value === '', document.getElementById('chatInput')?.value || '');
+  // Recall Library -> Revisi: kembali ke menu chat + kartu Kanban Revisi
+  // (tombol Chat lama diganti Revisi sesuai perintah kartu Library).
+  [...addedRow.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Revisi').click();
+  await waitFor(() => document.body.textContent.includes('Perbaikan dibuka'), 'pesan revisi di chat', 120);
+  check('recall Revisi kembali ke menu chat', document.getElementById('view-home')?.classList.contains('active'));
+  check('recall Revisi membuka perbaikan di chat', document.body.textContent.includes('Perbaikan dibuka'));
+  check('recall Revisi membuat kartu Kanban Revisi', document.body.textContent.includes('Revisi:'));
   check('generate memanggil router (fetch chat-completions)', log.some((x) => x.includes('chat/completions')), log.join(','));
   const notes = [...document.querySelectorAll('#se-main .se-note')].map((n) => n.textContent).join(' ');
   check('footer menyebut provider meta', notes.includes('meta'), notes);

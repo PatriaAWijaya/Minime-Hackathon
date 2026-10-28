@@ -1,4 +1,5 @@
 import { esc, jsEsc } from './esc.js';
+import { readThumb } from './image-api.js';
 // Mechanical migration of prototype-v5/index.html <script> blocks.
 // Logic is UNCHANGED: declarations kept at module level, executable
 // top-level statements moved into initV5() in original order.
@@ -9,7 +10,7 @@ import { esc, jsEsc } from './esc.js';
 // B4: Kanban (TEST Kopi) + Planner now come from real artifacts via
 // backend-data.js; the dummy literals below were replaced, not kept.
 import { campaignCounts, campaignDrafts, campaignLeads, campaignPipeline, kopiKanban, plannerReal } from './backend-data.js';
-import { tr } from './i18n.js';
+import { tr, getLang, MONTHS } from './i18n.js';
 
 /* ---------- Agen ---------- */
 export function renderAgents() {
@@ -401,25 +402,218 @@ function loadLibAdded() {
 function saveLibAdded() {
   try { window.localStorage.setItem(LIB_LS, JSON.stringify(LIB_ADDED)); } catch (_) {}
 }
-function libAll() { return LIB.concat(LIB_ADDED); }
+/* Baris bawaan (LIB) adalah konstanta snapshot — menghapusnya tidak bisa
+   splice array; sebagai gantinya simpan tombstone judul di localStorage.
+   Baris user (LIB_ADDED) dihapus langsung dari array. libAll() adalah
+   satu-satunya sumber daftar Library, jadi tombstone berlaku di semua
+   pemakaian (render, recall, dedup simpan). */
+var LIB_DEL_LS = "minime.library.deleted";
+function loadLibDeleted() {
+  try {
+    var raw = window.localStorage.getItem(LIB_DEL_LS);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter(function (x) { return typeof x === "string"; }) : [];
+  } catch (_) { return []; }
+}
+var LIB_DELETED = loadLibDeleted();
+function saveLibDeleted() {
+  try { window.localStorage.setItem(LIB_DEL_LS, JSON.stringify(LIB_DELETED)); } catch (_) {}
+}
+function libAll() {
+  return LIB.filter(function (x) { return LIB_DELETED.indexOf("b:" + x.o) === -1; }).concat(LIB_ADDED);
+}
 
 export function libAddScript(title, content) {
   var all = libAll();
   for (var k = 0; k < all.length; k++) {
     if (all[k].content && all[k].content === content) return { index: k, added: false };
   }
-  LIB_ADDED.push({ o: title, a: "Kreatif", s: "Draf", badge: "b-idle", content: content, kind: "script" });
+  LIB_ADDED.push({ o: title, a: "Kreatif", s: "Draf", badge: "b-idle", content: content, kind: "script", proj: PROJECTS[currentProj] ? PROJECTS[currentProj].name : "", addedAt: libTodayISO() });
   saveLibAdded();
   renderLib();
   return { index: all.length, added: true };
 }
 
+/* Filter Library: 4 dimensi — jenis file, periode produksi, agen,
+   project. Baris tanpa tanggal hanya muncul di periode "Semua" (bukan
+   ditebak tanggalnya). Indeks kartu = indeks global libAll(), karena
+   aksi (Media/Hapus/Revisi/detail) memakai indeks itu. */
+var libFilter = { kind: "all", period: "all", agent: "all", proj: "all" };
+function libTodayISO() {
+  var n = new Date();
+  return n.getFullYear() + "-" + String(n.getMonth() + 1).padStart(2, "0") + "-" + String(n.getDate()).padStart(2, "0");
+}
+function libKindOf(item) {
+  if (item.kind === "script") return "script";
+  if (item.kind === "image") return "image";
+  return "doc";
+}
+function libKindLabel(kind) {
+  return kind === "script" ? tr('lib.kind.script') : kind === "image" ? tr('lib.kind.image') : tr('lib.kind.doc');
+}
+function libDayDiff(addedAt) {
+  if (!addedAt) return null;
+  var parts = addedAt.split("-");
+  if (parts.length !== 3) return null;
+  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  if (isNaN(d.getTime())) return null;
+  var now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((today.getTime() - d.getTime()) / 86400000);
+}
+function libDateLabel(item) {
+  if (!item.addedAt) return "—";
+  var parts = item.addedAt.split("-");
+  if (parts.length !== 3) return "—";
+  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  if (isNaN(d.getTime())) return "—";
+  return d.getDate() + " " + MONTHS[getLang()][d.getMonth()] + " " + d.getFullYear();
+}
+function libMatchPeriod(item) {
+  if (libFilter.period === "all") return true;
+  var diff = libDayDiff(item.addedAt);
+  if (diff === null || diff < 0) return false;
+  if (libFilter.period === "today") return diff === 0;
+  if (libFilter.period === "d7") return diff <= 7;
+  if (libFilter.period === "d30") return diff <= 30;
+  if (libFilter.period === "d90") return diff <= 90;
+  return true;
+}
+function fillLibSelect(id, values, current) {
+  var sel = document.getElementById(id);
+  if (!sel) return "all";
+  var keep = values.indexOf(current) !== -1 ? current : "all";
+  sel.innerHTML = "<option value='all'>" + esc(tr('lib.filter.all')) + "</option>" + values.map(function (v) {
+    return "<option value='" + esc(v) + "'" + (v === keep ? " selected" : "") + ">" + esc(v) + "</option>";
+  }).join("");
+  return keep;
+}
+export function libSetFilter(dim, value) {
+  if (dim === "kind" || dim === "period" || dim === "agent" || dim === "proj") libFilter[dim] = value;
+  renderLib();
+}
+
 export function renderLib() {
-    document.getElementById("libBody").innerHTML = "<tr><th>Output</th><th>Agen</th><th>Status</th><th>Aksi</th></tr>" + libAll().map(function (item, i) {
-      return "<tr><td>" + esc(item.o) + "</td><td>" + esc(item.a) + "</td><td><span class='badge " + item.badge + "'>" + esc(item.s) + "</span></td>"
-        + "<td><button class='btn btn-sm' onclick='libMedia(" + i + ")'>" + tr('lib.btn.media') + "</button><button class='btn btn-sm' onclick='libChat(" + i + ")'>" + tr('lib.btn.chat') + "</button><button class='btn btn-sm' onclick='libRevise(" + i + ")'>Perbaiki Lanjut</button></td></tr>";
-    }).join("");
+    var grid = document.getElementById("libGrid");
+    if (!grid) return;
+    var all = libAll();
+    var agents = [];
+    var projs = [];
+    all.forEach(function (item) {
+      if (agents.indexOf(item.a) === -1) agents.push(item.a);
+      if (item.proj && projs.indexOf(item.proj) === -1) projs.push(item.proj);
+    });
+    libFilter.agent = fillLibSelect("libFilterAgent", agents, libFilter.agent);
+    libFilter.proj = fillLibSelect("libFilterProj", projs, libFilter.proj);
+    var shown = 0;
+    var cards = [];
+    all.forEach(function (item, gi) {
+      if (libFilter.kind !== "all" && libKindOf(item) !== libFilter.kind) return;
+      if (!libMatchPeriod(item)) return;
+      if (libFilter.agent !== "all" && item.a !== libFilter.agent) return;
+      if (libFilter.proj !== "all" && item.proj !== libFilter.proj) return;
+      shown++;
+      var thumb = item.kind === "image" && item.imageFile
+        ? "<img class='lib-thumb' data-lib-idx='" + gi + "' alt=''>"
+        : "";
+      cards.push("<div class='lib-card' ondblclick='libDetail(" + gi + ", event)'>"
+        + thumb
+        + "<div class='lib-title'>" + esc(item.o) + "</div>"
+        + "<div class='lib-meta'>" + esc(tr('lib.card.agent')) + ": " + esc(item.a) + " • " + esc(tr('lib.card.project')) + ": " + esc(item.proj || "—") + "</div>"
+        + "<div class='lib-meta'>" + esc(tr('lib.card.type')) + ": " + esc(libKindLabel(libKindOf(item))) + " • " + esc(tr('lib.card.date')) + ": " + esc(libDateLabel(item)) + " <span class='badge " + item.badge + "'>" + esc(item.s) + "</span></div>"
+        + "<div class='lib-actions'>"
+        + "<button class='btn btn-sm' onclick='libMedia(" + gi + ")'>" + esc(tr('lib.btn.media')) + "</button>"
+        + "<button class='btn btn-sm' onclick='libDelete(" + gi + ")'>" + esc(tr('lib.btn.delete')) + "</button>"
+        + "<button class='btn btn-sm' onclick='libRevise(" + gi + ")'>" + esc(tr('lib.btn.revise')) + "</button>"
+        + "</div></div>");
+    });
+    grid.innerHTML = cards.join("") || "<div class='se-note'>" + esc(tr('lib.empty')) + "</div>";
+    var cnt = document.getElementById("libFilterCount");
+    if (cnt) cnt.textContent = tr('lib.count', { n: shown, total: all.length });
+    // Thumbnail gambar dimuat async lewat cache bersama (gagal -> hilang).
+    grid.querySelectorAll("[data-lib-idx]").forEach(function (img) {
+      var it = libAll()[Number(img.getAttribute("data-lib-idx"))];
+      if (!it || !it.imageFile) return;
+      readThumb(it.imageFile).then(function (url) {
+        if (url) img.src = url; else img.remove();
+      });
+    });
   }
+
+/* Detail Library (klik 2x pada kartu): judul + meta lengkap + pratinjau
+   isi (teks naskah / thumbnail gambar) + 3 aksi yang sama dengan kartu.
+   Klik tombol di kartu TIDAK membuka detail (dicek via event target). */
+export function libDetail(i, ev) {
+  if (ev && ev.target && ev.target.closest && ev.target.closest("button")) return;
+  var item = libAll()[i];
+  var dlg = document.getElementById("libDetailDlg");
+  if (!item || !dlg) return;
+  var preview = "";
+  if (item.kind === "image" && item.imageFile) {
+    preview = "<img class='lib-detail-img' data-lib-idx='" + i + "' alt=''><div class='se-note'>" + esc(item.content || "") + "</div>";
+  } else if (item.content) {
+    preview = "<pre class='lib-detail-pre'>" + esc(item.content) + "</pre>";
+  } else {
+    preview = "<div class='se-note'>" + esc(tr('lib.detail.nocontent')) + "</div>";
+  }
+  dlg.innerHTML = "<div class='lib-dialog-backdrop' onclick='libDetailClose()'></div><div class='lib-dialog-card'>"
+    + "<div class='lib-title'>" + esc(item.o) + "</div>"
+    + "<div class='lib-meta'>" + esc(tr('lib.card.agent')) + ": " + esc(item.a) + " • " + esc(tr('lib.card.project')) + ": " + esc(item.proj || "—") + "</div>"
+    + "<div class='lib-meta'>" + esc(tr('lib.card.type')) + ": " + esc(libKindLabel(libKindOf(item))) + " • " + esc(tr('lib.card.date')) + ": " + esc(libDateLabel(item)) + " <span class='badge " + item.badge + "'>" + esc(item.s) + "</span></div>"
+    + preview
+    + "<div class='lib-actions'>"
+    + "<button class='btn btn-sm' onclick='libDetailClose(); libMedia(" + i + ")'>" + esc(tr('lib.btn.media')) + "</button>"
+    + "<button class='btn btn-sm' onclick='libDelete(" + i + ")'>" + esc(tr('lib.btn.delete')) + "</button>"
+    + "<button class='btn btn-sm' onclick='libDetailClose(); libRevise(" + i + ")'>" + esc(tr('lib.btn.revise')) + "</button>"
+    + "<button class='btn btn-sm' onclick='libDetailClose()'>" + esc(tr('lib.detail.close')) + "</button>"
+    + "</div></div>";
+  dlg.style.display = "block";
+  var img = dlg.querySelector("[data-lib-idx]");
+  if (img && item.imageFile) {
+    readThumb(item.imageFile).then(function (url) {
+      if (url) img.src = url; else img.remove();
+    });
+  }
+}
+export function libDetailClose() {
+  var dlg = document.getElementById("libDetailDlg");
+  if (dlg) { dlg.style.display = "none"; dlg.innerHTML = ""; }
+}
+
+/* Hapus menyeluruh: Library (persist: splice baris user / tombstone baris
+   bawaan) + kartu Kanban yang merujuk judul ini + file gambar di disk
+   (best-effort) + cache thumbnail + galeri (via imgRefreshUI, karena
+   galeri membaca langsung dari minime.library.added). Riwayat chat dan
+   baris snapshot Planner TIDAK dihapus (rekaman, bukan referensi hidup);
+   draf Script Editor yang sedang dibuka juga dibiarkan (draf kerja). */
+export function libDelete(i) {
+  var item = libAll()[i];
+  if (!item) return;
+  if (!window.confirm(tr('lib.delete.confirm', { title: item.o }))) return;
+  var bi = LIB.indexOf(item);
+  if (bi !== -1) {
+    if (LIB_DELETED.indexOf("b:" + item.o) === -1) LIB_DELETED.push("b:" + item.o);
+    saveLibDeleted();
+  } else {
+    var ai = LIB_ADDED.indexOf(item);
+    if (ai !== -1) { LIB_ADDED.splice(ai, 1); saveLibAdded(); }
+  }
+  Object.keys(PROJECTS).forEach(function (k) {
+    if (PROJECTS[k] && Array.isArray(PROJECTS[k].kanban)) {
+      PROJECTS[k].kanban = PROJECTS[k].kanban.filter(function (c) {
+        return c.t !== item.o && c.t !== "Revisi: " + item.o;
+      });
+    }
+  });
+  if (item.kind === "image" && item.imageFile) {
+    if (typeof window.imgDeleteFile === "function") { try { window.imgDeleteFile(item.imageFile); } catch (_) {} }
+    if (typeof window.imgDropThumb === "function") { try { window.imgDropThumb(item.imageFile); } catch (_) {} }
+  }
+  libDetailClose();
+  renderLib();
+  renderKanban();
+  if (typeof window.imgRefreshUI === "function") { try { window.imgRefreshUI(); } catch (_) {} }
+}
 
 /* Recall ke Media Studio: muat isi (atau judul bila tanpa isi) ke
    output Script Editor yang bisa diedit, lalu buka tab Script.
@@ -429,7 +623,7 @@ export function libAddImage(title, prompt, imageFile, costUsd) {
   for (var k = 0; k < all.length; k++) {
     if (all[k].imageFile && all[k].imageFile === imageFile) return { index: k, added: false };
   }
-  LIB_ADDED.push({ o: title, a: "Kreatif", s: "Disetujui", badge: "b-ok", content: prompt, kind: "image", imageFile: imageFile, costUsd: costUsd });
+  LIB_ADDED.push({ o: title, a: "Kreatif", s: "Disetujui", badge: "b-ok", content: prompt, kind: "image", imageFile: imageFile, costUsd: costUsd, proj: PROJECTS[currentProj] ? PROJECTS[currentProj].name : "", addedAt: libTodayISO() });
   saveLibAdded();
   renderLib();
   return { index: all.length, added: true };
@@ -450,17 +644,6 @@ export function libMedia(i) {
     mediaTab("script");
   }
 
-/* Recall ke chat agen: kirim brief ke Prime Agent lewat delegasi chat
-   yang sama dengan tombol kirim (AI beneran, bukan simulasi). */
-export function libChat(i) {
-    var item = libAll()[i];
-    if (!item) return;
-    var brief = tr('lib.chat.brief') + "\n\n" + (item.content || item.o);
-    showView("home");
-    var inp = document.getElementById("chatInput");
-    if (inp) inp.value = brief;
-    sendChat();
-  }
 
 export function libRevise(i) {
     var item = libAll()[i];
@@ -473,11 +656,38 @@ export function libRevise(i) {
 
 export function mediaBadge(s) { return s === "Siap untuk Post" ? "b-ok" : (s === "Menunggu GKonten" || s === "Menunggu provider" ? "b-wait" : "b-idle"); }
 
+/* Embed Postiz di Planner: iframe UI Postiz (port yang sama dengan API
+   batch: 127.0.0.1:4007). Cek reachable memakai fetch no-cors — respons
+   opaque = port menjawab (bukan bukti login; login dilakukan di dalam
+   panel, sesinya milik webview app). Bila Postiz memblokir framing
+   (X-Frame-Options) panel akan kosong: catatan di bawah menjelaskan
+   fallback-nya (penjadwalan native Batch tetap jalan). */
+var POSTIZ_UI = "http://127.0.0.1:4007";
+export function postizCheck() {
+  var st = document.getElementById("postizStatus");
+  var note = document.getElementById("postizNote");
+  if (!st) return;
+  st.textContent = tr('planner.postiz.checking');
+  fetch(POSTIZ_UI, { mode: "no-cors" }).then(function () {
+    st.textContent = tr('planner.postiz.online');
+    if (note) note.textContent = tr('planner.postiz.note.online');
+  }).catch(function () {
+    st.textContent = tr('planner.postiz.offline');
+    if (note) note.textContent = tr('planner.postiz.note.offline');
+  });
+}
+export function postizReload() {
+  var f = document.getElementById("postizFrame");
+  if (f) f.src = POSTIZ_UI;
+  postizCheck();
+}
+
 
 export function renderPlanner() {
     document.getElementById("plannerBody").innerHTML = PLANNER.map(function (p) {
       return "<tr><td>" + p.item + "</td><td>" + p.ch + "</td><td>" + p.when + "</td><td><span class='badge b-wait'>" + p.st + "</span></td><td><small>" + p.postId + "</small></td></tr>";
     }).join("");
+    postizCheck();
   }
 
 /** B5: append one planner row (used by the Postiz composer). Session-only. */
@@ -747,11 +957,11 @@ var nodeCounter = 0;
 /* ---------- Library ---------- */
 var LIB_ADDED = loadLibAdded();
 var LIB = [
-    { o: "STP v2 — TEST Kopi Surabaya", a: "Strategi", s: "Disetujui (GSTP)", badge: "b-ok" },
-    { o: "Riset behaviour digital + spending", a: "Riset", s: "Disetujui", badge: "b-ok" },
-    { o: "Kalender 7 hari + 7 brief", a: "Kreatif", s: "Disetujui (GKonten)", badge: "b-ok" },
-    { o: "Gambar Hari 1–7 (menunggu provider)", a: "Media", s: "Menunggu provider", badge: "b-wait" },
-    { o: "Brief produk digital (draf)", a: "Produk Digital", s: "DRAF", badge: "b-idle" }
+    { o: "STP v2 — TEST Kopi Surabaya", a: "Strategi", s: "Disetujui (GSTP)", badge: "b-ok", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27" },
+    { o: "Riset behaviour digital + spending", a: "Riset", s: "Disetujui", badge: "b-ok", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27" },
+    { o: "Kalender 7 hari + 7 brief", a: "Kreatif", s: "Disetujui (GKonten)", badge: "b-ok", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27" },
+    { o: "Gambar Hari 1–7 (menunggu provider)", a: "Media", s: "Menunggu provider", badge: "b-wait", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27" },
+    { o: "Brief produk digital (draf)", a: "Produk Digital", s: "DRAF", badge: "b-idle", proj: "TEST Produk Digital" }
   ];
 
 /* ---------- Media Studio ---------- */
@@ -816,5 +1026,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libChat, libMedia, libRevise, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizReload, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

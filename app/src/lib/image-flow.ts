@@ -25,7 +25,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
 import { readKeys } from './chat.js';
 import { libAddImage } from './v5logic.js';
-import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, addImgSpend, readImgSpend, readThumb } from './image-api.js';
+import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, addImgSpend, readImgSpend, readThumb, thumbCache } from './image-api.js';
 import { brandSuffix } from './brand.js';
 import { esc } from './esc.js';
 
@@ -237,6 +237,14 @@ export function initImageFlow(): void {
   });
   // Jembatan recall Library (v5logic.libMedia): muat gambar tersimpan
   // ke panel (preview + brief) — tanpa siklus import.
+  // Jembatan untuk Hapus Library: hapus file di disk (best-effort),
+  // buang thumbnail dari cache bersama, dan render ulang galeri
+  // (galeri membaca langsung dari minime.library.added).
+  (window as unknown as Record<string, unknown>).imgDeleteFile = async (name: string) => {
+    try { await invoke('image_delete', { req: { name } }); } catch { /* abaikan: file mungkin sudah hilang */ }
+  };
+  (window as unknown as Record<string, unknown>).imgDropThumb = (file: string) => { thumbCache.delete(file); };
+  (window as unknown as Record<string, unknown>).imgRefreshUI = imgRefreshUI;
   (window as unknown as Record<string, unknown>).imgLoadSaved = async (item: { content?: string; imageFile?: string; o: string }) => {
     if (item.content) { state.brief = item.content; saveState(); syncForm(); renderPreview(); }
     const box = el('img-loaded');

@@ -24,7 +24,8 @@
     "rig:chat": "node tests/rig-chat.js",
     "rig:image": "node tests/rig-image.js",
     "rig:brand": "node tests/rig-brand.js",
-    "rig:batch": "node tests/rig-batch.js"
+    "rig:batch": "node tests/rig-batch.js",
+    "rig:lib": "node tests/rig-lib.js"
   },
   "type": "module",
   "version": "0.1.0"

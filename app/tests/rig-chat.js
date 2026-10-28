@@ -88,13 +88,13 @@ function check(name, ok, extra = '') {
 }
 
 const bodyText = () => document.body.textContent || '';
-// Hitung hanya MODEL call: sejak 29 Okt, onMount menjalankan vsCheck()
-// (perbaikan MINOR-2: status VoiceStudio tidak lagi kosong saat load),
-// yang mem-ping localhost:3900 (status + daftar model + voice = 3 fetch
-// lokal). Itu cek status lokal, bukan model call — dikecualikan agar
-// asersi '1 model call' / 'tanpa fetch' tetap bermakna.
+// Hitung hanya MODEL call: onMount menjalankan vsCheck() (ping
+// localhost:3900: status + model + voice) dan renderPlanner()
+// menjalankan postizCheck() (ping localhost:4007). Itu cek status
+// lokal, bukan model call — dikecualikan agar asersi '1 model call' /
+// 'tanpa fetch' tetap bermakna.
 const fetchCount = () =>
-  log.filter((l) => l.startsWith('fetch:') && !l.includes('127.0.0.1:3900')).length;
+  log.filter((l) => l.startsWith('fetch:') && !l.includes('127.0.0.1:3900') && !l.includes('127.0.0.1:4007')).length;
 const countOcc = (s) => (bodyText().match(new RegExp(s, 'g')) || []).length;
 
 async function sendMsg(text) {
