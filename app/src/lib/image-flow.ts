@@ -27,6 +27,7 @@ import { readKeys } from './chat.js';
 import { libAddImage } from './v5logic.js';
 import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, addImgSpend, readImgSpend } from './image-api.js';
 import { brandSuffix } from './brand.js';
+import { esc } from './esc.js';
 
 const FLOW_LS = 'minime.imageFlow';
 
@@ -36,10 +37,6 @@ let state: FlowState = { ...DEFAULTS };
 
 
 const STYLES = ['product photography', 'illustration', 'flat design', 'poster design', 'photorealistic'];
-
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 
 function el(id: string): HTMLElement | null {
   return document.getElementById(id);

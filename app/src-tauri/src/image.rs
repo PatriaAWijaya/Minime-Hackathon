@@ -11,9 +11,9 @@ use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-fn images_dir() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join("minime-images")
+fn images_dir() -> Result<PathBuf, String> {
+    let home = std::env::var("HOME").map_err(|_| "direktori HOME tidak ditemukan.".to_string())?;
+    Ok(PathBuf::from(home).join("minime-images"))
 }
 
 fn safe_name(name: &str) -> Option<String> {
@@ -50,7 +50,7 @@ pub fn image_save(req: ImageSaveReq) -> Result<ImageSaveRes, String> {
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(&req.b64)
         .map_err(|e| e.to_string())?;
-    let dir = images_dir();
+    let dir = images_dir()?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     std::fs::write(dir.join(&name), &bytes).map_err(|e| e.to_string())?;
     Ok(ImageSaveRes {
@@ -76,7 +76,7 @@ pub struct ImageReadRes {
 #[tauri::command]
 pub fn image_read(req: ImageReadReq) -> Result<ImageReadRes, String> {
     let name = safe_name(&req.name).ok_or("nama file tidak valid")?;
-    let bytes = std::fs::read(images_dir().join(&name)).map_err(|e| e.to_string())?;
+    let bytes = std::fs::read(images_dir()?.join(&name)).map_err(|e| e.to_string())?;
     Ok(ImageReadRes {
         file: name,
         b64: base64::engine::general_purpose::STANDARD.encode(&bytes),
@@ -100,7 +100,7 @@ pub struct ImageDeleteRes {
 #[tauri::command]
 pub fn image_delete(req: ImageDeleteReq) -> Result<ImageDeleteRes, String> {
     let name = safe_name(&req.name).ok_or("nama file tidak valid")?;
-    match std::fs::remove_file(images_dir().join(&name)) {
+    match std::fs::remove_file(images_dir()?.join(&name)) {
         Ok(()) => Ok(ImageDeleteRes {
             file: name,
             deleted: true,

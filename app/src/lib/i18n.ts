@@ -19,12 +19,6 @@ export type Lang = 'id' | 'en' | 'zh';
 
 export const LANG_LS = 'minime.lang';
 export const DEFAULT_LANG: Lang = 'id';
-export const LANGS: Lang[] = ['id', 'en', 'zh'];
-export const LANG_NAMES: Record<Lang, string> = {
-  id: 'Bahasa Indonesia',
-  en: 'English',
-  zh: '中文',
-};
 
 let current: Lang = DEFAULT_LANG;
 try {
@@ -284,9 +278,6 @@ const ID: Dict = {
   'home.filter': 'Filter agen',
   'home.allagents': 'Semua agen',
   'home.chatdate': 'Today 2:31 PM',
-  'chip.1': 'Riset kompetitor kopi susu kekinian di Surabaya, lalu buatkan carousel-nya.',
-  'chip.2': 'Buatkan talking head untuk promo bundling.',
-  'composer.curate': 'Kurasi Prime (simulasi)',
   'composer.ph': 'Message Prime Agent',
   'composer.attach.img': '🖼 Gambar',
   'composer.attach.doc': '📄 Dokumen',
@@ -769,9 +760,6 @@ const EN: Dict = {
   'home.filter': 'Filter agents',
   'home.allagents': 'All agents',
   'home.chatdate': 'Today 2:31 PM',
-  'chip.1': 'Research trendy milk-coffee competitors in Surabaya, then make a carousel.',
-  'chip.2': 'Make a talking head for the bundling promo.',
-  'composer.curate': 'Prime Curation (simulated)',
   'composer.ph': 'Message Prime Agent',
   'composer.attach.img': '🖼 Image',
   'composer.attach.doc': '📄 Document',
@@ -1254,9 +1242,6 @@ const ZH: Dict = {
   'home.filter': '筛选智能体',
   'home.allagents': '全部智能体',
   'home.chatdate': '今天 14:31',
-  'chip.1': '调研泗水时兴的牛奶咖啡竞争对手，然后制作轮播图。',
-  'chip.2': '为捆绑促销制作 talking head。',
-  'composer.curate': 'Prime 策划（模拟）',
   'composer.ph': '给 Prime Agent 发消息',
   'composer.attach.img': '🖼 图片',
   'composer.attach.doc': '🖼 文档',

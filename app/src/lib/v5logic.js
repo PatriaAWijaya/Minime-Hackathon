@@ -1,3 +1,4 @@
+import { esc } from './esc.js';
 // Mechanical migration of prototype-v5/index.html <script> blocks.
 // Logic is UNCHANGED: declarations kept at module level, executable
 // top-level statements moved into initV5() in original order.
@@ -141,7 +142,6 @@ export function postChat(who, name, color, text, curation) {
     renderChat();
   }
 
-export function quickChat(text) { document.getElementById("chatInput").value = text; sendChat(); }
 
 var sendChatImpl = null;
 
@@ -169,9 +169,6 @@ export function sendChat() {
     }, 1500);
   }
 
-export function primeCurate() {
-    postChat("prime", "Prime Agent", "#EB87B4", "Kurasi Prime (simulasi): semua hasil agen di atas sudah saya periksa konsistensinya terhadap STP dan riset. Yang masih menunggu keputusanmu: gerbang GKonten untuk media dan gerbang distribusi untuk draf Postiz.", true);
-  }
 
 export function doSearch() {
     var q = document.getElementById("searchInput").value.trim().toLowerCase();
@@ -419,7 +416,7 @@ export function libAddScript(title, content) {
 
 export function renderLib() {
     document.getElementById("libBody").innerHTML = "<tr><th>Output</th><th>Agen</th><th>Status</th><th>Aksi</th></tr>" + libAll().map(function (item, i) {
-      return "<tr><td>" + item.o + "</td><td>" + item.a + "</td><td><span class='badge " + item.badge + "'>" + item.s + "</span></td>"
+      return "<tr><td>" + esc(item.o) + "</td><td>" + esc(item.a) + "</td><td><span class='badge " + item.badge + "'>" + esc(item.s) + "</span></td>"
         + "<td><button class='btn btn-sm' onclick='libMedia(" + i + ")'>" + tr('lib.btn.media') + "</button><button class='btn btn-sm' onclick='libChat(" + i + ")'>" + tr('lib.btn.chat') + "</button><button class='btn btn-sm' onclick='libRevise(" + i + ")'>Perbaiki Lanjut</button></td></tr>";
     }).join("");
   }
@@ -484,10 +481,6 @@ export function renderPlanner() {
   }
 
 /** B5: append one planner row (used by the Postiz composer). Session-only. */
-export function addPlannerRow(row) {
-  PLANNER.push(row);
-  renderPlanner();
-}
 
 /** B7: re-derive backend data in the current language (after a language switch). */
 export function refreshBackendData() {
@@ -495,22 +488,21 @@ export function refreshBackendData() {
   PROJECTS.kopi.kanban = kopiKanban();
 }
 
-export function mediaTab(id) {
-  ['script', 'image', 'batch', 'voice', 'video'].forEach(function (k) {
-    var p = document.getElementById('ms-tab-' + k);
+function tabSwitcher(panelPrefix, btnPrefix, keys, id) {
+  keys.forEach(function (k) {
+    var p = document.getElementById(panelPrefix + k);
     if (p) p.style.display = (k === id) ? 'block' : 'none';
-    var b = document.getElementById('ms-tabbtn-' + k);
+    var b = document.getElementById(btnPrefix + k);
     if (b) b.classList.toggle('active', k === id);
   });
 }
 
+export function mediaTab(id) {
+  tabSwitcher('ms-tab-', 'ms-tabbtn-', ['script', 'image', 'batch', 'voice', 'video'], id);
+}
+
 export function campaignTab(id) {
-  ['leads', 'crm', 'outreach', 'followup'].forEach(function (k) {
-    var p = document.getElementById('cp-tab-' + k);
-    if (p) p.style.display = (k === id) ? 'block' : 'none';
-    var b = document.getElementById('cp-tabbtn-' + k);
-    if (b) b.classList.toggle('active', k === id);
-  });
+  tabSwitcher('cp-tab-', 'cp-tabbtn-', ['leads', 'crm', 'outreach', 'followup'], id);
 }
 
 /** Campaign tab bodies, DERIVED from the real Fase 4 artifact via
@@ -815,8 +807,6 @@ export function initV5() {
   (function () {
       var _sc = sendChat;
       sendChat = function () { _sc(); waInputChanged(); };
-      var _qc = quickChat;
-      quickChat = function (t) { _qc(t); waInputChanged(); };
     })();
   renderAgents = function () { _ra2(); renderAddMenu(); };
   showView = function (id) {
@@ -826,7 +816,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  var _ms = document.getElementById('msScript');
-  if (_ms) { try { _ms.value = localStorage.getItem('minime.script') || ''; } catch (_) {} }
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libChat, libMedia, libRevise, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, primeCurate, quickChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libChat, libMedia, libRevise, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

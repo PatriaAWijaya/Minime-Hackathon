@@ -7,8 +7,6 @@
 // PATH shell user.
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -153,8 +151,24 @@ fn tail(s: &str, n: usize) -> String {
     if s.len() <= n {
         s.to_string()
     } else {
-        s[s.len() - n..].to_string()
+        // Potong di batas karakter: potong byte mentah bisa panic bila
+        // jatuh di tengah karakter multi-byte (mis. nama file non-ASCII).
+        let mut start = s.len() - n;
+        while !s.is_char_boundary(start) {
+            start += 1;
+        }
+        s[start..].to_string()
     }
+}
+
+// Sufiks unik per panggilan (PID saja balapan pada klik ganda):
+// dipakai nama temp di video_capture, sherpa_tts, vs_install.
+pub(crate) fn unique_suffix() -> String {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    format!("{}-{}", std::process::id(), nanos)
 }
 
 // Probe ffprobe JSON sekali, dipakai video_qc dan video_probe (tanpa duplikasi
@@ -420,7 +434,7 @@ pub fn video_capture(req: CaptureRequest) -> Result<CaptureResult, String> {
     let ffmpeg = find_tool("ffmpeg").ok_or_else(|| {
         "ffmpeg tidak ditemukan (PATH + /opt/homebrew/bin + /usr/local/bin + ~/bin)".to_string()
     })?;
-    let tmp = std::env::temp_dir().join(format!("minime-capture-{}.jpg", std::process::id()));
+    let tmp = std::env::temp_dir().join(format!("minime-capture-{}.jpg", unique_suffix()));
     let tmp_str = tmp.to_string_lossy().to_string();
     let status = Command::new(&ffmpeg)
         .args([
@@ -442,9 +456,16 @@ pub fn video_capture(req: CaptureRequest) -> Result<CaptureResult, String> {
         .status()
         .map_err(|e| format!("gagal menjalankan ffmpeg capture: {e}"))?;
     if !status.success() || !tmp.is_file() {
+        let _ = std::fs::remove_file(&tmp);
         return Err("capture frame gagal".to_string());
     }
-    let bytes = std::fs::read(&tmp).map_err(|e| format!("gagal membaca frame: {e}"))?;
+    let bytes = match std::fs::read(&tmp) {
+        Ok(b) => b,
+        Err(e) => {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(format!("gagal membaca frame: {e}"));
+        }
+    };
     let _ = std::fs::remove_file(&tmp);
     Ok(CaptureResult {
         data_url: format!(
@@ -475,24 +496,9 @@ pub fn video_probe(req: ProbeRequest) -> Result<ProbeResult, String> {
 
 #[tauri::command]
 pub fn video_asset_hash(req: HashRequest) -> Result<HashResult, String> {
-    let mut file = std::fs::File::open(&req.path)
-        .map_err(|_| format!("file tidak ditemukan: {}", req.path))?;
-    let size = file.metadata().map(|m| m.len()).unwrap_or(0);
-    let mut hasher = Sha256::new();
-    let mut buf = [0u8; 65536];
-    loop {
-        let n = file
-            .read(&mut buf)
-            .map_err(|e| format!("gagal membaca file: {e}"))?;
-        if n == 0 {
-            break;
-        }
-        hasher.update(&buf[..n]);
-    }
-    Ok(HashResult {
-        sha256: format!("{:x}", hasher.finalize()),
-        size,
-    })
+    let size = std::fs::metadata(&req.path).map(|m| m.len()).unwrap_or(0);
+    let sha256 = crate::voicestudio::sha256_file(&PathBuf::from(&req.path))?;
+    Ok(HashResult { sha256, size })
 }
 
 #[tauri::command]

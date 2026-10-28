@@ -13,9 +13,11 @@ that specific case, recorded in the log.
 3. **Gates belong to Patria.** No gate (GSTP, GKonten, Fase 0, or
    any other) is approved by the agent. Code enforces gates and
    fails visibly (GateError) without an approval record.
-4. **Postiz draft-only.** The client exposes createDraft only.
+4. **Postiz draft-only by default.** The client exposes createDraft only.
    No publish/schedule method may be added without Patria's
    explicit order. Nothing is published or scheduled by default.
+   The single exception is the batch schedule step, explicitly
+   ordered by Patria 28 Okt 2026 (double-confirm approval).
 5. **Zero-error gate.** `npx tsc` (0 errors), `npm run gate-test`
    (all groups pass), `npm run scan` (passed), app/prototype JS
    checks — all green before any push. A push + log entry happens
@@ -25,8 +27,8 @@ that specific case, recorded in the log.
    exist yet). No fake success states, no unlabelled mocks in
    production paths (test mocks are labelled).
 7. **Compact but powerful.** No unused dependencies, no duplicate
-   artifacts, no dead code. The v5 single-file build is the one
-   frontend source in Tahap A — never a second copy.
+   artifacts, no dead code. The app frontend source is app/src
+   (Svelte + v5logic) — never a second copy.
 8. **Rust hygiene.** No `unwrap()`/`expect()` in production Rust
    paths; handle errors and exit cleanly with a message.
 9. **Vite `base: './'` is mandatory** for any Vite frontend build

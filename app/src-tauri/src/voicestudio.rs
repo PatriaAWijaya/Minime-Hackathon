@@ -33,14 +33,6 @@ const VS_RELEASE_BASE: &str = "https://github.com/debpalash/VoiceStudio/releases
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct VsStatusResult {
-    pub installed: bool,
-    pub app_path: Option<String>,
-    pub backend_up: bool,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct VsLaunchResult {
     pub backend_up: bool,
     pub app_path: String,
@@ -69,8 +61,12 @@ fn find_app() -> Option<PathBuf> {
     candidates.into_iter().find(|c| c.is_dir())
 }
 
+pub(crate) fn curl_path() -> PathBuf {
+    find_tool("curl").unwrap_or_else(|| PathBuf::from("/usr/bin/curl"))
+}
+
 fn backend_up() -> bool {
-    let curl = find_tool("curl").unwrap_or_else(|| PathBuf::from("/usr/bin/curl"));
+    let curl = curl_path();
     if !curl.exists() {
         return false;
     }
@@ -114,16 +110,6 @@ fn launch_app(app: &PathBuf) -> Result<(), String> {
 const LAUNCH_TIMEOUT_NOTE: &str = "VoiceStudio dibuka tetapi backend :3900 tidak merespons dalam 60 detik — bila muncul dialog macOS, klik Open; bila muncul permintaan lisensi model, terima di Model Catalogue VoiceStudio lalu coba lagi.";
 
 #[tauri::command]
-pub fn vs_status() -> VsStatusResult {
-    let app = find_app();
-    VsStatusResult {
-        installed: app.is_some(),
-        app_path: app.map(|p| p.to_string_lossy().to_string()),
-        backend_up: backend_up(),
-    }
-}
-
-#[tauri::command]
 pub fn vs_launch() -> Result<VsLaunchResult, String> {
     let Some(app) = find_app() else {
         return Err(
@@ -148,7 +134,7 @@ pub fn vs_launch() -> Result<VsLaunchResult, String> {
     }
 }
 
-fn sha256_file(path: &PathBuf) -> Result<String, String> {
+pub(crate) fn sha256_file(path: &PathBuf) -> Result<String, String> {
     let mut f = File::open(path).map_err(|e| format!("gagal membuka {}: {e}", path.display()))?;
     let mut hasher = Sha256::new();
     let mut buf = [0u8; 65536];
@@ -230,11 +216,14 @@ pub fn vs_install() -> Result<VsInstallResult, String> {
     let zip_url = format!("{VS_RELEASE_BASE}/{zip_name}");
     let sums_url = format!("{VS_RELEASE_BASE}/SHA256SUMS.txt");
 
-    let curl = find_tool("curl").unwrap_or_else(|| PathBuf::from("/usr/bin/curl"));
+    let curl = curl_path();
     if !curl.exists() {
         return Err("curl tidak ditemukan — tidak bisa mengunduh VoiceStudio.".to_string());
     }
-    let tmp = std::env::temp_dir().join("minime-vs-install");
+    let tmp = std::env::temp_dir().join(format!(
+        "minime-vs-install-{}",
+        crate::video::unique_suffix()
+    ));
     std::fs::create_dir_all(&tmp)
         .map_err(|e| format!("gagal membuat direktori sementara {}: {e}", tmp.display()))?;
     let zip_path = tmp.join(&zip_name);

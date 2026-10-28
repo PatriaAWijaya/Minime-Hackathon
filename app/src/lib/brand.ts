@@ -17,6 +17,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
+import { esc } from './esc.js';
 
 export const BRAND_LS = 'minime.brand';
 
@@ -113,10 +114,6 @@ export function brandSuffix(): string {
   if (b.footerText.trim()) parts.push('Footer text: ' + b.footerText.trim());
   if (!parts.length) return '';
   return ', ' + parts.join('. ');
-}
-
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 let inited = false;

@@ -1,11 +1,9 @@
-import { Controller, Get, Post, Body, Param, Sse, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Sse } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { JobQueue } from './queue';
-import { PolicyEngine, GateError } from './policy';
 import { CostLedger } from './ledger';
 
 const queue = new JobQueue('data/jobs.sqlite');
-const policy = new PolicyEngine();
 const ledger = new CostLedger('data/cost-ledger.jsonl', Number(process.env.COST_HARD_LIMIT_USD ?? 5));
 
 @Controller()
@@ -44,25 +42,12 @@ export class AppController {
     });
   }
 
-  @Post('approvals')
-  approval(@Body() body: { gate: 'GS' | 'GSTP' | 'GKonten' | 'GBatch'; productId: string; approver: string; decision: 'approved' | 'rejected' | 'revision_requested' }) {
-    // Approvals are explicit records. This endpoint never auto-approves:
-    // the caller supplies approver + decision, and the record is stored.
-    return policy.approve(body.gate, body.productId, body.approver, body.decision);
-  }
-
-  @Post('publish')
-  publish(@Body() body: { approvedBatchId?: string | null }) {
-    // Service-level gate: publish without an approved batch is rejected
-    // with a clean 403, not a 500.
-    try {
-      policy.requirePublishAllowed(body.approvedBatchId ?? null);
-    } catch (e) {
-      if (e instanceof GateError) {
-        throw new HttpException({ error: e.message }, HttpStatus.FORBIDDEN);
-      }
-      throw e;
-    }
-    return { published: true, batch: body.approvedBatchId };
-  }
+  // NOTE (audit 28 Okt 2026): endpoint POST /approvals dan POST /publish
+  // DIHAPUS. /publish membalas {published:true} tanpa mengirim apa pun
+  // (sukses palsu, melanggar rule no.6), dan /approvals membiarkan
+  // caller menyetujui batch-nya sendiri tanpa autentikasi. Approval
+  // yang sah hanya dari file JSON (docs/fase-*-approval.json) yang
+  // divalidasi runner, dan satu-satunya jalur live adalah scheduler
+  // batch di app (perintah Patria + double-confirm). Server ini hanya
+  // menyisakan health + jobs (queue-backed, nyata).
 }

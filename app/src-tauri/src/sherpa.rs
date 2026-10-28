@@ -32,13 +32,15 @@ use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use crate::video::find_tool;
 use crate::voicestudio::download_file;
 
 const VOICE_ONNX_URL: &str = "https://huggingface.co/rhasspy/piper-voices/resolve/main/id/id_ID/news_tts/medium/id_ID-news_tts-medium.onnx";
 const VOICE_JSON_URL: &str = "https://huggingface.co/rhasspy/piper-voices/resolve/main/id/id_ID/news_tts/medium/id_ID-news_tts-medium.onnx.json";
 const VOICE_FILE: &str = "id_ID-news_tts-medium.onnx";
 const VOICE_JSON_FILE: &str = "id_ID-news_tts-medium.onnx.json";
+// Ukuran penuh yang diketahui (lihat gerbang ukuran di sherpa_setup).
+const VOICE_ONNX_BYTES: u64 = 62_950_044;
+const VOICE_JSON_BYTES: u64 = 5_050;
 const ESPEAK_VOICE: &str = "id";
 
 // Metadata ONNX yang wajib ada agar sherpa-onnx VITS mau init
@@ -101,6 +103,7 @@ pub struct SherpaSetupResult {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SherpaTtsRequest {
     pub text: String,
     pub speed: Option<f32>,
@@ -167,6 +170,11 @@ fn write_tokens(json_path: &PathBuf, tokens_path: &PathBuf) -> Result<usize, Str
     if by_id.is_empty() {
         return Err("phoneme_id_map kosong".to_string());
     }
+    let mut ids: Vec<u64> = by_id.keys().copied().collect();
+    ids.sort_unstable();
+    if ids != (0..by_id.len() as u64).collect::<Vec<_>>() {
+        return Err("phoneme_id_map tidak kontinu 0..n".to_string());
+    }
     let mut out = String::new();
     for (id, ph) in &by_id {
         out.push_str(&format!("{ph} {id}\n"));
@@ -182,28 +190,33 @@ pub fn sherpa_setup() -> Result<SherpaSetupResult, String> {
         return Err("direktori HOME tidak ditemukan.".to_string());
     };
     std::fs::create_dir_all(&dir).map_err(|e| format!("gagal membuat {}: {e}", dir.display()))?;
-    let curl = find_tool("curl").unwrap_or_else(|| PathBuf::from("/usr/bin/curl"));
+    let curl = crate::voicestudio::curl_path();
     if !curl.exists() {
         return Err("curl tidak ditemukan — tidak bisa mengunduh aset Sherpa.".to_string());
     }
     let onnx = dir.join(VOICE_FILE);
     let json = dir.join(VOICE_JSON_FILE);
-    if !onnx.is_file() || onnx.metadata().map(|m| m.len()).unwrap_or(0) == 0 {
+    let marker = dir.join(".metadata-appended");
+    // Unduhan parsial selalu LEBIH KECIL dari ukuran penuh, jadi ukuran
+    // >= nilai berarti file utuh (termasuk varian +131 byte pasca-append
+    // metadata, dan versi suara yang lebih besar di masa depan).
+    let onnx_len = onnx.metadata().map(|m| m.len()).unwrap_or(0);
+    if !onnx.is_file() || onnx_len < VOICE_ONNX_BYTES {
+        let _ = std::fs::remove_file(&onnx);
+        let _ = std::fs::remove_file(&marker);
         download_file(&curl, VOICE_ONNX_URL, &onnx, 600)?;
     }
-    if !json.is_file() || json.metadata().map(|m| m.len()).unwrap_or(0) == 0 {
+    let json_len = json.metadata().map(|m| m.len()).unwrap_or(0);
+    if !json.is_file() || json_len < VOICE_JSON_BYTES {
+        let _ = std::fs::remove_file(&json);
         download_file(&curl, VOICE_JSON_URL, &json, 120)?;
     }
     let tokens = dir.join("tokens.txt");
-    let n = write_tokens(&json, &tokens)?;
-    if n == 0 {
-        return Err("tokens.txt kosong".to_string());
-    }
+    write_tokens(&json, &tokens)?;
     // Konversi sekali: tambah metadata ONNX (file Piper mentah tidak
     // memilikinya). Marker mencegah append ganda pada setup berikutnya
     // (append ganda pun tak merusak — map protobuf menang nilai terakhir
     // yang identik — tapi tetap dihindari).
-    let marker = dir.join(".metadata-appended");
     if !marker.is_file() {
         append_onnx_metadata(&onnx)?;
         std::fs::write(&marker, "vits piper id 22050\n")
@@ -285,11 +298,21 @@ fn run_sherpa_tts(text: &str, speed: f32) -> Result<TtsData, String> {
     }
     let sample_rate = sample_rate_raw as u32;
     let duration_secs = samples.len() as f32 / sample_rate as f32;
-    let tmp = std::env::temp_dir().join(format!("minime-sherpa-{}.wav", std::process::id()));
+    let tmp = std::env::temp_dir().join(format!(
+        "minime-sherpa-{}.wav",
+        crate::video::unique_suffix()
+    ));
     if !audio.save(tmp.to_str().unwrap_or("")) {
+        let _ = std::fs::remove_file(&tmp);
         return Err("gagal menyimpan WAV Sherpa".to_string());
     }
-    let bytes = std::fs::read(&tmp).map_err(|e| format!("gagal membaca WAV Sherpa: {e}"))?;
+    let bytes = match std::fs::read(&tmp) {
+        Ok(b) => b,
+        Err(e) => {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(format!("gagal membaca WAV Sherpa: {e}"));
+        }
+    };
     let _ = std::fs::remove_file(&tmp);
     let data_url = format!(
         "data:audio/wav;base64,{}",

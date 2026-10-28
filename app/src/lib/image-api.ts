@@ -4,7 +4,9 @@
 // POST https://api.meta.ai/v1/images/generations, Bearer kunci Meta,
 // body {model, prompt, n, size, response_format: 'b64_json',
 // output_format: 'webp'} -> {data: [{b64_json}]}.
-// Biaya $0,01/gambar; kurs Rp18.148/USD (Finnhub 28 Okt).
+// Biaya $0,01/gambar; kurs Rp18.148/USD (Finnhub 28 Okt) — snapshot
+// bertanggal, BUKAN kurs live: record spend menyimpan kurs + tanggalnya
+// supaya konversi Rp tidak basi diam-diam.
 
 export const IMG_MODEL = 'muse-image-1.0';
 export const IMG_PRICE_USD = 0.01;
@@ -18,17 +20,20 @@ export const RATIO_SIZE: Record<string, string> = {
   '3:4': '1024x1365', '3:2': '1536x1024', '2:3': '1024x1536',
 };
 
-export type ImgSpend = { images: number; usd: number; idr: number };
+export type ImgSpend = { images: number; usd: number; idr: number; rate: number; rateDate: string };
 
 export function readImgSpend(): ImgSpend {
   try {
     const raw = window.localStorage.getItem(SPEND_LS);
     const o = raw ? JSON.parse(raw) : null;
     if (o && typeof o.images === 'number' && typeof o.usd === 'number') {
-      return { images: o.images, usd: o.usd, idr: typeof o.idr === 'number' ? o.idr : Math.round(o.usd * IMG_USD_RATE) };
+      // Backfill record lama (sebelum rate dicatat): kurs snapshot 28 Okt.
+      const rate = typeof o.rate === 'number' ? o.rate : IMG_USD_RATE;
+      const rateDate = typeof o.rateDate === 'string' ? o.rateDate : '2026-10-28';
+      return { images: o.images, usd: o.usd, idr: typeof o.idr === 'number' ? o.idr : Math.round(o.usd * rate), rate, rateDate };
     }
   } catch { /* abaikan, pakai default */ }
-  return { images: 0, usd: 0, idr: 0 };
+  return { images: 0, usd: 0, idr: 0, rate: IMG_USD_RATE, rateDate: '2026-10-28' };
 }
 
 export function saveImgSpend(s: ImgSpend): void {
@@ -42,6 +47,8 @@ export function addImgSpend(n: number): ImgSpend {
   s.images += n;
   s.usd = Math.round((s.usd + n * IMG_PRICE_USD) * 100) / 100;
   s.idr = Math.round(s.usd * IMG_USD_RATE);
+  s.rate = IMG_USD_RATE;
+  s.rateDate = '2026-10-28';
   saveImgSpend(s);
   return s;
 }

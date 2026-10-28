@@ -35,7 +35,7 @@ ulang angka-angka di bawah ini untuk tanggal lain.
   konfirmasi halaman pricing Google sebelum dipakai sebagai angka
   ledger).
 - Ollama lokal (DeepSeek/Qwen di MacBook) = **Rp0** marginal.
-- Biaya Fase 1 live 27 Okt siang (1.551 token Gemini): **belum bisa
+- Biaya Fase 1 live 27 Okt siang (v1: 1.551 token Gemini, 3 panggilan — sore harinya diperdalam ke v2 = 4.660 token, 4 panggilan; angka v2 yang berlaku, total Fase 1–3 = 10.859 token): **belum bisa
   dirupiahkan** — harga per token Gemini belum di-baseline resmi,
   sehingga `costUsd` bernilai null dan konversi Rp-nya juga null.
   Ini pengecualian yang jujur dari aturan, bukan pelanggaran:

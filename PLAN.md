@@ -21,22 +21,23 @@ copied from the main Minime repository.
 
 ## Phases — 27 Oct to 2 Nov 2026 (build plan; pace updated 27 Oct: 2 phases/day attempted)
 
-- **Phase 0 — Foundation, Tue 27 Oct: EXECUTED, gate CONDITIONALLY PASSED 27 Oct 15:04 WIB (Patria).**
+- **Phase 0 — Foundation, Tue 27 Oct: EXECUTED, gate CONDITIONALLY PASSED 27 Oct 15:04 WIB (Patria) — conditions CLOSED 28 Okt, declared LOLOS PENUH 28 Okt 11:20 WIB (Patria).**
   Repo contracts (JSON v1), model router, append-only CostLedger +
   hard limit, service-level policy engine for gates GS/GSTP/GKonten,
   DB-backed queue + SSE progress, one sample job end-to-end with
   CostRecord and trace ID, zero credentials in repo — all built and
   mock-tested (see `docs/fase-0-log.md` and `docs/fase-0-gate-results.md`).
   Gate CONDITIONALLY PASSED by Patria 27 Oct 2026 15:04 WIB (record
-  docs/fase-0-gate-conditional-approval.json): the two remaining
-  conditions are live Muse verification and full cost re-baselining
-  (both pending, see below). Since the morning
-  report, the Ollama leg is proven live (DeepSeek 1.5b GPU 4.2 s,
-  Qwen 3b 2.5 s) and the Gemini leg is proven live through the router
-  code (with intermittent provider HTTP 503 "high demand" in the same
-  session). Still pending: live Muse (Meta credit claim + card +
-  spend limit, Patria-only) and full cost re-baselining. No live Muse
-  metric is claimed until those tests pass.
+  docs/fase-0-gate-conditional-approval.json). UPDATE 28 Okt 2026:
+  both conditions CLOSED — live Muse verified 28 Okt 03:36 WIB
+  (muse-spark-1.3, 718 tokens, $0.00295) and cost re-baseline decided
+  by Patria 28 Okt 04:36 WIB (Gemini free tier, billed $0); Patria
+  declared Fase 0 LOLOS PENUH 28 Okt 11:20 WIB (addendum on
+  docs/fase-0-gate-results.md, original conditional verdict kept).
+  Since the morning report, the Ollama leg is proven live (DeepSeek
+  1.5b GPU 4.2 s, Qwen 3b 2.5 s) and the Gemini leg is proven live
+  through the router code (with intermittent provider HTTP 503
+  "high demand" in the same session).
 - **Phase 1 — Decisions, Tue 27 Oct (EXECUTED live; GSTP APPROVED 27 Oct 12:04 WIB):**
   Intake → Research → Business Strategy → STP, stopping at GS/GSTP
   gates. No production before GSTP approval; exactly one Approved STP

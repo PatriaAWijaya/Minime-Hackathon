@@ -16,7 +16,8 @@ Aplikasi Konten MVP — one product becomes one week of scheduled draft
 content through Intake → Research → Business Strategy → STP → Image →
 Postiz draft, plus an internal loop proof (public Form → CRM Leads →
 draft Outreach batch, with no live sending). No video, no live outreach
-sending, no live publishing, and no customer mini-app in this demo window.
+sending, no instant live publishing (authorized batch scheduling creates
+scheduled posts, double-confirm), and no customer mini-app in this demo window.
 
 ## Model router (27 Oct 2026)
 

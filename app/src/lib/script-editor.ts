@@ -4,11 +4,11 @@
 // sama dengan chat (Meta -> Gemini -> Ollama lokal), dengan prompt
 // yang dibangun deterministik dari form — bukan template tempel.
 // State (termasuk hasil) tersimpan di localStorage; hasil juga dicerminkan
-// ke kunci lama 'minime.script' agar perilaku lama tidak hilang.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { readKeys } from './chat.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { libAddScript, mediaTab } from './v5logic.js';
+import { esc } from './esc.js';
 
 export type SeMenu = 'social' | 'artikel' | 'movie';
 type SePlatform = 'instagram' | 'facebook' | 'whatsapp' | 'tiktok' | 'thread' | 'linkedin';
@@ -110,14 +110,9 @@ function loadState(): void {
 function saveState(): void {
   try {
     window.localStorage.setItem(LS, JSON.stringify(state));
-    window.localStorage.setItem('minime.script', state.output);
   } catch {
     // storage unavailable: editor tetap jalan untuk sesi ini
   }
-}
-
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function radioRow(name: string, options: readonly string[], current: string, labelKey: (o: string) => string): string {

@@ -101,9 +101,9 @@ async function main() {
   ok('ollama live probe fails visibly in this VM (expected, recorded as pending)');
 
   // Block G — sample job with mock, end to end
-  clean('data/jobs.sqlite');
-  clean('data/cost-ledger.jsonl');
-  const sample = await runSample({ allowMock: true, humanApprover: 'phase-0-test-harness (TEST product only)', dataDir: 'data' });
+  clean('data/test-gate/jobs.sqlite');
+  clean('data/test-gate/cost-ledger.jsonl');
+  const sample = await runSample({ allowMock: true, humanApprover: 'phase-0-test-harness (TEST product only)', dataDir: 'data/test-gate' });
   assert.strictEqual(sample.mock, true, 'sample in this run is mock — must be reported as mock');
   assert.ok((sample as { draft: { published: boolean } }).draft.published === false, 'sample must end in draft, never publish');
   assert.ok(Array.isArray(sample.stages) && (sample.stages as string[]).includes('done'));
@@ -111,9 +111,9 @@ async function main() {
 
   // Phase 1 (draft only) — mock run must produce a draft STP, record
   // NO approval, and leave production blocked.
-  clean('data/jobs.sqlite');
-  clean('data/cost-ledger.jsonl');
-  const fase1 = await runFase1({ allowMock: true, dataDir: 'data' });
+  clean('data/test-gate/jobs.sqlite');
+  clean('data/test-gate/cost-ledger.jsonl');
+  const fase1 = await runFase1({ allowMock: true, dataDir: 'data/test-gate' });
   assert.strictEqual((fase1.stp as { status: string }).status, 'draft', 'Fase 1 STP must be draft, never approved by code');
   const fase1Research = fase1.research as Record<string, unknown>;
   for (const field of ['behaviourDigital', 'paparanMedia', 'jenisKonten', 'caraTransaksi', 'touchPoints', 'painPoints', 'spendingBulanan', 'spendingDigital']) {
@@ -128,17 +128,17 @@ async function main() {
   // briefs with QC passing, image pending, and NO GKonten approval.
   // The test approval fixture below is a TEST fixture only, not a
   // real Patria approval; the real record lives in docs/.
-  clean('data/jobs.sqlite');
-  clean('data/cost-ledger.jsonl');
+  clean('data/test-gate/jobs.sqlite');
+  clean('data/test-gate/cost-ledger.jsonl');
   fs.writeFileSync('data/fase2-test-approval.json', JSON.stringify({ gate: 'GSTP', decision: 'approved', productId: 'TEST-BRAND-001', approver: 'test-harness', approvedStp: { segment: 'test segment', targeting: 'test targeting', positioning: 'test positioning' } }));
-  const fase2 = await runFase2({ allowMock: true, dataDir: 'data', approvalPath: 'data/fase2-test-approval.json', researchPath: 'docs/fase-1-output.json' });
+  const fase2 = await runFase2({ allowMock: true, dataDir: 'data/test-gate', approvalPath: 'data/fase2-test-approval.json', researchPath: 'docs/fase-1-output.json' });
   assert.strictEqual((fase2.calendar as unknown[]).length, 7, 'Fase 2 calendar must have 7 days');
   assert.strictEqual((fase2.briefs as unknown[]).length, 7, 'Fase 2 must have 7 briefs');
   assert.ok((fase2.qc as Array<{ passes: boolean }>).every((q) => q.passes), 'all Fase 2 QC must pass');
   assert.strictEqual(fase2.imageStatus, 'pending-provider', 'Fase 2 must not claim a generated image');
   assert.deepStrictEqual(fase2.gkontenApproval, [], 'Fase 2 must record no GKonten approval');
   assert.strictEqual(fase2.contentBlocked, true, 'distribution must be blocked without GKonten');
-  await assert.rejects(() => runFase2({ allowMock: true, dataDir: 'data', approvalPath: 'data/no-such-approval.json', researchPath: 'docs/fase-1-output.json' }), GateError, 'Fase 2 without GSTP record must be blocked');
+  await assert.rejects(() => runFase2({ allowMock: true, dataDir: 'data/test-gate', approvalPath: 'data/no-such-approval.json', researchPath: 'docs/fase-1-output.json' }), GateError, 'Fase 2 without GSTP record must be blocked');
   ok('fase2: 7-day calendar + 7 briefs, QC pass, image pending, GKonten pending, no-GSTP blocked');
 
   // Phase 3 (mock) — requires approved GSTP + GKonten records,
@@ -148,7 +148,7 @@ async function main() {
   // method by construction; a live draft is verified against a
   // local capture server, not against real Postiz.
   fs.writeFileSync('data/fase3-test-gkonten.json', JSON.stringify({ gate: 'GKonten', decision: 'approved', productId: 'TEST-BRAND-001', approver: 'test-harness' }));
-  const fase3 = await runFase3({ allowMock: true, dataDir: 'data', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json', fase2Path: 'docs/fase-2-output.json' });
+  const fase3 = await runFase3({ allowMock: true, dataDir: 'data/test-gate', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json', fase2Path: 'docs/fase-2-output.json' });
   assert.strictEqual((fase3.carousels as unknown[]).length, 7, 'Fase 3 must have 7 carousels');
   for (const c of fase3.carousels as Array<Record<string, unknown>>) {
     const slides = c.slides as Array<Record<string, unknown>>;
@@ -165,8 +165,8 @@ async function main() {
   assert.ok((fase3.postizDrafts as Array<Record<string, unknown>>).every((d) => d.type === 'draft' && d.status === 'pending-postiz' && d.published === false), 'without a key, all drafts must be pending-postiz and unpublished');
   assert.strictEqual(fase3.published, false, 'Fase 3 must never publish');
   assert.strictEqual(fase3.postizLive, false, 'Fase 3 without a key must not be live');
-  await assert.rejects(() => runFase3({ allowMock: true, dataDir: 'data', gkontenApprovalPath: 'data/no-such-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json', fase2Path: 'docs/fase-2-output.json' }), GateError, 'Fase 3 without GKonten record must be blocked');
-  await assert.rejects(() => runFase3({ allowMock: true, dataDir: 'data', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/no-such-gstp.json', fase2Path: 'docs/fase-2-output.json' }), GateError, 'Fase 3 without GSTP record must be blocked');
+  await assert.rejects(() => runFase3({ allowMock: true, dataDir: 'data/test-gate', gkontenApprovalPath: 'data/no-such-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json', fase2Path: 'docs/fase-2-output.json' }), GateError, 'Fase 3 without GKonten record must be blocked');
+  await assert.rejects(() => runFase3({ allowMock: true, dataDir: 'data/test-gate', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/no-such-gstp.json', fase2Path: 'docs/fase-2-output.json' }), GateError, 'Fase 3 without GSTP record must be blocked');
   ok('fase3: 7 carousels x 3 slides, QC pass, image pending, drafts pending-postiz, unpublished, no-gate blocked');
 
   // Phase 4 (rule-based, no model calls) — requires approved GSTP +
@@ -174,7 +174,7 @@ async function main() {
   // 10 (2 merges), flags 1 name-only candidate pair without
   // merging, scores 1-5 with auditable reasons, stages by score,
   // and emits draft Outreach only (score >= 3, never sent).
-  const fase4 = await runFase4({ dataDir: 'data', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json' });
+  const fase4 = await runFase4({ dataDir: 'data/test-gate', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json' });
   assert.strictEqual((fase4.counts as Record<string, unknown>).raw, 12, 'Fase 4 must capture 12 raw leads');
   assert.strictEqual((fase4.counts as Record<string, unknown>).deduped, 10, 'Fase 4 must dedupe to 10 leads');
   assert.strictEqual((fase4.counts as Record<string, unknown>).merged, 2, 'Fase 4 must merge exactly 2 duplicates');
@@ -195,8 +195,8 @@ async function main() {
   assert.strictEqual(fase4.liveModelCalls, 0, 'Fase 4 must use zero model calls');
   assert.strictEqual(fase4.gtemplateApproval, null, 'Fase 4 must not invent a GTemplate approval');
   assert.strictEqual(fase4.gbatchApproved, false, 'GBatch must stay locked in the test run');
-  await assert.rejects(() => runFase4({ dataDir: 'data', gkontenApprovalPath: 'data/no-such-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json' }), GateError, 'Fase 4 without GKonten record must be blocked');
-  await assert.rejects(() => runFase4({ dataDir: 'data', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/no-such-gstp.json' }), GateError, 'Fase 4 without GSTP record must be blocked');
+  await assert.rejects(() => runFase4({ dataDir: 'data/test-gate', gkontenApprovalPath: 'data/no-such-gkonten.json', gstpApprovalPath: 'data/fase2-test-approval.json' }), GateError, 'Fase 4 without GKonten record must be blocked');
+  await assert.rejects(() => runFase4({ dataDir: 'data/test-gate', gkontenApprovalPath: 'data/fase3-test-gkonten.json', gstpApprovalPath: 'data/no-such-gstp.json' }), GateError, 'Fase 4 without GSTP record must be blocked');
   ok('fase4: 12 raw -> 10 deduped, 2 merges, 1 candidate pair, scores 1-5, pipeline, 6 drafts unsent, 0 model calls, no-gate blocked');
 
   // Postiz draft-only client: live draft shape against a capture

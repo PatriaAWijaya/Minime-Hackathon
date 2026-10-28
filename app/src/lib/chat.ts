@@ -14,6 +14,7 @@ import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { AGENTS, activateAgent, mediaTab, postChat, showView } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { POSTIZ_KEY_LS, readPostizKey } from './postiz.js';
+import { esc } from './esc.js';
 
 const GEMINI_KEY_LS = 'minime.geminiKey';
 const META_KEY_LS = 'minime.metaKey';
@@ -59,10 +60,6 @@ export function saveKeys(): void {
     // storage unavailable: keys simply stay unset for this session
   }
   updateKeyStatus();
-}
-
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /* Orkestrasi chat (perintah Patria 28 Okt 18:58).

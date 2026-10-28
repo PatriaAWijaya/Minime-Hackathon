@@ -58,10 +58,13 @@
 - Rasio selain 1:1 PROVISIONAL: hanya 1024x1024 terverifikasi live;
   rasio lain memakai pola param yang sama (size dibaca model sebagai
   rasio, bukan piksel persis).
-- Lampiran ke draf Postiz BELUM dibangun: butuh verifikasi apakah
-  API Postiz mengizinkan tambah media ke draf yang sudah ada.
-  Yang dibangun: Library + galeri + biaya. Draf-only tetap berlaku.
-- Hapus gambar belum ada (butuh command delete Rust) — follow-up.
+- Lampiran media ke draf Postiz YANG SUDAH ADA belum dibangun
+  (butuh verifikasi apakah API mengizinkan tambah media ke draf lama).
+  Yang SUDAH dibangun: upload + schedule bermedia lewat langkah batch
+  (post terjadwal BARU, bukan menempel ke draf lama) + Library +
+  galeri + biaya.
+- Hapus gambar: command image_delete SUDAH dibangun (dipakai hapus
+  logo/elemen Brand); tombol hapus di galeri Image masih follow-up.
 - Kartu Billing menampilkan baris muse-image-1.0 bila spend > 0;
   total statis COST_TOTAL tidak dicampur (ledger Node vs panggilan
   langsung frontend adalah dua pencatatan berbeda).

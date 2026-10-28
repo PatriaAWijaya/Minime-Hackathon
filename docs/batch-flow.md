@@ -110,7 +110,7 @@ Urutan: form -> skrip -> kartu -> jadwal.
   + registrasi di main.rs. Dipakai hapus logo/elemen/header/footer.
 - CSS: `.batch-card`, `.choices-row`, `.choice(.sel)`,
   `.choice-thumbs img` di layout-scroll.css (app.css tetap verbatim).
-- i18n: 486 kunci x 3 (89 baru: ms.tab.brand/batch, brand.*,
+- i18n: 479 kunci x 3 (per 28 Okt malam, setelah hapus brand.prompt.*, img.title, dan kunci chip mati; dulu 486: ms.tab.brand/batch, brand.*,
   batch.*), 0 duplikat, 0 selisih.
 
 ### Verifikasi dokumen vs live
@@ -119,15 +119,16 @@ Urutan: form -> skrip -> kartu -> jadwal.
   28 Okt 2026) — endpoint, field `file`, bentuk {id, path}, bentuk
   schedule, settings `__type`. BUKAN tebakan integrator.
 - Bukti LIVE di app MASIH MENUNGGU (sama seperti flow gambar):
-  Postiz berjalan di MacBook (saat ini tidur) + klik Patria di tab
-  Brand/Batch. Status schedule = docs-verified, bukan live-proven —
+  Postiz berjalan di MacBook (bangun; rantai deploy berjalan) + klik
+  Patria di tab Image/Batch. Status schedule = docs-verified, bukan
+  live-proven —
   dan setiap kartu melaporkan sukses/gagal sendiri-sendiri supaya
   kegagalan live tidak tertutup.
 
 ### Gerbang (28 Okt malam)
 
 root+app tsc 0, svelte-check 0 error, vite build OK, gate-test 14/14,
-scan PASSED, cargo fmt/check/clippy 0, rig-brand BARU 12/12,
+scan PASSED, cargo fmt/check/clippy 0, rig-brand 14/14,
 rig-batch BARU 15/15, rig-vs/sherpa/script/chat/image tetap PASS.
 
 Dua bug yang ditangkap rig (bukan asumsi): (1) filter load font

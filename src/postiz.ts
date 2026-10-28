@@ -6,6 +6,15 @@
  * leave draft state through a human approval in the Postiz
  * dashboard (or a later, separately gated batch step), never
  * through this code path.
+ *
+ * HONEST WIRE NOTE (audit 28 Okt 2026): the request body sent here is
+ * ONLY {type: 'draft', caption} — the payload's channel, slides,
+ * itemId and day fields are NEVER sent on the wire. The 7 "carousel"
+ * drafts recorded in docs/fase-3-postiz-drafts.json are therefore
+ * text-caption drafts (hook + CTA); their attachment to the Instagram
+ * channel "Branding, Marketing & AI" is NOT proven by any request
+ * field and still needs a Postiz dashboard check.
+ *
  * The public API base and key format follow the LIVE-PROVEN values
  * from the Fase 3 session (docs/fase-3-postiz-drafts.json, 27 Okt
  * 2026 15:35 WIB, 7 drafts HTTP 201): base URL http://localhost:4007

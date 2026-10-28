@@ -39,9 +39,10 @@ Ollama) → human approval gates → live evaluation harness.
 
 ## Where things live
 - `app/src-tauri/` — Tauri shell (Rust + config + capabilities).
-- `prototype-v5/` — current UI source; `prototype-v5/build/` holds
-  the single-file build that Tahap A serves as the frontend
-  (frontendDist points there; no duplicate copy).
+- `app/src/` — current UI source (Svelte 5 + v5logic, migrated
+  from prototype v5 in Tahap B2); `app/dist/` is the Vite build
+  that Tauri serves (frontendDist points there; prototype-v5/
+  was archived out of the repo 28 Okt 2026, history kept in git).
 - `src/` (repo root) — NestJS backend + fase runners.
 - `docs/` — canon docs, gate records, engine list, master log.
 
