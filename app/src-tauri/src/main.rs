@@ -8,8 +8,44 @@ mod sherpa;
 mod video;
 mod voicestudio;
 
+use tauri::utils::config::WebviewUrl;
+use tauri::webview::{NewWindowResponse, WebviewWindowBuilder};
+
 fn main() {
     if let Err(err) = tauri::Builder::default()
+        .setup(|app| {
+            // Jendela utama dibuat di sini (bukan dari tauri.conf.json)
+            // supaya handler navigasi + jendela baru bisa dipasang.
+            // Panel Postiz di dalam webview tidak boleh bernavigasi
+            // keluar (provider OAuth menolak login di webview) dan
+            // tidak boleh membuka popup liar: yang eksternal dilempar
+            // ke browser sistem, yang lokal/app tetap di dalam app.
+            // Ukuran + judul sama dengan konfigurasi sebelumnya
+            // (1280x800, "MiniMe").
+            WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                .title("MiniMe")
+                .inner_size(1280.0, 800.0)
+                .on_navigation(|url| match browser::classify_navigation(url.as_str()) {
+                    browser::NavDecision::Allow => true,
+                    browser::NavDecision::Deny => false,
+                    browser::NavDecision::OpenExternal => {
+                        let _ = browser::open_external_url(url.as_str());
+                        false
+                    }
+                })
+                .on_new_window(
+                    |url, _features| match browser::classify_navigation(url.as_str()) {
+                        browser::NavDecision::Allow => NewWindowResponse::Allow,
+                        browser::NavDecision::Deny => NewWindowResponse::Deny,
+                        browser::NavDecision::OpenExternal => {
+                            let _ = browser::open_external_url(url.as_str());
+                            NewWindowResponse::Deny
+                        }
+                    },
+                )
+                .build()?;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             video::video_render,
             video::video_qc,
