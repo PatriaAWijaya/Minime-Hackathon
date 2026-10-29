@@ -1801,3 +1801,10 @@ dokumen lama yang dipakai.
 - Bukti: tab LinkedIn client_id kosong — kredensial aplikasi memang belum ada di env (beda dari FB yang soal akun). Perintah ringkas: isi cukup di MiniMe.
 - Perbaikan: kartu "Kredensial provider Postiz" di Pengaturan (LinkedIn ID/Secret + IG ID/Secret + Terapkan + Buka developer LinkedIn). Perintah Rust postiz_provider_env: temukan Postiz jalan via port 4007 + label compose, upsert hanya 4 kunci ke .env (lainnya utuh, tulis via tmp+rename, tolak baris baru), restart hanya service postiz. Nilai tidak pernah disimpan di MiniMe/di-log. Allowlist open_browser +linkedin.com/developers/apps. Probe FB disamakan URL asli (tambah scope).
 - Push: kode fe0cea1 <-> 3d5d0dd (tree identik).
+
+## v61 penjadwal + autopost native (29 Okt, perintah Patria 17:01)
+- Perintah: bangun sendiri penjadwalan + autopost, UI persis Postiz, kanal FB/FB Page/IG/Threads/LinkedIn/YouTube/TikTok/X, hapus Postiz dari embed, tanpa tumpang tindih.
+- Dibangun v61: Rust social.rs (OAuth loopback 127.0.0.1:4317 + token exchange + publish LinkedIn teks/gambar via curl config 0600) + frontend social.js (8 kartu kanal + composer + kalender + antrean + timer 30 dtk). Scope LinkedIn native: openid profile w_member_social (personal saja).
+- URUTAN KEAMANAN: Planner native tampil DI ATAS embed Postiz selama satu versi; embed + wizard + kartu/kunci Postiz + perintah Rust Postiz dihapus v62 sesudah publish native pertama terbukti (supaya tidak ada versi tanpa penjadwal). Batch dialihkan ke native di v62 yang sama.
+- KOREKSI LINGKUP: profil Facebook pribadi TIDAK BISA autopost via API — hanya Page. Platform selain LinkedIn di v61 mengembalikan error 'belum dibangun' (bukan sukses palsu). Penjadwal v61 hanya jalan selama app terbuka (launchd menyusul).
+- Push: kode ce52ae5 <-> 0da66b4 (tree identik).
