@@ -547,7 +547,6 @@
       </div>
     </div>
     <div class="view" id="view-planner">
-      <div class="colhead"><h2>{t('view.planner.title', lang)}</h2></div>
       <div class="scroll">
         <div class="postiz-embed">
           <div class="postiz-bar"><b>Postiz</b> <span id="postizStatus"></span> <button id="postizReloadBtn" class="btn btn-sm" onclick={() => postizReload()}>{t('planner.postiz.reload', lang)}</button> <button class="btn btn-sm" onclick={() => postizOpenBrowser()}>{t('planner.postiz.open', lang)}</button></div>
