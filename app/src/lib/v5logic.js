@@ -1193,6 +1193,20 @@ var _sv2 = showView;
 var _sa2 = selectAgent;
 
 export function initV5() {
+  // Jembatan OAuth panel (v57): pesan dari frame Postiz (init script
+  // di main.rs) yang membawa URL OAuth hasil klik tile channel.
+  // Asal wajib panel Postiz; URL divalidasi ulang di Rust
+  // (open_external_url hanya menerima https non-lokal).
+  if (!window.__minimeOauthListener) {
+    window.__minimeOauthListener = true;
+    window.addEventListener("message", function (ev) {
+      if (ev.origin !== "http://localhost:4007" && ev.origin !== "http://127.0.0.1:4007") return;
+      var d = ev.data;
+      if (d && d.type === "minime-oauth-url" && typeof d.url === "string" && d.url) {
+        invoke("open_external_url", { url: d.url }).catch(function () {});
+      }
+    });
+  }
   document.addEventListener("mousemove", function (e) {
       if (!dragNode) return;
       var box = document.getElementById("graphBox").getBoundingClientRect();

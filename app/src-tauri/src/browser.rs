@@ -76,6 +76,13 @@ pub fn classify_navigation(url: &str) -> NavDecision {
     if host == "tauri.localhost" {
         return NavDecision::Allow;
     }
+    // Frame pihak ketiga yang wajib tetap di dalam halaman (mis.
+    // Stripe.js di UI billing Postiz): membukanya di browser sistem
+    // tidak berguna dan merusak UI-nya. Entri nav log v56.1
+    // membuktikan frame ini bernavigasi di dalam panel.
+    if host == "js.stripe.com" {
+        return NavDecision::Allow;
+    }
     if host == "localhost" || host == "127.0.0.1" || host == "::1" {
         // UI Postiz lokal hanya di port 4007.
         return if port == Some("4007") {
@@ -94,10 +101,30 @@ pub fn classify_navigation(url: &str) -> NavDecision {
 
 /// Buka URL eksternal di browser sistem. Hanya menerima URL yang
 /// lolos klasifikasi OpenExternal; sisanya ditolak (jalur ini tidak
-/// pernah membuka URL lokal/app).
+/// pernah membuka URL lokal/app). Perintah Tauri `open_external_url`
+/// (dipakai pendengar jembatan OAuth di frontend) maupun handler
+/// navigasi memanggil fungsi yang sama.
+/// Anti-ganda: URL yang sama persis dalam 10 detik terakhir hanya
+/// dibuka sekali — jembatan fetch dan handler navigasi bisa sama-sama
+/// memicu URL yang sama untuk satu klik, dan tab ganda tidak berguna
+/// (state OAuth sekali pakai).
+#[tauri::command]
 pub fn open_external_url(url: &str) -> Result<(), String> {
     if classify_navigation(url) != NavDecision::OpenExternal {
         return Err("URL tidak diizinkan untuk browser eksternal".into());
+    }
+    {
+        use std::sync::Mutex;
+        use std::time::{Duration, Instant};
+        static LAST_OPEN: Mutex<Option<(String, Instant)>> = Mutex::new(None);
+        if let Ok(mut guard) = LAST_OPEN.lock() {
+            if let Some((last, at)) = guard.as_ref() {
+                if last == url && at.elapsed() < Duration::from_secs(10) {
+                    return Ok(());
+                }
+            }
+            *guard = Some((url.to_string(), Instant::now()));
+        }
     }
     Command::new("open")
         .arg(url)
@@ -158,6 +185,11 @@ mod tests {
         assert_eq!(
             classify_navigation("https://accounts.google.com/o/oauth2/auth"),
             NavDecision::OpenExternal
+        );
+        // Frame Stripe.js wajib tetap di halaman (bukan tab browser).
+        assert_eq!(
+            classify_navigation("https://js.stripe.com/v3/m-outer.html"),
+            NavDecision::Allow
         );
         assert_eq!(
             classify_navigation("http://example.com/"),
