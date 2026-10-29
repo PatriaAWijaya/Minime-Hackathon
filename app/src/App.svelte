@@ -12,12 +12,13 @@
   import { initBatchFlow, batchRefreshUI } from "./lib/batch-flow.js";
   import { readImgSpend } from "./lib/image-api.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
-  import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtInt, fmtUsd } from "./lib/cost.js";
+  import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtInt, fmtUsd, readLiveCost } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
   import { invoke } from "@tauri-apps/api/core";
 
   let lang = $state(getLang());
   let imgSpend = $state(readImgSpend());
+  let liveCost = $state(readLiveCost());
 
   function applyLanguage(value: string) {
     const next = value === 'en' || value === 'zh' ? value : 'id';
@@ -52,6 +53,7 @@
     initBrand();
     initBatchFlow();
     (window as unknown as Record<string, unknown>).refreshImgSpend = () => { imgSpend = readImgSpend(); };
+    (window as unknown as Record<string, unknown>).refreshLiveCost = () => { liveCost = readLiveCost(); imgSpend = readImgSpend(); };
     renderKeyButtons();
   });
 
@@ -283,7 +285,7 @@
             <div class="av" style="width:28px;height:28px;font-size:12px;background:#404040;margin-left:-8px">S</div>
             <div class="av" style="width:28px;height:28px;font-size:12px;background:#5b5b5b;margin-left:-8px">K</div>
             <div class="av" style="width:28px;height:28px;font-size:12px;background:#5b5b5b;margin-left:-8px">M</div>
-            <button class="btn btn-sm" style="margin-left:10px" onclick={() => { alert('Simulasi: tambah anggota tim (tampilan saja).') }}>＋</button>
+            <button class="btn btn-sm" style="margin-left:10px" onclick={() => { const n = document.getElementById('kbTeamNote'); if (n) n.textContent = t('kanban.team.sim', lang); }}>＋</button><span id="kbTeamNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
           </div>
         </div>
         <div class="kb-tabs">
@@ -399,13 +401,13 @@
         </div>
         <div id="ms-tab-voice" style="display:none">
           <h3>{t('ms.tab.voice', lang)}</h3>
-          <p><span id="vsStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { vsCheck() }}>{t('vs.status.check', lang)}</button></p>
+          <p><button class="btn btn-sm" onclick={() => { vsCheck() }}>{t('vs.status.check', lang)}</button></p>
           <h4>{t('vs.setup.title', lang)}</h4>
           <p><button class="btn btn-primary" onclick={() => { vsSetupInstall() }}>{t('vs.setup.install', lang)}</button> <button class="btn btn-sm" onclick={() => { vsSetupLaunch() }}>{t('vs.setup.launch', lang)}</button> <span id="vsSetupNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span></p>
           <p style="color:#a1a1a1;font-size:13px">{t('vs.setup.note', lang)}</p>
           <h4>{t('vs.embed.title', lang)}</h4>
           <div class="vs-embed">
-            <div class="vs-bar"><b>VoiceStudio</b> <span id="vsEmbedStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { vsEmbedReload() }}>{t('vs.embed.reload', lang)}</button> <button class="btn btn-sm" onclick={() => { vsSetupLaunch() }}>{t('vs.embed.open', lang)}</button></div>
+            <div class="vs-bar"><b>VoiceStudio</b> <span id="vsEmbedStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { vsEmbedReload() }}>{t('vs.embed.reload', lang)}</button></div>
             <iframe id="vsEmbedFrame" title="VoiceStudio" onload={() => { vsEmbedCheck() }} style="display:none"></iframe>
             <p class="se-note" id="vsEmbedNote"></p>
           </div>
@@ -431,7 +433,7 @@
           <textarea id="vsRefText" rows="2" style="width:100%;box-sizing:border-box" placeholder={t('vs.ref.text.placeholder', lang)}></textarea>
           <label>{t('vs.speed.label', lang)}</label>
           <input id="vsCloneSpeed" type="number" min="0.5" max="2" step="0.1" value="1">
-          <button class="btn btn-primary" onclick={() => { vsGenerateClone() }}>{t('vs.generate', lang)}</button>
+          <button class="btn btn-primary" onclick={() => { vsGenerateClone() }}>{t('vs.generate.clone', lang)}</button>
           <span id="vsCloneNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
           <audio id="vsCloneAudio" controls style="display:none;width:100%;margin-top:8px"></audio>
           <a id="vsCloneDownload" style="display:none">{t('vs.download', lang)}</a>
@@ -457,6 +459,7 @@
           <button class="btn btn-sm" onclick={() => { veTool('Transisi') }}>{t('ve.transition', lang)}</button>
           <span class="veToolNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
           </div>
+          <p class="se-note">{t('ve.sim_banner', lang)}</p>
           <div class="ve2-toolbar">
           <button class="btn btn-sm" onclick={() => { ve2Note('Simulasi: proyek tersimpan (tampilan saja).') }}>{t('settings.saveproj', lang)}</button>
           <button class="btn btn-sm" onclick={() => { ve2Note('Belum bisa diekspor: engine render belum ada (lihat daftar engine di bawah).') }}>{t('ve.export', lang)}</button>
@@ -478,8 +481,8 @@
           <div class="ve2-inspector">
           <h4 style="margin:0 0 8px">{t('ve.inspector', lang)}</h4>
           <label>{t('word.nama', lang)}</label><input id="ve2Name" value="Hook (0–8 dtk)" oninput={() => { ve2SyncName() }}>
-          <label>{t('ve.start.label', lang)}</label><input id="ve2Start" value="0" type="number">
-          <label>{t('ve.dur.label', lang)}</label><input id="ve2Dur" value="8" type="number">
+          <label>{t('ve.start.label', lang)}</label><input id="ve2Start" value="0" type="number" readonly>
+          <label>{t('ve.dur.label', lang)}</label><input id="ve2Dur" value="8" type="number" readonly>
           <label>{t('ve.track', lang)}</label><div id="ve2Track" class="ve-field">{t('word.video', lang)}</div>
           <label>{t('ve.effect', lang)}</label><select id="ve2Fx" onchange={() => { ve2Note('Simulasi: efek belum diterapkan — butuh engine render.') }}><option>{t('ve.fx.none', lang)}</option><option>{t('ve.fx.fade', lang)}</option><option>{t('ve.fx.zoom', lang)}</option></select>
           <span id="ve2Note" class="ve2-note"></span>
@@ -604,6 +607,12 @@
             <div>{t('img.billing', lang, { n: imgSpend.images })} · ${imgSpend.usd.toFixed(2)} ≈ Rp{imgSpend.idr.toLocaleString('id-ID')}</div>
           </div>
           {/if}
+          {#if liveCost.calls > 0}
+          <div style="margin-bottom:12px">
+            <div><b>{t('cost.live', lang)}</b> <span style="color:#a1a1a1">app</span></div>
+            <div>{liveCost.calls} {t('cost.col.calls', lang)} · {fmtInt(liveCost.tokens, lang)} {t('cost.col.tokens', lang)} · ${liveCost.usd.toFixed(5)}</div>
+          </div>
+          {/if}
           <div style="border-top:1px solid #2a2a2a;padding-top:12px"><b>{t('cost.total', lang)}</b>: {COST_TOTAL.calls} {t('cost.col.calls', lang)} · {fmtInt(COST_TOTAL.tokens, lang)} {t('cost.col.tokens', lang)} · {fmtUsd(COST_TOTAL, lang)} · {fmtIdr(COST_TOTAL, lang)}</div>
         </div>
         <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px">
@@ -615,7 +624,10 @@
         <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px">
           <h3 style="margin:0 0 12px">{t('billing.limit', lang)}</h3>
           <div>{t('billing.limit.hard', lang)}: {fmtUsd(BILLING_HARD_LIMIT, lang)} (≈ Rp{fmtInt(90740, lang)})</div>
-          <div>{t('billing.used', lang)}: {fmtUsd(COST_TOTAL, lang)} (≈ {fmtIdr(COST_TOTAL, lang)})</div>
+          <div>{t('billing.used', lang)}: ${(COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd).toFixed(4)} (≈ Rp{fmtInt(Math.round((COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd) * 18137), lang)})</div>
+          {#if COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd > BILLING_HARD_LIMIT.usdMax}
+          <div style="color:#EB87B4;margin-top:8px">{t('billing.over', lang)}</div>
+          {/if}
         </div>
       </div>
     </div>
@@ -624,16 +636,10 @@
       <div class="scroll">
         <h3>{t('settings.lang', lang)}</h3>
         <p><label>{t('settings.lang', lang)}: <select id="langSel" value={lang} onchange={(e) => { applyLanguage(e.currentTarget.value) }}><option value="id">Bahasa Indonesia</option><option value="en">English</option><option value="zh">中文</option></select></label></p>
-        <h3>{t('settings.conn', lang)}</h3>
-        <p><label><input type="checkbox" checked> {t('settings.meta.main', lang)}</label><label><input type="checkbox" checked> {t('settings.gemini.fb', lang)}</label><label><input type="checkbox" checked> {t('settings.ollama.fb', lang)}</label><label><input type="checkbox" checked> {t('ve.canva.title', lang)}</label><label><input type="checkbox"> {t('settings.voicestudio', lang)}</label></p>
         <h3>{t('settings.keys', lang)}</h3>
         <div class="key-card"><b>{t('key.gemini', lang)}</b><div class="key-row"><input type="password" id="apiKeyGemini" placeholder={t('key.ph.empty', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnGemini" onclick={() => { connectKey('gemini') }}>{t('key.connect', lang)}</button></div><span id="keyNoteGemini"></span></div>
         <div class="key-card"><b>{t('key.meta', lang)}</b><div class="key-row"><input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnMeta" onclick={() => { connectKey('meta') }}>{t('key.connect', lang)}</button></div><span id="keyNoteMeta"></span></div>
         <div class="key-card"><span>{t('key.ollama', lang)}</span></div>
-        <h3 id="gateHead">{t('settings.gates', lang)}</h3>
-        <p><label><input type="checkbox" checked> {t('settings.dist.default', lang)}</label><label><input type="checkbox"> {t('settings.dist.batch', lang)}</label></p>
-        <h3>{t('settings.cost', lang)}</h3>
-        <p><label><input type="checkbox" checked> {t('settings.cost.rupiah', lang)}</label><label>{t('settings.cost.rate', lang)} <input type="text" value="18137" style="width:120px"></label></p>
         <button class="btn btn-primary" onclick={() => { showSetNotice() }}>{t('settings.save', lang)}</button>
         <div class="notice" id="setNotice" style="display:none"></div>
       </div>

@@ -28,8 +28,14 @@ Ollama) → human approval gates → live evaluation harness.
    `npm run scan`, prototype/app JS checks — all must pass before
    push. Push + log only when the check passes with zero errors.
 3. Gates are Patria's alone. Never approve GSTP, GKonten, Fase 0,
-   or any gate on his behalf. Code enforces gates (GateError),
-   never invents approvals.
+   or any gate on his behalf. NOTE (koreksi audit v66): the app does
+   NOT enforce gates in code — the old requireGate() was dead code
+   and was removed. What authorizes a send in the app is the user's
+   explicit click at that moment (Publish now / schedule with
+   double-confirm for batch); there is no general live-send approval
+   and no code gate. The Node runners (repo root src/policy.ts)
+   enforce gates server-side; the Tauri app only records live usage
+   and warns past the $5 self-imposed display limit.
 4. Every change lands in `docs/fase-0-log.md` (master log) and the
    relevant PLAN/README/status notes, then is pushed with its SHA
    pair recorded (local ↔ remote, trees identical).
@@ -56,7 +62,16 @@ Ollama) → human approval gates → live evaluation harness.
   schedule step, explicitly ordered by Patria 28 Okt 2026
   ("jadwalkan otomatis ke postiz dengan persetujuan user"):
   per-card upload + schedule with double-confirm approval.
+  SUPERSEDED 29 Okt 2026 17:01 by Patria's order: native scheduling
+  + autopost replaces Postiz entirely (v61-v64); Postiz removed
+  from the app in v63. The native Planner keeps the same rule:
+  single posts draft-only, autopost only in scheduled-batch mode
+  with Patria's approval at the start of the batch.
 - Costs: report in Rupiah whenever possible; null when no rate
-  (never guessed). Hard limit $5 enforced by the ledger.
+  (never guessed). Hard limit $5: NOT enforced by the app —
+  correction (audit v66): the app records live usage and WARNS past
+  $5; hard enforcement lives only in the Node runners' ledger.
+  The $5 limit is a self-imposed display limit, not a block, because
+  the active Meta credit is $150.
 - Compact but powerful: no unused dependencies, no duplicate
   artifacts, no dead code shipped.

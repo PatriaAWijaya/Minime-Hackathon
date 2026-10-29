@@ -31,6 +31,7 @@ import { readKeys } from './chat.js';
 import { readBrand, brandSuffix } from './brand.js';
 import { socConnectedChannels, socQueueAdd, socMimeFromExt } from './social.js';
 import { metaGenerateImage, addImgSpend, RATIO_SIZE, readThumb } from './image-api.js';
+import { recordLiveCost } from './cost.js';
 import { esc } from './esc.js';
 
 export const BATCH_LS = 'minime.batch';
@@ -41,6 +42,9 @@ export type BatchCard = {
   choices: BatchChoice[]; selected: number | null;
   status: 'draft' | 'generating' | 'ready' | 'failed' | 'scheduled';
   nativeIds: string[]; error: string;
+  // Kanal asal penjadwalan pertama (audit v66 B-M2): retry harus
+  // memakai kanal yang sama, bukan semua kanal yang sedang terhubung.
+  platforms?: string[];
 };
 export type BatchState = {
   kind: 'image' | 'carousel'; topic: string; days: number; start: string;
@@ -99,6 +103,7 @@ export function readBatch(): BatchState {
             status: x.status === 'ready' || x.status === 'failed' || x.status === 'scheduled' ? x.status : 'draft',
             nativeIds: Array.isArray(x.nativeIds) ? x.nativeIds.filter((v) => typeof v === 'string') : [],
             error: typeof x.error === 'string' ? x.error : '',
+            platforms: Array.isArray(x.platforms) ? x.platforms.filter((v) => typeof v === 'string') : undefined,
           }));
       }
       if (typeof o.genDone === 'number') b.genDone = o.genDone;
@@ -320,6 +325,7 @@ async function makeScripts(): Promise<void> {
       'VISUAL: <English image prompt, text-free, describing the visual>';
     try {
       const res = await router.callWithFallback(prompt, 'trace-batch-script-' + Date.now());
+      recordLiveCost(res);
       scripts.push(parseScript(res.text, day));
     } catch (e) {
       note(tr('batch.err.script', { n: day }) + ' ' + (e instanceof Error ? e.message : String(e)));
@@ -422,9 +428,12 @@ async function runGeneration(onlyCard: number | null): Promise<void> {
         const b64s = await metaGenerateImage(keys.meta as string, t.prompt, 1, RATIO_SIZE[b0.kind === 'carousel' ? '1:1' : '4:5']);
         if (cancelled) break;
         if (!b64s.length) throw new Error('Meta mengembalikan 0 gambar');
+        // Audit v66 $-M1: biaya dicatat SEGERA setelah generate (API
+        // menagih saat itu) — dulu setelah image_save, sehingga gagal
+        // simpan = tagihan luput dari catatan.
+        addImgSpend(1);
         const name = 'img-batch-' + Date.now() + '-' + t.card + '-' + t.choice + '-' + t.slide + '.webp';
         await invoke('image_save', { req: { name, b64: b64s[0] } });
-        addImgSpend(1);
         const cur2 = readBatch();
         const card = cur2.cards[t.card];
         if (card && card.choices[t.choice]) {
@@ -483,8 +492,13 @@ function bindCards(): void {
       note(tr('batch.schedule.confirm', { n: b.cards.filter((c) => c.status === 'ready').length }));
       return;
     }
+    // Audit v66 B-B1: pilihan kanal HARUS dibaca SEBELUM mutate (yang
+    // me-render ulang tanpa checkbox) — dulu dibaca di dalam
+    // scheduleBatch setelah re-render, sehingga picked selalu kosong
+    // dan semua kanal terhubung ikut terkirim walau dicopot centangnya.
+    const picked = Array.from(document.querySelectorAll('.batch-tgt:checked')).map((el) => (el as HTMLInputElement).value);
     mutate((cur) => { cur.scheduleArmed = false; });
-    void scheduleBatch(false);
+    void scheduleBatch(false, picked);
   });
   b.cards.forEach((_c, i) => {
     document.querySelectorAll('[data-choice^="' + i + '-"]').forEach((el) => {
@@ -575,15 +589,17 @@ function batchTargetChecks(): string {
     '<label><input type="checkbox" class="batch-tgt" value="' + c.id + '" checked> ' + esc(c.name) + '</label>').join(' ');
 }
 
-async function scheduleBatch(onlyFailed: boolean): Promise<void> {
+async function scheduleBatch(onlyFailed: boolean, pickedOverride?: string[]): Promise<void> {
   const b = readBatch();
   const connected = batchFileChannels();
   if (!connected.length) { note(tr('batch.schedule.nochannel')); return; }
-  // Target: checkbox saat armed; retry (onlyFailed) pakai semua yang
-  // terhubung karena tombol retry tidak melewati fase armed.
-  const picked = Array.from(document.querySelectorAll('.batch-tgt:checked')).map((el) => (el as HTMLInputElement).value);
-  const targets = picked.length ? connected.filter((c) => picked.includes(c.id)) : connected;
-  if (!targets.length) {
+  // Target penjadwalan biasa: checkbox saat armed (diteruskan pemanggil
+  // sebelum re-render — lihat B-B1). Retry (onlyFailed) tidak melewati
+  // fase armed: tiap kartu memakai kanal ASALNYA (card.platforms),
+  // bukan semua kanal yang sedang terhubung (audit v66 B-M2).
+  const picked = pickedOverride ?? Array.from(document.querySelectorAll('.batch-tgt:checked')).map((el) => (el as HTMLInputElement).value);
+  const baseTargets = picked.length ? connected.filter((c) => picked.includes(c.id)) : connected;
+  if (!baseTargets.length) {
     note(tr('batch.schedule.nochannel'));
     const cur = readBatch();
     cur.scheduleArmed = true;
@@ -596,8 +612,15 @@ async function scheduleBatch(onlyFailed: boolean): Promise<void> {
   let skipped = 0;
   for (let i = 0; i < b.cards.length; i++) {
     const card = b.cards[i];
-    if (onlyFailed && card.status !== 'failed') continue;
-    if (card.status !== 'ready' && card.status !== 'failed') { skipped++; continue; }
+    // Audit v66 (minor): penjadwalan biasa hanya memproses 'ready'
+    // (sesuai hitungan armed); kartu 'failed' hanya lewat retry.
+    if (onlyFailed) {
+      if (card.status !== 'failed') continue;
+    } else if (card.status !== 'ready') { skipped++; continue; }
+    const targets = onlyFailed && card.platforms?.length
+      ? connected.filter((c) => card.platforms!.includes(c.id))
+      : baseTargets;
+    if (!targets.length) { skipped++; continue; }
     const choice = card.choices[card.selected ?? 0];
     const files = choice ? choice.files.filter(Boolean) : [];
     if (!files.length) {
@@ -621,6 +644,7 @@ async function scheduleBatch(onlyFailed: boolean): Promise<void> {
         scheduledAt: Date.parse(cardDateISO(b.start, card.day)),
       })));
       card.nativeIds = ids;
+      card.platforms = targets.map((t) => t.id);
       card.status = 'scheduled';
       card.error = '';
       ok++;

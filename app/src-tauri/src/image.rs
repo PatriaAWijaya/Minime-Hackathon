@@ -79,7 +79,13 @@ pub struct ImageReadRes {
 #[tauri::command]
 pub fn image_read(req: ImageReadReq) -> Result<ImageReadRes, String> {
     let name = safe_name(&req.name).ok_or("nama file tidak valid")?;
-    let bytes = std::fs::read(images_dir()?.join(&name)).map_err(|e| e.to_string())?;
+    let path = images_dir()?.join(&name);
+    // Cap baca = cap simpan (audit v66 m-1, sama seperti audio_read).
+    let meta = std::fs::metadata(&path).map_err(|e| e.to_string())?;
+    if meta.len() > 20_000_000 {
+        return Err("gambar melebihi 20 MB".to_string());
+    }
+    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
     Ok(ImageReadRes {
         file: name,
         b64: base64::engine::general_purpose::STANDARD.encode(&bytes),

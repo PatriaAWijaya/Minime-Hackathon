@@ -211,6 +211,16 @@ function bind<T extends HTMLElement>(id: string, ev: string, fn: (e: T) => void)
   if (e) e.addEventListener(ev, () => fn(e as T));
 }
 
+/** Set brief Image dari luar (dipakai seUse Script Editor — audit v66
+ *  M1 overlap: tombol 'Gunakan' harus benar-benar memakai naskah,
+ *  bukan hanya pindah tab dan menunggu klik 'Muat Naskah' kedua). */
+export function imgSetBrief(text: string): void {
+  state.brief = text;
+  saveState();
+  syncForm();
+  renderPreview();
+}
+
 export function initImageFlow(): void {
   loadState();
   syncForm();
@@ -246,6 +256,7 @@ export function initImageFlow(): void {
   };
   (window as unknown as Record<string, unknown>).imgDropThumb = (file: string) => { thumbCache.delete(file); };
   (window as unknown as Record<string, unknown>).imgRefreshUI = imgRefreshUI;
+  (window as unknown as Record<string, unknown>).imgSetBrief = imgSetBrief;
   (window as unknown as Record<string, unknown>).imgLoadSaved = async (item: { content?: string; imageFile?: string; o: string }) => {
     if (item.content) { state.brief = item.content; saveState(); syncForm(); renderPreview(); }
     const box = el('img-loaded');

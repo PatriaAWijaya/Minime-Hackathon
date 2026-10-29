@@ -44,6 +44,16 @@ let sel: { start: number; end: number } | null = null;
 let raf = 0;
 let bound = false;
 let lastTranscriptId: string | null = null;
+// Audit v66: token muatan (V-B3) — hasil decode basi diabaikan bila
+// pengguna sudah memuat aset lain / menghapus aset di tengah jalan.
+let loadSeq = 0;
+// ID yang sedang ditranskrip (V-M3): klik ganda tidak menjalankan
+// dua proses whisper bersamaan.
+const transcribing = new Set<string>();
+// localStorage aset korup (V-M8): dibaca sekali, dicadangkan, dan
+// ditampilkan sebagai peringatan — bukan ditimpa diam-diam.
+let assetsCorrupt = false;
+let lastAssetsSig = '';
 
 function el<T extends HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
@@ -68,6 +78,18 @@ function loadAssets(): VedAsset[] {
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? (arr as VedAsset[]) : [];
   } catch {
+    // Audit v66 V-M8: jangan kembalikan [] diam-diam — penyimpanan
+    // berikutnya akan menimpa metadata lama. Cadangkan raw korup dan
+    // tandai; vedRenderAssets menampilkan peringatan.
+    if (!assetsCorrupt) {
+      assetsCorrupt = true;
+      try {
+        const raw = localStorage.getItem(LS);
+        if (raw) localStorage.setItem(LS + '.corrupt', raw);
+      } catch {
+        // Cadangan pun gagal: peringatan tetap tampil.
+      }
+    }
     return [];
   }
 }
@@ -81,8 +103,14 @@ function saveAssets(list: VedAsset[]): void {
 }
 
 function sanitizeFile(name: string): string {
-  const base = name.replace(/[^A-Za-z0-9._-]/g, '_').replace(/^\.+/, '_') || 'audio';
-  return 'ved-' + Date.now() + '-' + base;
+  // Audit v66 V-M7 + tabrakan milidetik: runtuhkan titik beruntun
+  // ('..' di tengah selalu ditolak safe_name Rust) dan tambah suffix
+  // acak (dua simpan dalam milidetik yang sama tidak lagi menimpa
+  // file yang sama).
+  let base = name.replace(/[^A-Za-z0-9._-]/g, '_').replace(/^\.+/, '_');
+  base = base.replace(/\.+/g, '.');
+  if (!base.replace(/\./g, '')) base = 'audio';
+  return 'ved-' + Date.now() + '-' + Math.floor(Math.random() * 1e6) + '-' + base;
 }
 
 function bytesToB64(bytes: Uint8Array): string {
@@ -126,18 +154,24 @@ async function decodeBytes(bytes: Uint8Array): Promise<AudioBuffer | null> {
 }
 
 function computePeaks(buf: AudioBuffer, cols: number): { min: Float32Array; max: Float32Array } {
-  const ch = buf.getChannelData(0);
+  // Audit v66 (minor): gabung SEMUA kanal — dulu hanya kanal 0,
+  // sehingga stereo yang keras di kanan tampil datar.
+  const chans: Float32Array[] = [];
+  for (let c = 0; c < buf.numberOfChannels; c++) chans.push(buf.getChannelData(c));
+  const len = chans.length ? chans[0].length : 0;
   const min = new Float32Array(cols);
   const max = new Float32Array(cols);
-  const step = Math.max(1, Math.floor(ch.length / cols));
+  const step = Math.max(1, Math.floor(len / cols));
   for (let c = 0; c < cols; c++) {
     let lo = 0;
     let hi = 0;
     const start = c * step;
-    const end = Math.min(ch.length, start + step);
-    for (let i = start; i < end; i++) {
-      if (ch[i] < lo) lo = ch[i];
-      if (ch[i] > hi) hi = ch[i];
+    const end = Math.min(len, start + step);
+    for (const ch of chans) {
+      for (let i = start; i < end; i++) {
+        if (ch[i] < lo) lo = ch[i];
+        if (ch[i] > hi) hi = ch[i];
+      }
     }
     min[c] = lo;
     max[c] = hi;
@@ -213,7 +247,9 @@ function vedTick(): void {
   if (audio && timeEl) {
     timeEl.textContent =
       fmtTime(audio.currentTime) + ' / ' + fmtTime(current?.buf?.duration ?? NaN);
-    if (sel && audio.currentTime >= sel.end) {
+    // Seleksi di bawah ambang (sisa jalur mouseleave lama) tidak
+    // boleh menghentikan putar — seleksi valid selalu >= 0,05 dtk.
+    if (sel && sel.end - sel.start >= 0.05 && audio.currentTime >= sel.end) {
       void audio.pause();
       const btn = el<HTMLButtonElement>('vedPlay');
       if (btn) btn.textContent = tr('ved.play');
@@ -241,11 +277,28 @@ export function vedPlay(): void {
     if (sel && (audio.currentTime < sel.start || audio.currentTime >= sel.end)) {
       audio.currentTime = sel.start;
     }
-    void audio.play();
-    const btn = el<HTMLButtonElement>('vedPlay');
-    if (btn) btn.textContent = tr('ved.pause');
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(vedTick);
+    // Audit v66 V-M9: play() bisa ditolak (decode gagal, blokir
+    // autoplay) — label 'Jeda' + RAF hanya bila play() resolve.
+    // Lingkungan tanpa Promise play() (rig jsdom) memakai perilaku
+    // lama (label + RAF langsung).
+    const playRes = audio.play() as unknown;
+    if (playRes && typeof (playRes as Promise<void>).then === 'function') {
+      (playRes as Promise<void>).then(() => {
+        const btn = el<HTMLButtonElement>('vedPlay');
+        if (btn) btn.textContent = tr('ved.pause');
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(vedTick);
+      }).catch((e) => {
+        const btn = el<HTMLButtonElement>('vedPlay');
+        if (btn) btn.textContent = tr('ved.play');
+        setNote(tr('vs.error') + (e instanceof Error ? e.message : String(e)));
+      });
+    } else {
+      const btn = el<HTMLButtonElement>('vedPlay');
+      if (btn) btn.textContent = tr('ved.pause');
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(vedTick);
+    }
   } else {
     audio.pause();
     const btn = el<HTMLButtonElement>('vedPlay');
@@ -282,38 +335,115 @@ function mimeFor(file: string): string {
   if (ext === 'ogg') return 'audio/ogg';
   if (ext === 'flac') return 'audio/flac';
   if (ext === 'm4a') return 'audio/mp4';
+  if (ext === 'aac') return 'audio/aac';
+  if (ext === 'opus') return 'audio/opus';
+  if (ext === 'aiff' || ext === 'aif') return 'audio/aiff';
+  if (ext === 'wma') return 'audio/x-ms-wma';
   return 'audio/wav';
 }
 
-export async function vedLoadAsset(id: string, seekTo?: number): Promise<void> {
+export async function vedLoadAsset(id: string, seekTo?: number): Promise<boolean> {
   const list = loadAssets();
   const asset = list.find((a) => a.id === id);
-  if (!asset) return;
+  if (!asset) return false;
+  // Audit v66 (perf M1): aset yang sama sudah termuat — lewati
+  // audio_read + decodeAudioData penuh, cukup seek (+transkrip).
+  if (current?.asset.id === id && current.buf) {
+    const audio = el<HTMLAudioElement>('vedAudio');
+    if (audio && seekTo !== undefined) {
+      audio.currentTime = Math.max(0, Math.min(seekTo, current.buf.duration));
+    }
+    lastTranscriptId = id;
+    vedRenderTranscript(id);
+    vedDraw();
+    return true;
+  }
+  // Audit v66 V-B3: token muatan — hasil await yang basi (pengguna
+  // memuat aset lain / menghapus aset di tengah decode) diabaikan.
+  const seq = ++loadSeq;
   try {
     const r = (await invoke('audio_read', { req: { name: asset.file } })) as {
       b64: string;
     };
+    if (seq !== loadSeq) return false;
     const bytes = b64ToBytes(r.b64);
     const blob = new Blob([bytes as unknown as BlobPart], { type: mimeFor(asset.file) });
     const audio = el<HTMLAudioElement>('vedAudio');
-    if (!audio) return;
+    if (!audio) return false;
+    audio.pause();
     if (current?.url) URL.revokeObjectURL(current.url);
     const url = URL.createObjectURL(blob);
     audio.src = url;
     audio.load();
     const buf = await decodeBytes(bytes);
+    if (seq !== loadSeq) {
+      // Muatan basi: cabut URL yang sempat dibuat, jangan sentuh current.
+      URL.revokeObjectURL(url);
+      return false;
+    }
+    // Audit v66 V-M10: decode gagal padahal AudioContext tersedia
+    // (file bukan audio/korup) — jangan jadikan current; tampilkan
+    // pesan jelas, bukan aset 'termuat' tanpa waveform dan suara.
+    // Tanpa AudioContext (rig jsdom) decode memang tak mungkin:
+    // pertahankan perilaku lama (current terdaftar, seek tetap jalan).
+    if (!buf) {
+      let hasCtx = false;
+      try {
+        const probe = getCtx();
+        hasCtx = !!probe;
+        if (probe) void probe.close().catch(() => {});
+      } catch {
+        hasCtx = false;
+      }
+      if (hasCtx) {
+        URL.revokeObjectURL(url);
+        audio.removeAttribute('src');
+        audio.load();
+        setNote(tr('ved.bad_audio'));
+        return false;
+      }
+    }
     current = { asset, buf, url };
     peaks = buf ? computePeaks(buf, 900) : null;
     sel = null;
     renderSelInfo();
     const btn = el<HTMLButtonElement>('vedPlay');
     if (btn) btn.textContent = tr('ved.play');
-    if (seekTo !== undefined) audio.currentTime = seekTo;
+    if (seekTo !== undefined) {
+      if (!buf) {
+        // Tanpa engine: set langsung (perilaku lama, dipakai rig).
+        audio.currentTime = seekTo;
+      } else {
+        // Audit v66 V-M1: seek HANYA sesudah metadata siap (WebView
+        // bisa melempar error atau mengabaikan seek pra-metadata).
+        // Tunggu loadedmetadata (atau readyState cukup), maks 2 detik.
+        const clamped = Math.max(0, Math.min(seekTo, buf.duration));
+        if (audio.readyState >= 1) {
+          audio.currentTime = clamped;
+        } else {
+          await new Promise<void>((resolve) => {
+            let done = false;
+            const finish = () => {
+              if (done) return;
+              done = true;
+              audio.removeEventListener('loadedmetadata', finish);
+              resolve();
+            };
+            audio.addEventListener('loadedmetadata', finish);
+            setTimeout(finish, 2000);
+          });
+          if (seq === loadSeq) audio.currentTime = clamped;
+        }
+      }
+    }
+    lastTranscriptId = id;
     setNote(asset.name);
     vedDraw();
-    vedRenderTranscript(asset.id);
+    vedRenderTranscript(id);
+    return true;
   } catch (e) {
     setNote(tr('vs.error') + (e instanceof Error ? e.message : String(e)));
+    return false;
   }
 }
 
@@ -359,6 +489,10 @@ async function sliceToAsset(
     return;
   }
   const src = current.buf;
+  // Audit v66 V-M2: tangkap aset SEBELUM await render — nama file,
+  // nama aset, dan sumber dibaca dari jepretan ini, bukan dari
+  // current yang bisa sudah berpindah/dihapus selama render.
+  const assetSnap = current.asset;
   const ctx = getCtx();
   if (!ctx) {
     setNote(tr('ved.no_engine'));
@@ -376,14 +510,14 @@ async function sliceToAsset(
     node.start(0, fromSec, toSec - fromSec);
     const rendered = await off.startRendering();
     const wav = await renderBufferToWav(rendered);
-    const file = sanitizeFile(current.asset.file.replace(/\.[^.]+$/, '') + '-' + suffix + '.wav');
+    const file = sanitizeFile(assetSnap.file.replace(/\.[^.]+$/, '') + '-' + suffix + '.wav');
     await invoke('audio_save', { req: { name: file, b64: bytesToB64(wav) } });
     const list = loadAssets();
     list.unshift({
       id: 'ved-' + Date.now() + '-' + Math.floor(Math.random() * 1e6),
-      name: current.asset.name + ' (' + suffix + ')',
+      name: assetSnap.name + ' (' + suffix + ')',
       file,
-      source: current.asset.source,
+      source: assetSnap.source,
       createdAt: Date.now(),
       duration: rendered.duration,
       transcript: null,
@@ -399,7 +533,7 @@ async function sliceToAsset(
 }
 
 export function vedTrimSel(): void {
-  if (!sel) {
+  if (!sel || sel.end - sel.start < 0.05) {
     setNote(tr('ved.no_sel'));
     return;
   }
@@ -411,8 +545,19 @@ export async function vedCutSel(): Promise<void> {
     setNote(!current?.buf ? tr('ved.no_audio') : tr('ved.no_sel'));
     return;
   }
+  // Audit v66 V-M4: seleksi nol-lebar dan seleksi penuh ditolak —
+  // dulu menghasilkan WAV 1 sampel (hening) atas nama aset baru.
+  if (sel.end - sel.start < 0.05) {
+    setNote(tr('ved.no_sel'));
+    return;
+  }
+  if (sel.start <= 0.05 && sel.end >= current.buf.duration - 0.05) {
+    setNote(tr('ved.full_cut'));
+    return;
+  }
   // Potong = gabung [0, start) + (end, dur] jadi aset baru (asal utuh).
   const src = current.buf;
+  const assetSnap = current.asset;
   const ctx = getCtx();
   if (!ctx) {
     setNote(tr('ved.no_engine'));
@@ -435,14 +580,14 @@ export async function vedCutSel(): Promise<void> {
     mk(sel.end, src.duration - sel.end, sel.start);
     const rendered = await off.startRendering();
     const wav = await renderBufferToWav(rendered);
-    const file = sanitizeFile(current.asset.file.replace(/\.[^.]+$/, '') + '-tanpa-seleksi.wav');
+    const file = sanitizeFile(assetSnap.file.replace(/\.[^.]+$/, '') + '-tanpa-seleksi.wav');
     await invoke('audio_save', { req: { name: file, b64: bytesToB64(wav) } });
     const list = loadAssets();
     list.unshift({
       id: 'ved-' + Date.now() + '-' + Math.floor(Math.random() * 1e6),
-      name: current.asset.name + ' (tanpa seleksi)',
+      name: assetSnap.name + ' (tanpa seleksi)',
       file,
-      source: current.asset.source,
+      source: assetSnap.source,
       createdAt: Date.now(),
       duration: rendered.duration,
       transcript: null,
@@ -461,11 +606,20 @@ export function vedRenderAssets(): void {
   const box = el('vedAssets');
   if (!box) return;
   const list = loadAssets();
+  // Audit v66 (perf m3): jangan rebuild + re-attach listener tiap
+  // buka tab bila daftar tidak berubah.
+  const sig = list.map((a) => a.id + ':' + (a.transcript ? 't' : '-') + ':' + a.duration).join('|') + (assetsCorrupt ? '|corrupt' : '');
+  if (sig === lastAssetsSig && box.dataset.vedSig === sig) return;
+  lastAssetsSig = sig;
+  box.dataset.vedSig = sig;
+  const warn = assetsCorrupt
+    ? '<p style="color:#f0b429;font-size:13px">' + esc(tr('ved.corrupt')) + '</p>'
+    : '';
   if (list.length === 0) {
-    box.innerHTML = '<p style="color:#a1a1a1;font-size:13px">' + esc(tr('ved.empty')) + '</p>';
+    box.innerHTML = warn + '<p style="color:#a1a1a1;font-size:13px">' + esc(tr('ved.empty')) + '</p>';
     return;
   }
-  box.innerHTML = list
+  box.innerHTML = warn + list
     .map(
       (a) =>
         '<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #2a2a2a">' +
@@ -512,6 +666,8 @@ async function vedDeleteAsset(id: string): Promise<void> {
   const list = loadAssets();
   const asset = list.find((a) => a.id === id);
   if (!asset) return;
+  // Audit v66 V-B3: batalkan muatan yang tertunda untuk aset ini.
+  loadSeq++;
   try {
     await invoke('audio_delete', { req: { name: asset.file } });
   } catch {
@@ -519,9 +675,26 @@ async function vedDeleteAsset(id: string): Promise<void> {
   }
   saveAssets(list.filter((a) => a.id !== id));
   if (current?.asset.id === id) {
+    // Audit v66 V-B2: hentikan audio SECARA TOTAL — dulu hanya
+    // current = null, sehingga blob yang sedang diputar tidak bisa
+    // dihentikan dari UI (vedPlay menolak karena !current).
+    const audio = el<HTMLAudioElement>('vedAudio');
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+    }
+    if (current.url) URL.revokeObjectURL(current.url);
+    cancelAnimationFrame(raf);
+    raf = 0;
     current = null;
     peaks = null;
     sel = null;
+    renderSelInfo();
+    const btn = el<HTMLButtonElement>('vedPlay');
+    if (btn) btn.textContent = tr('ved.play');
+    const timeEl = el('vedTime');
+    if (timeEl) timeEl.textContent = '';
     vedDraw();
   }
   if (lastTranscriptId === id) {
@@ -537,6 +710,13 @@ export async function vedTranscribe(id: string): Promise<void> {
   const list = loadAssets();
   const asset = list.find((a) => a.id === id);
   if (!asset) return;
+  // Audit v66 V-M3: guard in-flight — klik kedua diabaikan, bukan
+  // menjalankan proses whisper kedua (2x load model ~500 MB).
+  if (transcribing.has(id)) {
+    setNote(tr('ved.transcribing'));
+    return;
+  }
+  transcribing.add(id);
   lastTranscriptId = id;
   setNote(tr('ved.transcribing'));
   try {
@@ -549,16 +729,24 @@ export async function vedTranscribe(id: string): Promise<void> {
     if (target) {
       target.transcript = { segments: r.segments, text: r.text };
       saveAssets(updated);
+      vedRenderAssets();
+      vedRenderTranscript(id);
+      setNote(
+        r.segments.length === 0
+          ? tr('ved.no_speech')
+          : tr('ved.transcript') + ' (' + r.segments.length + ' segmen)',
+      );
+    } else {
+      // Aset dihapus selama transkrip berjalan: jangan tampilkan
+      // catatan sukses atas transkrip yang tidak tersimpan.
+      vedRenderAssets();
+      vedRenderTranscript(id);
+      setNote('');
     }
-    vedRenderAssets();
-    vedRenderTranscript(id);
-    setNote(
-      r.segments.length === 0
-        ? tr('ved.no_speech')
-        : tr('ved.transcript') + ' (' + r.segments.length + ' segmen)',
-    );
   } catch (e) {
     setNote(tr('vs.error') + (e instanceof Error ? e.message : String(e)));
+  } finally {
+    transcribing.delete(id);
   }
 }
 
@@ -606,9 +794,11 @@ export function vedRenderTranscript(id?: string): void {
   box.querySelectorAll('[data-ved-seek]').forEach((row) => {
     row.addEventListener('click', () => {
       const sec = parseFloat((row as HTMLElement).dataset.vedSeek ?? '0');
-      void vedLoadAsset(asset.id, sec).then(() => {
+      void vedLoadAsset(asset.id, sec).then((ok) => {
+        // Audit v66 V-M1: hanya putar bila muat sukses — dulu gagal
+        // muat tetap memutar aset lama seolah segmen yang diklik.
         const audio = el<HTMLAudioElement>('vedAudio');
-        if (audio && audio.paused) vedPlay();
+        if (ok && audio && audio.paused) vedPlay();
       });
     });
   });
@@ -618,26 +808,40 @@ async function vedRegisterBytes(
   bytes: Uint8Array,
   name: string,
   source: VedAsset['source'],
-): Promise<void> {
+): Promise<VedAsset | null> {
+  // Audit v66 V-B1: mengembalikan aset bila benar-benar tersimpan,
+  // null bila gagal — pemanggil TIDAK BOLEH menampilkan 'tersimpan'
+  // atas kegagalan. Decode gagal (AudioContext tersedia tapi decode
+  // null = file bukan audio) juga gagal tertutup, bukan aset durasi 0.
+  // Tanpa AudioContext (rig jsdom) perilaku lama dipertahankan
+  // (durasi 0, tetap terdaftar) karena decode memang tak mungkin.
+  const file = sanitizeFile(name);
+  await invoke('audio_save', { req: { name: file, b64: bytesToB64(bytes) } });
+  let buf: AudioBuffer | null = null;
+  let ctxAvailable = false;
   try {
-    const file = sanitizeFile(name);
-    await invoke('audio_save', { req: { name: file, b64: bytesToB64(bytes) } });
-    const buf = await decodeBytes(bytes);
-    const list = loadAssets();
-    list.unshift({
-      id: 'ved-' + Date.now() + '-' + Math.floor(Math.random() * 1e6),
-      name,
-      file,
-      source,
-      createdAt: Date.now(),
-      duration: buf?.duration ?? 0,
-      transcript: null,
-    });
-    saveAssets(list);
-    vedRenderAssets();
+    const probe = getCtx();
+    ctxAvailable = !!probe;
+    if (probe) void probe.close().catch(() => {});
   } catch {
-    // Gagal simpan (mis. kuota): hasil tetap bisa diputar dari player asal.
+    ctxAvailable = false;
   }
+  buf = await decodeBytes(bytes);
+  if (ctxAvailable && !buf) throw new Error(tr('ved.bad_audio'));
+  const asset: VedAsset = {
+    id: 'ved-' + Date.now() + '-' + Math.floor(Math.random() * 1e6),
+    name,
+    file,
+    source,
+    createdAt: Date.now(),
+    duration: buf?.duration ?? 0,
+    transcript: null,
+  };
+  const list = loadAssets();
+  list.unshift(asset);
+  saveAssets(list);
+  vedRenderAssets();
+  return asset;
 }
 
 /** Dipanggil dari voicestudio.ts/sherpa.ts setelah generate sukses. */
@@ -648,9 +852,12 @@ export async function vedRegisterBlob(
 ): Promise<void> {
   try {
     const buf = await (await fetch(url)).arrayBuffer();
-    await vedRegisterBytes(new Uint8Array(buf), name, source);
+    const asset = await vedRegisterBytes(new Uint8Array(buf), name, source);
+    if (!asset) setNote(tr('ved.reg_failed'));
   } catch {
-    // Abaikan: player asal tetap berfungsi.
+    // Player asal tetap berfungsi; kegagalan registrasi ditampilkan,
+    // bukan hilang diam-diam (audit v66, minor).
+    setNote(tr('ved.reg_failed'));
   }
 }
 
@@ -662,9 +869,10 @@ export async function vedRegisterDataUrl(
   const b64 = dataUrl.split(',')[1] ?? '';
   if (!b64) return;
   try {
-    await vedRegisterBytes(b64ToBytes(b64), name, source);
+    const asset = await vedRegisterBytes(b64ToBytes(b64), name, source);
+    if (!asset) setNote(tr('ved.reg_failed'));
   } catch {
-    // Abaikan: player asal tetap berfungsi.
+    setNote(tr('ved.reg_failed'));
   }
 }
 
@@ -674,8 +882,14 @@ async function vedUpload(ev: Event): Promise<void> {
   if (!file) return;
   try {
     const buf = await file.arrayBuffer();
-    await vedRegisterBytes(new Uint8Array(buf), file.name, 'upload');
-    setNote(tr('ved.saved'));
+    const asset = await vedRegisterBytes(new Uint8Array(buf), file.name, 'upload');
+    if (!asset) {
+      setNote(tr('vs.error') + 'gagal menyimpan');
+      return;
+    }
+    // Audit v66 (perf M5): audio panjang tetap diterima, tapi
+    // pengguna diperingatkan bahwa pemuatan/trim bisa lambat.
+    setNote(asset.duration > 600 ? tr('ved.saved') + ' ' + tr('ved.long_audio') : tr('ved.saved'));
   } catch (e) {
     setNote(tr('vs.error') + (e instanceof Error ? e.message : String(e)));
   } finally {
@@ -701,10 +915,12 @@ function bindCanvas(): void {
       setNote(tr('ved.no_audio'));
       return;
     }
+    // Audit v66 V-M5: mousedown TIDAK menyentuh sel — sel titik di
+    // sini membuat vedTick menghentikan putar saat klik-seek. Sel
+    // baru dibentuk di mousemove (bila benar-benar diseret).
     dragging = true;
     moved = false;
     x0 = toSec(e.clientX);
-    sel = { start: x0, end: x0 };
   });
   cv.addEventListener('mousemove', (e) => {
     if (!dragging) return;
@@ -733,9 +949,12 @@ function bindCanvas(): void {
     vedDraw();
   };
   cv.addEventListener('mouseup', endDrag);
-  cv.addEventListener('mouseleave', () => {
-    dragging = false;
-    vedDraw();
+  // Audit v66 V-M4: mouseleave dulu hanya mematikan dragging tanpa
+  // endDrag — seleksi nol-lebar tertinggal permanen (dan trim atas
+  // seleksi itu menyimpan WAV 1 sampel). Jalankan endDrag yang sama.
+  cv.addEventListener('mouseleave', (e) => {
+    if (dragging) endDrag(e);
+    else vedDraw();
   });
 }
 

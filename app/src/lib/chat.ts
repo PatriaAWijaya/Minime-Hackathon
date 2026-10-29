@@ -11,10 +11,11 @@
 // No key -> that provider is skipped by the chain (LiveUnavailableError
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
-import { AGENTS, activateAgent, mediaTab, postChat, showView } from './v5logic.js';
+import { AGENTS, activateAgent, isAgentDeactivated, mediaTab, postChat, showView } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { invoke } from '@tauri-apps/api/core';
+import { recordLiveCost } from './cost.js';
 
 const GEMINI_KEY_LS = 'minime.geminiKey';
 const META_KEY_LS = 'minime.metaKey';
@@ -152,8 +153,8 @@ export async function connectKey(kind: KeyKind): Promise<void> {
     cfg.geminiApiKey = kind === 'gemini' ? key : null;
     cfg.metaApiKey = kind === 'meta' ? key : null;
     const router = new ModelRouter(cfg);
-    if (kind === 'gemini') await router.callGemini('Jawab satu kata: OK');
-    else await router.callMeta('Jawab satu kata: OK', 'key-test');
+    if (kind === 'gemini') recordLiveCost(await router.callGemini('Jawab satu kata: OK'));
+    else recordLiveCost(await router.callMeta('Jawab satu kata: OK', 'key-test'));
     ok = true;
   } catch (e) {
     ok = false;
@@ -185,45 +186,83 @@ const DELEGATE_RULES: Array<{ key: AgentKey; words: string[] }> = [
   { key: 'media', words: ['aset media', 'status produksi', 'daftar media'] },
 ];
 
-const MEDIA_WORDS = ['gambar', 'desain', 'video', 'reels', 'poster', 'visual', 'naskah', 'script', 'voice', 'audio', 'musik', 'suara'];
+// Kata kreatif + kata media disatukan (audit v66 C-M2): dulu kata
+// 'konten/caption' merutekan ke Kreatif tapi TIDAK ada di MEDIA_WORDS,
+// sehingga tugas Kreatif itu tidak pernah mendapat tombol Approve.
+const MEDIA_WORDS = ['gambar', 'desain', 'video', 'reels', 'poster', 'visual', 'naskah', 'script', 'voice', 'audio', 'musik', 'suara', 'konten', 'caption', 'tulisan', 'artikel', 'copywriting', 'cerita'];
+
+// Normalisasi untuk pencocokan kata: huruf kecil, non-huruf jadi
+// spasi, diberi bantalan spasi — 'data' tidak lagi cocok di 'datang',
+// 'jadwal posting' tetap cocok sebagai frasa.
+function normPadded(text: string): string {
+  return ' ' + text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+}
 
 export function delegateFor(text: string): AgentKey | null {
-  const low = text.toLowerCase();
+  // Audit v66 C-M1: skor, bukan urutan kaku — frasa bernilai 2, kata
+  // bernilai 1, seri dimenangkan aturan yang lebih dulu. Contoh:
+  // 'jadwal posting video' -> distribusi (2) mengalahkan kreatif (1).
+  const low = normPadded(text);
+  let best: AgentKey | null = null;
+  let bestScore = 0;
   for (const rule of DELEGATE_RULES) {
-    if (rule.words.some((w) => low.includes(w))) return rule.key;
+    let score = 0;
+    for (const w of rule.words) {
+      if (low.includes(' ' + w + ' ')) score += w.includes(' ') ? 2 : 1;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = rule.key;
+    }
   }
-  return null;
+  return best;
 }
 
 export function mediaNeeded(text: string): boolean {
-  const low = text.toLowerCase();
-  return MEDIA_WORDS.some((w) => low.includes(w));
+  const low = normPadded(text);
+  return MEDIA_WORDS.some((w) => low.includes(' ' + w + ' '));
 }
 
 function taskShort(text: string): string {
   return text.length > 120 ? text.slice(0, 120) + '…' : text;
 }
 
-/* Handoff studio yang tertunda: diisi saat bubble hasil membawa tombol
-   Approve, dibaca saat user mengetuknya. Hanya satu yang tertunda
-   (yang terbaru menang) — tombol lama yang tertunda lalu diklik
-   memakai hasil terbaru, sesuai urutan chat. */
-let pendingStudio: { text: string; agent: string } | null = null;
+/* Handoff studio per tombol (audit v66 C-M3): dulu SATU slot
+   pendingStudio — tombol Approve pada bubble lama memuat hasil
+   TERBARU. Kini tiap tombol mengikat indeks hasilnya sendiri. */
+const pendingStudios: Array<{ text: string; agent: string }> = [];
 
 function studioButton(resultText: string, agentKey: string): string {
-  pendingStudio = { text: resultText, agent: agentKey };
+  pendingStudios.push({ text: resultText, agent: agentKey });
+  if (pendingStudios.length > 50) pendingStudios.shift();
+  const idx = pendingStudios.length - 1;
   return (
     '<br><br>' + esc(tr('chat.studio.note')) +
-    '<br><button class="btn btn-sm" onclick="approveStudio()">' + esc(tr('chat.studio.approve')) + '</button>'
+    '<br><button class="btn btn-sm" onclick="approveStudio(' + idx + ')">' + esc(tr('chat.studio.approve')) + '</button>'
   );
 }
 
 /* Approve dari chat: muat hasil ke output Script Editor (bisa diedit),
    konfirmasi di chat, lalu PINDAH ke Media Studio tab Script.
-   Tanpa ketukan ini, window TIDAK pernah berpindah sendiri. */
-export function approveStudio(): void {
-  if (!pendingStudio) return;
-  const { text, agent } = pendingStudio;
+   Tanpa ketukan ini, window TIDAK pernah berpindah sendiri.
+   Batasan Prime+Kreatif di sini hanya berlaku di jalur chat — dari
+   kartu Library, Media Studio dibuka sebagai navigasi biasa
+   (audit v66 C-M2: jangan baca ini sebagai kontrol akses app-wide). */
+export function approveStudio(idx?: number): void {
+  const item = typeof idx === 'number' ? pendingStudios[idx] : pendingStudios[pendingStudios.length - 1];
+  if (!item) return;
+  // Konfirmasi timpa draf (audit v66 C-M3): draf yang sedang dibuka
+  // tidak boleh tertimpa diam-diam oleh hasil chat.
+  try {
+    const raw = window.localStorage.getItem('minime.scriptEditor');
+    const o = raw ? JSON.parse(raw) : null;
+    if (o && typeof o.output === 'string' && o.output.trim()) {
+      if (!window.confirm(tr('chat.studio.overwrite'))) return;
+    }
+  } catch {
+    // State tak terbaca: lanjut seperti biasa.
+  }
+  const { text, agent } = item;
   const ag = (AGENTS as Record<string, { name: string; color: string }>)[agent];
   if (typeof (window as unknown as Record<string, unknown>).seLoadOutput === 'function') {
     ((window as unknown as Record<string, (t: string) => void>).seLoadOutput)(text);
@@ -253,15 +292,20 @@ export async function sendChatReal(): Promise<void> {
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
   const router = new ModelRouter(cfg);
-  const delegate = delegateFor(text);
+  // Audit v66 C-M1: agen yang dinonaktifkan user tidak lagi menjawab
+  // lewat chat — delegasi jatuh kembali ke Prime.
+  let delegate = delegateFor(text);
+  if (delegate && isAgentDeactivated(delegate)) delegate = null;
   if (!delegate) {
     cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()];
     const trace = 'trace-chat-' + Date.now();
     try {
       const r = await router.callWithFallback(text, trace);
+      recordLiveCost(r);
       const footer =
         ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
-        (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '');
+        (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '') +
+        (r.promptTokens != null || r.completionTokens != null ? ' · ' + (r.promptTokens ?? '—') + '+' + (r.completionTokens ?? '—') + ' token' : '');
       const studio = mediaNeeded(text) ? studioButton(r.text, 'prime') : '';
       postChat('prime', 'Prime Agent', '#EB87B4', esc(r.text) + footer + studio);
     } catch (e) {
@@ -278,9 +322,11 @@ export async function sendChatReal(): Promise<void> {
   const trace = 'trace-chat-' + delegate + '-' + Date.now();
   try {
     const r = await router.callWithFallback(text, trace);
+    recordLiveCost(r);
     const footer =
       ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
-      (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '');
+      (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '') +
+      (r.promptTokens != null || r.completionTokens != null ? ' · ' + (r.promptTokens ?? '—') + '+' + (r.completionTokens ?? '—') + ' token' : '');
     // Tombol studio HANYA untuk Kreatif (aturan skill) + tugas media.
     const studio = delegate === 'kreatif' && mediaNeeded(text) ? studioButton(r.text, delegate) : '';
     postChat(delegate, ag.name, ag.color, esc(r.text) + footer + studio);

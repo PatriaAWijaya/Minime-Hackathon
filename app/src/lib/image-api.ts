@@ -85,14 +85,27 @@ export async function metaGenerateImage(key: string, prompt: string, n: number, 
 // brand): satu Map, satu jalur invoke. Tanpa cache, tiap render ulang
 // (ganti bahasa, mutasi brand, tugas batch selesai) me-image_read ulang
 // SEMUA file — transfer base64 berulang yang sama.
+// Audit v66 perf m1: LRU maks 50 entri — tanpa evict, cache tumbuh
+// tanpa batas seiring gambar baru (tiap entri = base64 penuh).
 export const thumbCache = new Map<string, string>();
+const THUMB_CACHE_MAX = 50;
 export async function readThumb(file: string): Promise<string | null> {
   const cached = thumbCache.get(file);
-  if (cached) return cached;
+  if (cached) {
+    // Sentuh ulang agar entri yang sering dipakai tidak ikut ter-evict.
+    thumbCache.delete(file);
+    thumbCache.set(file, cached);
+    return cached;
+  }
   try {
     const res = await invoke<{ b64: string }>('image_read', { req: { name: file } });
     const url = 'data:image/webp;base64,' + res.b64;
     thumbCache.set(file, url);
+    while (thumbCache.size > THUMB_CACHE_MAX) {
+      const oldest = thumbCache.keys().next().value;
+      if (oldest === undefined) break;
+      thumbCache.delete(oldest);
+    }
     return url;
   } catch {
     return null;

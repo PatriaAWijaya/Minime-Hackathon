@@ -136,6 +136,44 @@ struct CurlRes {
     body: String,
 }
 
+/// Nilai yang diinterpolasi ke file config curl TIDAK BOLEH mengandung
+/// CR/LF: parser config curl membaca per baris, jadi newline di nilai
+/// mengakhiri baris dan baris berikut diparse sebagai opsi curl baru
+/// (audit v66 B-1: caption multi-baris memotong publish foto FB Page,
+/// dan baris `output = ...` injeksi bisa membelokkan respons).
+/// Token/URL/metode dicek di sini; field teks user TIDAK PERNAH masuk
+/// config — ia lewat argumen --form-string (lihat curl_multipart).
+fn no_crlf(v: &str, what: &str) -> Result<(), String> {
+    if v.contains('\r') || v.contains('\n') {
+        return Err(format!("nilai {what} mengandung baris baru — ditolak"));
+    }
+    Ok(())
+}
+
+/// Allowlist MIME gambar untuk publish. Nilai dari frontend tidak
+/// pernah diteruskan mentah ke header Content-Type (audit v66 M-3):
+/// yang tak dikenal jatuh ke image/jpeg, bukan ke string asing.
+fn allow_mime(m: &str) -> &'static str {
+    match m {
+        "image/png" => "image/png",
+        "image/webp" => "image/webp",
+        "image/gif" => "image/gif",
+        _ => "image/jpeg",
+    }
+}
+
+/// Argumen --form-string untuk field teks multipart. Beda dengan
+/// --form: nilainya literal (caption yang diawali '@' tidak dibaca
+/// sebagai file, newline tetap data, bukan sintaksis config).
+fn multipart_field_args(text_fields: &[(&str, &str)]) -> Vec<String> {
+    let mut out = Vec::new();
+    for (k, v) in text_fields {
+        out.push("--form-string".to_string());
+        out.push(format!("{k}={v}"));
+    }
+    out
+}
+
 /// Panggil API HTTPS lewat curl dengan file konfigurasi sementara
 /// (0600, dihapus sesudah dipakai). `json_body` ditulis ke file data
 /// terpisah agar tanda kutip JSON tidak pecah di config. `upload_file`
@@ -156,6 +194,17 @@ fn curl_api(
     let cfg = dir.join(format!("minime-curl-{stamp}.cfg"));
     let body_path = dir.join(format!("minime-curl-{stamp}.body"));
     let mut data_path: Option<std::path::PathBuf> = None;
+    // Nilai config divalidasi dulu (lihat no_crlf): URL/metode/token/
+    // content-type berasal dari konstanta call-site + token tersimpan,
+    // tapi satu newline saja sudah cukup membajak parser config.
+    no_crlf(url, "URL")?;
+    no_crlf(method, "metode")?;
+    if let Some(t) = token {
+        no_crlf(t, "token")?;
+    }
+    if let Some(ct) = content_type {
+        no_crlf(ct, "content-type")?;
+    }
     let mut cfg_text = String::new();
     cfg_text.push_str("silent = true\n");
     cfg_text.push_str(&format!("url = \"{url}\"\n"));
@@ -350,6 +399,11 @@ fn curl_form_basic(
     std::fs::write(&dp, form).map_err(|e| e.to_string())?;
     let cred =
         base64::engine::general_purpose::STANDARD.encode(format!("{basic_user}:{basic_pass}"));
+    // Base64 tidak mengandung CR/LF menurut konstruksi, tapi satu baris
+    // baru di sini akan membajak parser config (lihat no_crlf) — cek
+    // defensif, murah, dan gagal tertutup bila asumsi itu pecah.
+    no_crlf(&cred, "kredensial")?;
+    no_crlf(url, "URL")?;
     let cfg_text = format!(
         "silent = true\nurl = \"{url}\"\nrequest = \"POST\"\noutput = \"{}\"\nwrite-out = \"%{{http_code}}\"\nheader = \"Authorization: Basic {cred}\"\nheader = \"Content-Type: application/x-www-form-urlencoded\"\ndata-binary = \"@{}\"\n",
         body_path.to_string_lossy(),
@@ -430,30 +484,28 @@ fn resolve_image(req: &PublishReq) -> Result<Option<(Vec<u8>, String)>, String> 
         let name = crate::image::safe_name(&req.image_file).ok_or("nama file tidak valid")?;
         let dir = crate::image::images_dir()?;
         let bytes = std::fs::read(dir.join(name)).map_err(|e| e.to_string())?;
-        let mime = if req.image_mime.is_empty() {
-            "image/jpeg"
-        } else {
-            req.image_mime.as_str()
-        };
+        let mime = allow_mime(req.image_mime.as_str());
         return Ok(Some((bytes, mime.to_string())));
     }
     if !req.image_b64.is_empty() {
         let bytes =
             base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &req.image_b64)
                 .map_err(|e| e.to_string())?;
-        let mime = if req.image_mime.is_empty() {
-            "image/jpeg"
-        } else {
-            req.image_mime.as_str()
-        };
+        let mime = allow_mime(req.image_mime.as_str());
         return Ok(Some((bytes, mime.to_string())));
     }
     Ok(None)
 }
 
-/// POST multipart (satu file) lewat curl config sementara — dipakai
-/// upload foto Facebook Page. Field teks dikirim sebagai `form`
-/// biasa; file sebagai `form = "field=@path;type=mime"`.
+/// POST multipart (satu file) — dipakai upload foto Facebook Page dan
+/// upload media X. KEAMANAN (audit v66 B-1): field teks TIDAK PERNAH
+/// diinterpolasi ke file config — caption batch selalu multi-baris
+/// (judul + \n\n + konsep) dan newline di config memotong caption
+/// bahkan bisa menginjeksikan opsi curl. Karena itu config hanya
+/// memuat nilai aman (token tervalidasi no_crlf), sementara field teks
+/// lewat argumen --form-string (literal, newline = data) dan file lewat
+/// --form. Token tetap TIDAK PERNAH di argv (hanya di config 0600);
+/// caption bukan rahasia (teks postingan yang akan publik).
 fn curl_multipart(
     url: &str,
     token: &str,
@@ -462,6 +514,8 @@ fn curl_multipart(
     file_path: &std::path::Path,
     file_mime: &str,
 ) -> Result<CurlRes, String> {
+    no_crlf(url, "URL")?;
+    no_crlf(token, "token")?;
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
@@ -476,14 +530,6 @@ fn curl_multipart(
     cfg_text.push_str(&format!("output = \"{}\"\n", body_path.to_string_lossy()));
     cfg_text.push_str("write-out = \"%{http_code}\"\n");
     cfg_text.push_str(&format!("header = \"Authorization: Bearer {token}\"\n"));
-    for (k, v) in text_fields {
-        let v_esc = v.replace('\\', "\\\\").replace('"', "\\\"");
-        cfg_text.push_str(&format!("form = \"{k}={v_esc}\"\n"));
-    }
-    cfg_text.push_str(&format!(
-        "form = \"{file_field}=@{};type={file_mime}\"\n",
-        file_path.to_string_lossy()
-    ));
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -494,10 +540,16 @@ fn curl_multipart(
     {
         std::fs::write(&cfg, &cfg_text).map_err(|e| e.to_string())?;
     }
-    let out = std::process::Command::new("curl")
-        .args(["-K", &cfg.to_string_lossy()])
-        .output()
-        .map_err(|e| e.to_string())?;
+    let mut cmd = std::process::Command::new("curl");
+    cmd.args(["-K", &cfg.to_string_lossy()]);
+    cmd.args(multipart_field_args(text_fields));
+    cmd.arg("--form");
+    cmd.arg(format!(
+        "{file_field}=@{};type={}",
+        file_path.to_string_lossy(),
+        allow_mime(file_mime)
+    ));
+    let out = cmd.output().map_err(|e| e.to_string())?;
     let status: u16 = String::from_utf8_lossy(&out.stdout)
         .trim()
         .parse()
@@ -1073,6 +1125,34 @@ mod tests {
         assert_eq!(pct_decode("a%2Bb"), "a+b");
         assert_eq!(pct_decode("x+y"), "x y");
         assert_eq!(pct_decode("abc"), "abc");
+    }
+
+    // Audit v66 B-1/M-3: regresi injeksi config curl.
+    #[test]
+    fn multipart_args_keep_newlines_as_data() {
+        // Caption batch selalu multi-baris; argumen --form-string harus
+        // membawa newline utuh sebagai SATU nilai (bukan dua baris
+        // config, bukan opsi curl baru).
+        let args = multipart_field_args(&[("caption", "Judul\n\nKonsep baris dua")]);
+        assert_eq!(args.len(), 2);
+        assert_eq!(args[0], "--form-string");
+        assert_eq!(args[1], "caption=Judul\n\nKonsep baris dua");
+        // Caption diawali '@' tidak boleh dibaca sebagai file.
+        let args = multipart_field_args(&[("caption", "@bukan-file")]);
+        assert_eq!(args[1], "caption=@bukan-file");
+    }
+
+    #[test]
+    fn crlf_rejected_and_mime_allowlisted() {
+        assert!(no_crlf("token-biasa", "token").is_ok());
+        assert!(no_crlf("baris\noutput = \"/tmp/x\"", "token").is_err());
+        assert!(no_crlf("baris\r\nlain", "token").is_err());
+        assert_eq!(allow_mime("image/png"), "image/png");
+        assert_eq!(allow_mime("image/webp"), "image/webp");
+        assert_eq!(allow_mime("image/gif"), "image/gif");
+        // Tak dikenal / ber-newline -> fallback aman, bukan string asing.
+        assert_eq!(allow_mime(""), "image/jpeg");
+        assert_eq!(allow_mime("image/jpeg\noutput = \"/tmp/x\""), "image/jpeg");
     }
 
     #[test]

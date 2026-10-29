@@ -44,7 +44,9 @@ function queueLoad() {
   } catch (_) { return []; }
 }
 function queueSave(q) {
-  try { window.localStorage.setItem(QUEUE_LS, JSON.stringify(q)); } catch (_) {}
+  // Mengembalikan boolean (audit v66 B-B2): penyimpanan yang gagal
+  // (kuota) TIDAK BOLEH dilaporkan sebagai sukses oleh pemanggil.
+  try { window.localStorage.setItem(QUEUE_LS, JSON.stringify(q)); return true; } catch (_) { return false; }
 }
 function socBind(id, fn) {
   var b = document.getElementById(id);
@@ -169,7 +171,9 @@ export function socQueueAdd(items) {
     q.push(row);
     ids.push(row.id);
   });
-  queueSave(q);
+  // Gagal simpan = lempar, bukan kembalikan id palsu: pemanggil
+  // (Batch) hanya boleh menandai 'scheduled' bila antrean tersimpan.
+  if (!queueSave(q)) throw new Error(tr('soc.err.save'));
   return ids;
 }
 
@@ -426,9 +430,19 @@ async function socSubmit(now) {
     } catch (e) { socNote(String(e || '')); return; }
     if (!imageFile) { socNote(tr('soc.err.image')); return; }
   }
-  socQueueAdd(plats.map(function (pl) {
-    return { platform: pl, text: text, imageFile: imageFile, imageMime: media.imageMime || '', imageUrl: imgUrl, scheduledAt: when };
-  }));
+  // Audit v66 S-M3: Threads/IG/TikTok MENOLAK file lokal di Rust, tapi
+  // penolakan itu dulu baru muncul saat jam jatuh tempo. Blokir di
+  // sini (saat antre) dengan pesan yang sama jelasnya; teks saja
+  // tetap boleh diantrekan ke ketiga kanal itu.
+  if (imageFile) {
+    var blocked = plats.filter(function (pl) { return pl === 'threads' || pl === 'instagram' || pl === 'tiktok'; });
+    if (blocked.length) { socNote(tr('soc.err.file_url')); return; }
+  }
+  try {
+    socQueueAdd(plats.map(function (pl) {
+      return { platform: pl, text: text, imageFile: imageFile, imageMime: media.imageMime || '', imageUrl: imgUrl, scheduledAt: when };
+    }));
+  } catch (e) { socNote(String(e || '')); return; }
   var t = document.getElementById('socText'); if (t) t.value = '';
   renderNativePlanner();
 }
@@ -436,10 +450,13 @@ async function socSubmit(now) {
 // Satu-satunya tempat yang merakit argumen publish — mencegah
 // divergensi antar jalur (langsung / antrean / timer). Aturan IG:
 // pageId yang dikirim adalah ID akun IG, bukan ID Page.
-function socPublishArgs(platform, ch, text, img, imgUrl, imageFile) {
+// Parameter mime dipakai jalur antrean (img = null): tanpa ini MIME
+// gambar antrean selalu '' dan Rust default ke image/jpeg, sehingga
+// WebP antrean dikirim berlabel JPEG (audit v66 B-M1).
+function socPublishArgs(platform, ch, text, img, imgUrl, imageFile, mime) {
   return {
     platform: platform, text: text,
-    imageB64: img ? img.b64 : '', imageMime: img ? img.mime : '',
+    imageB64: img ? img.b64 : '', imageMime: img ? img.mime : (mime || ''),
     accessToken: ch.accessToken || '',
     pageId: platform === 'instagram' ? (ch.igUserId || '') : (ch.pageId || ''),
     pageToken: ch.pageToken || '',
@@ -460,7 +477,7 @@ function socDayDialogHTML() {
       : it.status === 'failed' ? tr('soc.status.failed') + (it.error ? ' — ' + esc(it.error) : '')
       : it.status === 'sending' ? tr('soc.status.sending')
       : tr('soc.status.queued');
-    var del = (it.status === 'queued' || it.status === 'failed')
+    var del = (it.status === 'queued' || it.status === 'failed' || it.status === 'sent')
       ? ' <button class="btn btn-sm" data-soc-daydel="' + it.id + '">' + tr('soc.delete') + '</button>'
       : '';
     return '<div class="soc-q"><b>' + esc(platName(it.platform)) + '</b> · ' + esc(fmtTime(it.scheduledAt)) + ' · ' + st
@@ -505,9 +522,18 @@ async function socScheduleDay() {
     } catch (e) { note(String(e || '')); return; }
     if (!imageFile) { note(tr('soc.err.image')); return; }
   }
-  var ids = socQueueAdd(plats.map(function (pl) {
-    return { platform: pl, text: text, imageFile: imageFile, imageMime: media.imageMime || '', imageUrl: media.imageUrl || '', scheduledAt: when };
-  }));
+  // Audit v66 S-M3: sama seperti socSubmit — file lokal untuk
+  // Threads/IG/TikTok ditolak di sini, bukan di jam jatuh tempo.
+  if (imageFile) {
+    var blockedDay = plats.filter(function (pl) { return pl === 'threads' || pl === 'instagram' || pl === 'tiktok'; });
+    if (blockedDay.length) { note(tr('soc.err.file_url')); return; }
+  }
+  var ids;
+  try {
+    ids = socQueueAdd(plats.map(function (pl) {
+      return { platform: pl, text: text, imageFile: imageFile, imageMime: media.imageMime || '', imageUrl: media.imageUrl || '', scheduledAt: when };
+    }));
+  } catch (e) { note(String(e || '')); return; }
   if (!ids.length) { note(tr('soc.err.no_channel')); return; }
   renderNativePlanner();
 }
@@ -537,7 +563,7 @@ async function socPublishItem(id) {
   }
   it.status = 'sending'; queueSave(q); renderNativePlanner();
   try {
-    await invoke('social_publish', { req: socPublishArgs(it.platform, ch, it.text, null, it.imageUrl || '', it.imageFile || '') });
+    await invoke('social_publish', { req: socPublishArgs(it.platform, ch, it.text, null, it.imageUrl || '', it.imageFile || '', it.imageMime || '') });
     it.status = 'sent'; it.error = '';
   } catch (e) {
     it.status = 'failed'; it.error = String(e || '');
@@ -782,9 +808,26 @@ async function socConnect(platform) {
 }
 
 var socTimer = null;
+var socTickRunning = false;
 export function initSocialScheduler() {
   if (socTimer) return;
+  // Pemulihan startup (audit v66 S-B1): item 'sending' dari sesi
+  // sebelumnya tidak pernah kembali — ia macet tanpa tombol retry/
+  // hapus. Tandai 'failed' dengan keterangan jujur (pengiriman itu
+  // mungkin sudah sampai; pengguna memutuskan retry setelah memeriksa
+  // kanal), sehingga item bisa di-retry/dihapus dari dialog kalender.
+  try {
+    var q0 = queueLoad();
+    var recovered = false;
+    q0.forEach(function (it) {
+      if (it.status === 'sending') { it.status = 'failed'; it.error = tr('soc.err.stale'); recovered = true; }
+    });
+    if (recovered) queueSave(q0);
+  } catch (_) {}
   socTimer = setInterval(async function () {
+    if (socTickRunning) return; // audit v66 S-M1: tick tumpang-tindih
+    socTickRunning = true;      // bisa mengirim item yang sama 2x.
+    try {
     var q = queueLoad();
     var due = q.filter(function (it) { return it.status === 'queued' && it.scheduledAt <= Date.now(); });
     if (!due.length) return;
@@ -795,9 +838,13 @@ export function initSocialScheduler() {
       var s = socStore();
       var ch = s[it.platform];
       if (it.platform === 'x') ch = await socEnsureXToken(ch);
-      if (!tokenValid(ch)) { it.status = 'failed'; it.error = tr('soc.err.token'); continue; }
+      // Audit v66 S-B1: 'continue' di sini dulu melompati queueSave
+      // di akhir loop, sehingga status 'failed' hilang dan tick berikut
+      // memproses ulang item yang sama tanpa henti (untuk X: refresh
+      // token tiap 30 detik selamanya). Simpan SEBELUM continue.
+      if (!tokenValid(ch)) { it.status = 'failed'; it.error = tr('soc.err.token'); queueSave(q); continue; }
       try {
-        await invoke('social_publish', { req: socPublishArgs(it.platform, ch, it.text, null, it.imageUrl || '', it.imageFile || '') });
+        await invoke('social_publish', { req: socPublishArgs(it.platform, ch, it.text, null, it.imageUrl || '', it.imageFile || '', it.imageMime || '') });
         it.status = 'sent'; it.error = '';
       } catch (e) {
         it.status = 'failed'; it.error = String(e || '');
@@ -805,5 +852,8 @@ export function initSocialScheduler() {
       queueSave(q);
     }
     renderNativePlanner();
+    } finally {
+      socTickRunning = false;
+    }
   }, 30000);
 }

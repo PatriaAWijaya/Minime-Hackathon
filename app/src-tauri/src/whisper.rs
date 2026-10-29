@@ -16,6 +16,9 @@
 // - Tanpa timeout buatan: klip dibatasi 20 MB oleh audio_save
 //   (WAV mono 16 kHz ~10 menit), model small di Apple Silicon jalan
 //   lebih cepat dari realtime untuk klip sepanjang itu.
+//   (KOREKSI audit v66: timeout keras 600 detik kini ada di
+//   whisper_transcribe — satu klip bermasalah tidak boleh menggantung
+//   invoke selamanya.)
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -44,7 +47,8 @@ pub struct WhisperRes {
 
 /// "HH:MM:SS,mmm" atau "HH:MM:SS.mmm" -> detik (desimal).
 /// Mengembalikan None bila format tidak dikenali (segmen dilewati,
-/// bukan ditebak).
+/// bukan ditebak). Komponen di luar rentang (menit/detik >= 60,
+/// negatif) ditolak — audit v66: parser lama menerima "99:99:99".
 pub fn parse_timestamp(s: &str) -> Option<f64> {
     let s = s.trim();
     let mut parts = s.split(':');
@@ -66,6 +70,9 @@ pub fn parse_timestamp(s: &str) -> Option<f64> {
         None => 0.0,
     };
     if sec_it.next().is_some() {
+        return None;
+    }
+    if h < 0.0 || m < 0.0 || m >= 60.0 || sec < 0.0 || sec >= 60.0 {
         return None;
     }
     Some(h * 3600.0 + m * 60.0 + sec + ms)
@@ -116,6 +123,11 @@ pub fn parse_whisper_json(body: &str) -> Result<Vec<WhisperSegment>, String> {
                 _ => continue,
             },
         };
+        // Segmen tanpa waktu valid atau terbalik dilewati diam-diam
+        // (audit v66: end <= start dulu lolos sebagai segmen).
+        if start < 0.0 || end <= start {
+            continue;
+        }
         out.push(WhisperSegment { start, end, text });
     }
     Ok(out)
@@ -148,7 +160,11 @@ pub fn whisper_transcribe(req: WhisperReq) -> Result<WhisperRes, String> {
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     let base = std::env::temp_dir().join(format!("minime-whisper-{stamp}"));
-    let out = Command::new(whisper_bin())
+    // Timeout keras 600 detik (audit v66 V-M11): Command::output tanpa
+    // batas menggantung invoke selamanya bila whisper-cli macet.
+    // Pola sama dengan output_timeout di video.rs: spawn + drainer
+    // thread + poll try_wait + kill bila lewat batas.
+    let mut child = Command::new(whisper_bin())
         .args([
             "-m",
             &model.to_string_lossy(),
@@ -159,10 +175,54 @@ pub fn whisper_transcribe(req: WhisperReq) -> Result<WhisperRes, String> {
             &base.to_string_lossy(),
             &audio.to_string_lossy(),
         ])
-        .output()
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
         .map_err(|e| format!("whisper-cli gagal dijalankan: {e}"))?;
+    let out_pipe = child.stdout.take();
+    let err_pipe = child.stderr.take();
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        use std::io::Read;
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        if let Some(mut s) = out_pipe {
+            let _ = s.read_to_end(&mut out);
+        }
+        if let Some(mut s) = err_pipe {
+            let _ = s.read_to_end(&mut err);
+        }
+        let _ = tx.send((out, err));
+    });
+    let start = std::time::Instant::now();
+    let out = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                let (stdout, stderr) = rx.recv().unwrap_or_default();
+                break std::process::Output {
+                    status,
+                    stdout,
+                    stderr,
+                };
+            }
+            Ok(None) => {
+                if start.elapsed().as_secs() >= 600 {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    let _ = rx.recv_timeout(std::time::Duration::from_secs(5));
+                    return Err("whisper melebihi timeout 600 detik — dibatalkan".to_string());
+                }
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            Err(e) => return Err(format!("gagal menunggu whisper: {e}")),
+        }
+    };
     let json_path = base.with_extension("json");
-    let body = std::fs::read_to_string(&json_path).map_err(|_| {
+    // JSON temp dihapus di SEMUA jalur keluar (audit v66: dulu hanya
+    // di jalur sukses; gagal parse meninggalkan litter /tmp).
+    let body_res = std::fs::read_to_string(&json_path);
+    let _ = std::fs::remove_file(&json_path);
+    let body = body_res.map_err(|_| {
         let tail = String::from_utf8_lossy(&out.stderr);
         let tail: String = tail
             .chars()
@@ -174,7 +234,20 @@ pub fn whisper_transcribe(req: WhisperReq) -> Result<WhisperRes, String> {
             .collect();
         format!("whisper tidak menghasilkan JSON ({tail})")
     })?;
-    let _ = std::fs::remove_file(&json_path);
+    // Status proses diperiksa (audit v66): JSON parsial-yang-valid dari
+    // proses yang gagal sebelumnya dilaporkan sebagai sukses.
+    if !out.status.success() {
+        let tail = String::from_utf8_lossy(&out.stderr);
+        let tail: String = tail
+            .chars()
+            .rev()
+            .take(300)
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect();
+        return Err(format!("whisper gagal (status {0}): {tail}", out.status));
+    }
     let segments = parse_whisper_json(&body)?;
     let text = segments
         .iter()

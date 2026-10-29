@@ -65,7 +65,14 @@ pub struct AudioReadRes {
 #[tauri::command]
 pub fn audio_read(req: AudioReadReq) -> Result<AudioReadRes, String> {
     let name = crate::image::safe_name(&req.name).ok_or("nama file tidak valid")?;
-    let bytes = std::fs::read(audio_dir()?.join(&name)).map_err(|e| e.to_string())?;
+    let path = audio_dir()?.join(&name);
+    // Cap baca = cap simpan (audit v66 m-1): file yang dibesarkan
+    // manual di ~/minime-audio/ tidak boleh meledak ke memori + PCM.
+    let meta = std::fs::metadata(&path).map_err(|e| e.to_string())?;
+    if meta.len() > 20_000_000 {
+        return Err("audio melebihi 20 MB".to_string());
+    }
+    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
     Ok(AudioReadRes {
         file: name,
         b64: base64::engine::general_purpose::STANDARD.encode(&bytes),

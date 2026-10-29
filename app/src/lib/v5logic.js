@@ -195,6 +195,10 @@ export function colName(ci) { var kc = kcols(); return ci < kc.length ? kc[ci] :
 export function colColor(ci) { return ["#525252", "#6b7280", "#EB87B4", "#737373", "#404040"][ci] || "#737373"; }
 
 export function renderKanban() {
+    // Audit v66 L-B1: Kanban PERSISTEN — simpan di awal render, karena
+    // semua mutasi (drag, advance, tambah, hapus Library) memanggil
+    // renderKanban sesudah mengubah state.
+    saveKanban();
     document.getElementById("kanbanTitle").textContent = PROJECTS[currentProj].name;
     var wrap = document.getElementById("kanbanBox");
     var cards = PROJECTS[currentProj].kanban;
@@ -394,15 +398,26 @@ export function runGraphSim() {
    lagi simulasi. libSave/libUse simulasi lama DIHAPUS (tidak ada
    pemakai lain); diganti aksi recall nyata: Media Studio + Chat. */
 var LIB_LS = "minime.library.added";
+/* Audit v66 L-M2: data Library korup/gagal simpan tidak boleh hilang
+   diam-diam. Korup -> mentah dicadangkan + bendera peringatan;
+   gagal simpan -> bendera peringatan + operasi dibatalkan (rollback). */
+var LIB_CORRUPT_LS = "minime.library.added.corrupt";
+var libCorrupt = false;
+var libSaveError = false;
 function loadLibAdded() {
   try {
     var raw = window.localStorage.getItem(LIB_LS);
     var arr = raw ? JSON.parse(raw) : [];
     return Array.isArray(arr) ? arr.filter(function (x) { return x && typeof x.o === "string"; }) : [];
-  } catch (_) { return []; }
+  } catch (_) {
+    try { window.localStorage.setItem(LIB_CORRUPT_LS, window.localStorage.getItem(LIB_LS) || ""); } catch (_) {}
+    libCorrupt = true;
+    return [];
+  }
 }
 function saveLibAdded() {
-  try { window.localStorage.setItem(LIB_LS, JSON.stringify(LIB_ADDED)); } catch (_) {}
+  try { window.localStorage.setItem(LIB_LS, JSON.stringify(LIB_ADDED)); libSaveError = false; return true; }
+  catch (_) { libSaveError = true; return false; }
 }
 /* Baris bawaan (LIB) adalah konstanta snapshot — menghapusnya tidak bisa
    splice array; sebagai gantinya simpan tombstone judul di localStorage.
@@ -419,7 +434,8 @@ function loadLibDeleted() {
 }
 var LIB_DELETED = loadLibDeleted();
 function saveLibDeleted() {
-  try { window.localStorage.setItem(LIB_DEL_LS, JSON.stringify(LIB_DELETED)); } catch (_) {}
+  try { window.localStorage.setItem(LIB_DEL_LS, JSON.stringify(LIB_DELETED)); libSaveError = false; return true; }
+  catch (_) { libSaveError = true; return false; }
 }
 function libAll() {
   return LIB.filter(function (x) { return LIB_DELETED.indexOf("b:" + x.o) === -1; }).concat(LIB_ADDED);
@@ -431,7 +447,7 @@ export function libAddScript(title, content) {
     if (all[k].content && all[k].content === content) return { index: k, added: false };
   }
   LIB_ADDED.push({ o: title, a: "Kreatif", s: "Draf", badge: "b-idle", content: content, kind: "script", proj: PROJECTS[currentProj] ? PROJECTS[currentProj].name : "", addedAt: libTodayISO() });
-  saveLibAdded();
+  if (!saveLibAdded()) { LIB_ADDED.pop(); renderLib(); return { index: -1, added: false, saveFailed: true }; }
   renderLib();
   return { index: all.length, added: true };
 }
@@ -530,11 +546,20 @@ export function renderLib() {
         + "</div></div>");
     });
     grid.innerHTML = cards.join("") || "<div class='se-note'>" + esc(tr('lib.empty')) + "</div>";
+    // Audit v66 L-M2: peringatan persistensi di atas daftar — data
+    // korup (dicadangkan) atau gagal simpan terakhir harus terlihat,
+    // bukan hilang diam-diam.
+    var warn = "";
+    if (libCorrupt) warn += "<div class='se-note'>" + esc(tr('lib.corrupt')) + "</div>";
+    if (libSaveError) warn += "<div class='se-note'>" + esc(tr('lib.err.save')) + "</div>";
+    if (warn) grid.innerHTML = warn + grid.innerHTML;
     var cnt = document.getElementById("libFilterCount");
     if (cnt) cnt.textContent = tr('lib.count', { n: shown, total: all.length });
     // Thumbnail gambar dimuat async lewat cache bersama (gagal -> hilang).
+    // Pakai daftar 'all' yang sudah dimuat — dulu libAll() dipanggil
+    // ulang per thumbnail (perf m2).
     grid.querySelectorAll("[data-lib-idx]").forEach(function (img) {
-      var it = libAll()[Number(img.getAttribute("data-lib-idx"))];
+      var it = all[Number(img.getAttribute("data-lib-idx"))];
       if (!it || !it.imageFile) return;
       readThumb(it.imageFile).then(function (url) {
         if (url) img.src = url; else img.remove();
@@ -616,17 +641,29 @@ export function libConfirmDelete() {
   var item = libAll()[i];
   if (!item) return;
   var bi = LIB.indexOf(item);
+  var saved = true;
   if (bi !== -1) {
-    if (LIB_DELETED.indexOf("b:" + item.o) === -1) LIB_DELETED.push("b:" + item.o);
-    saveLibDeleted();
+    var pushed = false;
+    if (LIB_DELETED.indexOf("b:" + item.o) === -1) { LIB_DELETED.push("b:" + item.o); pushed = true; }
+    saved = saveLibDeleted();
+    if (!saved && pushed) LIB_DELETED.pop();
   } else {
     var ai = LIB_ADDED.indexOf(item);
-    if (ai !== -1) { LIB_ADDED.splice(ai, 1); saveLibAdded(); }
+    if (ai !== -1) {
+      LIB_ADDED.splice(ai, 1);
+      saved = saveLibAdded();
+      if (!saved) LIB_ADDED.splice(ai, 0, item);
+    }
   }
+  if (!saved) { renderLib(); return; }
+  // Audit v66 L-M1: hapus Library HANYA menyentuh kartu Kanban yang
+  // dibuat libRevise ("Revisi: <judul>") — dulu klausa c.t === item.o
+  // ikut menghapus kartu snapshot yang kebetulan berjudul sama
+  // ("Kalender 7 hari + 7 brief").
   Object.keys(PROJECTS).forEach(function (k) {
     if (PROJECTS[k] && Array.isArray(PROJECTS[k].kanban)) {
       PROJECTS[k].kanban = PROJECTS[k].kanban.filter(function (c) {
-        return c.t !== item.o && c.t !== "Revisi: " + item.o;
+        return c.t !== "Revisi: " + item.o;
       });
     }
   });
@@ -649,7 +686,7 @@ export function libAddImage(title, prompt, imageFile, costUsd) {
     if (all[k].imageFile && all[k].imageFile === imageFile) return { index: k, added: false };
   }
   LIB_ADDED.push({ o: title, a: "Kreatif", s: "Disetujui", badge: "b-ok", content: prompt, kind: "image", imageFile: imageFile, costUsd: costUsd, proj: PROJECTS[currentProj] ? PROJECTS[currentProj].name : "", addedAt: libTodayISO() });
-  saveLibAdded();
+  if (!saveLibAdded()) { LIB_ADDED.pop(); renderLib(); return { index: -1, added: false, saveFailed: true }; }
   renderLib();
   return { index: all.length, added: true };
 }
@@ -692,9 +729,40 @@ export function renderPlanner() {
     renderNativePlanner();
   }
 
+/* Kanban persistensi (audit v66 L-B1): snapshot build-time hanya
+   fallback — bila localStorage punya Kanban tersimpan, itulah yang
+   dipakai, termasuk saat ganti bahasa (refreshBackendData). */
+var KANBAN_LS = "minime.kanban";
+function saveKanban() {
+  try {
+    var store = {};
+    Object.keys(PROJECTS).forEach(function (k) { store[k] = PROJECTS[k].kanban; });
+    window.localStorage.setItem(KANBAN_LS, JSON.stringify(store));
+  } catch (_) {
+    // Kuota penuh: perubahan sesi tetap tampil, hilang saat reload —
+    // sama seperti sebelum v66, tapi tidak pernah diklaim tersimpan.
+  }
+}
+function loadKanban() {
+  try {
+    var raw = window.localStorage.getItem(KANBAN_LS);
+    var store = raw ? JSON.parse(raw) : null;
+    if (store && typeof store === "object") {
+      Object.keys(PROJECTS).forEach(function (k) {
+        if (Array.isArray(store[k])) PROJECTS[k].kanban = store[k].filter(function (c) { return c && typeof c.t === "string"; });
+      });
+    }
+  } catch (_) {
+    // Korup: pakai snapshot.
+  }
+}
+
 /** B7: re-derive backend data in the current language (after a language switch). */
 export function refreshBackendData() {
   PROJECTS.kopi.kanban = kopiKanban();
+  // Audit v66 L-B1: ganti bahasa TIDAK boleh menimpa Kanban user —
+  // data tersimpan menang atas snapshot.
+  loadKanban();
 }
 
 function tabSwitcher(panelPrefix, btnPrefix, keys, id) {
@@ -725,7 +793,9 @@ export function renderCampaign() {
   var crm = document.getElementById('cp-crm-body');
   if (crm) {
     var rows = campaignLeads().map(function (l) {
-      return '<tr><td><b>' + l.id + '</b> ' + l.name + '</td><td>' + l.channel + '</td><td>' + tr('cp.score') + ' ' + l.score + '</td><td>' + l.stage + '</td></tr>';
+      // Audit v66 code m-3: field data di-escape (hari ini fixture
+      // statis, tapi pola yang sama berbahaya saat lead asli masuk).
+      return '<tr><td><b>' + esc(l.id) + '</b> ' + esc(l.name) + '</td><td>' + esc(l.channel) + '</td><td>' + tr('cp.score') + ' ' + l.score + '</td><td>' + esc(l.stage) + '</td></tr>';
     }).join('');
     var summary = pipe.map(function (s) { return s.stage + ': ' + s.ids.length; }).join(' · ');
     crm.innerHTML = '<p>' + counts.raw + ' → ' + counts.deduped + ' lead (' + tr('cp.crm.dedupe', { merged: counts.merged }) + ') · ' + summary + '</p><table><tr><th>Lead</th><th>' + tr('word.channel') + '</th><th>' + tr('cp.score') + '</th><th>' + tr('cp.stage') + '</th></tr>' + rows + '</table>';
@@ -733,8 +803,8 @@ export function renderCampaign() {
   var out = document.getElementById('cp-outreach-body');
   if (out) {
     var drafts = campaignDrafts().map(function (d) {
-      var link = d.waLink ? ' · <a href="' + d.waLink + '" target="_blank" rel="noreferrer">wa.me</a>' : '';
-      return '<div style="margin-bottom:12px"><b>' + d.leadId + ' ' + d.leadName + '</b> (' + d.stage + ', ' + tr('cp.score') + ' ' + d.score + ', ' + d.channel + ') <span class="badge b-wait">' + tr('cp.status.draft') + '</span><div style="color:#a1a1a1;font-size:13px">' + d.text + link + '</div></div>';
+      var link = d.waLink ? ' · <a href="' + esc(d.waLink) + '" target="_blank" rel="noreferrer">wa.me</a>' : '';
+      return '<div style="margin-bottom:12px"><b>' + esc(d.leadId) + ' ' + esc(d.leadName) + '</b> (' + esc(d.stage) + ', ' + tr('cp.score') + ' ' + d.score + ', ' + esc(d.channel) + ') <span class="badge b-wait">' + tr('cp.status.draft') + '</span><div style="color:#a1a1a1;font-size:13px">' + esc(d.text) + link + '</div></div>';
     }).join('');
     out.innerHTML = drafts;
   }
@@ -790,6 +860,9 @@ export function showView(id) {
     document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
     document.getElementById("view-" + id).classList.add("active");
     document.querySelector(".app").classList.toggle("no-nav", id !== "home");
+    // Audit v66: Billing selalu menampilkan pemakaian live terbaru
+    // saat dibuka (angka tidak beku di render pertama).
+    if (id === "billing" && typeof window.refreshLiveCost === "function") { try { window.refreshLiveCost(); } catch (_) {} }
   }
 
 export function showSetNotice() {
@@ -844,9 +917,10 @@ export function waAttach(kind) {
   }
 
 export function waMic() {
-    var n = document.getElementById('waNote');
-    n.style.display = 'block';
-    n.textContent = tr('voice.note');
+    // Audit v66 overlap m4: tombol mic di slot utama chat bukan lagi
+    // fungsi simulasi — jadi pintasan nyata ke Editor Suara.
+    showView('media');
+    mediaTab('voice');
   }
 
 export function toggleAddMenu() { document.getElementById('addMenu').classList.toggle('open'); }
@@ -855,9 +929,20 @@ export function renderAddMenu() {
     var menu = document.getElementById('addMenu');
     var proj = PROJECTS[currentProj];
     var avail = Object.keys(AGENTS).filter(function (k) { return k !== 'prime' && !proj.agents.some(function (a) { return a.key === k; }); });
-    menu.innerHTML = '<div style="font-size:13px;color:#a1a1a1;margin-bottom:8px">Tambah agen ke ' + proj.name + '</div>'
-      + (avail.length ? avail.map(function (k) { return '<button onclick="addAgent(\'' + k + '\')">' + AGENTS[k].name + ' — ' + AGENTS[k].role + '</button>'; }).join('') : '<div style="font-size:13px;color:#a1a1a1">Semua agen sudah ada di proyek ini.</div>');
+    menu.innerHTML = '<div style="font-size:13px;color:#a1a1a1;margin-bottom:8px">Tambah agen ke ' + esc(proj.name) + '</div>'
+      + (avail.length ? avail.map(function (k) { return '<button onclick="addAgent(\'' + k + '\')">' + esc(AGENTS[k].name) + ' — ' + esc(AGENTS[k].role) + '</button>'; }).join('') : '<div style="font-size:13px;color:#a1a1a1">Semua agen sudah ada di proyek ini.</div>');
   }
+
+/* Audit v66 C-M1: status Nonaktif agen dipakai chat.ts — agen yang
+   dinonaktifkan user tidak menjawab lewat chat (delegasi jatuh ke
+   Prime). Toggle agen hanya mengubah label tampilannya bila helper
+   ini tidak dipakai — helper inilah yang menutup celah itu. */
+export function isAgentDeactivated(key) {
+  var proj = PROJECTS[currentProj];
+  if (!proj || !Array.isArray(proj.agents)) return false;
+  var m = proj.agents.filter(function (a) { return a.key === key; })[0];
+  return !!m && m.status === "Nonaktif";
+}
 
 export function viewBack() { if (viewHistIdx > 0) { navJump = true; viewHistIdx--; _sv2(viewHist[viewHistIdx]); navJump = false; } }
 
@@ -984,6 +1069,8 @@ var _sa2 = selectAgent;
 export function initV5() {
   // Penjadwal native (v61): timer antrean mulai sekali saat app hidup.
   initSocialScheduler();
+  // Audit v66 L-B1: Kanban tersimpan dimuat sebelum render pertama.
+  loadKanban();
   document.addEventListener("mousemove", function (e) {
       if (!dragNode) return;
       var box = document.getElementById("graphBox").getBoundingClientRect();
@@ -1031,5 +1118,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

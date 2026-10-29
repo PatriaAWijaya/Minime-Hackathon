@@ -8,6 +8,7 @@ import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { readKeys } from './chat.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { libAddScript, mediaTab } from './v5logic.js';
+import { recordLiveCost } from './cost.js';
 import { esc } from './esc.js';
 
 export type SeMenu = 'social' | 'artikel' | 'movie';
@@ -152,7 +153,7 @@ function titleFor(st: SeState): string {
 
 function seSave(): void {
   const r = libAddScript(titleFor(state), state.output);
-  state.note = tr(r.added ? 'se.note.saved' : 'se.note.already');
+  state.note = tr(r.saveFailed ? 'lib.err.save' : (r.added ? 'se.note.saved' : 'se.note.already'));
   renderSeMain();
 }
 
@@ -161,6 +162,11 @@ function seUse(): void {
   state.note = tr('se.note.used');
   saveState();
   renderSeMain();
+  // Audit v66 (overlap M1): 'Gunakan' benar-benar memakai naskah —
+  // brief tab Image diisi langsung, bukan menunggu klik kedua.
+  if (typeof (window as unknown as Record<string, unknown>).imgSetBrief === 'function') {
+    ((window as unknown as Record<string, (t: string) => void>).imgSetBrief)(state.output);
+  }
   mediaTab('image');
 }
 
@@ -352,6 +358,7 @@ export async function seGenerate(): Promise<void> {
     cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()];
     const router = new ModelRouter(cfg);
     const r = await router.callWithFallback(buildScriptPrompt(state), 'trace-script-' + Date.now());
+    recordLiveCost(r);
     state.output = r.text;
     state.outputMeta =
       tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +

@@ -335,34 +335,79 @@ fn output_timeout(cmd: &mut Command, secs: u64) -> Result<std::process::Output, 
     }
 }
 
+// Normalisasi leksikal path (urai '.' dan '..' per komponen, tanpa
+// menyentuh filesystem): komponen '..' yang keluar dari root membuat
+// path tidak valid. Dipakai output_allowed agar
+// ~/Movies/../../Documents/x.mp4 tidak lagi lolos cek prefix
+// (audit v66 M-2: starts_with atas path mentah).
+fn normalize_lexical(p: &Path) -> Option<PathBuf> {
+    use std::path::Component;
+    let mut out = PathBuf::new();
+    for c in p.components() {
+        match c {
+            Component::RootDir => out.push("/"),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !out.pop() {
+                    return None;
+                }
+            }
+            Component::Normal(s) => out.push(s),
+            Component::Prefix(_) => return None,
+        }
+    }
+    Some(out)
+}
+
 // Output render hanya boleh ke temp dir, ~/Movies, atau file bernama
-// minime-* (konvensi bukti manual app). Path relatif dan direktori lain
-// ditolak — cegah WebView yang terkompromi menimpa file sembarang.
-// (HOME dibaca dari env, bukan helper voicestudio yang privat.)
+// minime-* DI DALAM HOME (konvensi bukti manual app). Path relatif dan
+// direktori lain ditolak — cegah WebView yang terkompromi menimpa file
+// sembarang. Perbandingan prefix dilakukan atas path yang sudah
+// dinormalisasi DAN direktori izin yang sudah di-canonicalize.
 fn output_allowed(p: &str) -> bool {
     let path = Path::new(p);
     if !path.is_absolute() {
         return false;
     }
-    if let Ok(tmp) = std::env::temp_dir().canonicalize() {
-        if path.starts_with(&tmp) {
-            return true;
+    let norm = match normalize_lexical(path) {
+        Some(n) => n,
+        None => return false,
+    };
+    // Kandidat kedua: induk yang sudah di-canonicalize (bila ada) —
+    // menangani direktori symlink seperti /tmp -> /private/tmp, yang
+    // tidak bisa diselesaikan normalisasi leksikal saja.
+    let mut candidates = vec![norm.clone()];
+    if let (Some(parent), Some(name)) = (norm.parent(), norm.file_name()) {
+        if let Ok(canon_parent) = parent.canonicalize() {
+            candidates.push(canon_parent.join(name));
         }
     }
-    if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
-        if path.starts_with(home.join("Movies")) {
-            return true;
-        }
-        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-            if name.starts_with("minime-") {
+    let allowed_prefix = |c: &Path| -> bool {
+        if let Ok(tmp) = std::env::temp_dir().canonicalize() {
+            if c.starts_with(&tmp) {
                 return true;
             }
         }
-    }
-    false
+        if let Some(home_os) = std::env::var_os("HOME") {
+            let home = PathBuf::from(&home_os);
+            let home_canon = home.canonicalize().unwrap_or(home.clone());
+            if c.starts_with(home_canon.join("Movies")) {
+                return true;
+            }
+            // Aturan nama-file saja DIBATASI ke dalam HOME (sebelumnya
+            // mengizinkan direktori mana pun tanpa batas).
+            if c.starts_with(&home_canon) {
+                if let Some(name) = c.file_name().and_then(|n| n.to_str()) {
+                    if name.starts_with("minime-") {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    };
+    candidates.iter().any(|c| allowed_prefix(c))
 }
-
-// Allowlist flag ffmpeg = kosakata PERSIS yang diemisikan compiler
 // video.ts (compileTimeline: -nostdin -y -i -filter_complex -map -c:v
 // -pix_fmt -r -c:a -b:a). Flag di luar daftar = error jujur, bukan
 // dibiarkan lolos — cegah opsi eksotis (tee, protocol, filter script).

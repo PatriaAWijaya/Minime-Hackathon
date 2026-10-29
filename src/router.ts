@@ -132,7 +132,15 @@ export class ModelRouter {
     );
     const { text, usage } = chatCompletionsText(data);
     void traceId;
-    return { text, provider: 'meta', family: 'meta', model: this.cfg.metaModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: usage.prompt, completionTokens: usage.completion, costUsd: null };
+    // Audit v66 $-B1: biaya live HARUS dihitung di sini, bukan dibuang
+    // ke null — dulu Billing menampilkan $0 untuk semua live call.
+    // Tarif muse-spark-1.3: $1,25 input / $4,25 output per 1 jt token.
+    // Model lain -> null (jangan menebak tarifnya).
+    const isSpark13 = this.cfg.metaModel === 'muse-spark-1.3';
+    const costUsd = isSpark13 && usage.prompt != null && usage.completion != null
+      ? usage.prompt * 1.25e-6 + usage.completion * 4.25e-6
+      : null;
+    return { text, provider: 'meta', family: 'meta', model: this.cfg.metaModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: usage.prompt, completionTokens: usage.completion, costUsd };
   }
 
   async callGemini(prompt: string): Promise<CallResult> {
@@ -151,7 +159,11 @@ export class ModelRouter {
       usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
     };
     const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
-    return { text, provider: 'gemini', family: 'gemini', model: this.cfg.geminiModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: data.usageMetadata?.promptTokenCount ?? null, completionTokens: data.usageMetadata?.candidatesTokenCount ?? null, costUsd: null };
+    // Audit v66 $-B1: Gemini = $0 atas dasar free tier (keputusan
+    // Patria 28 Okt 2026 'Catat $0 free tier, tutup bagian 2') —
+    // BUKAN karena tarifnya nol. Bila pemakaian berbayar dimulai,
+    // baris ini harus dihitung dari tarif model yang dipakai.
+    return { text, provider: 'gemini', family: 'gemini', model: this.cfg.geminiModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: data.usageMetadata?.promptTokenCount ?? null, completionTokens: data.usageMetadata?.candidatesTokenCount ?? null, costUsd: 0 };
   }
 
   private ollamaFamilyFor(model: string): 'deepseek' | 'qwen' {

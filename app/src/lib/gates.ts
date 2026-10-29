@@ -1,15 +1,31 @@
-// B3 — gate guard state for the UI.
+// Persetujuan historis + model persetujuan pengiriman app.
 //
-// The approval records (append-only, in docs/) remain the source of
-// truth; PolicyEngine enforces gates server-side. This module only
-// holds the guard state the UI send paths must check:
-//   GSTP    docs/fase-1-gstp-approval.json    approved 27 Okt 2026 12:04 WIB
-//   GKonten docs/fase-2-gkonten-approval.json approved 27 Okt 2026 13:06 WIB
-//   GBatch  (live sending)                    NO GENERAL APPROVAL — see note below
-// The gate status DISPLAY was removed 28 Okt 2026 on Patria's order
-// (no gate-status panel in Planner or Settings); the guard itself
-// stays: draft paths need no GBatch, live sending stays locked
-// until Patria approves GBatch.
+// ATURAN BERDIRI (Patria): tidak ada publikasi/pengiriman tanpa
+// persetujuan bernama yang tercatat; perintah eksplisit Patria hanya
+// mengesahkan tindakan itu.
+//
+// MODEL PERSETUJUAN YANG SEBENARNYA BERLAKU DI APP (audit v66 C-B1):
+// tidak ada guard kode yang memblokir pengiriman. Yang mengesahkan
+// sebuah kiriman adalah AKSI EKSPLISIT USER di UI pada saat itu:
+//   - klik "Terbit sekarang" = perintah langsung untuk item itu;
+//   - klik jadwalkan (composer / dialog tanggal / batch dengan
+//     double-confirm) = persetujuan untuk item itu, dieksekusi
+//     scheduler 30 detik selama app terbuka.
+// Tidak ada pengiriman yang berjalan sendiri tanpa klik itu, dan
+// tidak ada persetujuan live-send UMUM yang bisa dibaca dari flag.
+// Versi lama modul ini punya fungsi requireGate() yang TIDAK PERNAH
+// dipanggil jalur kirim mana pun — fungsi mati itu DIHAPUS v66 agar
+// tidak ada yang mengira kode menegakkan gerbang. Bila suatu hari
+// gerbang kode benar-benar dipasang, ia harus dipanggil di ketiga
+// jalur (langsung, antrean, scheduler) dan diuji, bukan hanya ditulis.
+//
+// Status historis (snapshot, BUKAN dibaca live dari berkas):
+//   GSTP    docs/fase-1-gstp-approval.json    disetujui 27 Okt 2026 12:04 WIB
+//   GKonten docs/fase-2-gkonten-approval.json disetujui 27 Okt 2026 13:06 WIB
+//   GBatch  (live sending)                    TIDAK ADA persetujuan umum
+// Panel status gerbang dihapus 28 Okt 2026 atas perintah Patria;
+// GATES hanya dipakai backend-data.ts untuk status kartu Kanban
+// snapshot (bukan sebagai gerbang kirim).
 
 export type GateId = 'GSTP' | 'GKonten' | 'GBatch';
 
@@ -25,28 +41,20 @@ export const GATES: Record<GateId, GateState> = {
     approved: true,
     trace: 'trace-fase1-1793077341157',
     record: 'docs/fase-1-gstp-approval.json',
-    note: 'Disetujui Patria 27 Okt 2026 12:04 WIB',
+    note: 'Disetujui Patria 27 Okt 2026 12:04 WIB (snapshot historis)',
   },
   GKonten: {
     approved: true,
     trace: 'trace-fase2-1793077740478',
     record: 'docs/fase-2-gkonten-approval.json',
-    note: 'Disetujui Patria 27 Okt 2026 13:06 WIB',
+    note: 'Disetujui Patria 27 Okt 2026 13:06 WIB (snapshot historis)',
   },
   GBatch: {
     // approved:false = tidak ada persetujuan live-send UMUM. Langkah
     // jadwal batch TEROTORISASI TERPISAH (perintah Patria 28 Okt +
-    // double-confirm di batch-flow) dan TIDAK melewati requireGate —
-    // jangan baca flag ini sebagai blokir atas langkah tersebut.
+    // double-confirm di batch-flow) dan TIDAK melewati guard apa pun
+    // — jangan baca flag ini sebagai blokir atas langkah tersebut.
     approved: false,
     note: 'Tanpa persetujuan live-send umum; jadwal batch terotorisasi terpisah (perintah Patria 28 Okt + double-confirm)',
   },
 };
-
-/** Guard every future send path must call. Returns true only if approved.
- *  NOTE: the batch scheduler does NOT call this (its gate is Patria's
- *  explicit order + double-confirm); do not read GBatch.approved=false
- *  as blocking that authorized step. */
-export function requireGate(gate: GateId): boolean {
-  return GATES[gate].approved;
-}

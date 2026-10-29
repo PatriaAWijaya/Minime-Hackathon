@@ -64,6 +64,62 @@ export const COST_TOTAL = {
   idrMax: 53.5,
 };
 
+// Pemakaian live dari app (audit v66 $-B1): setiap callWithFallback
+// yang sukses dicatat di sini (localStorage, device only) agar Billing
+// menampilkan pemakaian berjalan, bukan hanya konstanta historis di
+// atas. Biaya Meta dihitung router dari token x tarif muse-spark-1.3;
+// Gemini $0 (free tier, keputusan Patria 28 Okt 2026); Ollama $0.
+// Nilai null (tarif model tak dikenal) dicatat 0 panggilan/token tapi
+// TIDAK menambah USD — jangan menebak tarif.
+export interface LiveCost {
+  calls: number;
+  tokens: number;
+  usd: number;
+}
+
+const LIVE_COST_LS = 'minime.costLive';
+
+export function readLiveCost(): LiveCost {
+  try {
+    const raw = window.localStorage.getItem(LIVE_COST_LS);
+    const o = raw ? JSON.parse(raw) : null;
+    if (o && typeof o === 'object') {
+      return {
+        calls: typeof o.calls === 'number' ? o.calls : 0,
+        tokens: typeof o.tokens === 'number' ? o.tokens : 0,
+        usd: typeof o.usd === 'number' ? o.usd : 0,
+      };
+    }
+  } catch {
+    // Korup -> mulai dari nol (bukan klaim angka).
+  }
+  return { calls: 0, tokens: 0, usd: 0 };
+}
+
+export function recordLiveCost(r: {
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  costUsd?: number | null;
+  mock?: boolean;
+}): LiveCost {
+  if (r.mock) return readLiveCost();
+  const cur = readLiveCost();
+  const tokens = (r.promptTokens ?? 0) + (r.completionTokens ?? 0);
+  const next: LiveCost = {
+    calls: cur.calls + 1,
+    tokens: cur.tokens + tokens,
+    usd: cur.usd + (typeof r.costUsd === 'number' ? r.costUsd : 0),
+  };
+  try {
+    window.localStorage.setItem(LIVE_COST_LS, JSON.stringify(next));
+  } catch {
+    // Kuota penuh: pemakaian berjalan tidak tercatat — Billing tetap
+    // menampilkan angka terakhir yang berhasil disimpan, bukan nol.
+    return cur;
+  }
+  return next;
+}
+
 function trimNum(n: number): string {
   let s = n.toFixed(5);
   if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, '');
