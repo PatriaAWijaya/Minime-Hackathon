@@ -2097,3 +2097,10 @@ dokumen lama yang dipakai.
 - Rig: teks 'New project' di 6 rig; rig-audit S6 jadi kontrak v87 (Simpan hilang, Hubungkan hadir); rig-graph S15 baru (B3: node baru +1, punya edge masuk, berkelas ok).
 - Gerbang: tsc 0, svelte-check 0 error/26 warning, vite, 13 rig ALL PASSED, root build, gate-test 14/14, scan bersih, cargo fmt+check 0 warning, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Push kode: lokal 270b5ac <-> remote 28ed01b (tree identik).
+
+## v88 — bersihkan dummy Graph (30 Okt 2026 ~05:20 WIB)
+- Perintah Patria 30 Okt 05:07: "bersihkan juga dummy project di menu graph".
+- Temuan: dropdown proyek Graph sudah bersih (seed PROJECTS = {} sejak v84, homeState live bahkan tak ada); yang masih dummy = kanvas Graph live — workflow seed 9 node (trigger/prime/gate/dist/revisi/model/memory/toolmedia/tooljadwal, trigger sempat diganti nama jadi "Atur Jadwal Pengguna") + 1 node baru + 3 riwayat simulasi manual 29 Okt 21:01. Kanban + Library live sudah kosong (v84). Nilai WebKit tersimpan UTF-16 (tampilan CLI sempat mengira terpotong).
+- Perbaikan: runCleanGraphV88() di initV5 (pola runCleanV84) — backup graphState/graphRuns ke *.pre-v88, tulis graphState kosong + runs '[]', flag minime.cleaned-graph-v88 hanya bila baca-balik kosong; hanya bila storage berisi (rig tak tersentuh). Seed kode GNODES/GEDGES DIPERTAHANKAN untuk instalasi baru + rig; yang bersih = storage app Patria. Bila Patria mau seed kode juga dihapus, itu langkah susulan (rig-graph perlu setup ulang).
+- Rig-graph S16 baru (mount storage dummy -> 0 node + backup + flag + runs kosong).
+- Gerbang: tsc 0, svelte-check 0 error/26 warning, vite, 13 rig ALL PASSED, gate-test 14/14, scan bersih, cargo fmt+check 0 warning, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
