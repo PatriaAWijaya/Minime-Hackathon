@@ -405,7 +405,7 @@ export function renderGraph() {
       if (k === graphSel) {
         var bar = document.createElement("div");
         bar.className = "n8n-nodebar";
-        [["\u29C9", graphDuplicate, "graph.dup"], [nd.locked ? "\uD83D\uDD13" : "\uD83D\uDD12", graphToggleLock, nd.locked ? "graph.unlock" : "graph.lock"], ["\uD83D\uDDD1", graphAskDelete, "graph.del"]].forEach(function (b) {
+        (function () { var _bb = [["\u29C9", graphDuplicate, "graph.dup"], [nd.locked ? "\uD83D\uDD13" : "\uD83D\uDD12", graphToggleLock, nd.locked ? "graph.unlock" : "graph.lock"]]; if (!nd.locked) _bb.push(["\uD83D\uDDD1", graphAskDelete, "graph.del"]); return _bb; })().forEach(function (b) {
           var bb = document.createElement("button");
           bb.textContent = b[0]; bb.title = tr(b[2]);
           bb.addEventListener("mousedown", function (e) { e.stopPropagation(); });
@@ -1598,42 +1598,44 @@ export function renderGraphPanel() {
   }
   var nd = graphSelNode();
   if (!nd) { ov.style.display = "none"; p.innerHTML = ""; return; }
-  var html = "<div class='g-head'><span>" + esc(nd.icon || "") + " " + esc(nd.name) + (nd.locked ? " 🔒" : "") + "</span><button class='g-x' onclick='graphClosePanel()'>×</button></div>";
-  html += "<div class='g-row'><label>" + tr("graph.name") + "</label><input class='g-input' value=\"" + esc(nd.name) + "\" oninput='graphRename(this.value)'></div>";
-  html += "<div class='g-row'><label>" + tr("graph.desc") + "</label><textarea class='g-input' oninput='graphRedesc(this.value)'>" + esc(nd.desc || "") + "</textarea></div>";
+  var dis = nd.locked ? " disabled" : "";
+  var html = "<div class='g-head'><span id='graphPopupTitle'>" + esc(nd.icon || "") + " " + esc(nd.name) + (nd.locked ? " 🔒" : "") + "</span><button class='g-x' onclick='graphClosePanel()'>×</button></div>";
+  html += "<div class='g-saved' id='graphPopupSaved'></div>";
+  html += "<div class='g-row'><label>" + tr("graph.name") + "</label><input class='g-input' value=\"" + esc(nd.name) + "\" oninput='graphRename(this.value)'" + dis + "></div>";
+  html += "<div class='g-row'><label>" + tr("graph.desc") + "</label><textarea class='g-input' oninput='graphRedesc(this.value)'" + dis + ">" + esc(nd.desc || "") + "</textarea></div>";
   if (nd.kind === "decision") {
-    html += "<div class='g-row'><label>" + tr("graph.branch_true") + "</label><input class='g-input' value=\"" + esc(nd.branchT || "true") + "\" onchange='graphSetBranch(\"T\", this.value)'></div>";
-    html += "<div class='g-row'><label>" + tr("graph.branch_false") + "</label><input class='g-input' value=\"" + esc(nd.branchF || "false") + "\" onchange='graphSetBranch(\"F\", this.value)'></div>";
+    html += "<div class='g-row'><label>" + tr("graph.branch_true") + "</label><input class='g-input' value=\"" + esc(nd.branchT || "true") + "\" onchange='graphSetBranch(\"T\", this.value)'" + dis + "></div>";
+    html += "<div class='g-row'><label>" + tr("graph.branch_false") + "</label><input class='g-input' value=\"" + esc(nd.branchF || "false") + "\" onchange='graphSetBranch(\"F\", this.value)'" + dis + "></div>";
   }
   if (nd.kind === "trigger") {
     var t = graphTrigOf(nd);
-    html += "<div class='g-row'><label>" + tr("graph.type") + "</label><select class='g-input' onchange='graphSetTrig(\"type\", this.value)'>";
+    html += "<div class='g-row'><label>" + tr("graph.type") + "</label><select class='g-input' onchange='graphSetTrig(\"type\", this.value)'" + dis + ">";
     ["schedule", "manual", "webhook"].forEach(function (v) { html += "<option value='" + v + "'" + (t.type === v ? " selected" : "") + ">" + tr("graph.trig." + v) + "</option>"; });
     html += "</select></div>";
     if (t.type === "schedule") {
-      html += "<div class='g-row'><label>" + tr("graph.freq") + "</label><select class='g-input' onchange='graphSetTrig(\"freq\", this.value)'>";
+      html += "<div class='g-row'><label>" + tr("graph.freq") + "</label><select class='g-input' onchange='graphSetTrig(\"freq\", this.value)'" + dis + ">";
       ["once", "hourly", "daily", "weekly", "monthly", "yearly", "custom"].forEach(function (v) { html += "<option value='" + v + "'" + (t.freq === v ? " selected" : "") + ">" + tr("graph.freq." + v) + "</option>"; });
       html += "</select></div>";
       if (t.freq === "weekly") {
         html += "<div class='g-row'><label>" + tr("graph.days") + "</label><div class='g-days'>";
-        for (var d = 0; d < 7; d++) html += "<button class='g-day" + (t.days.indexOf(d) >= 0 ? " on" : "") + "' onclick='graphToggleDay(" + d + ")'>" + "SMTWTFS"[d] + "</button>";
+        for (var d = 0; d < 7; d++) html += "<button class='g-day" + (t.days.indexOf(d) >= 0 ? " on" : "") + "' onclick='graphToggleDay(" + d + ")'" + dis + ">" + "SMTWTFS"[d] + "</button>";
         html += "</div></div>";
       }
-      if (t.freq === "once") html += "<div class='g-row'><label>" + tr("graph.date") + "</label><input class='g-input' type='date' value='" + esc(t.date) + "' onchange='graphSetTrig(\"date\", this.value)'></div>";
-      if (t.freq === "monthly") html += "<div class='g-row'><label>" + tr("graph.date") + "</label><input class='g-input' type='number' min='1' max='31' value='" + t.monthDay + "' onchange='graphSetTrigNum(\"monthDay\", this.value)'></div>";
+      if (t.freq === "once") html += "<div class='g-row'><label>" + tr("graph.date") + "</label><input class='g-input' type='date' value='" + esc(t.date) + "' onchange='graphSetTrig(\"date\", this.value)'" + dis + "></div>";
+      if (t.freq === "monthly") html += "<div class='g-row'><label>" + tr("graph.date") + "</label><input class='g-input' type='number' min='1' max='31' value='" + t.monthDay + "' onchange='graphSetTrigNum(\"monthDay\", this.value)'" + dis + "></div>";
       if (t.freq === "yearly") {
         html += "<div class='g-row'><label>" + tr("graph.date") + "</label><div class='g-flex'><select class='g-input' onchange='graphSetTrigNum(\"month\", this.value)'>";
         MONTHS[getLang()].forEach(function (m, i) { html += "<option value='" + (i + 1) + "'" + (t.month === i + 1 ? " selected" : "") + ">" + m + "</option>"; });
-        html += "</select><input class='g-input' type='number' min='1' max='31' value='" + t.day + "' onchange='graphSetTrigNum(\"day\", this.value)'></div></div>";
+        html += "</select><input class='g-input' type='number' min='1' max='31' value='" + t.day + "' onchange='graphSetTrigNum(\"day\", this.value)'" + dis + "></div></div>";
       }
-      if (t.freq === "hourly") html += "<div class='g-row'><label>" + tr("graph.time") + "</label><input class='g-input' type='number' min='0' max='59' value='" + t.min + "' onchange='graphSetTrigNum(\"min\", this.value)'></div>";
-      if (t.freq === "custom") html += "<div class='g-row'><label>" + tr("graph.cron") + "</label><input class='g-input' value=\"" + esc(t.cron) + "\" onchange='graphSetTrig(\"cron\", this.value)'></div>";
+      if (t.freq === "hourly") html += "<div class='g-row'><label>" + tr("graph.time") + "</label><input class='g-input' type='number' min='0' max='59' value='" + t.min + "' onchange='graphSetTrigNum(\"min\", this.value)'" + dis + "></div>";
+      if (t.freq === "custom") html += "<div class='g-row'><label>" + tr("graph.cron") + "</label><input class='g-input' value=\"" + esc(t.cron) + "\" onchange='graphSetTrig(\"cron\", this.value)'" + dis + "></div>";
       if (t.freq !== "hourly" && t.freq !== "custom") {
-        html += "<div class='g-row'><label>" + tr("graph.time") + "</label><div class='g-flex'><input class='g-input' type='number' min='1' max='12' value='" + t.hour + "' onchange='graphSetTrigNum(\"hour\", this.value)'><span>:</span><input class='g-input' type='number' min='0' max='59' value='" + t.min + "' onchange='graphSetTrigNum(\"min\", this.value)'><button class='g-ampm" + (t.ampm === "AM" ? " on" : "") + "' onclick='graphSetAmpm(\"AM\")'>AM</button><button class='g-ampm" + (t.ampm === "PM" ? " on" : "") + "' onclick='graphSetAmpm(\"PM\")'>PM</button></div></div>";
+        html += "<div class='g-row'><label>" + tr("graph.time") + "</label><div class='g-flex'><input class='g-input' type='number' min='1' max='12' value='" + t.hour + "' onchange='graphSetTrigNum(\"hour\", this.value)'" + dis + "><span>:</span><input class='g-input' type='number' min='0' max='59' value='" + t.min + "' onchange='graphSetTrigNum(\"min\", this.value)'" + dis + "><button class='g-ampm" + (t.ampm === "AM" ? " on" : "") + "' onclick='graphSetAmpm(\"AM\")'" + dis + ">AM</button><button class='g-ampm" + (t.ampm === "PM" ? " on" : "") + "' onclick='graphSetAmpm(\"PM\")'" + dis + ">PM</button></div></div>";
       }
       html += "<div class='g-sum'>" + esc(graphTrigSummary(t)) + "</div>";
       html += "<div class='g-next'>" + tr("graph.next") + ": <b>" + esc(graphNextText(t)) + "</b></div>";
-      html += "<label class='g-check'><input type='checkbox'" + (t.active ? " checked" : "") + " onchange='graphSetTrigBool(\"active\", this.checked)'> " + tr("graph.active") + "</label>";
+      html += "<label class='g-check'><input type='checkbox'" + (t.active ? " checked" : "") + " onchange='graphSetTrigBool(\"active\", this.checked)'" + dis + "> " + tr("graph.active") + "</label>";
       html += "<div class='g-note'>" + tr("graph.note.open") + "</div>";
       if (t.freq === "custom") html += "<div class='g-note'>" + tr("graph.note.custom") + "</div>";
     } else if (t.type === "manual") {
@@ -1643,28 +1645,30 @@ export function renderGraphPanel() {
     }
     html += "<button class='g-run' onclick='graphRunNow()'>" + tr("graph.run_now") + "</button>";
   }
-  html += "<div class='g-actions'><button class='btn' onclick='graphDuplicate()'>" + tr("graph.dup") + "</button><button class='btn' onclick='graphToggleLock()'>" + (nd.locked ? tr("graph.unlock") : tr("graph.lock")) + "</button><button class='btn' onclick='graphAskDelete()'>" + tr("graph.del") + "</button></div>";
+  html += "<div class='g-actions'><button class='btn' onclick='graphDuplicate()'>" + tr("graph.dup") + "</button><button class='btn' onclick='graphToggleLock()'>" + (nd.locked ? tr("graph.unlock") : tr("graph.lock")) + "</button><button class='btn' onclick='graphAskDelete()'" + dis + ">" + tr("graph.del") + "</button></div>";
   if (graphDelAsk) html += "<div class='g-delask'>" + tr("graph.del_ask") + " <button class='btn' onclick='graphConfirmDelete()'>" + tr("graph.del_yes") + "</button> <button class='btn' onclick='graphCancelDelete()'>" + tr("graph.del_no") + "</button></div>";
   p.innerHTML = html;
 }
 
-export function graphRename(v) { var nd = graphSelNode(); if (!nd) return; nd.name = v; saveGraphState(); renderGraph(); }
-export function graphRedesc(v) { var nd = graphSelNode(); if (!nd) return; nd.desc = v; saveGraphState(); }
-export function graphSetBranch(side, v) { var nd = graphSelNode(); if (!nd) return; if (side === "T") nd.branchT = v; else nd.branchF = v; saveGraphState(); renderGraph(); renderGraphPanel(); }
+function graphPopupSaved() { var el = document.getElementById("graphPopupSaved"); if (el) el.textContent = "✓ " + tr("graph.saved"); }
+function graphPopupTitle(nd) { var el = document.getElementById("graphPopupTitle"); if (el) el.textContent = (nd.icon || "") + " " + nd.name + (nd.locked ? " 🔒" : ""); }
+export function graphRename(v) { var nd = graphSelNode(); if (!nd || nd.locked) return; nd.name = v; saveGraphState(); renderGraph(); graphPopupTitle(nd); graphPopupSaved(); }
+export function graphRedesc(v) { var nd = graphSelNode(); if (!nd || nd.locked) return; nd.desc = v; saveGraphState(); graphPopupSaved(); }
+export function graphSetBranch(side, v) { var nd = graphSelNode(); if (!nd || nd.locked) return; if (side === "T") nd.branchT = v; else nd.branchF = v; saveGraphState(); renderGraph(); renderGraphPanel(); }
 function graphTrigSync(nd) { var t = graphTrigOf(nd); nd.sub = graphTrigSummary(t); }
-export function graphSetTrig(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return; graphTrigOf(nd)[field] = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel(); }
+export function graphSetTrig(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return; graphTrigOf(nd)[field] = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel(); }
 export function graphSetTrigNum(field, v) {
-  var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return;
+  var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return;
   var n = parseInt(v, 10); if (isNaN(n)) return;
   var max = field === "hour" ? 12 : field === "min" ? 59 : field === "month" ? 12 : 31;
   var min = (field === "monthDay" || field === "day" || field === "hour" || field === "month") ? 1 : 0;
   graphTrigOf(nd)[field] = Math.max(min, Math.min(max, n));
   graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel();
 }
-export function graphSetTrigBool(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return; graphTrigOf(nd)[field] = !!v; saveGraphState(); renderGraph(); renderGraphPanel(); }
-export function graphSetAmpm(v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return; graphTrigOf(nd).ampm = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel(); }
+export function graphSetTrigBool(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return; graphTrigOf(nd)[field] = !!v; saveGraphState(); renderGraph(); renderGraphPanel(); }
+export function graphSetAmpm(v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return; graphTrigOf(nd).ampm = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel(); }
 export function graphToggleDay(d) {
-  var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return;
+  var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return;
   var t = graphTrigOf(nd);
   var i = t.days.indexOf(d);
   if (i >= 0) { if (t.days.length > 1) t.days.splice(i, 1); }
@@ -1678,6 +1682,7 @@ export function graphDuplicate() {
   nodeCounter++;
   var nk = "baru" + nodeCounter;
   var copy = JSON.parse(JSON.stringify(nd));
+  copy.locked = false;
   copy.name = (nd.name || "Node") + " (salinan)";
   copy.x = Math.min(90, (copy.x || 10) + 6);
   copy.y = Math.min(84, (copy.y || 10) + 12);
@@ -1688,10 +1693,10 @@ export function graphDuplicate() {
   var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.node_added"); }
 }
 export function graphToggleLock() { var nd = graphSelNode(); if (!nd) return; nd.locked = !nd.locked; saveGraphState(); renderGraph(); renderGraphPanel(); }
-export function graphAskDelete() { if (graphSel && GNODES[graphSel]) graphPopupOpen = true; graphDelAsk = true; renderGraphPanel(); }
+export function graphAskDelete() { var nd = graphSelNode(); if (nd && nd.locked) return; if (graphSel && GNODES[graphSel]) graphPopupOpen = true; graphDelAsk = true; renderGraphPanel(); }
 export function graphCancelDelete() { graphDelAsk = false; renderGraphPanel(); }
 export function graphConfirmDelete() {
-  if (!graphSel || !GNODES[graphSel]) return;
+  if (!graphSel || !GNODES[graphSel] || GNODES[graphSel].locked) return;
   var key = graphSel;
   delete GNODES[key];
   for (var i = GEDGES.length - 1; i >= 0; i--) { if (GEDGES[i].f === key || GEDGES[i].t === key) GEDGES.splice(i, 1); }

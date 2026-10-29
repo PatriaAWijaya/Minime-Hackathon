@@ -313,6 +313,50 @@ try {
   await tick(100);
   check('tombol x menutup popup', popup().style.display === 'none', popup().style.display);
 
+  // 14. v86: fitur popup per logika — nama/deskripsi/kunci/hapus pada sub-node model.
+  const pop14 = () => document.getElementById('graphPopup');
+  const card14 = () => document.getElementById('graphPopupCard');
+  const nameIn14 = () => card14().querySelector('input.g-input');
+  const descIn14 = () => card14().querySelector('textarea.g-input');
+  const btn14 = (t) => [...card14().querySelectorAll('button')].find((b) => b.textContent.trim() === t);
+  dbl13(document.querySelector('[data-nkey="model"]'));
+  await tick(100);
+  check('popup model tampil + judul ikon-nama', pop14().style.display !== 'none' && (document.getElementById('graphPopupTitle')?.textContent || '').includes('Chat Model'), document.getElementById('graphPopupTitle')?.textContent);
+  check('input nama berisi Chat Model', nameIn14() && nameIn14().value === 'Chat Model', nameIn14()?.value);
+  nameIn14().focus();
+  nameIn14().value = 'Model Uji';
+  nameIn14().dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  check('rename tersimpan + judul ikut + fokus bertahan', dom.window.GNODES.model.name === 'Model Uji' && (document.getElementById('graphPopupTitle')?.textContent || '').includes('Model Uji') && document.activeElement === nameIn14(), dom.window.GNODES.model.name + '|' + document.getElementById('graphPopupTitle')?.textContent);
+  descIn14().value = 'Deskripsi uji';
+  descIn14().dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  check('deskripsi tersimpan + indikator tampil', dom.window.GNODES.model.desc === 'Deskripsi uji' && (document.getElementById('graphPopupSaved')?.textContent || '').length > 0, dom.window.GNODES.model.desc + '|' + document.getElementById('graphPopupSaved')?.textContent);
+  btn14('Kunci').click();
+  await tick(100);
+  check('kunci -> input + hapus nonaktif', dom.window.GNODES.model.locked === true && nameIn14().disabled === true && descIn14().disabled === true && btn14('Hapus').disabled === true, JSON.stringify(dom.window.GNODES.model.locked) + '|' + nameIn14().disabled + '|' + btn14('Hapus').disabled);
+  dom.window.graphRename('Seharusnya Gagal');
+  dom.window.graphConfirmDelete();
+  await tick(50);
+  check('node terkunci tak bisa rename/hapus', dom.window.GNODES.model.name === 'Model Uji' && !!dom.window.GNODES.model, dom.window.GNODES.model.name);
+  btn14('Duplikat').click();
+  await tick(100);
+  const copy14 = [...document.querySelectorAll('[data-nkey]')].find((el) => el.textContent.includes('Model Uji (salinan)'));
+  const copyKey14 = copy14?.getAttribute('data-nkey');
+  check('duplikat node terkunci -> salinan tak terkunci', !!copyKey14 && dom.window.GNODES[copyKey14] && dom.window.GNODES[copyKey14].locked === false, copyKey14 + '|' + JSON.stringify(dom.window.GNODES[copyKey14]?.locked));
+  document.querySelector('#graphPopupCard .g-x').click();
+  await tick(100);
+  dbl13(document.querySelector('[data-nkey="model"]'));
+  await tick(100);
+  btn14('Buka kunci').click();
+  await tick(100);
+  check('buka kunci -> input aktif lagi', dom.window.GNODES.model.locked === false && nameIn14().disabled === false, JSON.stringify(dom.window.GNODES.model.locked));
+  btn14('Hapus').click();
+  await tick(100);
+  btn14('Ya, hapus').click();
+  await tick(100);
+  check('hapus model -> node + garis putus hilang + popup tutup', !dom.window.GNODES.model && !dom.window.GEDGES.some((e) => e.t === 'model') && pop14().style.display === 'none', Object.keys(dom.window.GNODES).join(','));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-graph exception :: ' + (e && e.stack ? e.stack : e));
