@@ -30,7 +30,7 @@ var PLATFORMS = [
   { id: 'linkedin', name: 'LinkedIn', mono: 'IN', icon: 'linkedin-icon.png', note: '', can: true },
   { id: 'youtube', name: 'YouTube', mono: 'YT', icon: 'youtube-icon.png', note: 'soc.note.youtube_video', can: false },
   { id: 'tiktok', name: 'TikTok', mono: 'TT', icon: 'tiktok-icon.png', note: 'soc.note.tiktok_url', can: true },
-  { id: 'x', name: 'X', mono: 'X', note: 'soc.note.x_cost', can: true },
+  { id: 'x', name: 'X', mono: 'X', icon: 'x-icon.png', note: 'soc.note.x_cost', can: true },
 ];
 
 function socStore() {
@@ -66,8 +66,8 @@ function platMono(id) {
 // Ikon kanal v69: logo asli dari app/public (pola yang sama dengan
 // ikon rail di App.svelte: src relatif "./nama.png", TANPA invert —
 // logo brand harus tampil apa adanya). Kanal tanpa berkas logo
-// (threads: berkas kiriman Patria kosong total/transparan; x: belum
-// dikirim) tetap memakai monogram.
+// (threads: berkas kiriman Patria kosong total/transparan) tetap
+// memakai monogram.
 function platIconHTML(id, sm) {
   var p = PLATFORMS.find(function (x) { return x.id === id; });
   var cls = sm ? 'soc-icon sm' : 'soc-icon';
