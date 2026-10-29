@@ -224,6 +224,20 @@ var socSideSel = null; // id kanal terhubung terpilih di sidebar
 var socPopOpen = false; // popup Tambah Channel terbuka
 var socPopForm = null; // platform yang sedang isi kredensial di popup
 var socPopMsg = ''; // pesan di popup (mis. FB profil tidak bisa autopost)
+var socWizStep = 1; // langkah wizard hubungkan (1-4), in-memory saja
+// Wizard hubungkan v73 (semua kanal, bukan cuma IG): tiap kanal punya
+// situs + URL dashboard aplikasi providernya + 3 teks terpandu (buat
+// aplikasi, tempel URI, cari ID/Secret). FB Page + IG berbagi aplikasi
+// Meta yang sama (satu App ID/Secret untuk kedua kartu).
+var SOC_WIZ = {
+  facebook_page: { site: 'developers.facebook.com', url: 'https://developers.facebook.com/apps/create/', app: 'soc.wiz.app_meta', uri: 'soc.wiz.uri_meta', find: 'soc.wiz.find_meta' },
+  instagram: { site: 'developers.facebook.com', url: 'https://developers.facebook.com/apps/create/', app: 'soc.wiz.app_meta', uri: 'soc.wiz.uri_meta', find: 'soc.wiz.find_meta' },
+  threads: { site: 'developers.facebook.com', url: 'https://developers.facebook.com/apps/', app: 'soc.wiz.app_th', uri: 'soc.wiz.uri_th', find: 'soc.wiz.find_th' },
+  linkedin: { site: 'linkedin.com', url: 'https://www.linkedin.com/developers/apps', app: 'soc.wiz.app_in', uri: 'soc.wiz.uri_in', find: 'soc.wiz.find_in' },
+  tiktok: { site: 'developers.tiktok.com', url: 'https://developers.tiktok.com/apps/', app: 'soc.wiz.app_tt', uri: 'soc.wiz.uri_tt', find: 'soc.wiz.find_tt' },
+  youtube: { site: 'console.cloud.google.com', url: 'https://console.cloud.google.com/apis/credentials', app: 'soc.wiz.app_yt', uri: 'soc.wiz.uri_yt', find: 'soc.wiz.find_yt' },
+  x: { site: 'developer.x.com', url: 'https://developer.x.com/en/portal/dashboard', app: 'soc.wiz.app_x', uri: 'soc.wiz.uri_x', find: 'soc.wiz.find_x' },
+};
 
 function socAvatarHTML(p, ch) {
   if (ch && ch.picture) return '<img class="soc-avatar" src="' + esc(ch.picture) + '" alt="">';
@@ -267,6 +281,8 @@ function socPopHTML() {
   if (socPopMsg) {
     inner = '<p>' + esc(socPopMsg) + '</p><div class="soc-row"><button class="btn btn-sm" id="socPopBack">' + tr('soc.back') + '</button></div>';
   } else if (socPopForm) {
+    if (SOC_WIZ[socPopForm]) { inner = socWizHTML(socPopForm); }
+    else {
     var p = PLATFORMS.find(function (x) { return x.id === socPopForm; });
     var ch = socStore()[socPopForm] || {};
     inner = '<h4>' + esc(p ? p.name : socPopForm) + '</h4>'
@@ -276,12 +292,75 @@ function socPopHTML() {
       + '<div class="soc-row"><button id="socPopConn" class="btn btn-sm btn-primary">' + tr('soc.connect') + '</button> '
       + '<button id="socPopBack" class="btn btn-sm">' + tr('soc.back') + '</button></div>'
       + '<div id="socPopNote" class="se-note"></div>';
+    }
   } else {
     inner = '<h4>' + tr('soc.add_channel') + '</h4><div class="soc-pop-grid">' + PLATFORMS.map(function (p) {
       return '<button class="soc-pop-tile" data-soc-tile="' + p.id + '">' + platIconHTML(p.id, false) + '<span>' + esc(p.name) + '</span></button>';
     }).join('') + '</div>';
   }
   return '<div class="soc-pop-overlay"><div class="soc-pop"><button class="soc-pop-x" id="socPopClose">×</button>' + inner + '</div></div>';
+}
+
+function socWizHTML(platform) {
+  var w = SOC_WIZ[platform];
+  var p = PLATFORMS.find(function (x) { return x.id === platform; });
+  var st = socStore()[platform] || {};
+  var steps = ['soc.wiz.s1', 'soc.wiz.s2', 'soc.wiz.s3', 'soc.wiz.s4'];
+  var head = '<h4>' + esc(p ? p.name : platform) + ' — ' + tr('soc.wiz.title') + '</h4>'
+    + '<div class="soc-wiz-steps">' + steps.map(function (k, i) {
+      return '<span class="soc-wiz-step' + (socWizStep === i + 1 ? ' on' : '') + '">' + (i + 1) + '. ' + tr(k) + '</span>';
+    }).join('') + '</div>';
+  var body = '';
+  if (socWizStep === 1) {
+    body = '<p>' + tr(w.app) + '</p>'
+      + '<div class="soc-row"><button id="socWizOpen" class="btn btn-sm btn-primary">' + tr('soc.wiz.open') + ' ' + esc(w.site) + '</button> '
+      + '<button id="socWizNext" class="btn btn-sm">' + tr('soc.wiz.next') + '</button></div>';
+  } else if (socWizStep === 2) {
+    body = '<p>' + tr('soc.wiz.t2') + '</p>'
+      + '<div class="soc-row"><input type="text" readonly id="socWizUri" class="soc-wiz-uri" value="' + esc(OAUTH_REDIRECT) + '"> '
+      + '<button id="socWizCopy" class="btn btn-sm">' + tr('soc.wiz.copy') + '</button></div>'
+      + '<div class="soc-row"><button id="socWizNext" class="btn btn-sm btn-primary">' + tr('soc.wiz.next') + '</button></div>'
+      + '<div id="socWizNote" class="se-note"></div>';
+  } else if (socWizStep === 3) {
+    body = '<p>' + tr(w.uri) + '</p>'
+      + '<div class="soc-row"><button id="socWizNext" class="btn btn-sm btn-primary">' + tr('soc.wiz.next') + '</button></div>';
+  } else {
+    var useBtn = '';
+    if (platform === 'instagram') {
+      var fb = socStore().facebook_page || {};
+      if (fb.clientId && fb.clientSecret) useBtn = '<button id="socWizUseFb" class="btn btn-sm">' + tr('soc.wiz.use_fb') + '</button> ';
+    }
+    if (platform === 'facebook_page') {
+      var ig = socStore().instagram || {};
+      if (ig.clientId && ig.clientSecret) useBtn = '<button id="socWizUseIg" class="btn btn-sm">' + tr('soc.wiz.use_ig') + '</button> ';
+    }
+    body = '<p>' + tr(w.find) + '</p>'
+      + '<div class="se-note">' + tr('soc.cred_hint') + '</div>'
+      + '<div class="soc-row"><input type="text" id="socPopId" placeholder="' + tr('soc.ph.id') + '" style="width:180px" value="' + esc(st.clientId || '') + '"> '
+      + '<input type="password" id="socPopSec" placeholder="' + tr('soc.ph.secret') + '" style="width:180px"></div>'
+      + '<div class="soc-row">' + useBtn + '<button id="socPopConn" class="btn btn-sm btn-primary">' + tr('soc.connect') + '</button></div>'
+      + '<div id="socPopNote" class="se-note"></div>';
+  }
+  var nav = '<div class="soc-row">'
+    + (socWizStep > 1 ? '<button id="socWizPrev" class="btn btn-sm">' + tr('soc.back') + '</button> ' : '<button id="socPopBack" class="btn btn-sm">' + tr('soc.back') + '</button> ')
+    + (socWizStep < 4 ? '<button id="socWizSkip" class="btn btn-sm">' + tr('soc.wiz.have') + '</button>' : '')
+    + '</div>';
+  return head + body + nav;
+}
+
+function socWizCopyFn() {
+  var done = function () { var n = document.getElementById('socWizNote'); if (n) n.textContent = tr('soc.wiz.copied'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(OAUTH_REDIRECT).then(done).catch(function () { socWizCopyFallback(); done(); });
+  } else { socWizCopyFallback(); done(); }
+}
+
+function socWizCopyFallback() {
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = OAUTH_REDIRECT; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  } catch (_) {}
 }
 
 function socPopTile(platform) {
@@ -298,7 +377,7 @@ function socPopTile(platform) {
     socConnectCreds(platform, ch.clientId, ch.clientSecret);
     return;
   }
-  socPopForm = platform; socPopMsg = '';
+  socPopForm = platform; socPopMsg = ''; socWizStep = 1;
   renderNativePlanner();
 }
 
@@ -330,7 +409,7 @@ export function renderNativePlanner() {
     });
   });
   // Bind popup Tambah Channel.
-  socBind('socAddChannel', function () { socPopOpen = true; socPopForm = null; socPopMsg = ''; renderNativePlanner(); });
+  socBind('socAddChannel', function () { socPopOpen = true; socPopForm = null; socPopMsg = ''; socWizStep = 1; renderNativePlanner(); });
   socBind('socPopClose', function () { socPopOpen = false; socPopForm = null; socPopMsg = ''; renderNativePlanner(); });
   socBind('socPopBack', function () { socPopForm = null; socPopMsg = ''; renderNativePlanner(); });
   el.querySelectorAll('[data-soc-tile]').forEach(function (b) {
@@ -354,6 +433,22 @@ export function renderNativePlanner() {
     socPopOpen = false; socPopForm = null; socPopMsg = '';
     renderNativePlanner();
     socConnectCreds(platform, cid, csec);
+  });
+  // Binding wizard hubungkan v73 (null-safe via socBind).
+  socBind('socWizOpen', function () { var w = SOC_WIZ[socPopForm]; if (w) invoke('open_external_url', { url: w.url }); });
+  socBind('socWizCopy', function () { socWizCopyFn(); });
+  socBind('socWizNext', function () { if (socWizStep < 4) { socWizStep++; renderNativePlanner(); } });
+  socBind('socWizPrev', function () { if (socWizStep > 1) { socWizStep--; renderNativePlanner(); } });
+  socBind('socWizSkip', function () { socWizStep = 4; renderNativePlanner(); });
+  socBind('socWizUseFb', function () {
+    var fb = socStore().facebook_page || {};
+    var a = document.getElementById('socPopId'); var b = document.getElementById('socPopSec');
+    if (a) a.value = fb.clientId || ''; if (b) b.value = fb.clientSecret || '';
+  });
+  socBind('socWizUseIg', function () {
+    var ig = socStore().instagram || {};
+    var a = document.getElementById('socPopId'); var b = document.getElementById('socPopSec');
+    if (a) a.value = ig.clientId || ''; if (b) b.value = ig.clientSecret || '';
   });
   socBind('socCalPrev', function () {
     socCalCursor = socCalCursor || new Date();

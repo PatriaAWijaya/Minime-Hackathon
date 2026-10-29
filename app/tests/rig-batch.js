@@ -226,7 +226,10 @@ try {
   check('Kembali -> grid popup lagi', !!document.querySelector('.soc-pop-grid'), '');
   document.querySelector('[data-soc-tile="tiktok"]').click();
   await tick(100);
-  check('klik ikon TikTok tanpa kredensial -> form ID + Secret', !!document.getElementById('socPopId') && !!document.getElementById('socPopConn'), '');
+  check('klik ikon TikTok tanpa kredensial -> wizard langkah 1', !!document.getElementById('socWizOpen') && !!document.getElementById('socWizSkip') && document.querySelectorAll('.soc-wiz-step').length === 4, '');
+  document.getElementById('socWizSkip').click();
+  await tick(100);
+  check('wizard: Saya sudah punya aplikasi -> form ID + Secret', !!document.getElementById('socPopId') && !!document.getElementById('socPopConn'), '');
   document.getElementById('socPopId').value = 'rig-tk-id';
   document.getElementById('socPopSec').value = 'rig-tk-sec';
   document.getElementById('socPopConn').click();
@@ -317,6 +320,89 @@ try {
   document.getElementById('socConfirmYes').click();
   await tick(100);
   check('pilih Ya -> komposer tertutup', !document.querySelector('.soc-composer'), '');
+
+  // 10. Wizard hubungkan v73: semua kanal terpandu 4 langkah
+  // (buat aplikasi -> salin URI -> tempel URI -> isi ID/Secret).
+  store.set('minime.social', JSON.stringify({ linkedin: { accessToken: 'rig-token', expiresAt: Date.now() + 3600000 } }));
+  dom.window.renderPlanner();
+  await tick(100);
+  const wizOpen = async (tile, expect) => {
+    document.getElementById('socAddChannel').click();
+    await tick(100);
+    document.querySelector('[data-soc-tile="' + tile + '"]').click();
+    await tick(100);
+    const ok = !!document.getElementById('socWizOpen') && document.querySelectorAll('.soc-wiz-step').length === 4;
+    globalThis.__lastOAuthUrl = '';
+    document.getElementById('socWizOpen').click();
+    await tick(100);
+    check('wizard ' + tile + ' -> buka dashboard provider', ok && (globalThis.__lastOAuthUrl || '').includes(expect), globalThis.__lastOAuthUrl);
+    document.getElementById('socPopClose').click();
+    await tick(100);
+  };
+  await wizOpen('instagram', 'developers.facebook.com/apps/create/');
+  await wizOpen('threads', 'developers.facebook.com/apps/');
+  await wizOpen('linkedin', 'linkedin.com/developers');
+  await wizOpen('tiktok', 'developers.tiktok.com');
+  await wizOpen('youtube', 'console.cloud.google.com');
+  await wizOpen('x', 'developer.x.com');
+  // Jalan langkah IG penuh: 1 -> 2 (salin URI) -> 3 -> 4 -> kembali.
+  document.getElementById('socAddChannel').click();
+  await tick(100);
+  document.querySelector('[data-soc-tile="instagram"]').click();
+  await tick(100);
+  document.getElementById('socWizNext').click();
+  await tick(100);
+  check('wizard langkah 2: URI loopback + tombol salin', (document.getElementById('socWizUri')?.value || '') === 'http://127.0.0.1:4317/callback' && !!document.getElementById('socWizCopy'), document.getElementById('socWizUri')?.value);
+  document.getElementById('socWizCopy').click();
+  await tick(100);
+  check('wizard: salin -> nota Tersalin', (document.getElementById('socWizNote')?.textContent || '').includes('Tersalin'), document.getElementById('socWizNote')?.textContent);
+  document.getElementById('socWizNext').click();
+  await tick(100);
+  check('wizard langkah 3: petunjuk tempel URI Meta', (document.querySelector('.soc-pop')?.textContent || '').includes('Facebook Login'), '');
+  document.getElementById('socWizNext').click();
+  await tick(100);
+  check('wizard langkah 4: form ID + Secret', !!document.getElementById('socPopId') && !!document.getElementById('socPopConn'), '');
+  document.getElementById('socWizPrev').click();
+  await tick(100);
+  check('wizard: Kembali dari 4 -> 3', !!document.getElementById('socWizNext') && (document.querySelector('.soc-pop')?.textContent || '').includes('Facebook Login'), '');
+  document.getElementById('socWizPrev').click();
+  await tick(100);
+  check('wizard: Kembali dari 3 -> 2', !!document.getElementById('socWizUri'), '');
+  document.getElementById('socWizPrev').click();
+  await tick(100);
+  check('wizard: Kembali dari 2 -> 1', !!document.getElementById('socWizOpen'), '');
+  document.getElementById('socPopBack').click();
+  await tick(100);
+  check('wizard: Kembali dari 1 -> grid channel', !!document.querySelector('.soc-pop-grid'), '');
+  // Pakai ulang aplikasi Meta: FB Page -> IG dan IG -> FB Page.
+  store.set('minime.social', JSON.stringify({ linkedin: { accessToken: 'rig-token', expiresAt: Date.now() + 3600000 }, facebook_page: { clientId: 'fb-id', clientSecret: 'fb-sec' } }));
+  dom.window.renderPlanner();
+  await tick(100);
+  document.getElementById('socAddChannel').click();
+  await tick(100);
+  document.querySelector('[data-soc-tile="instagram"]').click();
+  await tick(100);
+  document.getElementById('socWizSkip').click();
+  await tick(100);
+  check('wizard IG: tombol pakai aplikasi FB Page muncul', !!document.getElementById('socWizUseFb'), '');
+  document.getElementById('socWizUseFb').click();
+  await tick(100);
+  check('wizard IG: pakai aplikasi FB Page mengisi form', document.getElementById('socPopId').value === 'fb-id' && document.getElementById('socPopSec').value === 'fb-sec', document.getElementById('socPopId').value);
+  document.getElementById('socPopClose').click();
+  await tick(100);
+  store.set('minime.social', JSON.stringify({ linkedin: { accessToken: 'rig-token', expiresAt: Date.now() + 3600000 }, instagram: { clientId: 'ig-id', clientSecret: 'ig-sec' } }));
+  dom.window.renderPlanner();
+  await tick(100);
+  document.getElementById('socAddChannel').click();
+  await tick(100);
+  document.querySelector('[data-soc-tile="facebook_page"]').click();
+  await tick(100);
+  document.getElementById('socWizSkip').click();
+  await tick(100);
+  check('wizard FB Page: tombol pakai aplikasi IG muncul + mengisi form', !!document.getElementById('socWizUseIg'), '');
+  document.getElementById('socWizUseIg').click();
+  await tick(100);
+  check('wizard FB Page: pakai aplikasi IG mengisi form', document.getElementById('socPopId').value === 'ig-id' && document.getElementById('socPopSec').value === 'ig-sec', document.getElementById('socPopId').value);
 
 } catch (e) {
   // eslint-disable-next-line no-console

@@ -223,3 +223,8 @@ h3 { font-size: 18px; }
 .soc-comp-media { background: #222; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .soc-item-draft { opacity: .85; border-style: dashed; }
 .soc-item[data-soc-edit] { cursor: pointer; }
+/* ---- Wizard hubungkan v73: langkah terpandu + URI monospace ---- */
+.soc-wiz-steps { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+.soc-wiz-step { font-size: 12px; padding: 4px 8px; border-radius: 20px; background: #2a2a2a; color: #aaa; }
+.soc-wiz-step.on { background: #EB87B4; color: #222; font-weight: bold; }
+.soc-wiz-uri { font-family: monospace; width: 280px; background: #111; color: #ddd; border: 1px solid #333; border-radius: 8px; padding: 6px 8px; }
