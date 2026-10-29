@@ -158,10 +158,12 @@ function renderCalendar() {
     var k = y + '-' + (m + 1) + '-' + d;
     var chips = (byDay[k] || []).map(function (it) {
       var fail = it.status === 'failed' ? ' <span class="soc-item-fail">' + tr('soc.status.failed') + '</span>' : '';
-      var cls = it.status === 'sent' ? ' soc-item-sent' : '';
-      return '<div class="soc-item' + cls + '" title="' + esc(it.text || '') + '">' + platIconHTML(it.platform, true) + '<span class="soc-item-title">' + esc(socItemTitle(it.text)) + '</span>' + fail + '<button class="soc-del" data-soc-del="' + it.id + '" title="' + tr('soc.delete') + '">−</button></div>';
+      var cls = it.status === 'sent' ? ' soc-item-sent' : (it.status === 'draft' ? ' soc-item-draft' : '');
+      var title = it.status === 'draft' ? tr('soc.draft_label') + ': ' + socItemTitle(it.text) : socItemTitle(it.text);
+      var editAttr = (it.status === 'draft' || it.status === 'queued' || it.status === 'failed') ? ' data-soc-edit="' + it.id + '"' : '';
+      return '<div class="soc-item' + cls + '"' + editAttr + ' title="' + esc(it.text || '') + '">' + platIconHTML(it.platform, true) + '<span class="soc-item-title">' + esc(title) + '</span>' + fail + '<button class="soc-del" data-soc-del="' + it.id + '" title="' + tr('soc.delete') + '">−</button></div>';
     }).join('');
-    cells += '<div class="soc-cal-day" data-day="' + k + '"><div class="soc-day-head"><b>' + d + '</b><button class="soc-add" data-soc-add="' + k + '" title="' + tr('soc.day.add') + '">+</button></div>' + chips + '</div>';
+    cells += '<div class="soc-cal-day" data-day="' + k + '"><div class="soc-day-head"><b>' + d + '</b><button class="soc-add" data-soc-add="' + k + '" title="' + tr('soc.create_post') + '">+</button></div>' + chips + '</div>';
   }
   var monthName = now.toLocaleString(undefined, { month: 'long', year: 'numeric' });
   return '<div class="soc-cal-head"><button id="socCalPrev" class="btn btn-sm">‹</button><b>' + esc(monthName) + '</b><button id="socCalNext" class="btn btn-sm">›</button></div>'
@@ -184,7 +186,8 @@ export function socQueueAdd(items) {
       platform: it.platform, text: it.text,
       imageB64: '', imageMime: it.imageMime || '',
       imageFile: it.imageFile || '', imageUrl: it.imageUrl || '',
-      scheduledAt: it.scheduledAt, status: 'queued', error: '',
+      scheduledAt: it.scheduledAt, status: it.status || 'queued', error: '',
+      repeat: it.repeat || '',
     };
     q.push(row);
     ids.push(row.id);
@@ -195,11 +198,7 @@ export function socQueueAdd(items) {
   return ids;
 }
 
-// ---- Sumber konten penjadwalan (v63) ----
-// Default = Library (perintah Patria 29 Okt 17:46); opsi "File sendiri"
-// membuka input file + URL. Satu builder dipakai dialog tanggal
-// (v68: composer lama dihapus bersama layout lama).
-// tanggal — tidak ada duplikasi UI.
+// Akses item Library untuk sumber media komposer (v72).
 function socLibItems() {
   try {
     if (typeof window.libAll !== 'function') return [];
@@ -213,120 +212,94 @@ export function socMimeFromExt(f) {
   if (m.endsWith('.jpg') || m.endsWith('.jpeg')) return 'image/jpeg';
   return '';
 }
-function socSourceHTML(prefix) {
-  var items = socLibItems();
-  var opts = [];
-  items.forEach(function (it, i) {
-    if (it.kind === 'image' && it.imageFile) {
-      opts.push('<option value="img:' + esc(it.imageFile) + '">🖼 ' + esc(it.o || 'Gambar') + '</option>');
-    } else if ((it.kind === 'script' || it.kind === 'doc') && it.content) {
-      opts.push('<option value="txt:' + i + '">📝 ' + esc(it.o || 'Naskah') + '</option>');
-    }
-  });
-  var libSel = opts.length
-    ? '<select id="socLibSel-' + prefix + '">' + opts.join('') + '</select>'
-    : '<span>' + tr('soc.lib.empty') + '</span>';
-  return '<div class="soc-row"><label>' + tr('soc.source') + ' <select id="socSrc-' + prefix + '">'
-    + '<option value="library">' + tr('soc.source.lib') + '</option>'
-    + '<option value="custom">' + tr('soc.source.custom') + '</option></select></label></div>'
-    + '<div id="socLib-' + prefix + '" class="soc-row">' + libSel + '</div>'
-    + '<div id="socCustom-' + prefix + '" class="soc-row" style="display:none"><input type="file" id="socFile-' + prefix + '" accept="image/*,video/*"> '
-    + '<input type="text" id="socUrl-' + prefix + '" placeholder="' + tr('soc.ph.imgurl') + '" style="width:260px"></div>';
-}
-function socBindSource(prefix, textElId) {
-  var src = document.getElementById('socSrc-' + prefix);
-  var lib = document.getElementById('socLib-' + prefix);
-  var cus = document.getElementById('socCustom-' + prefix);
-  var libSel = document.getElementById('socLibSel-' + prefix);
-  if (!src) return;
-  var sync = function () {
-    var isLib = src.value === 'library';
-    if (lib) lib.style.display = isLib ? '' : 'none';
-    if (cus) cus.style.display = isLib ? 'none' : '';
-    if (!libSel) src.value = 'custom';
-    if (libSel && !libSel.options.length) src.value = 'custom';
-  };
-  src.addEventListener('change', function () {
-    sync();
-    // Pilih naskah Library -> isi caption (masih bisa diedit user).
-    if (libSel && libSel.value.indexOf('txt:') === 0) {
-      var items = socLibItems();
-      var it = items[parseInt(libSel.value.slice(4), 10)];
-      var ta = textElId ? document.getElementById(textElId) : null;
-      if (it && it.content && ta) ta.value = it.content;
-    }
-  });
-  if (libSel) libSel.addEventListener('change', function () {
-    if (libSel.value.indexOf('txt:') === 0) {
-      var items = socLibItems();
-      var it = items[parseInt(libSel.value.slice(4), 10)];
-      var ta = textElId ? document.getElementById(textElId) : null;
-      if (it && it.content && ta) ta.value = it.content;
-    }
-  });
-  sync();
-  // Isi awal: bila opsi Library pertama adalah naskah, caption terisi
-  // tanpa menunggu user mengubah dropdown.
-  if (libSel && libSel.value.indexOf('txt:') === 0) {
-    var items0 = socLibItems();
-    var it0 = items0[parseInt(libSel.value.slice(4), 10)];
-    var ta0 = textElId ? document.getElementById(textElId) : null;
-    if (it0 && it0.content && ta0 && !ta0.value) ta0.value = it0.content;
-  }
-}
-async function socReadSource(prefix) {
-  var src = document.getElementById('socSrc-' + prefix);
-  var out = { imageFile: '', imageB64: '', imageMime: '', imageUrl: '' };
-  if (!src || src.value === 'library') {
-    var libSel = document.getElementById('socLibSel-' + prefix);
-    if (libSel && libSel.value.indexOf('img:') === 0) {
-      out.imageFile = libSel.value.slice(4);
-      out.imageMime = socMimeFromExt(out.imageFile);
-    }
-    return out;
-  }
-  var fileEl = document.getElementById('socFile-' + prefix);
-  if (fileEl && fileEl.files && fileEl.files[0]) {
-    try {
-      var r = await readFileB64(fileEl.files[0]);
-      out.imageB64 = r.b64;
-      out.imageMime = r.mime;
-      out.imageFile = '';
-    } catch (_) {}
-    return out;
-  }
-  var urlEl = document.getElementById('socUrl-' + prefix);
-  if (urlEl) out.imageUrl = urlEl.value.trim();
-  return out;
-}
-
-var socDayOpen = null; // 'YYYY-M-D' atau null
-
 var socCalCursor = null;
 
-// Sidebar Planner (v68, perintah Patria 29 Okt 21:01): daftar kanal
-// sebagai tombol ikon + status; klik kanal memunculkan kartu
-// koneksinya DI DALAM sidebar (form hubungkan/putuskan + picker
-// Page). Window utama HANYA kalender — composer + daftar antrean
-// lama dihapus; penjadwalan lewat + di kartu (dialog tanggal),
-// item tampil di kartu sebagai judul + ikon kanal, hapus via −.
-var socSideSel = null; // id kanal terpilih di sidebar, null = belum memilih
+// Sidebar Planner gaya Postiz (v72, perintah Patria 30 Okt 00:28):
+// tombol Tambah Channel di atas + Buat Postingan di bawahnya,
+// lalu HANYA channel terhubung sebagai baris (avatar + nama akun +
+// badge platform, persis baris channel Postiz). Channel belum
+// terhubung TIDAK tampil di sini — hubungkan lewat popup Tambah
+// Channel. Klik baris = kartu detailnya (Putuskan / picker Page).
+var socSideSel = null; // id kanal terhubung terpilih di sidebar
+var socPopOpen = false; // popup Tambah Channel terbuka
+var socPopForm = null; // platform yang sedang isi kredensial di popup
+var socPopMsg = ''; // pesan di popup (mis. FB profil tidak bisa autopost)
+
+function socAvatarHTML(p, ch) {
+  if (ch && ch.picture) return '<img class="soc-avatar" src="' + esc(ch.picture) + '" alt="">';
+  return platIconHTML(p.id, false);
+}
 
 function renderSideBar() {
   var s = socStore();
-  var list = PLATFORMS.map(function (p) {
-    var connected = tokenValid(s[p.id]);
+  var rows = PLATFORMS.filter(function (p) { return tokenValid(s[p.id]); }).map(function (p) {
+    var ch = s[p.id];
     var sel = socSideSel === p.id ? ' sel' : '';
-    return '<button class="soc-side-btn' + sel + '" data-soc-side="' + p.id + '">' + platIconHTML(p.id, false) + '<span class="soc-side-name">' + esc(p.name) + '</span><span class="badge ' + (connected ? 'b-ok' : '') + '">' + (connected ? tr('soc.connected') : tr('soc.not_connected')) + '</span></button>';
+    return '<button class="soc-side-row' + sel + '" data-soc-side="' + p.id + '"><span class="soc-avatar-wrap">' + socAvatarHTML(p, ch) + '<span class="soc-row-badge">' + platIconHTML(p.id, true) + '</span></span><span class="soc-side-name">' + esc(ch.label || p.name) + '</span></button>';
   }).join('');
   var detail = '';
-  if (!socSideSel) {
-    detail = '<p class="se-note">' + tr('soc.side.hint') + '</p>';
-  } else {
+  var pendingPlat = socMetaPending ? socMetaPending.platform : (socYtPending ? socYtPending.platform : null);
+  if (pendingPlat) {
+    var pp = PLATFORMS.find(function (x) { return x.id === pendingPlat; });
+    detail = pp ? renderChannels([pp]) : '';
+  } else if (socSideSel) {
     var p = PLATFORMS.find(function (x) { return x.id === socSideSel; });
     detail = p ? renderChannels([p]) : '';
+  } else {
+    detail = '<p class="se-note">' + tr('soc.side.hint') + '</p>';
   }
-  return '<div class="soc-side"><h3>' + tr('soc.side.title') + '</h3><div class="soc-side-list">' + list + '</div><div class="soc-side-detail">' + detail + '</div></div>';
+  return '<div class="soc-side"><h3>' + tr('soc.side.title') + '</h3>'
+    + '<div class="soc-row"><button id="socAddChannel" class="btn btn-primary" style="width:100%">+ ' + tr('soc.add_channel') + '</button></div>'
+    + '<div class="soc-row"><button id="socCreatePost" class="btn" style="width:100%">+ ' + tr('soc.create_post') + '</button></div>'
+    + '<div class="soc-side-list">' + rows + '</div><div class="soc-side-detail">' + detail + '</div></div>';
+}
+
+// Popup Tambah Channel gaya Postiz (v72): grid ikon + nama aplikasi
+// di bawahnya. Klik ikon:
+//  - FB profil: penjelasan jujur (API tidak mengizinkan autopost
+//    profil; Postiz pun tidak menawarkannya).
+//  - kredensial tersimpan: login browser LANGSUNG (tanpa form).
+//  - belum ada kredensial: form ID + Secret di dalam popup;
+//    Hubungkan menyimpan kredensial lalu login browser otomatis.
+function socPopHTML() {
+  if (!socPopOpen) return '';
+  var inner = '';
+  if (socPopMsg) {
+    inner = '<p>' + esc(socPopMsg) + '</p><div class="soc-row"><button class="btn btn-sm" id="socPopBack">' + tr('soc.back') + '</button></div>';
+  } else if (socPopForm) {
+    var p = PLATFORMS.find(function (x) { return x.id === socPopForm; });
+    var ch = socStore()[socPopForm] || {};
+    inner = '<h4>' + esc(p ? p.name : socPopForm) + '</h4>'
+      + '<div class="se-note">' + tr('soc.cred_hint') + '</div>'
+      + '<div class="soc-row"><input type="text" id="socPopId" placeholder="' + tr('soc.ph.id') + '" style="width:180px" value="' + esc(ch.clientId || '') + '"> '
+      + '<input type="password" id="socPopSec" placeholder="' + tr('soc.ph.secret') + '" style="width:180px"></div>'
+      + '<div class="soc-row"><button id="socPopConn" class="btn btn-sm btn-primary">' + tr('soc.connect') + '</button> '
+      + '<button id="socPopBack" class="btn btn-sm">' + tr('soc.back') + '</button></div>'
+      + '<div id="socPopNote" class="se-note"></div>';
+  } else {
+    inner = '<h4>' + tr('soc.add_channel') + '</h4><div class="soc-pop-grid">' + PLATFORMS.map(function (p) {
+      return '<button class="soc-pop-tile" data-soc-tile="' + p.id + '">' + platIconHTML(p.id, false) + '<span>' + esc(p.name) + '</span></button>';
+    }).join('') + '</div>';
+  }
+  return '<div class="soc-pop-overlay"><div class="soc-pop"><button class="soc-pop-x" id="socPopClose">×</button>' + inner + '</div></div>';
+}
+
+function socPopTile(platform) {
+  if (platform === 'facebook') {
+    socPopMsg = tr('soc.note.fb_profile');
+    socPopForm = null;
+    renderNativePlanner();
+    return;
+  }
+  var ch = socStore()[platform] || {};
+  if (ch.clientId && ch.clientSecret) {
+    socPopOpen = false; socPopForm = null; socPopMsg = '';
+    renderNativePlanner();
+    socConnectCreds(platform, ch.clientId, ch.clientSecret);
+    return;
+  }
+  socPopForm = platform; socPopMsg = '';
+  renderNativePlanner();
 }
 
 export function renderNativePlanner() {
@@ -334,8 +307,8 @@ export function renderNativePlanner() {
   if (!el) return;
   el.innerHTML = '<div class="soc-wrap soc-layout">' + renderSideBar()
     + '<div class="soc-main"><div class="soc-cal">' + renderCalendar() + '</div>'
-    + socDayDialogHTML()
-    + '<p class="se-note">' + tr('soc.desc') + '</p></div></div>';
+    + socComposerHTML()
+    + '<p class="se-note">' + tr('soc.desc') + '</p></div></div>' + socPopHTML();
   // Bind sidebar: pilih kanal -> kartu koneksinya muncul di sidebar.
   el.querySelectorAll('[data-soc-side]').forEach(function (b) {
     b.addEventListener('click', function () { socSideSel = b.getAttribute('data-soc-side'); renderNativePlanner(); });
@@ -344,8 +317,43 @@ export function renderNativePlanner() {
   PLATFORMS.forEach(function (p) {
     socBind('socConn-' + p.id, function () { socConnect(p.id); });
     socBind('socDisc-' + p.id, function () {
-      var st = socStore(); delete st[p.id]; socSave(st); renderNativePlanner();
+      var st = socStore();
+      var old = st[p.id] || {};
+      // Putuskan = hapus token + identitas akun, tapi SIMPAN kredensial
+      // aplikasi (v72): popup Tambah Channel bisa login langsung tanpa
+      // isi ulang Client ID/Secret.
+      if (old.clientId && old.clientSecret) { st[p.id] = { clientId: old.clientId, clientSecret: old.clientSecret }; }
+      else { delete st[p.id]; }
+      socSave(st);
+      if (socSideSel === p.id) socSideSel = null;
+      renderNativePlanner();
     });
+  });
+  // Bind popup Tambah Channel.
+  socBind('socAddChannel', function () { socPopOpen = true; socPopForm = null; socPopMsg = ''; renderNativePlanner(); });
+  socBind('socPopClose', function () { socPopOpen = false; socPopForm = null; socPopMsg = ''; renderNativePlanner(); });
+  socBind('socPopBack', function () { socPopForm = null; socPopMsg = ''; renderNativePlanner(); });
+  el.querySelectorAll('[data-soc-tile]').forEach(function (b) {
+    b.addEventListener('click', function () { socPopTile(b.getAttribute('data-soc-tile')); });
+  });
+  socBind('socPopConn', function () {
+    var idEl = document.getElementById('socPopId');
+    var secEl = document.getElementById('socPopSec');
+    var cid = idEl ? idEl.value.trim() : '';
+    var csec = secEl ? secEl.value.trim() : '';
+    if (!cid || !csec) {
+      var n = document.getElementById('socPopNote');
+      if (n) n.textContent = tr('soc.err.cred');
+      return;
+    }
+    var platform = socPopForm;
+    if (!platform) return;
+    var s = socStore();
+    s[platform] = Object.assign({}, s[platform] || {}, { clientId: cid, clientSecret: csec });
+    socSave(s);
+    socPopOpen = false; socPopForm = null; socPopMsg = '';
+    renderNativePlanner();
+    socConnectCreds(platform, cid, csec);
   });
   socBind('socCalPrev', function () {
     socCalCursor = socCalCursor || new Date();
@@ -357,23 +365,21 @@ export function renderNativePlanner() {
     socCalCursor = new Date(socCalCursor.getFullYear(), socCalCursor.getMonth() + 1, 1);
     renderNativePlanner();
   });
+  // Klik kartu / tombol + = buka komposer Buat Postingan untuk
+  // tanggal itu (Postiz: klik sel kalender membuka Create Post).
   el.querySelectorAll('.soc-cal-day[data-day]').forEach(function (cell) {
     cell.addEventListener('click', function () {
-      socDayOpen = cell.getAttribute('data-day');
-      renderNativePlanner();
+      socComposerOpen(cell.getAttribute('data-day'), null);
     });
   });
-  // + di kartu = buka dialog tanggal (alurnya sama dengan klik kartu;
-  // stopPropagation agar tidak render ganda).
   el.querySelectorAll('[data-soc-add]').forEach(function (b) {
     b.addEventListener('click', function (e) {
       e.stopPropagation();
-      socDayOpen = b.getAttribute('data-soc-add');
-      renderNativePlanner();
+      socComposerOpen(b.getAttribute('data-soc-add'), null);
     });
   });
   // − di chip = hapus penjadwalan itu saja (stopPropagation agar
-  // dialog tanggal tidak ikut terbuka).
+  // komposer tidak ikut terbuka).
   el.querySelectorAll('[data-soc-del]').forEach(function (b) {
     b.addEventListener('click', function (e) {
       e.stopPropagation();
@@ -381,9 +387,16 @@ export function renderNativePlanner() {
       renderNativePlanner();
     });
   });
-  socBind('socDayCloseBtn', function () { socDayOpen = null; renderNativePlanner(); });
-  socBind('socDayScheduleBtn', function () { socScheduleDay(); });
-  socBind('socDayNowBtn', function () { socPublishDayNow(); });
+  // Klik chip draf/antrean/gagal = edit di komposer.
+  el.querySelectorAll('[data-soc-edit]').forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var it = queueLoad().find(function (x) { return String(x.id) === b.getAttribute('data-soc-edit'); });
+      if (it) socComposerOpen(dayKey(it.scheduledAt), it.id);
+    });
+  });
+  // Tombol Buat Postingan di sidebar = komposer untuk hari ini.
+  socBind('socCreatePost', function () { socComposerOpen(dayKey(Date.now()), null); });
   el.querySelectorAll('[data-soc-ytpick]').forEach(function (b) {
     b.addEventListener('click', function () {
       if (!socYtPending) return;
@@ -394,20 +407,14 @@ export function renderNativePlanner() {
         clientId: socYtPending.clientId, clientSecret: socYtPending.clientSecret,
         accessToken: socYtPending.accessToken, refreshToken: socYtPending.refreshToken || '',
         expiresAt: socYtPending.expiresAt || 0,
-        channelId: ch.id, label: ch.name,
+        channelId: ch.id, label: ch.name, picture: ch.picture || '',
       };
       socSave(s);
       socYtPending = null;
       renderNativePlanner();
     });
   });
-  socBindSource('day', 'socDayText');
-  el.querySelectorAll('[data-soc-daydel]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      queueSave(queueLoad().filter(function (it) { return String(it.id) !== b.getAttribute('data-soc-daydel'); }));
-      renderNativePlanner();
-    });
-  });
+  socBindComposer();
   el.querySelectorAll('[data-soc-pick]').forEach(function (b) {
     b.addEventListener('click', async function () {
       if (!socMetaPending) return;
@@ -420,14 +427,14 @@ export function renderNativePlanner() {
         catch (e) { socNote(String(e || '')); return; }
         var igJ;
         try { igJ = JSON.parse(igBody); } catch (_) { socNote(tr('soc.err.ig_account')); return; }
-        var igId = igJ.instagram_business_account && igJ.instagram_business_account.id;
+        var igId = igJ.id || (igJ.instagram_business_account && igJ.instagram_business_account.id);
         if (!igId) { socNote(tr('soc.err.ig_account')); return; }
         var s2 = socStore();
         s2.instagram = {
           clientId: socMetaPending.clientId, clientSecret: socMetaPending.clientSecret,
           userToken: socMetaPending.userToken,
           pageId: pg.id, pageName: pg.name, pageToken: pg.access_token,
-          igUserId: igId, label: pg.name,
+          igUserId: igId, label: igJ.username || pg.name, picture: igJ.picture || '',
         };
         socSave(s2);
         socMetaPending = null;
@@ -440,6 +447,7 @@ export function renderNativePlanner() {
         userToken: socMetaPending.userToken,
         pageId: pg.id, pageName: pg.name, pageToken: pg.access_token,
         expiresAt: 0, label: pg.name,
+        picture: (pg.picture && pg.picture.data && pg.picture.data.url) || '',
       };
       socSave(s);
       socMetaPending = null;
@@ -451,7 +459,7 @@ export function renderNativePlanner() {
 function socNote(m) {
   // v68: composer (#socNote) dihapus bersama layout lama — catatan
   // jatuh ke #socDayNote bila dialog tanggal sedang terbuka.
-  var el = document.getElementById('socNote') || document.getElementById('socDayNote');
+  var el = document.getElementById('socNote') || document.getElementById('socComposerNote');
   if (el) el.textContent = m;
 }
 
@@ -467,26 +475,6 @@ function readFileB64(file) {
   });
 }
 
-// Terbit sekarang dari dialog tanggal (v68): pengganti tombol
-// composer lama yang dihapus bersama layout lama. Membaca form yang
-// sama dengan socScheduleDay (teks + kanal tercentang + sumber),
-// menerbitkan langsung ke tiap kanal tercentang, TANPA menyentuh
-// antrean dan TANPA render ulang (dialog tetap terbuka agar catatan
-// hasil per kanal tidak terhapus render).
-async function socPublishDayNow() {
-  var text = (document.getElementById('socDayText') || {}).value || '';
-  text = text.trim();
-  var noteEl = document.getElementById('socDayNote');
-  var note = function (m) { if (noteEl) noteEl.textContent = m; };
-  if (!text) { note(tr('soc.err.empty')); return; }
-  var plats = Array.prototype.slice.call(document.querySelectorAll('.soc-day-chk:checked')).map(function (c) { return c.value; });
-  if (!plats.length) { note(tr('soc.err.no_channel')); return; }
-  var media = await socReadSource('day');
-  var img = media.imageB64 ? { b64: media.imageB64, mime: media.imageMime || '' } : null;
-  for (var i = 0; i < plats.length; i++) {
-    await socPublishDirect(plats[i], text, img, media.imageUrl || '', media.imageFile || '');
-  }
-}
 // Satu-satunya tempat yang merakit argumen publish — mencegah
 // divergensi antar jalur (langsung / antrean / timer). Aturan IG:
 // pageId yang dikirim adalah ID akun IG, bukan ID Page.
@@ -505,87 +493,9 @@ function socPublishArgs(platform, ch, text, img, imgUrl, imageFile, mime) {
   };
 }
 
-function socDayDialogHTML() {
-  if (!socDayOpen) return '';
-  var parts = socDayOpen.split('-');
-  var label = '';
-  try { label = new Date(+parts[0], +parts[1] - 1, +parts[2]).toLocaleDateString(); } catch (_) { label = socDayOpen; }
-  var items = queueLoad().filter(function (it) { return dayKey(it.scheduledAt) === socDayOpen; })
-    .sort(function (a, b) { return a.scheduledAt - b.scheduledAt; });
-  var list = items.length ? items.map(function (it) {
-    var st = it.status === 'sent' ? tr('soc.status.sent')
-      : it.status === 'failed' ? tr('soc.status.failed') + (it.error ? ' — ' + esc(it.error) : '')
-      : it.status === 'sending' ? tr('soc.status.sending')
-      : tr('soc.status.queued');
-    var del = (it.status === 'queued' || it.status === 'failed' || it.status === 'sent')
-      ? ' <button class="btn btn-sm" data-soc-daydel="' + it.id + '">' + tr('soc.delete') + '</button>'
-      : '';
-    return '<div class="soc-q"><b>' + esc(platName(it.platform)) + '</b> · ' + esc(fmtTime(it.scheduledAt)) + ' · ' + st
-      + '<div>' + esc((it.text || '').slice(0, 120)) + ((it.imageB64 || it.imageFile) ? ' 📷' : '') + (it.imageUrl ? ' 🔗' : '') + '</div>' + del + '</div>';
-  }).join('') : '<div>' + tr('soc.day.empty') + '</div>';
-  var s = socStore();
-  var checks = PLATFORMS.filter(function (p) { return tokenValid(s[p.id]); }).map(function (p) {
-    return '<label><input type="checkbox" class="soc-day-chk" value="' + p.id + '" checked> ' + esc(p.name) + '</label>';
-  }).join(' ') || tr('soc.no_channel');
-  return '<div class="soc-daydlg"><h4>' + tr('soc.day.title', { date: label }) + '</h4>'
-    + '<div>' + list + '</div>'
-    + '<div class="soc-composer"><h4>' + tr('soc.day.add') + '</h4>'
-    + '<textarea id="socDayText" rows="3" placeholder="' + tr('soc.text_ph') + '" style="width:100%"></textarea>'
-    + '<div class="soc-row">' + checks + '</div>'
-    + socSourceHTML('day')
-    + '<div class="soc-row"><input type="time" id="socDayTime" value="09:00"></div>'
-    + '<div class="soc-row"><button id="socDayScheduleBtn" class="btn btn-primary">' + tr('soc.schedule') + '</button> '
-    + '<button id="socDayNowBtn" class="btn">' + tr('soc.publish_now') + '</button> '
-    + '<button id="socDayCloseBtn" class="btn">' + tr('soc.close') + '</button></div>'
-    + '<div id="socDayNote"></div></div></div>';
-}
-
-async function socScheduleDay() {
-  if (!socDayOpen) return;
-  var parts = socDayOpen.split('-');
-  var timeEl = document.getElementById('socDayTime');
-  var hm = (timeEl ? timeEl.value : '09:00') || '09:00';
-  var hhmm = hm.split(':');
-  var when = new Date(+parts[0], +parts[1] - 1, +parts[2], +(hhmm[0] || 9), +(hhmm[1] || 0)).getTime();
-  var text = (document.getElementById('socDayText') || {}).value || '';
-  text = text.trim();
-  var noteEl = document.getElementById('socDayNote');
-  var note = function (m) { if (noteEl) noteEl.textContent = m; };
-  if (!text) { note(tr('soc.err.empty')); return; }
-  var plats = Array.prototype.slice.call(document.querySelectorAll('.soc-day-chk:checked')).map(function (c) { return c.value; });
-  if (!plats.length) { note(tr('soc.err.no_channel')); return; }
-  var media = await socReadSource('day');
-  // Video hanya untuk YouTube (cara Postiz: YouTube = video-only).
-  if ((media.imageMime || '').indexOf('video/') === 0 && plats.some(function (pl) { return pl !== 'youtube'; })) {
-    note(tr('soc.err.yt_only')); return;
-  }
-  var imageFile = media.imageFile || '';
-  if (media.imageB64) {
-    try {
-      var saved = await invoke('image_save', { req: { name: 'soc-' + Date.now() + '-day', b64: media.imageB64 } });
-      imageFile = saved.file || '';
-    } catch (e) { note(String(e || '')); return; }
-    if (!imageFile) { note(tr('soc.err.image')); return; }
-  }
-  // Audit v66 S-M3: file lokal untuk
-  // Threads/IG/TikTok ditolak di sini, bukan di jam jatuh tempo.
-  if (imageFile) {
-    var blockedDay = plats.filter(function (pl) { return pl === 'threads' || pl === 'instagram' || pl === 'tiktok'; });
-    if (blockedDay.length) { note(tr('soc.err.file_url')); return; }
-  }
-  var ids;
-  try {
-    ids = socQueueAdd(plats.map(function (pl) {
-      return { platform: pl, text: text, imageFile: imageFile, imageMime: media.imageMime || '', imageUrl: media.imageUrl || '', scheduledAt: when };
-    }));
-  } catch (e) { note(String(e || '')); return; }
-  if (!ids.length) { note(tr('soc.err.no_channel')); return; }
-  renderNativePlanner();
-}
-
 async function socPublishDirect(platform, text, img, imgUrl, imageFile) {
   if (img && (img.mime || '').indexOf('video/') === 0 && platform !== 'youtube') {
-    socNote(platName(platform) + ': ' + tr('soc.err.yt_only')); return;
+    return { ok: false, msg: platName(platform) + ': ' + tr('soc.err.yt_only') };
   }
   var s = socStore();
   var ch = s[platform];
@@ -594,12 +504,12 @@ async function socPublishDirect(platform, text, img, imgUrl, imageFile) {
   if (platform === 'linkedin') ch = await socEnsureRefresh(ch, 'social_linkedin_refresh', 'linkedin');
   if (platform === 'tiktok') ch = await socEnsureRefresh(ch, 'social_tiktok_refresh', 'tiktok');
   if (platform === 'youtube') ch = await socEnsureRefresh(ch, 'social_youtube_refresh', 'youtube');
-  if (!tokenValid(ch)) { socNote(platName(platform) + ': ' + tr('soc.err.token')); return; }
+  if (!tokenValid(ch)) { return { ok: false, msg: platName(platform) + ': ' + tr('soc.err.token') }; }
   try {
     await invoke('social_publish', { req: socPublishArgs(platform, ch, text, img, imgUrl, imageFile) });
-    socNote(platName(platform) + ': ' + tr('soc.status.sent'));
+    return { ok: true, msg: platName(platform) + ': ' + tr('soc.status.sent') };
   } catch (e) {
-    socNote(platName(platform) + ': ' + String(e || ''));
+    return { ok: false, msg: platName(platform) + ': ' + String(e || '') };
   }
 }
 
@@ -658,17 +568,19 @@ async function socConnectX(clientId, clientSecret) {
   try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return; }
   if (!tj.access_token) { socNote(tr('soc.err.token_body')); return; }
   var label = '';
+  var xPicture = '';
   try {
     var me = await invoke('social_x_me', { token: tj.access_token });
     var mj = JSON.parse(me);
     label = mj.data && mj.data.username ? '@' + mj.data.username : '';
+    xPicture = (mj.data && mj.data.profile_image_url) || '';
   } catch (_) {}
   var s = socStore();
   s.x = {
     clientId: clientId, clientSecret: clientSecret,
     accessToken: tj.access_token, refreshToken: tj.refresh_token || '',
     expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
-    label: label,
+    label: label, picture: xPicture,
   };
   socSave(s);
   renderNativePlanner();
@@ -700,12 +612,21 @@ async function socConnectTiktok(clientId, clientSecret) {
   var tj;
   try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return; }
   if (!tj.access_token) { socNote(tr('soc.err.token_body')); return; }
+  var tkLabel = tj.open_id || 'TikTok';
+  var tkPicture = '';
+  try {
+    var tme = await invoke('social_tiktok_me', { token: tj.access_token });
+    var tmj = JSON.parse(tme);
+    var tdata = tmj.data || tmj;
+    tkLabel = tdata.display_name || tdata.username || tj.open_id || 'TikTok';
+    tkPicture = tdata.avatar_url || '';
+  } catch (_) {}
   var s = socStore();
   s.tiktok = {
     clientId: clientId, clientSecret: clientSecret,
     accessToken: tj.access_token, refreshToken: tj.refresh_token || '',
     expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
-    label: tj.open_id || 'TikTok',
+    label: tkLabel, picture: tkPicture,
   };
   socSave(s);
   renderNativePlanner();
@@ -804,17 +725,19 @@ async function socConnectThreads(clientId, clientSecret) {
   try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return; }
   if (!tj.access_token) { socNote(tr('soc.err.token_body')); return; }
   var label = '';
+  var thPicture = '';
   try {
     var me = await invoke('social_threads_me', { token: tj.access_token });
     var mj = JSON.parse(me);
     label = mj.username || '';
+    thPicture = mj.threads_profile_picture_url || '';
   } catch (_) {}
   var s = socStore();
   s.threads = {
     clientId: clientId, clientSecret: clientSecret,
     accessToken: tj.access_token, refreshToken: tj.access_token,
     expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
-    label: label || 'Threads',
+    label: label || 'Threads', picture: thPicture,
   };
   socSave(s);
   renderNativePlanner();
@@ -856,7 +779,9 @@ async function socConnectYoutube(clientId, clientSecret) {
   var cj;
   try { cj = JSON.parse(chBody); } catch (_) { socNote(tr('soc.err.channels')); return; }
   var channels = (cj.items || []).map(function (it) {
-    return { id: it.id || '', name: (it.snippet && it.snippet.title) || it.id || '' };
+    var th = it.snippet && it.snippet.thumbnails;
+    return { id: it.id || '', name: (it.snippet && it.snippet.title) || it.id || '',
+      picture: (th && th.default && th.default.url) || '' };
   }).filter(function (c) { return c.id; });
   if (!channels.length) { socNote(tr('soc.err.channels')); return; }
   socYtPending = {
@@ -908,6 +833,11 @@ async function socConnect(platform) {
   var secEl = document.getElementById('socSec-' + platform);
   var clientId = idEl ? idEl.value.trim() : '';
   var clientSecret = secEl ? secEl.value.trim() : '';
+  await socConnectCreds(platform, clientId, clientSecret);
+}
+// Jalur login langsung (v72, gaya Postiz): kredensial sudah tersimpan
+// -> panggil ini tanpa form; kredensial kosong tetap ditolak jujur.
+async function socConnectCreds(platform, clientId, clientSecret) {
   if (!clientId || !clientSecret) { socNote(tr('soc.err.cred')); return; }
   if (platform === 'threads') { await socConnectThreads(clientId, clientSecret); return; }
   if (platform === 'youtube') { await socConnectYoutube(clientId, clientSecret); return; }
@@ -942,20 +872,330 @@ async function socConnect(platform) {
   try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return; }
   if (!tj.access_token) { socNote(tr('soc.err.token_body')); return; }
   var label = '';
+  var liPicture = '';
   try {
     var me = await invoke('social_linkedin_me', { token: tj.access_token });
     var mj = JSON.parse(me);
     label = mj.name || '';
+    liPicture = mj.picture || '';
   } catch (_) {}
   var s = socStore();
   s.linkedin = {
     clientId: clientId, clientSecret: clientSecret,
     accessToken: tj.access_token, refreshToken: tj.refresh_token || '',
     expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
-    label: label,
+    label: label, picture: liPicture,
   };
   socSave(s);
   renderNativePlanner();
+}
+
+// ---- Komposer Buat Postingan gaya Postiz (v72, perintah Patria
+// 30 Okt 00:32: tahapan, fitur, dan desain UI disamakan dengan
+// Postiz — dibangun ulang bersih, bukan salinan kode Postiz) ----
+// Menggantikan dialog tanggal v68 sebagai SATU-SATUNYA permukaan
+// input penjadwalan (tanpa duplikasi UI): kolom kiri komposer
+// (kanal, teks, media, jadwal, ulangi, draf/kalender/terbit) +
+// kolom kanan pratinjau live. State dipegang modul (bukan DOM)
+// sehingga render ulang (toggle kanal, buka popup channel) tidak
+// menghilangkan draf yang sedang diketik.
+var socComposer = null; // {date, editId, orig, text, plats, src, media, when, repeat, mediaOpen}
+var socComposerConfirm = false;
+
+var SOC_LIMITS = { threads: 500, x: 280, instagram: 2200, tiktok: 2000, linkedin: 3000, facebook_page: 63206, youtube: 5000, facebook: 63206 };
+
+function socLocalInput(ms) {
+  var d = new Date(ms);
+  var p = function (n) { return (n < 10 ? '0' : '') + n; };
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function socComposerOpen(dateStr, editId) {
+  var parts = String(dateStr || '').split('-');
+  var base = new Date(+parts[0], +parts[1] - 1, +parts[2], 9, 0).getTime();
+  var s = socStore();
+  var connected = PLATFORMS.filter(function (p) { return tokenValid(s[p.id]); }).map(function (p) { return p.id; });
+  var st = { date: dateStr, editId: editId || null, orig: null, text: '', plats: connected.slice(), src: 'library', media: null, when: base, repeat: '', mediaOpen: true };
+  if (editId) {
+    var it = queueLoad().find(function (x) { return String(x.id) === String(editId); });
+    if (it) {
+      var media = null;
+      if (it.imageFile) media = { kind: 'saved', imageFile: it.imageFile, mime: it.imageMime || '' };
+      else if (it.imageUrl) media = { kind: 'url', url: it.imageUrl };
+      st.text = it.text || '';
+      st.plats = [it.platform];
+      st.media = media;
+      st.when = it.scheduledAt || base;
+      st.repeat = it.repeat || '';
+      st.orig = { text: st.text, plats: st.plats.slice(), media: JSON.stringify(media), when: st.when, repeat: st.repeat };
+    } else {
+      st.editId = null;
+    }
+  }
+  if (!st.orig) st.orig = { text: '', plats: [], media: 'null', when: base, repeat: '' };
+  socComposer = st;
+  socComposerConfirm = false;
+  renderNativePlanner();
+}
+
+function socComposerDirty() {
+  if (!socComposer) return false;
+  var st = socComposer;
+  if (st.text.trim() !== '' || st.media) return true;
+  if (!st.editId) return false;
+  var o = st.orig || {};
+  return st.text !== o.text
+    || JSON.stringify(st.plats.slice().sort()) !== JSON.stringify((o.plats || []).slice().sort())
+    || JSON.stringify(st.media) !== o.media || st.when !== o.when || st.repeat !== o.repeat;
+}
+
+function socComposerClose(force) {
+  if (!socComposer) return;
+  if (!force && socComposerDirty()) { socComposerConfirm = true; renderNativePlanner(); return; }
+  socComposer = null; socComposerConfirm = false;
+  renderNativePlanner();
+}
+
+function socComposerMediaHTML() {
+  var st = socComposer;
+  if (!st.mediaOpen) return '';
+  var items = socLibItems();
+  var libOpts = [];
+  items.forEach(function (it, i) {
+    if (it.kind === 'image' && it.imageFile) libOpts.push('<option value="img:' + esc(it.imageFile) + '">🖼 ' + esc(it.o || 'Gambar') + '</option>');
+    else if ((it.kind === 'script' || it.kind === 'doc') && it.content) libOpts.push('<option value="txt:' + i + '">📝 ' + esc(it.o || 'Naskah') + '</option>');
+  });
+  var libSel = libOpts.length
+    ? '<select id="socCompLibSel">' + libOpts.join('') + '</select>'
+    : '<span>' + tr('soc.lib.empty') + '</span>';
+  var cur = '';
+  if (st.media) {
+    var m = st.media;
+    var desc = m.kind === 'url' ? m.url : (m.imageFile || m.name || 'file');
+    cur = '<div class="soc-row"><span>📎 ' + esc(desc) + '</span> <button id="socCompMediaRemove" class="btn btn-sm">' + tr('soc.media_remove') + '</button></div>';
+  }
+  return '<div class="soc-comp-media"><div class="soc-row"><label>' + tr('soc.source') + ' <select id="socCompSrc">'
+    + '<option value="library"' + (st.src === 'library' ? ' selected' : '') + '>' + tr('soc.source.lib') + '</option>'
+    + '<option value="custom"' + (st.src === 'custom' ? ' selected' : '') + '>' + tr('soc.source.custom') + '</option></select></label></div>'
+    + '<div class="soc-row" style="display:' + (st.src === 'library' ? '' : 'none') + '">' + libSel + '</div>'
+    + '<div class="soc-row" style="display:' + (st.src === 'custom' ? '' : 'none') + '"><input type="file" id="socCompFile" accept="image/*,video/*"> '
+    + '<input type="text" id="socCompUrl" placeholder="' + tr('soc.ph.imgurl') + '" style="width:260px" value="' + esc(st.media && st.media.kind === 'url' ? st.media.url : '') + '"></div>'
+    + cur + '</div>';
+}
+
+function socComposerHTML() {
+  if (!socComposer) return '';
+  var st = socComposer;
+  var s = socStore();
+  var connected = PLATFORMS.filter(function (p) { return tokenValid(s[p.id]); });
+  var chans = connected.map(function (p) {
+    var ch = s[p.id];
+    var sel = st.plats.indexOf(p.id) >= 0 ? ' sel' : '';
+    return '<button class="soc-comp-chan' + sel + '" data-comp-chan="' + p.id + '" title="' + esc(ch.label || p.name) + '"><span class="soc-avatar-wrap">' + socAvatarHTML(p, ch) + '<span class="soc-row-badge">' + platIconHTML(p.id, true) + '</span></span></button>';
+  }).join('');
+  var reps = [['', 'soc.repeat.none'], ['day', 'soc.repeat.day'], ['2days', 'soc.repeat.2days'], ['3days', 'soc.repeat.3days'], ['4days', 'soc.repeat.4days'], ['5days', 'soc.repeat.5days'], ['6days', 'soc.repeat.6days'], ['week', 'soc.repeat.week'], ['2weeks', 'soc.repeat.2weeks'], ['month', 'soc.repeat.month']];
+  var repOpts = reps.map(function (r) { return '<option value="' + r[0] + '"' + (st.repeat === r[0] ? ' selected' : '') + '>' + tr(r[1]) + '</option>'; }).join('');
+  var title = st.editId ? tr('soc.edit_post') : tr('soc.create_post');
+  var confirm = socComposerConfirm
+    ? '<div class="soc-pop-overlay"><div class="soc-pop"><h4>' + tr('soc.confirm_close') + '</h4><p>' + tr('soc.confirm_close_msg') + '</p><div class="soc-row"><button class="btn btn-sm btn-primary" id="socConfirmYes">' + tr('soc.yes_close') + '</button> <button class="btn btn-sm" id="socConfirmNo">' + tr('soc.no_cancel') + '</button></div></div></div>'
+    : '';
+  return '<div class="soc-composer-overlay"><div class="soc-composer">'
+    + '<button class="soc-pop-x" id="socComposerClose">×</button>'
+    + '<div class="soc-composer-main"><h3>' + title + '</h3>'
+    + '<div class="soc-composer-channels">' + chans + '<button class="soc-comp-chan-add" id="socCompAddChan" title="' + tr('soc.add_channel') + '">+</button></div>'
+    + '<textarea id="socCompText" rows="5" placeholder="' + tr('soc.write_something') + '" style="width:100%">' + esc(st.text) + '</textarea>'
+    + '<div class="soc-row"><button id="socCompMediaBtn" class="btn btn-sm">' + tr('soc.insert_media') + '</button> '
+    + '<button id="socCompAiBtn" class="btn btn-sm">' + tr('soc.ai_image') + '</button></div>'
+    + socComposerMediaHTML()
+    + '<div class="soc-row"><label>' + tr('soc.repeat_label') + ' <select id="socCompRepeat">' + repOpts + '</select></label> '
+    + '<input type="datetime-local" id="socCompWhen" value="' + socLocalInput(st.when) + '"></div>'
+    + '<div class="soc-row"><button id="socCompDraft" class="btn">' + tr('soc.save_draft') + '</button> '
+    + '<button id="socCompSave" class="btn btn-primary">' + tr('soc.add_calendar') + '</button> '
+    + '<button id="socCompNow" class="btn">' + tr('soc.publish_now') + '</button></div>'
+    + '<div id="socComposerNote"></div></div>'
+    + '<div class="soc-composer-preview"><h3>' + tr('soc.post_preview') + '</h3><div id="socPreviewBody"></div><div id="socPreviewCounts"></div></div>'
+    + '</div>' + confirm + '</div>';
+}
+
+function socComposerRefreshPreview() {
+  var body = document.getElementById('socPreviewBody');
+  var counts = document.getElementById('socPreviewCounts');
+  if (!body || !socComposer) return;
+  var st = socComposer;
+  var text = (document.getElementById('socCompText') || {}).value || st.text;
+  var mediaHTML = '';
+  if (st.media) {
+    if (st.media.kind === 'file') mediaHTML = '<div>🖼 ' + esc(st.media.name || 'file') + '</div>';
+    else if (st.media.kind === 'url') mediaHTML = '<div><img src="' + esc(st.media.url) + '" style="max-width:100%;border-radius:8px" alt=""></div>';
+    else mediaHTML = '<div>🖼 ' + esc(st.media.imageFile || '') + '</div>';
+  }
+  body.innerHTML = text.trim()
+    ? '<div>' + esc(text).replace(/\n/g, '<br>') + '</div>' + mediaHTML
+    : '<div class="se-note">' + tr('soc.preview_empty') + '</div>';
+  var len = text.length;
+  var rows = st.plats.map(function (pid) {
+    var lim = SOC_LIMITS[pid] || 0;
+    var over = lim && len > lim;
+    return '<div' + (over ? ' style="color:#f87171"' : '') + '>' + esc(platName(pid)) + ': ' + len + (lim ? '/' + lim : '') + (over ? ' ⚠' : '') + '</div>';
+  }).join('');
+  if (counts) counts.innerHTML = rows;
+}
+
+async function socComposerSave(status) {
+  var st = socComposer;
+  if (!st) return;
+  var noteEl = document.getElementById('socComposerNote');
+  var note = function (m) { if (noteEl) noteEl.textContent = m; };
+  var text = ((document.getElementById('socCompText') || {}).value || st.text || '').trim();
+  if (!text) { note(tr('soc.err.empty')); return; }
+  if (!st.plats.length) { note(tr('soc.err.no_channel')); return; }
+  st.text = text;
+  var imageFile = '', imageMime = '', imageUrl = '';
+  if (st.media) {
+    if (st.media.kind === 'file') {
+      try {
+        var saved = await invoke('image_save', { req: { name: 'soc-' + Date.now() + '-comp', b64: st.media.b64 } });
+        imageFile = saved.file || '';
+      } catch (e) { note(String(e || '')); return; }
+      if (!imageFile) { note(tr('soc.err.image')); return; }
+      imageMime = st.media.mime || '';
+    } else if (st.media.kind === 'lib' || st.media.kind === 'saved') {
+      imageFile = st.media.imageFile || '';
+      imageMime = st.media.mime || socMimeFromExt(imageFile);
+    } else if (st.media.kind === 'url') {
+      imageUrl = st.media.url || '';
+    }
+  }
+  if ((imageMime || '').indexOf('video/') === 0 && st.plats.some(function (pl) { return pl !== 'youtube'; })) {
+    note(tr('soc.err.yt_only')); return;
+  }
+  if (imageFile) {
+    var blocked = st.plats.filter(function (pl) { return pl === 'threads' || pl === 'instagram' || pl === 'tiktok'; });
+    if (blocked.length) { note(tr('soc.err.file_url')); return; }
+  }
+  // Edit = ganti item lama (id berubah tidak masalah — id internal).
+  if (st.editId) {
+    if (!queueSave(queueLoad().filter(function (it) { return String(it.id) !== String(st.editId); }))) { note(tr('soc.err.save')); return; }
+  }
+  var items = st.plats.map(function (pl) {
+    return { platform: pl, text: text, imageFile: imageFile, imageMime: imageMime, imageUrl: imageUrl, scheduledAt: st.when, status: status, repeat: st.repeat || '' };
+  });
+  try { socQueueAdd(items); } catch (e) { note(String(e || '')); return; }
+  socComposer = null; socComposerConfirm = false;
+  renderNativePlanner();
+}
+
+async function socComposerPublishNow() {
+  var st = socComposer;
+  if (!st) return;
+  var noteEl = document.getElementById('socComposerNote');
+  var note = function (m) { if (noteEl) noteEl.textContent = m; };
+  var text = ((document.getElementById('socCompText') || {}).value || st.text || '').trim();
+  if (!text) { note(tr('soc.err.empty')); return; }
+  if (!st.plats.length) { note(tr('soc.err.no_channel')); return; }
+  var img = null, imageFile = '', imageUrl = '';
+  if (st.media) {
+    if (st.media.kind === 'file') img = { b64: st.media.b64, mime: st.media.mime || '' };
+    else if (st.media.kind === 'lib' || st.media.kind === 'saved') imageFile = st.media.imageFile || '';
+    else if (st.media.kind === 'url') imageUrl = st.media.url || '';
+  }
+  var results = [];
+  for (var i = 0; i < st.plats.length; i++) {
+    results.push(await socPublishDirect(st.plats[i], text, img, imageUrl, imageFile));
+  }
+  note(results.map(function (r) { return r.msg; }).join(' | '));
+  var failed = results.some(function (r) { return !r.ok; });
+  if (!failed) {
+    if (st.editId) queueSave(queueLoad().filter(function (it) { return String(it.id) !== String(st.editId); }));
+    socComposer = null; socComposerConfirm = false;
+    renderNativePlanner();
+  }
+}
+
+// Jadwal kemunculan berikutnya untuk pengulangan Postiz
+// (day..6days, week, 2weeks, month). Diekspor untuk rig.
+export function socNextRepeat(ms, repeat) {
+  var d = new Date(ms);
+  var days = { day: 1, '2days': 2, '3days': 3, '4days': 4, '5days': 5, '6days': 6, week: 7, '2weeks': 14 }[repeat];
+  if (days) return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days, d.getHours(), d.getMinutes()).getTime();
+  if (repeat === 'month') {
+    var nm = d.getMonth() + 1;
+    var dim = new Date(d.getFullYear(), nm + 1, 0).getDate();
+    return new Date(d.getFullYear(), nm, Math.min(d.getDate(), dim), d.getHours(), d.getMinutes()).getTime();
+  }
+  return 0;
+}
+
+function socBindComposer() {
+  var el = document.getElementById('nativePlanner');
+  if (!el || !socComposer) return;
+  var st = socComposer;
+  var ta = document.getElementById('socCompText');
+  if (ta) ta.addEventListener('input', function () { st.text = ta.value; socComposerRefreshPreview(); });
+  el.querySelectorAll('[data-comp-chan]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var pid = b.getAttribute('data-comp-chan');
+      var ix = st.plats.indexOf(pid);
+      if (ix >= 0) st.plats.splice(ix, 1); else st.plats.push(pid);
+      renderNativePlanner();
+    });
+  });
+  socBind('socCompAddChan', function () { socPopOpen = true; socPopForm = null; socPopMsg = ''; renderNativePlanner(); });
+  socBind('socCompMediaBtn', function () { st.mediaOpen = !st.mediaOpen; renderNativePlanner(); });
+  socBind('socCompAiBtn', function () {
+    // Gambar AI = Media Studio tab Image (hasilnya masuk Library,
+    // lalu dipilih di komposer). State komposer bertahan di modul
+    // saat pindah view; kembali ke Planner merendernya lagi.
+    if (typeof window.showView === 'function') {
+      window.showView('media');
+      if (typeof window.mediaTab === 'function') window.mediaTab('image');
+    }
+  });
+  var srcSel = document.getElementById('socCompSrc');
+  if (srcSel) srcSel.addEventListener('change', function () { st.src = srcSel.value; renderNativePlanner(); });
+  var libSel = document.getElementById('socCompLibSel');
+  if (libSel) libSel.addEventListener('change', function () {
+    if (libSel.value.indexOf('txt:') === 0) {
+      var items = socLibItems();
+      var it = items[parseInt(libSel.value.slice(4), 10)];
+      if (it && it.content) st.text = it.content;
+    } else if (libSel.value.indexOf('img:') === 0) {
+      var f = libSel.value.slice(4);
+      st.media = { kind: 'lib', imageFile: f, mime: socMimeFromExt(f) };
+    }
+    renderNativePlanner();
+  });
+  var fileEl = document.getElementById('socCompFile');
+  if (fileEl) fileEl.addEventListener('change', async function () {
+    if (fileEl.files && fileEl.files[0]) {
+      try {
+        var r = await readFileB64(fileEl.files[0]);
+        st.media = { kind: 'file', b64: r.b64, mime: r.mime, name: r.name };
+      } catch (_) {}
+      renderNativePlanner();
+    }
+  });
+  var urlEl = document.getElementById('socCompUrl');
+  if (urlEl) urlEl.addEventListener('change', function () {
+    var u = urlEl.value.trim();
+    st.media = u ? { kind: 'url', url: u } : null;
+    renderNativePlanner();
+  });
+  socBind('socCompMediaRemove', function () { st.media = null; renderNativePlanner(); });
+  var whenEl = document.getElementById('socCompWhen');
+  if (whenEl) whenEl.addEventListener('change', function () {
+    var v = new Date(whenEl.value).getTime();
+    if (v) st.when = v;
+  });
+  var repEl = document.getElementById('socCompRepeat');
+  if (repEl) repEl.addEventListener('change', function () { st.repeat = repEl.value; });
+  socBind('socCompDraft', function () { socComposerSave('draft'); });
+  socBind('socCompSave', function () { socComposerSave('queued'); });
+  socBind('socCompNow', function () { socComposerPublishNow(); });
+  socBind('socComposerClose', function () { socComposerClose(false); });
+  socBind('socConfirmYes', function () { socComposerClose(true); });
+  socBind('socConfirmNo', function () { socComposerConfirm = false; renderNativePlanner(); });
+  socComposerRefreshPreview();
 }
 
 var socTimer = null;
@@ -1001,6 +1241,12 @@ export function initSocialScheduler() {
       try {
         await invoke('social_publish', { req: socPublishArgs(it.platform, ch, it.text, null, it.imageUrl || '', it.imageFile || '', it.imageMime || '') });
         it.status = 'sent'; it.error = '';
+        if (it.repeat) {
+          var nxt = socNextRepeat(it.scheduledAt, it.repeat);
+          if (nxt) {
+            q.push({ id: Date.now() + '' + Math.floor(Math.random() * 10000), platform: it.platform, text: it.text, imageB64: '', imageMime: it.imageMime || '', imageFile: it.imageFile || '', imageUrl: it.imageUrl || '', scheduledAt: nxt, status: 'queued', error: '', repeat: it.repeat });
+          }
+        }
       } catch (e) {
         it.status = 'failed'; it.error = String(e || '');
       }

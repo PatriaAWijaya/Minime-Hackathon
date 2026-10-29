@@ -72,6 +72,7 @@ fn main() {
             social::social_linkedin_me,
             social::social_linkedin_refresh,
             social::social_tiktok_refresh,
+            social::social_tiktok_me,
             social::social_threads_exchange,
             social::social_threads_me,
             social::social_threads_refresh,

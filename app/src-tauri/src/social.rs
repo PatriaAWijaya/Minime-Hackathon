@@ -648,9 +648,9 @@ pub fn social_meta_exchange(req: MetaExchangeReq) -> Result<String, String> {
 pub fn social_meta_pages(token: String) -> Result<String, String> {
     let mut out: Vec<serde_json::Value> = Vec::new();
     let mut seen = std::collections::HashSet::new();
-    let mut push_pages = |v: &serde_json::Value,
-                          out: &mut Vec<serde_json::Value>,
-                          seen: &mut std::collections::HashSet<String>| {
+    let push_pages = |v: &serde_json::Value,
+                      out: &mut Vec<serde_json::Value>,
+                      seen: &mut std::collections::HashSet<String>| {
         if let Some(arr) = v.get("data").and_then(|d| d.as_array()) {
             for pg in arr {
                 let id = pg.get("id").and_then(|i| i.as_str()).unwrap_or("");
@@ -663,7 +663,7 @@ pub fn social_meta_pages(token: String) -> Result<String, String> {
     };
     let r = curl_api(
         "GET",
-        "https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token&limit=100",
+        "https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token,picture.type(large)&limit=100",
         Some(&token),
         None,
         None,
@@ -693,7 +693,7 @@ pub fn social_meta_pages(token: String) -> Result<String, String> {
                         }
                         for kind in ["owned_pages", "client_pages"] {
                             let url = format!(
-                                "https://graph.facebook.com/v25.0/{bid}/{kind}?fields=id,name,access_token&limit=100"
+                                "https://graph.facebook.com/v25.0/{bid}/{kind}?fields=id,name,access_token,picture.type(large)&limit=100"
                             );
                             if let Ok(pr) = curl_api("GET", &url, Some(&token), None, None, None) {
                                 if pr.status == 200 {
@@ -845,6 +845,8 @@ fn ig_publish(req: &PublishReq) -> Result<String, String> {
 }
 
 /// Ambil ID akun IG Business/Creator yang tertaut ke satu Page.
+/// ID + username + foto akun IG Business/Creator yang tertaut ke
+/// satu Page (dipakai label + avatar sidebar channel).
 #[tauri::command]
 pub fn social_meta_ig_id(page_id: String, token: String) -> Result<String, String> {
     let url =
@@ -853,7 +855,41 @@ pub fn social_meta_ig_id(page_id: String, token: String) -> Result<String, Strin
     if r.status != 200 {
         return Err(format!("Akun IG Page gagal (HTTP {})", r.status));
     }
-    Ok(r.body)
+    let ig_id = serde_json::from_str::<serde_json::Value>(&r.body)
+        .ok()
+        .and_then(|v| {
+            v.get("instagram_business_account")
+                .and_then(|a| a.get("id"))
+                .and_then(|i| i.as_str())
+                .map(|i| i.to_string())
+        })
+        .ok_or("Page ini tidak punya akun IG Business/Creator tertaut")?;
+    let mut username = String::new();
+    let mut picture = String::new();
+    if let Ok(info) = curl_api(
+        "GET",
+        &format!("https://graph.facebook.com/v25.0/{ig_id}?fields=username,profile_picture_url"),
+        Some(&token),
+        None,
+        None,
+        None,
+    ) {
+        if info.status == 200 {
+            if let Ok(iv) = serde_json::from_str::<serde_json::Value>(&info.body) {
+                username = iv
+                    .get("username")
+                    .and_then(|u| u.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                picture = iv
+                    .get("profile_picture_url")
+                    .and_then(|u| u.as_str())
+                    .unwrap_or("")
+                    .to_string();
+            }
+        }
+    }
+    Ok(serde_json::json!({ "id": ig_id, "username": username, "picture": picture }).to_string())
 }
 
 /// Terbitkan SATU postingan ke SATU platform (v61: LinkedIn;
@@ -914,6 +950,24 @@ pub struct ThreadsExchangeReq {
     pub redirect_uri: String,
     pub client_id: String,
     pub client_secret: String,
+}
+
+/// Profil TikTok (nama tampil + avatar) — dipakai label + avatar
+/// sidebar channel, bukan open_id mentah.
+#[tauri::command]
+pub fn social_tiktok_me(token: String) -> Result<String, String> {
+    let r = curl_api(
+        "GET",
+        "https://open.tiktokapis.com/v2/user/info/?fields=open_id,avatar_url,display_name,username",
+        Some(&token),
+        None,
+        None,
+        None,
+    )?;
+    if r.status != 200 {
+        return Err(format!("Profil TikTok gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
 }
 
 #[tauri::command]
@@ -1483,7 +1537,7 @@ fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
 pub fn social_x_me(token: String) -> Result<String, String> {
     let r = curl_api(
         "GET",
-        "https://api.twitter.com/2/users/me",
+        "https://api.twitter.com/2/users/me?user.fields=profile_image_url",
         Some(&token),
         None,
         None,

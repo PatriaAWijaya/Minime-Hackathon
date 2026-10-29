@@ -56,6 +56,16 @@ async function invokeStub(cmd, args) {
     imgFiles.delete(req.name);
     return { file: req.name, deleted: true };
   }
+  if (cmd === 'open_external_url') {
+    globalThis.__lastOAuthUrl = (args && args.url) || '';
+    return {};
+  }
+  if (cmd === 'social_oauth_listen') {
+    return new Promise(() => {});
+  }
+  if (cmd === 'social_publish') {
+    return 'ok';
+  }
   throw new Error('unexpected invoke ' + cmd);
 }
 
@@ -185,52 +195,128 @@ try {
   await waitFor(() => batch().cards.length === 1 && batch().cards[0].status === 'ready', 'kartu carousel ready', 200);
   check('pilihan carousel berisi 3 file', batch().cards[0].choices.every((ch) => ch.files.length === 3), JSON.stringify(batch().cards[0].choices.map((ch) => ch.files.length)));
 
-  // 7. Planner native v68: dua panel — sidebar 8 kanal (ikon +
-  // status, klik = kartu koneksi) + window utama HANYA kalender
-  // kartu (tombol + = jadwal via dialog, chip = judul + ikon kanal,
-  // tombol − = hapus item). Composer + daftar antrean lama dihapus.
+  // 7. Planner gaya Postiz v72: sidebar = tombol Tambah Channel +
+  // Buat Postingan + HANYA baris channel terhubung (avatar + nama
+  // akun + badge platform); kalender kartu tetap di window utama.
   dom.window.showView('planner');
   dom.window.renderPlanner();
   await tick(200);
-  check('planner dua panel tampil: sidebar 8 kanal + kalender kartu', !!document.getElementById('nativePlanner') && document.querySelectorAll('[data-soc-side]').length === 8 && !!document.querySelector('.soc-cal-grid'), '');
-  check('tanpa pilih kanal: kartu koneksi belum muncul + composer/queue lama hilang', !document.querySelector('.soc-side-detail .soc-card') && !document.getElementById('socText') && !document.querySelector('.soc-queue'), '');
-  check('setiap kartu tanggal punya tombol +', document.querySelectorAll('[data-soc-add]').length > 0, document.querySelectorAll('[data-soc-add]').length);
-  // Pilih kanal X (belum terhubung) -> tombol Hubungkan muncul;
-  // pilih LinkedIn (terhubung, dari seksi 5) -> tombol Putuskan.
-  document.querySelector('[data-soc-side="x"]').click();
-  await tick(100);
-  check('klik kanal X -> kartu koneksi X muncul', !!document.getElementById('socConn-x'), '');
+  check('planner tampil: sidebar + kalender kartu', !!document.getElementById('nativePlanner') && !!document.querySelector('.soc-cal-grid'), '');
+  check('tombol Tambah Channel + Buat Postingan di sidebar', !!document.getElementById('socAddChannel') && !!document.getElementById('socCreatePost'), '');
+  check('sidebar hanya baris terhubung (LinkedIn dari seksi 5)', document.querySelectorAll('[data-soc-side]').length === 1 && !!document.querySelector('[data-soc-side="linkedin"]'), document.querySelectorAll('[data-soc-side]').length);
+  check('baris LinkedIn pakai logo asli + nama fallback', (document.querySelector('[data-soc-side="linkedin"] img')?.getAttribute('src') || '').includes('linkedin-icon.png') && (document.querySelector('[data-soc-side="linkedin"]')?.textContent || '').includes('LinkedIn'), '');
+  check('tanpa pilih kanal: detail hanya petunjuk, bukan kartu koneksi', !document.querySelector('.soc-side-detail .soc-card'), '');
   document.querySelector('[data-soc-side="linkedin"]').click();
   await tick(100);
-  check('klik kanal LinkedIn -> tombol Putuskan muncul', !!document.getElementById('socDisc-linkedin'), '');
-  // YouTube v71: sudah bisa dihubungkan (can: true, OAuth Google + picker channel).
-  document.querySelector('[data-soc-side="youtube"]').click();
+  check('klik baris LinkedIn -> tombol Putuskan muncul', !!document.getElementById('socDisc-linkedin'), '');
+  check('setiap kartu tanggal punya tombol +', document.querySelectorAll('[data-soc-add]').length > 0, document.querySelectorAll('[data-soc-add]').length);
+
+  // 8. Popup Tambah Channel: grid 8 ikon + nama, klik ikon ->
+  // login browser langsung bila kredensial tersimpan, form bila
+  // belum; Putuskan menyimpan kredensial (login ulang tanpa isi).
+  document.getElementById('socAddChannel').click();
   await tick(100);
-  check('kanal YouTube punya tombol hubung', !!document.getElementById('socConn-youtube'), '');
-  // Ikon kanal v69-v71: logo asli untuk 8 kanal.
-  const sideImg = (id) => document.querySelector('[data-soc-side="' + id + '"] img')?.getAttribute('src') || '';
-  check('logo asli 8 kanal di sidebar', ['facebook', 'facebook_page', 'instagram', 'threads', 'linkedin', 'tiktok', 'youtube', 'x'].every((id) => sideImg(id).includes('-icon.png')), ['facebook', 'facebook_page', 'instagram', 'threads', 'linkedin', 'tiktok', 'youtube', 'x'].map(sideImg).join(','));
-  // Klik hari kalender (bukan hari ini, supaya tidak bercampur item
-  // Batch hari ini) -> dialog tanggal terbuka.
+  check('popup Tambah Channel: grid 8 ikon + nama', document.querySelectorAll('[data-soc-tile]').length === 8, document.querySelectorAll('[data-soc-tile]').length);
+  check('logo asli 8 kanal di popup', ['facebook', 'facebook_page', 'instagram', 'threads', 'linkedin', 'tiktok', 'youtube', 'x'].every((id) => (document.querySelector('[data-soc-tile="' + id + '"] img')?.getAttribute('src') || '').includes('-icon.png')), '');
+  document.querySelector('[data-soc-tile="facebook"]').click();
+  await tick(100);
+  check('klik ikon FB profil -> pesan jujur + tombol Kembali (bukan login palsu)', !!document.getElementById('socPopBack') && !document.querySelector('.soc-pop-grid'), '');
+  document.getElementById('socPopBack').click();
+  await tick(100);
+  check('Kembali -> grid popup lagi', !!document.querySelector('.soc-pop-grid'), '');
+  document.querySelector('[data-soc-tile="tiktok"]').click();
+  await tick(100);
+  check('klik ikon TikTok tanpa kredensial -> form ID + Secret', !!document.getElementById('socPopId') && !!document.getElementById('socPopConn'), '');
+  document.getElementById('socPopId').value = 'rig-tk-id';
+  document.getElementById('socPopSec').value = 'rig-tk-sec';
+  document.getElementById('socPopConn').click();
+  await tick(100);
+  check('Hubungkan -> login browser TikTok langsung', (globalThis.__lastOAuthUrl || '').includes('tiktok.com'), globalThis.__lastOAuthUrl);
+  check('popup tertutup saat login browser dimulai', !document.querySelector('.soc-pop-overlay'), '');
+  // Putuskan menyimpan kredensial: seed TikTok terhubung + kredensial,
+  // putuskan dari barisnya, lalu klik ikonnya lagi -> login langsung.
+  store.set('minime.social', JSON.stringify({ linkedin: { accessToken: 'rig-token', expiresAt: Date.now() + 3600000 }, tiktok: { clientId: 'rig-tk-id', clientSecret: 'rig-tk-sec', accessToken: 'rig-tk-tok', expiresAt: Date.now() + 3600000, label: 'RigTok' } }));
+  dom.window.renderPlanner();
+  await tick(100);
+  document.querySelector('[data-soc-side="tiktok"]').click();
+  await tick(100);
+  document.getElementById('socDisc-tiktok').click();
+  await tick(100);
+  const afterDisc = JSON.parse(store.get('minime.social') || '{}');
+  check('Putuskan simpan kredensial, hapus token', afterDisc.tiktok && afterDisc.tiktok.clientId === 'rig-tk-id' && !afterDisc.tiktok.accessToken, JSON.stringify(afterDisc.tiktok));
+  check('baris TikTok hilang dari sidebar setelah putus', !document.querySelector('[data-soc-side="tiktok"]'), '');
+  document.getElementById('socAddChannel').click();
+  await tick(100);
+  globalThis.__lastOAuthUrl = '';
+  document.querySelector('[data-soc-tile="tiktok"]').click();
+  await tick(100);
+  check('ikon TikTok berkredensial tersimpan -> login browser langsung', (globalThis.__lastOAuthUrl || '').includes('tiktok.com'), globalThis.__lastOAuthUrl);
+
+  // 9. Komposer Buat Postingan gaya Postiz: kanal avatar + teks +
+  // pratinjau live + draf + edit + jadwal + ulangi + terbit + konfirmasi tutup.
   const today = new Date();
   const todayKey = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
   const dayCell = [...document.querySelectorAll('.soc-cal-day[data-day]')].find((c) => c.getAttribute('data-day') !== todayKey);
-  dayCell.click();
+  const dayKey2 = dayCell.getAttribute('data-day');
+  dayCell.querySelector('[data-soc-add]').click();
   await tick(100);
-  check('klik hari -> dialog tanggal terbuka', !!document.getElementById('socDayText') && !!document.getElementById('socDayScheduleBtn'), '');
-  document.getElementById('socDayText').value = 'jadwal hari uji';
-  document.getElementById('socDayScheduleBtn').click();
+  check('klik + kartu -> komposer Buat Postingan terbuka', !!document.getElementById('socCompText') && !!document.getElementById('socCompSave') && !!document.getElementById('socPreviewBody'), '');
+  check('komposer: kanal terhubung tampil sebagai avatar', document.querySelectorAll('[data-comp-chan]').length >= 1, document.querySelectorAll('[data-comp-chan]').length);
+  const compText = document.getElementById('socCompText');
+  compText.value = 'draf komposer uji';
+  compText.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   await tick(100);
-  const q2 = JSON.parse(store.get('minime.socialQueue') || '[]');
-  check('jadwal via dialog tanggal masuk antrean', q2.some((it) => it.text === 'jadwal hari uji'), JSON.stringify(q2.map((it) => it.text)));
-  check('item tampil di kartu sebagai chip judul + tombol −', [...document.querySelectorAll('.soc-item-title')].some((el) => el.textContent.includes('jadwal hari uji')) && !!document.querySelector('[data-soc-del]'), '');
-  // Hapus via − di chip item itu (bukan via dialog, bukan item lain).
-  const chipDel = [...document.querySelectorAll('.soc-item')].find((el) => el.textContent.includes('jadwal hari uji'))?.querySelector('[data-soc-del]');
-  check('chip item punya tombol −', !!chipDel, '');
-  chipDel.click();
+  check('pratinjau live mengikuti teks', (document.getElementById('socPreviewBody')?.textContent || '').includes('draf komposer uji'), '');
+  document.getElementById('socCompDraft').click();
   await tick(100);
-  const q3 = JSON.parse(store.get('minime.socialQueue') || '[]');
-  check('hapus via − kartu menghilangkan item', !q3.some((it) => it.text === 'jadwal hari uji'), JSON.stringify(q3.map((it) => it.text)));
+  const qDraft = JSON.parse(store.get('minime.socialQueue') || '[]');
+  check('Simpan sebagai draf -> item status draft, komposer tertutup', qDraft.some((it) => it.text === 'draf komposer uji' && it.status === 'draft') && !document.getElementById('socCompText'), JSON.stringify(qDraft.map((it) => it.text + ':' + it.status)));
+  check('chip draf tampil dengan label Draf', [...document.querySelectorAll('.soc-item-title')].some((el) => el.textContent.includes('Draf: draf komposer uji')), '');
+  const draftChip = [...document.querySelectorAll('.soc-item')].find((el) => el.textContent.includes('draf komposer uji'));
+  check('chip draf bisa diklik untuk edit', !!draftChip?.querySelector('[data-soc-del]') && !!draftChip?.getAttribute('data-soc-edit'), '');
+  draftChip.click();
+  await tick(100);
+  check('klik chip draf -> komposer edit terisi teks', (document.getElementById('socCompText')?.value || '') === 'draf komposer uji', document.getElementById('socCompText')?.value);
+  const repSel = document.getElementById('socCompRepeat');
+  repSel.value = 'day';
+  repSel.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  document.getElementById('socCompSave').click();
+  await tick(100);
+  const qEdit = JSON.parse(store.get('minime.socialQueue') || '[]');
+  check('edit + Tambah ke Kalender -> draf terganti antrean repeat day', !qEdit.some((it) => it.text === 'draf komposer uji' && it.status === 'draft') && qEdit.some((it) => it.text === 'draf komposer uji' && it.status === 'queued' && it.repeat === 'day'), JSON.stringify(qEdit.map((it) => it.text + ':' + it.status + ':' + (it.repeat || ''))));
+  check('socNextRepeat: day +1 hari, month clamp 31 Jan -> 28 Feb', (() => {
+    const d1 = dom.window.socNextRepeat(new Date(2026, 9, 30, 9, 0).getTime(), 'day');
+    const d2 = dom.window.socNextRepeat(new Date(2026, 0, 31, 9, 0).getTime(), 'month');
+    return new Date(d1).getDate() === 31 && new Date(d2).getMonth() === 1 && new Date(d2).getDate() === 28;
+  })(), '');
+  // Terbit sekarang: komposer baru -> publish stub -> tutup, tanpa antrean.
+  const dayCell2 = [...document.querySelectorAll('.soc-cal-day[data-day]')].find((c) => c.getAttribute('data-day') !== todayKey && c.getAttribute('data-day') !== dayKey2);
+  dayCell2.querySelector('[data-soc-add]').click();
+  await tick(100);
+  const compText2 = document.getElementById('socCompText');
+  compText2.value = 'terbit langsung uji';
+  compText2.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  const pubBefore = invokeCount('social_publish');
+  document.getElementById('socCompNow').click();
+  await tick(200);
+  check('Terbit sekarang -> publish terpanggil + komposer tertutup + tanpa antrean', invokeCount('social_publish') === pubBefore + 1 && !document.getElementById('socCompText') && !JSON.parse(store.get('minime.socialQueue') || '[]').some((it) => it.text === 'terbit langsung uji'), 'pub=' + invokeCount('social_publish'));
+  // Konfirmasi tutup: draf kotor -> tanya dulu; Tidak -> tetap buka; Ya -> tutup.
+  dayCell.querySelector('[data-soc-add]').click();
+  await tick(100);
+  const compText3 = document.getElementById('socCompText');
+  compText3.value = 'jangan hilang';
+  compText3.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  document.getElementById('socComposerClose').click();
+  await tick(100);
+  check('tutup komposer kotor -> konfirmasi muncul', !!document.getElementById('socConfirmYes'), '');
+  document.getElementById('socConfirmNo').click();
+  await tick(100);
+  check('pilih Tidak -> komposer tetap terbuka', !!document.getElementById('socCompText'), '');
+  document.getElementById('socComposerClose').click();
+  await tick(100);
+  document.getElementById('socConfirmYes').click();
+  await tick(100);
+  check('pilih Ya -> komposer tertutup', !document.querySelector('.soc-composer'), '');
 
 } catch (e) {
   // eslint-disable-next-line no-console
