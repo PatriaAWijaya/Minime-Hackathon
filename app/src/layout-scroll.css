@@ -154,4 +154,10 @@ h3 { font-size: 18px; }
 #view-planner .scroll { display: flex; flex-direction: column; }
 #view-planner .postiz-embed { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 #postizFrame { width: 100%; flex: 1; height: auto; min-height: 480px; border: 1px solid #2a2a2a; border-radius: 12px; background: #fff; }
+.postiz-setup { border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.postiz-setup h3 { margin: 0 0 4px; font-size: 15px; }
+.postiz-setup .setup-step { display: flex; gap: 10px; margin: 10px 0; align-items: flex-start; }
+.postiz-setup .setup-mk { flex-shrink: 0; }
+.postiz-setup pre { background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 8px 10px; font-size: 12px; overflow-x: auto; margin: 6px 0; }
+.postiz-setup .setup-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 .btn-connected { background: #A6EBB1; color: #262626; border-color: #A6EBB1; }

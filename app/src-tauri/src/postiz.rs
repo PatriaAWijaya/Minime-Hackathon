@@ -9,8 +9,9 @@
 //! berjalan di luar webview sehingga tidak kena CORS sama sekali.
 //!
 //! Batasan keamanan (disengaja, mengikuti pola allowlist browser.rs):
-//! hanya POST ke Postiz lokal 127.0.0.1:4007, hanya dua path API publik
-//! (/api/public/v1/upload dan /posts), dan kunci API hanya dikirim
+//! hanya ke Postiz lokal 127.0.0.1:4007, hanya tiga path API publik
+//! (POST /api/public/v1/upload dan /posts, GET /api/public/v1/integrations
+//! untuk uji koneksi wizard Setup Postiz v50), dan kunci API hanya dikirim
 //! sebagai header Authorization ke localhost — tidak pernah ditulis
 //! ke log, tidak pernah masuk error string, tidak pernah keluar dari
 //! perintah ini. Ini BUKAN proxy HTTP umum.
@@ -53,6 +54,22 @@ fn http_post(path: &str, key: &str, content_type: &str, body: &[u8]) -> Result<P
     stream
         .write_all(head.as_bytes())
         .and_then(|_| stream.write_all(body))
+        .map_err(|e| e.to_string())?;
+    let mut raw = Vec::new();
+    stream.read_to_end(&mut raw).map_err(|e| e.to_string())?;
+    parse_response(&raw)
+}
+
+fn http_get(path: &str, key: &str) -> Result<PostizRes, String> {
+    let mut stream =
+        TcpStream::connect(POSTIZ_ADDR).map_err(|e| format!("Postiz tidak terjangkau: {e}"))?;
+    stream.set_read_timeout(Some(Duration::from_secs(30))).ok();
+    stream.set_write_timeout(Some(Duration::from_secs(30))).ok();
+    let head = format!(
+        "GET {path} HTTP/1.1\r\nHost: 127.0.0.1:4007\r\nAuthorization: {key}\r\nConnection: close\r\n\r\n"
+    );
+    stream
+        .write_all(head.as_bytes())
         .map_err(|e| e.to_string())?;
     let mut raw = Vec::new();
     stream.read_to_end(&mut raw).map_err(|e| e.to_string())?;
@@ -165,6 +182,10 @@ pub fn postiz_request(req: PostizReq) -> Result<PostizRes, String> {
                 json.as_bytes(),
             )
         }
+        // Uji koneksi wizard Setup Postiz: GET read-only, tanpa efek samping.
+        // 200 = kunci valid (+ daftar integrations = channel terhubung);
+        // 401 = kunci ditolak (pesan Postiz: "Invalid API key").
+        "ping" => http_get("/api/public/v1/integrations", &req.key),
         _ => Err("op Postiz tidak dikenal".into()),
     }
 }

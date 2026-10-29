@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { readPostizKey } from './postiz.js';
 import { esc, jsEsc } from './esc.js';
 import { readThumb } from './image-api.js';
 // Mechanical migration of prototype-v5/index.html <script> blocks.
@@ -713,10 +714,14 @@ export function postizCheck() {
     // tombol sendiri yang menjadi indikator: "Terhubung" hijau.
     st.style.display = "none";
     if (btn) { btn.textContent = tr('planner.postiz.connected'); btn.classList.add("btn-connected"); }
+    postizOnline = true;
+    renderPostizSetup();
   }).catch(function () {
     st.style.display = "";
     st.textContent = tr('planner.postiz.offline');
     if (btn) { btn.textContent = tr('planner.postiz.reload'); btn.classList.remove("btn-connected"); }
+    postizOnline = false;
+    renderPostizSetup();
   });
 }
 export async function postizOpenBrowser() {
@@ -736,9 +741,124 @@ export function postizReload() {
   postizCheck();
 }
 
+/* v50: wizard Setup Postiz — alur user baru (perintah Patria 29 Okt):
+   1) Postiz jalan (probe postizCheck, otomatis),
+   2) akun + API key (uji via Rust ping -> GET /api/public/v1/integrations),
+   3) channel terhubung (otomatis dari daftar integrations, atau konfirmasi
+   manual bila jumlah tak terbaca). Login + hubungkan channel dilakukan
+   di browser sistem (tombol Buka Postiz), bukan panel — login browser
+   tidak kena masalah cookie Secure webview (temuan v47). Satu-satunya
+   state manual adalah flag channel di localStorage minime.postizSetup;
+   sisanya derivasi dari probe + hasil uji terakhir, bukan klaim. */
+var postizOnline = false;
+var postizLastTest = null;
+var postizTesting = false;
+function postizSetupManual() {
+  try {
+    var raw = window.localStorage.getItem('minime.postizSetup');
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) { return {}; }
+}
+function postizSetupSaveManual(obj) {
+  try { window.localStorage.setItem('minime.postizSetup', JSON.stringify(obj)); } catch (_) {}
+}
+function postizSetupBind(id, fn) {
+  var b = document.getElementById(id);
+  if (b) b.addEventListener('click', fn);
+}
+function parseIntegrationsCount(body) {
+  try {
+    var v = JSON.parse(body);
+    if (Array.isArray(v)) return v.length;
+    if (v && Array.isArray(v.data)) return v.data.length;
+    if (v && Array.isArray(v.integrations)) return v.integrations.length;
+    if (v && Array.isArray(v.items)) return v.items.length;
+  } catch (_) {}
+  return null;
+}
+export async function postizTestKey() {
+  var key = readPostizKey();
+  if (!key) {
+    postizLastTest = { state: 'nokey', count: 0, status: 0 };
+    renderPostizSetup();
+    return postizLastTest;
+  }
+  postizTesting = true;
+  renderPostizSetup();
+  try {
+    var r = await invoke('postiz_request', { req: { op: 'ping', key: key } });
+    if (r.status === 401) {
+      postizLastTest = { state: 'badkey', count: 0, status: 401 };
+    } else if (r.status === 200) {
+      var n = parseIntegrationsCount(r.body);
+      postizLastTest = n === null ? { state: 'ok', count: null, status: 200 }
+        : (n > 0 ? { state: 'ok', count: n, status: 200 } : { state: 'nochannel', count: 0, status: 200 });
+    } else {
+      postizLastTest = { state: 'error', count: 0, status: r.status };
+    }
+  } catch (_) {
+    postizLastTest = { state: 'offline', count: 0, status: 0 };
+  }
+  postizTesting = false;
+  renderPostizSetup();
+  return postizLastTest;
+}
+export function postizSetupConfirm() {
+  var m = postizSetupManual();
+  m.channel = true;
+  postizSetupSaveManual(m);
+  renderPostizSetup();
+}
+export function postizSetupReset() {
+  try { window.localStorage.removeItem('minime.postizSetup'); } catch (_) {}
+  postizLastTest = null;
+  renderPostizSetup();
+  postizCheck();
+}
+export function renderPostizSetup() {
+  var el = document.getElementById("postizSetup");
+  if (!el) return;
+  var manual = postizSetupManual();
+  var t = postizLastTest;
+  var step1 = postizOnline;
+  var step2 = !!t && (t.state === 'ok' || t.state === 'nochannel');
+  var step3auto = !!t && t.state === 'ok' && typeof t.count === 'number' && t.count > 0;
+  var step3 = step3auto || !!manual.channel;
+  if (step1 && step2 && step3) {
+    el.innerHTML = '<div class="postiz-setup"><b>' + tr('setup.ready') + '</b> <button id="postizSetupResetBtn" class="btn btn-sm">' + tr('setup.reset') + '</button></div>';
+    postizSetupBind('postizSetupResetBtn', postizSetupReset);
+    return;
+  }
+  var mk = function (done) { return done ? '<span class="badge b-ok">✓</span>' : '<span>○</span>'; };
+  var testMsg = '';
+  if (postizTesting) testMsg = tr('setup.test.testing');
+  else if (t && t.state === 'nokey') testMsg = tr('setup.test.nokey');
+  else if (t && t.state === 'badkey') testMsg = tr('setup.test.badkey');
+  else if (t && t.state === 'offline') testMsg = tr('setup.test.offline');
+  else if (t && t.state === 'error') testMsg = tr('setup.test.error', { s: t.status });
+  else if (t && t.state === 'ok' && typeof t.count === 'number') testMsg = tr('setup.test.ok', { n: t.count });
+  else if (t && t.state === 'ok') testMsg = tr('setup.test.ok.nocount');
+  else if (t && t.state === 'nochannel') testMsg = tr('setup.test.nochannel');
+  var s1 = '<div class="setup-step"><span class="setup-mk">' + mk(step1) + '</span><div><b>' + tr('setup.step1') + '</b>';
+  if (!step1) {
+    s1 += '<div>' + tr('setup.step1.off') + '</div><pre>git clone https://github.com/gitroomhq/postiz-app.git\ncd postiz-app\ncp .env.example .env\ndocker compose up -d</pre><div>' + tr('setup.step1.port') + '</div><div class="setup-btns"><button id="postizSetupReloadBtn" class="btn btn-sm">' + tr('planner.postiz.reload') + '</button></div>';
+  }
+  s1 += '</div></div>';
+  var s2 = '<div class="setup-step"><span class="setup-mk">' + mk(step2) + '</span><div><b>' + tr('setup.step2') + '</b><div>' + tr('setup.step2.hint') + '</div><div class="setup-btns"><button id="postizSetupSettingsBtn" class="btn btn-sm">' + tr('setup.btn.settings') + '</button><button id="postizSetupTestBtn" class="btn btn-sm">' + tr('setup.btn.test') + '</button></div>' + (testMsg ? '<div>' + testMsg + '</div>' : '') + '</div></div>';
+  var s3 = '<div class="setup-step"><span class="setup-mk">' + mk(step3) + '</span><div><b>' + tr('setup.step3') + '</b><div>' + tr('setup.step3.hint') + '</div><div class="setup-btns"><button id="postizSetupOpenBtn" class="btn btn-sm">' + tr('planner.postiz.open') + '</button>';
+  if (!step3auto) s3 += '<button id="postizSetupConfirmBtn" class="btn btn-sm">' + tr('setup.btn.confirm') + '</button>';
+  s3 += '</div></div></div>';
+  el.innerHTML = '<div class="postiz-setup"><h3>' + tr('setup.title') + '</h3><div>' + tr('setup.browser.note') + '</div>' + s1 + s2 + s3 + '</div>';
+  postizSetupBind('postizSetupReloadBtn', postizReload);
+  postizSetupBind('postizSetupSettingsBtn', function () { showView('settings'); });
+  postizSetupBind('postizSetupTestBtn', postizTestKey);
+  postizSetupBind('postizSetupOpenBtn', postizOpenBrowser);
+  postizSetupBind('postizSetupConfirmBtn', postizSetupConfirm);
+}
 
 export function renderPlanner() {
     postizCheck();
+    renderPostizSetup();
   }
 
 /** B7: re-derive backend data in the current language (after a language switch). */
@@ -1077,5 +1197,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizOpenBrowser, postizReload, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizOpenBrowser, postizReload, postizSetupConfirm, postizSetupReset, postizTestKey, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

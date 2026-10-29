@@ -59,6 +59,11 @@ async function invokeStub(cmd, args) {
   if (cmd === 'postiz_request') {
     if (req.op === 'upload') return { status: 201, body: JSON.stringify({ id: 'up1', path: 'https://uploads.postiz.com/x.webp' }) };
     if (req.op === 'post') return { status: 201, body: JSON.stringify({ id: 'post1' }) };
+    if (req.op === 'ping') {
+      if (req.key === 'bad-key') return { status: 401, body: JSON.stringify({ msg: 'Invalid API key' }) };
+      if (req.key === 'empty-key') return { status: 200, body: '[]' };
+      return { status: 200, body: JSON.stringify([{ id: 'ig1' }]) };
+    }
     throw new Error('unexpected postiz op ' + req.op);
   }
   throw new Error('unexpected invoke ' + cmd);
@@ -184,6 +189,32 @@ try {
   document.getElementById('batch-approve').click();
   await waitFor(() => batch().cards.length === 1 && batch().cards[0].status === 'ready', 'kartu carousel ready', 200);
   check('pilihan carousel berisi 3 file', batch().cards[0].choices.every((ch) => ch.files.length === 3), JSON.stringify(batch().cards[0].choices.map((ch) => ch.files.length)));
+
+  // 7. Wizard Setup Postiz: uji koneksi via ping (Rust).
+  dom.window.showView('planner');
+  dom.window.renderPlanner();
+  await tick(200);
+  const setupText = () => document.getElementById('postizSetup')?.textContent || '';
+  check('wizard Setup tampil', !!document.getElementById('postizSetup') && setupText().includes('Setup Postiz'), setupText());
+  const pingBefore = invokeCount('postiz_request');
+  store.set('minime.postizKey', 'rig-postiz-key');
+  document.getElementById('postizSetupTestBtn').click();
+  await waitFor(() => setupText().includes('Postiz siap'), 'wizard siap sesudah uji ok', 200);
+  check('uji ok (1 channel) -> wizard siap', setupText().includes('Postiz siap') && setupText().includes('Setup ulang'), setupText());
+  document.getElementById('postizSetupResetBtn').click();
+  await tick(100);
+  store.set('minime.postizKey', 'bad-key');
+  document.getElementById('postizSetupTestBtn').click();
+  await waitFor(() => setupText().includes('ditolak'), 'uji badkey', 200);
+  check('uji badkey ditolak + wizard belum siap', setupText().includes('ditolak') && !setupText().includes('Postiz siap'), setupText());
+  store.set('minime.postizKey', 'empty-key');
+  document.getElementById('postizSetupTestBtn').click();
+  await waitFor(() => setupText().includes('belum ada channel'), 'uji nochannel', 200);
+  check('uji nochannel + tombol konfirmasi tampil', setupText().includes('belum ada channel') && !!document.getElementById('postizSetupConfirmBtn'), setupText());
+  document.getElementById('postizSetupConfirmBtn').click();
+  await tick(100);
+  check('konfirmasi manual channel -> wizard siap', setupText().includes('Postiz siap'), setupText());
+  check('ping dipanggil 3x via Rust', invokeCount('postiz_request') === pingBefore + 3, 'postiz_request=' + invokeCount('postiz_request'));
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-batch exception :: ' + (e && e.stack ? e.stack : e));

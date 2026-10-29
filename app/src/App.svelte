@@ -548,6 +548,7 @@
     </div>
     <div class="view" id="view-planner">
       <div class="scroll">
+        <div id="postizSetup"></div>
         <div class="postiz-embed">
           <div class="postiz-bar"><b>Postiz</b> <span id="postizStatus"></span> <button id="postizReloadBtn" class="btn btn-sm" onclick={() => postizReload()}>{t('planner.postiz.reload', lang)}</button> <button class="btn btn-sm" onclick={() => postizOpenBrowser()}>{t('planner.postiz.open', lang)}</button></div>
           <iframe id="postizFrame" src="http://localhost:4007" title="Postiz"></iframe>
