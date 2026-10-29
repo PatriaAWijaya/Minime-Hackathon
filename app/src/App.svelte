@@ -233,7 +233,6 @@
     <div class="agent-searchbox"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a1a1a1" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg><input type="text" id="navSearch" placeholder={t('word.search', lang)} oninput={(e) => { filterAgents(e.currentTarget.value) }}></div>
     <div style="padding:0 14px;flex-shrink:0"><div class="mainchat" onclick={() => { showView('home') }}><div class="av" style="background:#EB87B4">P</div><div><b>Main chat</b><br><small style="color:#a1a1a1">{t('nav.prime', lang)}</small></div></div></div>
     <div class="scroll" id="agentList"></div>
-    <div style="padding:0 14px 12px;flex-shrink:0"><div class="notice" id="addNotice" style="display:none"></div></div>
   </div>
   <div class="resizer" id="resizeAgent"></div>
 
@@ -265,6 +264,9 @@
         </div>
         <div class="notice" id="waNote" style="display:none;margin-top:0"></div>
       </div>
+    </div>
+    <div class="view" id="view-newagent">
+      <div class="scroll" id="newAgentBody"></div>
     </div>
     <div class="view" id="view-search">
       <div class="colhead"><h2>{t('word.search', lang)}</h2></div>
@@ -646,4 +648,5 @@
   <div class="col" id="detailCol">
     <div class="scroll" id="detailBody"></div>
   </div>
+  <div id="chanOverlay"></div>
 </div>

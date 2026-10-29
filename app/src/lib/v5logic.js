@@ -28,7 +28,7 @@ export function renderAgents() {
         rowNo++;
         var times = ["2:32 PM", "1:47 PM", "12:05 PM", "11:20 AM", "10:02 AM", "9:15 AM", "8:40 AM", "7:55 AM"];
         html += '<div class="agent ' + (selectedAgent === a.key && pid === currentProj ? 'sel' : '') + (off ? ' off' : '') + (pid === currentProj ? ' curproj' : '') + '" onclick="selectAgent(\'' + a.key + '\',\'' + pid + '\')">'
-          + '<div class="av" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div>'
+          + '<div class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div>'
           + '<div class="meta"><b>' + esc(ag.name) + '</b> <span class="badge ' + (off ? 'b-no' : 'b-ok') + '">' + esc(a.status) + '</span><br><small>' + esc(a.task) + '</small></div>'
           + (ag.always ? '' : '<button class="toggle" onclick="event.stopPropagation();toggleAgent(' + i + ',\'' + pid + '\')">' + (off ? 'Aktifkan' : 'Nonaktifkan') + '</button>')
           + '</div>';
@@ -41,22 +41,48 @@ export function renderAgents() {
 export function toggleAgent(idx, pid) {
     var a = PROJECTS[pid].agents[idx];
     a.status = a.status === "Nonaktif" ? "Idle" : "Nonaktif";
-    renderAgents(); renderDetail();
+    renderAgents(); renderDetail(); saveHomeState();
   }
 
-export function addAgent(key) {
-    if (!key) return;
-    var proj = PROJECTS[currentProj];
-    var n = document.getElementById("addNotice"); n.style.display = "block";
-    if (proj.agents.some(function (a) { return a.key === key; })) {
-      n.textContent = tr('agent.add.exists', {name: AGENTS[key].name});
+export function saveHomeState() {
+    try { window.localStorage.setItem('minime.homeState', JSON.stringify({ agents: AGENTS, projects: PROJECTS, currentProj: currentProj, selectedAgent: selectedAgent })); } catch (_) {}
+  }
+
+export function loadHomeState() {
+    var raw = null;
+    try { raw = window.localStorage.getItem('minime.homeState'); } catch (_) { return; }
+    if (!raw) return;
+    var st = null;
+    try { st = JSON.parse(raw); } catch (_) {}
+    if (!st || typeof st !== 'object' || !st.agents || !st.projects) {
+      try { window.localStorage.setItem('minime.homeState.corrupt', raw); } catch (_) {}
       return;
     }
-    proj.agents.push({ key: key, status: "Idle", task: "Baru ditambahkan (simulasi)" });
-    document.getElementById("addMenu").classList.remove("open");
-    renderAgents();
-    n.textContent = tr('agent.add.done', {name: AGENTS[key].name, proj: proj.name});
+    var agents = Object.assign({}, AGENTS, st.agents);
+    Object.keys(agents).forEach(function (k) {
+      var a = agents[k] || {};
+      agents[k] = { name: a.name || k, color: a.color || '#525252', role: a.role || '', goal: a.goal || '', instructions: a.instructions || '', skills: Array.isArray(a.skills) ? a.skills : [], model: a.model || '', shape: a.shape || 'circle', effort: a.effort || '', always: !!a.always };
+    });
+    var projects = Object.assign({}, PROJECTS, st.projects);
+    Object.keys(projects).forEach(function (k) {
+      var pr = projects[k] || {};
+      projects[k] = { name: pr.name || k, agents: Array.isArray(pr.agents) ? pr.agents.filter(function (a) { return a && agents[a.key]; }) : [], chat: Array.isArray(pr.chat) ? pr.chat : [], kanban: Array.isArray(pr.kanban) ? pr.kanban : [] };
+    });
+    AGENTS = agents; PROJECTS = projects;
+    if (PROJECTS[st.currentProj]) currentProj = st.currentProj;
+    if (AGENTS[st.selectedAgent]) selectedAgent = st.selectedAgent;
+    var ps = document.getElementById('projectSel'); if (ps) ps.value = currentProj;
+    var cp = document.getElementById('chatProj'); if (cp && PROJECTS[currentProj]) cp.textContent = PROJECTS[currentProj].name;
   }
+
+export function plusSlug(name, taken) {
+    var base = (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'item';
+    var slug = base, i = 2;
+    while (taken(slug)) { slug = base + '-' + i; i++; }
+    return slug;
+  }
+
+export function plusCloseMenu() { var m = document.getElementById('addMenu'); if (m) m.classList.remove('open'); }
 
 export function selectAgent(key, pid) {
     selectedAgent = key;
@@ -64,6 +90,7 @@ export function selectAgent(key, pid) {
     document.getElementById("projectSel").value = currentProj;
     renderAgents(); renderDetail(); renderChat(); renderKanban();
     document.getElementById("chatProj").textContent = PROJECTS[currentProj].name;
+    saveHomeState();
   }
 
 export function renderDetail() {
@@ -77,13 +104,13 @@ export function renderDetail() {
     try { notiOn = window.localStorage.getItem('minime.notify') !== '0'; } catch (_) {}
     var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox" checked onchange="detailNote(\'' + jsEsc(tr('detail.note.skill', {s: s})) + '\')"> <span>' + s + '</span></div>'; }).join("");
     document.getElementById("detailBody").innerHTML =
-      '<div class="detail-avatar-wrap"><div class="detail-avatar" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div><button class="avatar-edit" onclick="detailNote(\'' + jsEsc(tr('detail.note.avatar', {name: ag.name})) + '\')" title="Ubah avatar">✎</button></div>'
+      '<div class="detail-avatar-wrap"><div class="detail-avatar av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div><button class="avatar-edit" onclick="detailNote(\'' + jsEsc(tr('detail.note.avatar', {name: ag.name})) + '\')" title="Ubah avatar">✎</button></div>'
       + '<div class="d-label">' + tr('detail.name') + '</div><input type="text" class="d-field" value="' + esc(ag.name) + '" onchange="renameAgent(this.value)">'
       + '<div class="d-label">' + tr('detail.title') + '</div><input type="text" class="d-field" placeholder="Describe what your agent does" value="' + esc(ag.role) + '" onchange="retitleAgent(this.value)">'
       + '<div class="d-label">' + tr('detail.instructions') + '</div><textarea class="d-field d-area" onchange="setInstructions(this.value)">' + esc(ins) + '</textarea>'
       + '<div class="d-label">' + tr('detail.brain') + '</div><div class="d-rows">'
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.model')) + '\')"><span>' + tr('detail.model') + '</span><span class="d-val">' + ag.model + ' ›</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.reasoning')) + '\')"><span>' + tr('detail.reasoning') + '</span><span class="d-val">' + tr('detail.val.low') + '</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.reasoning')) + '\')"><span>' + tr('detail.reasoning') + '</span><span class="d-val">' + (ag.effort ? esc(ag.effort) + ' ↕' : tr('detail.val.low')) + '</span></div>'
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.backup')) + '\')"><span>' + tr('detail.backup') + '</span><span class="d-val">' + tr('detail.val.askfirst') + '</span></div></div>'
       + '<div class="d-label">' + tr('detail.knows') + '</div><div class="d-rows">'
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.memories', {name: ag.name})) + '\')"><span>' + tr('detail.memories') + '</span><span class="d-val">' + tr('detail.val.saved') + '</span></div>'
@@ -111,15 +138,15 @@ export function homeNotifyToggle(v) {
 
 export function toggleSkillList() { var el = document.getElementById("skillList"); if (el) el.style.display = el.style.display === "none" ? "block" : "none"; }
 
-export function renameAgent(v) { if (!v.trim()) return; AGENTS[selectedAgent].name = v.trim(); renderAgents(); renderDetail(); detailNote("Simulasi: nama agen diubah menjadi " + v.trim() + " (tampilan saja)."); }
+export function renameAgent(v) { if (!v.trim()) return; AGENTS[selectedAgent].name = v.trim(); renderAgents(); renderDetail(); saveHomeState(); detailNote("Simulasi: nama agen diubah menjadi " + v.trim() + " (tampilan saja)."); }
 
-export function retitleAgent(v) { AGENTS[selectedAgent].role = v; renderAgents(); renderDetail(); }
+export function retitleAgent(v) { AGENTS[selectedAgent].role = v; renderAgents(); renderDetail(); saveHomeState(); }
 
-export function setInstructions(v) { AGENTS[selectedAgent].instructions = v; detailNote("Simulasi: instructions tersimpan (tampilan saja)."); }
+export function setInstructions(v) { AGENTS[selectedAgent].instructions = v; saveHomeState(); detailNote("Simulasi: instructions tersimpan (tampilan saja)."); }
 
 /* ---------- Proyek & Chat ---------- */
 export function switchProject(pid) {
-    currentProj = pid;
+    currentProj = pid; saveHomeState();
     document.getElementById("chatProj").textContent = PROJECTS[pid].name;
     renderAgents(); renderChat(); renderKanban(); renderDetail();
   }
@@ -218,7 +245,7 @@ export function renderKanban() {
     saveKanban();
     document.getElementById("kanbanTitle").textContent = PROJECTS[currentProj].name;
     var wrap = document.getElementById("kanbanBox");
-    var cards = PROJECTS[currentProj].kanban;
+    var cards = PROJECTS[currentProj].kanban || [];
     var filter = document.getElementById("kbFilter") ? document.getElementById("kbFilter").value : "";
     function vis(card) { return !filter || card.a === filter; }
     if (kanbanTab === "table") {
@@ -876,7 +903,7 @@ export function showView(id) {
     document.querySelectorAll(".sidebar button").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-view") === id); });
     document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
     document.getElementById("view-" + id).classList.add("active");
-    document.querySelector(".app").classList.toggle("no-nav", id !== "home");
+    document.querySelector(".app").classList.toggle("no-nav", id !== "home" && id !== "newagent");
     // Audit v66: Billing selalu menampilkan pemakaian live terbaru
     // saat dibuka (angka tidak beku di render pertama).
     if (id === "billing" && typeof window.refreshLiveCost === "function") { try { window.refreshLiveCost(); } catch (_) {} }
@@ -944,10 +971,155 @@ export function toggleAddMenu() { document.getElementById('addMenu').classList.t
 
 export function renderAddMenu() {
     var menu = document.getElementById('addMenu');
-    var proj = PROJECTS[currentProj];
-    var avail = Object.keys(AGENTS).filter(function (k) { return k !== 'prime' && !proj.agents.some(function (a) { return a.key === k; }); });
-    menu.innerHTML = '<div style="font-size:13px;color:#a1a1a1;margin-bottom:8px">Tambah agen ke ' + esc(proj.name) + '</div>'
-      + (avail.length ? avail.map(function (k) { return '<button onclick="addAgent(\'' + k + '\')">' + esc(AGENTS[k].name) + ' — ' + esc(AGENTS[k].role) + '</button>'; }).join('') : '<div style="font-size:13px;color:#a1a1a1">Semua agen sudah ada di proyek ini.</div>');
+    if (!menu) return;
+    menu.innerHTML = '<button class="plus-item" onclick="plusNewAgent()"><span class="plus-ic">◎</span>' + tr('plus.new_agent') + '</button>'
+      + '<button class="plus-item" onclick="plusNewChannel()"><span class="plus-ic">#</span>' + tr('plus.new_channel') + '</button>'
+      + '<button class="plus-item" onclick="plusNewSection()"><span class="plus-ic">▤</span>' + tr('plus.new_section') + '</button>';
+  }
+
+/* ---------- Menu + v76: New agent / New channel / New section (ala OpenBot) ---------- */
+var NA_COLORS = ['#F97316', '#EF4444', '#F59E0B', '#EAB308', '#22C55E', '#14B8A6', '#3B82F6', '#A855F7', '#EB87B4'];
+var NA_SHAPES = ['circle', 'squircle', 'blob', 'hexagon', 'diamond'];
+var NA_EFFORTS = ['Low', 'Medium', 'High', 'Extra high', 'Max'];
+var NA_SUGS = [
+  { name: 'na.sug1', help: 'Research the market, digital behaviour, and spending patterns — verified, no made-up numbers.' },
+  { name: 'na.sug2', help: 'Turn research into specific, testable positioning, pillars, and STP.' },
+  { name: 'na.sug3', help: 'Write hooks, CTAs, and creative briefs ready for social production.' },
+  { name: 'na.sug4', help: 'Manage native scheduling drafts per social channel.' },
+];
+var naState = { color: '#F97316', shape: 'blob', model: 'meta', effort: 'Medium', modelOpen: false, name: '', help: '' };
+var ncSel = {};
+var nsBusy = false;
+
+export function naModelLabel(m) { return tr('na.model_' + m); }
+export function naEffortLabel(e) { return tr('na.effort_' + e.toLowerCase().replace(' ', '_')); }
+
+export function plusNewAgent() {
+    plusCloseMenu();
+    naState = { color: '#F97316', shape: 'blob', model: 'meta', effort: 'Medium', modelOpen: false, name: '', help: '' };
+    naRender();
+    showView('newagent');
+  }
+
+export function naRender() {
+    var body = document.getElementById('newAgentBody');
+    if (!body) return;
+    var letter = (naState.name.trim().charAt(0) || 'A').toUpperCase();
+    var colors = NA_COLORS.map(function (c) { return '<button class="na-dot' + (naState.color === c ? ' sel' : '') + '" style="background:' + c + '" onclick="naPickColor(\'' + c + '\')"></button>'; }).join('');
+    var shapes = NA_SHAPES.map(function (sh) { return '<button class="na-shape' + (naState.shape === sh ? ' sel' : '') + '" onclick="naPickShape(\'' + sh + '\')"><span class="av av-shape-' + sh + '" style="background:' + naState.color + '">' + letter + '</span></button>'; }).join('');
+    var models = ['meta', 'gemini', 'deepseek', 'qwen'].map(function (m) { return '<div class="na-model-row" onclick="naPickModel(\'' + m + '\')"><span class="na-radio' + (naState.model === m ? ' on' : '') + '">' + (naState.model === m ? '✓' : '') + '</span><span>' + naModelLabel(m) + '</span></div>'; }).join('');
+    var efforts = NA_EFFORTS.map(function (e) { return '<button class="na-effort-btn' + (naState.effort === e ? ' sel' : '') + '" onclick="naEffort(\'' + e + '\')">' + naEffortLabel(e) + '</button>'; }).join('');
+    var sugs = NA_SUGS.map(function (sg, i) { return '<div class="na-sug-card" onclick="naSuggest(' + i + ')"><b>' + tr(sg.name) + '</b><br><small>' + tr(sg.name + 'd') + '</small></div>'; }).join('');
+    body.innerHTML = '<div class="na-wrap">'
+      + '<div class="na-top"><span style="flex:1"></span><button class="na-cancel" onclick="naCancel()">' + tr('na.cancel') + '</button></div>'
+      + '<div class="na-preview"><div id="naPreview" class="av av-shape-' + naState.shape + ' na-big" style="background:' + naState.color + '">' + letter + '</div></div>'
+      + '<div class="na-colors">' + colors + '</div>'
+      + '<div class="na-shapes">' + shapes + '</div>'
+      + '<div class="d-label">' + tr('na.name') + ' *</div><input id="naName" class="d-field" value="' + esc(naState.name) + '" oninput="naNameInput(this)">'
+      + '<div class="d-label">' + tr('na.help') + '</div><textarea id="naHelp" class="d-field d-area" placeholder="' + esc(tr('na.help_ph')) + '" oninput="naHelpInput(this)">' + esc(naState.help) + '</textarea>'
+      + '<div class="d-label">' + tr('na.model') + '</div><div class="na-model-field" onclick="naModelToggle()"><span>' + naModelLabel(naState.model) + ' · ' + naEffortLabel(naState.effort) + '</span><span>⌄</span></div>'
+      + (naState.modelOpen ? '<div class="na-model-pop"><input class="d-field" placeholder="' + esc(tr('na.search_models')) + '" oninput="naModelFilter(this.value)"><div class="na-model-list">' + models + '</div><div class="d-label">' + tr('na.effort') + '</div><div class="na-effort">' + efforts + '</div></div>' : '')
+      + '<button id="naCreateBtn" class="na-create" ' + (naState.name.trim() ? '' : 'disabled') + ' onclick="naCreate()">' + tr('na.create') + '</button>'
+      + '<div class="d-label">' + tr('na.suggestions') + '</div><div class="na-sug">' + sugs + '</div>'
+      + '</div>';
+  }
+
+export function naPickColor(c) { naState.color = c; naRender(); }
+export function naPickShape(sh) { naState.shape = sh; naRender(); }
+export function naModelToggle() { naState.modelOpen = !naState.modelOpen; naRender(); }
+export function naPickModel(m) { naState.model = m; naState.modelOpen = false; naRender(); }
+export function naEffort(e) { naState.effort = e; naRender(); }
+export function naModelFilter(q) {
+    q = (q || '').toLowerCase();
+    document.querySelectorAll('.na-model-row').forEach(function (el) { el.style.display = el.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none'; });
+  }
+export function naNameInput(el) {
+    naState.name = el.value;
+    var pv = document.getElementById('naPreview'); if (pv) pv.textContent = (el.value.trim().charAt(0) || 'A').toUpperCase();
+    var b = document.getElementById('naCreateBtn'); if (b) b.disabled = !el.value.trim();
+  }
+export function naHelpInput(el) { naState.help = el.value; }
+export function naSuggest(i) {
+    var sg = NA_SUGS[i]; if (!sg) return;
+    naState.name = tr(sg.name); naState.help = sg.help; naRender();
+  }
+export function naCancel() { showView('home'); }
+export function naCreate() {
+    var nameEl = document.getElementById('naName'), helpEl = document.getElementById('naHelp');
+    var name = nameEl ? nameEl.value.trim() : naState.name.trim();
+    var help = helpEl ? helpEl.value.trim() : naState.help.trim();
+    if (!name) return;
+    var key = plusSlug(name, function (s) { return !!AGENTS[s]; });
+    AGENTS[key] = { name: name, color: naState.color, shape: naState.shape, role: help || 'General-purpose assistant', goal: help || 'General-purpose assistant', skills: [], model: naModelLabel(naState.model), effort: naState.effort };
+    PROJECTS[currentProj].agents.push({ key: key, status: 'Idle', task: 'Baru dibuat' });
+    saveHomeState();
+    showView('home');
+    selectAgent(key, currentProj);
+    detailNote(tr('na.note.created', { name: name, proj: PROJECTS[currentProj].name }));
+  }
+
+export function plusNewChannel() {
+    plusCloseMenu();
+    ncSel = {};
+    var rows = Object.keys(AGENTS).map(function (k) {
+      var ag = AGENTS[k];
+      return '<label class="chan-row"><input type="checkbox" onchange="ncToggle(\'' + k + '\', this.checked)"><span class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</span><span><b>' + esc(ag.name) + '</b><br><small>' + esc(ag.role) + '</small></span></label>';
+    }).join('');
+    document.getElementById('chanOverlay').innerHTML = '<div class="chan-back" onclick="ncClose()"></div><div class="chan-card">'
+      + '<div class="chan-head"><b>' + tr('nc.title') + '</b><button class="chan-x" onclick="ncClose()">×</button></div>'
+      + '<div class="d-label">' + tr('nc.name') + '</div><input id="ncName" class="d-field" placeholder="' + esc(tr('nc.name_ph')) + '" oninput="ncUpdateCreate()">'
+      + '<div class="d-label">' + tr('nc.add') + '</div><input class="d-field" placeholder="' + esc(tr('nc.search')) + '" oninput="ncFilter(this.value)">'
+      + '<div class="chan-list">' + rows + '</div>'
+      + '<div class="chan-foot"><button id="ncCreateBtn" class="na-create" disabled onclick="ncCreate()">' + tr('nc.create') + '</button></div>'
+      + '</div>';
+  }
+export function ncClose() { document.getElementById('chanOverlay').innerHTML = ''; }
+export function ncToggle(k, v) { ncSel[k] = !!v; }
+export function ncUpdateCreate() { var b = document.getElementById('ncCreateBtn'), n = document.getElementById('ncName'); if (b) b.disabled = !(n && n.value.trim()); }
+export function ncFilter(q) {
+    q = (q || '').toLowerCase();
+    document.querySelectorAll('.chan-row').forEach(function (el) { el.style.display = el.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none'; });
+  }
+export function ncCreate() {
+    var nameEl = document.getElementById('ncName');
+    var name = nameEl ? nameEl.value.trim() : '';
+    if (!name) return;
+    var pid = plusSlug(name, function (s) { return !!PROJECTS[s]; });
+    var keys = Object.keys(ncSel).filter(function (k) { return ncSel[k] && AGENTS[k]; });
+    PROJECTS[pid] = { name: name, agents: keys.map(function (k) { return { key: k, status: 'Idle', task: '—' }; }), chat: [], kanban: [] };
+    currentProj = pid;
+    saveHomeState();
+    ncClose();
+    var ps = document.getElementById('projectSel'); if (ps) ps.value = pid;
+    var cp = document.getElementById('chatProj'); if (cp) cp.textContent = name;
+    renderAgents(); renderDetail(); renderChat(); renderKanban();
+    detailNote(tr('nc.note.created', { name: name, n: keys.length }));
+  }
+
+export function plusNewSection() {
+    plusCloseMenu();
+    nsBusy = false;
+    var list = document.getElementById('agentList');
+    var row = document.createElement('div');
+    row.className = 'agent ns-new';
+    row.innerHTML = '<input id="nsInput" placeholder="' + esc(tr('ns.name_ph')) + '" onkeydown="if (event.key === \'Enter\') nsConfirm(); if (event.key === \'Escape\') { nsBusy = true; renderAgents(); }" onblur="nsConfirm()"><button onmousedown="nsConfirm()">▾</button>';
+    list.insertBefore(row, list.firstChild);
+    var inp = document.getElementById('nsInput'); if (inp) inp.focus();
+  }
+export function nsConfirm() {
+    if (nsBusy) return;
+    var inp = document.getElementById('nsInput');
+    var v = inp ? inp.value.trim() : '';
+    nsBusy = true;
+    if (!v) { renderAgents(); return; }
+    var pid = plusSlug(v, function (s) { return !!PROJECTS[s]; });
+    PROJECTS[pid] = { name: v, agents: [], chat: [], kanban: [] };
+    currentProj = pid;
+    saveHomeState();
+    var ps = document.getElementById('projectSel'); if (ps) ps.value = pid;
+    var cp = document.getElementById('chatProj'); if (cp) cp.textContent = v;
+    renderAgents(); renderDetail(); renderChat(); renderKanban();
+    detailNote(tr('ns.note.created', { name: v }));
   }
 
 /* Audit v66 C-M1: status Nonaktif agen dipakai chat.ts — agen yang
@@ -1088,6 +1260,8 @@ export function initV5() {
   initSocialScheduler();
   // Audit v66 L-B1: Kanban tersimpan dimuat sebelum render pertama.
   loadKanban();
+  // v76: agen/proyek kustom + pilihan terakhir dimuat sebelum render pertama.
+  loadHomeState();
   document.addEventListener("mousemove", function (e) {
       if (!dragNode) return;
       var box = document.getElementById("graphBox").getBoundingClientRect();
@@ -1135,5 +1309,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, grabDY, graphRunning, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, grabDY, graphRunning, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }
