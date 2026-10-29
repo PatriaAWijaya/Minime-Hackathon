@@ -27,7 +27,8 @@
     "rig:batch": "node tests/rig-batch.js",
     "rig:lib": "node tests/rig-lib.js",
     "rig:settings": "node tests/rig-settings.js",
-    "rig:home": "node tests/rig-home.js"
+    "rig:home": "node tests/rig-home.js",
+    "rig:graph": "node tests/rig-graph.js"
   },
   "type": "module",
   "version": "0.1.0"

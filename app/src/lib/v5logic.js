@@ -307,7 +307,7 @@ export function addKanbanList() {
   }
 
 export function nodeRects() {
-    var box = document.getElementById("graphBox").getBoundingClientRect();
+    var box = graphZoomEl().getBoundingClientRect();
     var out = {};
     Object.keys(GNODES).forEach(function (k) {
       var el = document.querySelector('[data-nkey="' + k + '"]');
@@ -334,7 +334,7 @@ export function renderGraph() {
     Object.keys(GNODES).forEach(function (k) {
       var nd = GNODES[k];
       var el = document.createElement("div");
-      el.className = "n8n-node " + nd.kind;
+      el.className = "n8n-node " + nd.kind + (k === graphSel ? " sel" : "") + (nd.locked ? " locked" : "");
       el.setAttribute("data-nkey", k);
       if (nd.kind === "circle") {
         el.style.left = "calc(" + nd.x + "% - 59px)";
@@ -344,7 +344,19 @@ export function renderGraph() {
         el.style.top = nd.y + "%";
         el.style.width = nd.w + "px";
       }
-      el.innerHTML = "<div class='nname'>" + nd.icon + " " + nd.name + "</div><div class='nsub'>" + nd.sub + "</div>";
+      el.innerHTML = "<div class='nname'>" + nd.icon + " " + nd.name + (nd.locked ? " \uD83D\uDD12" : "") + "</div><div class='nsub'>" + nd.sub + "</div>";
+      if (k === graphSel) {
+        var bar = document.createElement("div");
+        bar.className = "n8n-nodebar";
+        [["\u29C9", graphDuplicate, "graph.dup"], [nd.locked ? "\uD83D\uDD13" : "\uD83D\uDD12", graphToggleLock, nd.locked ? "graph.unlock" : "graph.lock"], ["\uD83D\uDDD1", graphAskDelete, "graph.del"]].forEach(function (b) {
+          var bb = document.createElement("button");
+          bb.textContent = b[0]; bb.title = tr(b[2]);
+          bb.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+          bb.addEventListener("click", function (e) { e.stopPropagation(); b[1](); });
+          bar.appendChild(bb);
+        });
+        el.appendChild(bar);
+      }
       if (nd.kind === "output") {
         var plus = document.createElement("div");
         plus.className = "n8n-plus"; plus.textContent = "+"; plus.title = "Tambah node setelah ini";
@@ -353,14 +365,16 @@ export function renderGraph() {
         el.appendChild(plus);
       }
       el.addEventListener("mousedown", function (e) {
+        if (nd.locked) return;
         dragNode = k; dragMoved = false;
-        var box = document.getElementById("graphBox").getBoundingClientRect();
+        var box = graphZoomEl().getBoundingClientRect();
         var r = el.getBoundingClientRect();
         grabDX = (e.clientX - r.left) / box.width * 100;
         grabDY = (e.clientY - r.top) / box.height * 100;
         dragStart = { x: e.clientX, y: e.clientY };
         e.preventDefault();
       });
+      el.addEventListener("click", function () { if (!dragMoved) graphSelect(k); });
       wrap.appendChild(el);
     });
     var rects = nodeRects();
@@ -392,11 +406,16 @@ export function renderGraph() {
         c.setAttribute("fill", "#6b7280"); c.setAttribute("stroke", "#0e0e0e"); c.setAttribute("stroke-width", "0.3");
         svg.appendChild(c);
       });
-      if (e.l) {
+      var elabel = e.l;
+      if (GNODES[e.f] && GNODES[e.f].kind === "decision") {
+        if (e.branch === "T") elabel = GNODES[e.f].branchT || "true";
+        else if (e.branch === "F") elabel = GNODES[e.f].branchF || "false";
+      }
+      if (elabel) {
         var t = document.createElementNS(NS, "text");
         t.setAttribute("x", (x1 + x2) / 2); t.setAttribute("y", (y1 + y2) / 2 - 1.5);
         t.setAttribute("fill", "#a1a1a1"); t.setAttribute("font-size", "3"); t.setAttribute("text-anchor", "middle");
-        t.textContent = e.l;
+        t.textContent = elabel;
         svg.appendChild(t);
       }
     });
@@ -408,13 +427,16 @@ export function addNodeAfter(key) {
     var nk = "baru" + nodeCounter;
     GNODES[nk] = { name: "Node Baru " + nodeCounter, sub: "simulasi", icon: "＋", x: Math.min(90, src.x + 14), y: src.y, w: 150, kind: "output", desc: "Node baru dari tombol ＋ (simulasi) — di aplikasi sungguhan, node ini bisa diisi agen/tool lain." };
     GEDGES.push({ f: key, t: nk, l: "" });
-    renderGraph();
+    saveGraphState();
+    graphSelect(nk);
     var n = document.getElementById("graphNotice");
     n.style.display = "block";
     n.textContent = "Simulasi: node baru ditambahkan setelah " + src.name + " (tampilan saja).";
+    return nk;
   }
 
-export function runGraphSim() {
+export function runGraphSim(kind) {
+    kind = kind || "manual";
     if (graphRunning) return;
     graphRunning = true;
     var seq = ["trigger", "prime", "gate", "dist"];
@@ -427,6 +449,7 @@ export function runGraphSim() {
       if (i >= seq.length) {
         graphRunning = false;
         n.textContent = "Simulasi selesai: alur berjalan Trigger → Prime Agent → GSTP (true) → Distribusi (draf). Gerbang sungguhan tetap menunggu keputusanmu — simulasi ini tidak menyetujui apa pun.";
+        graphRunsAdd(kind);
         return;
       }
       var el = document.querySelector('[data-nkey="' + seq[i] + '"]');
@@ -1215,8 +1238,8 @@ var GNODES = {
 var GEDGES = [
     { f: "trigger", t: "prime", l: "" },
     { f: "prime", t: "gate", l: "" },
-    { f: "gate", t: "dist", l: "true" },
-    { f: "gate", t: "revisi", l: "false" },
+    { f: "gate", t: "dist", l: "true", branch: "T" },
+    { f: "gate", t: "revisi", l: "false", branch: "F" },
     { f: "prime", t: "model", l: "", dashed: true },
     { f: "prime", t: "memory", l: "", dashed: true },
     { f: "prime", t: "toolmedia", l: "", dashed: true },
@@ -1226,6 +1249,304 @@ var GEDGES = [
 var dragNode = null, dragMoved = false, dragStart = null, grabDX = 0, grabDY = 0, graphRunning = false;
 
 var nodeCounter = 0;
+
+/* ---------- Graph v77: setting per node ala OpenBot ---------- */
+var graphSel = null, graphZoom = 1, graphDelAsk = false, graphHistOn = false, graphTimer = null, graphLastCheck = null;
+
+function graphZoomEl() { return document.getElementById("graphZoom") || document.getElementById("graphBox"); }
+function graphLocale() { var l = getLang(); return l === "id" ? "id-ID" : l === "zh" ? "zh-CN" : "en-US"; }
+
+function graphTrigDef() {
+  var d = new Date();
+  return { type: "schedule", freq: "daily", days: [0, 1, 2, 3, 4, 5, 6], hour: 9, min: 0, ampm: "AM", active: true,
+           date: graphISODate(d), monthDay: d.getDate(), month: d.getMonth() + 1, day: d.getDate(), cron: "", firedOnce: false };
+}
+function graphISODate(d) { return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+function graphTrigFill(t) {
+  var d = graphTrigDef();
+  if (!t || typeof t !== "object") return d;
+  Object.keys(d).forEach(function (k) { if (t[k] === undefined) t[k] = d[k]; });
+  if (!Array.isArray(t.days) || !t.days.length) t.days = d.days;
+  return t;
+}
+function graphTrigOf(nd) { if (!nd.trig) nd.trig = graphTrigDef(); return graphTrigFill(nd.trig); }
+
+export function graphNextRun(t, now) {
+  if (!t || t.type !== "schedule") return null;
+  t = graphTrigFill(t);
+  var h = t.hour % 12 + (t.ampm === "PM" ? 12 : 0);
+  function at(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, t.min, 0, 0); }
+  var n = now || new Date();
+  if (t.freq === "once") { var c1 = at(new Date(t.date + "T00:00:00")); return c1 > n ? c1 : null; }
+  if (t.freq === "hourly") { var c2 = new Date(n.getFullYear(), n.getMonth(), n.getDate(), n.getHours(), t.min, 0, 0); if (c2 <= n) c2 = new Date(c2.getTime() + 3600000); return c2; }
+  if (t.freq === "daily") { var c3 = at(n); if (c3 <= n) c3 = new Date(c3.getTime() + 86400000); return c3; }
+  if (t.freq === "weekly") {
+    var days = t.days.slice().sort(function (a, b) { return a - b; });
+    for (var i = 0; i < 8; i++) { var d = new Date(n.getFullYear(), n.getMonth(), n.getDate() + i); if (days.indexOf(d.getDay()) >= 0) { var c4 = at(d); if (c4 > n) return c4; } }
+    return null;
+  }
+  if (t.freq === "monthly") {
+    var md = Math.min(t.monthDay, 31), y = n.getFullYear(), m = n.getMonth();
+    for (var k = 0; k < 2; k++) { var last = new Date(y, m + 1, 0).getDate(); var c5 = new Date(y, m, Math.min(md, last), h, t.min, 0, 0); if (c5 > n) return c5; m++; if (m > 11) { m = 0; y++; } }
+    return null;
+  }
+  if (t.freq === "yearly") {
+    var y2 = n.getFullYear();
+    for (var k2 = 0; k2 < 2; k2++) { var last2 = new Date(y2, t.month, 0).getDate(); var c6 = new Date(y2, t.month - 1, Math.min(t.day, last2), h, t.min, 0, 0); if (c6 > n) return c6; y2++; }
+    return null;
+  }
+  return null;
+}
+
+export function graphPrevRun(t, now) {
+  if (!t || t.type !== "schedule") return null;
+  t = graphTrigFill(t);
+  var h = t.hour % 12 + (t.ampm === "PM" ? 12 : 0);
+  function at(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, t.min, 0, 0); }
+  var n = now || new Date();
+  if (t.freq === "once") { var c1 = at(new Date(t.date + "T00:00:00")); return c1 <= n ? c1 : null; }
+  if (t.freq === "hourly") { var c2 = new Date(n.getFullYear(), n.getMonth(), n.getDate(), n.getHours(), t.min, 0, 0); if (c2 > n) c2 = new Date(c2.getTime() - 3600000); return c2; }
+  if (t.freq === "daily") { var c3 = at(n); if (c3 > n) c3 = new Date(c3.getTime() - 86400000); return c3; }
+  if (t.freq === "weekly") {
+    var days = t.days.slice().sort(function (a, b) { return a - b; });
+    for (var i = 0; i < 8; i++) { var d = new Date(n.getFullYear(), n.getMonth(), n.getDate() - i); if (days.indexOf(d.getDay()) >= 0) { var c4 = at(d); if (c4 <= n) return c4; } }
+    return null;
+  }
+  if (t.freq === "monthly") {
+    var md = Math.min(t.monthDay, 31), y = n.getFullYear(), m = n.getMonth();
+    for (var k = 0; k < 2; k++) { var last = new Date(y, m + 1, 0).getDate(); var c5 = new Date(y, m, Math.min(md, last), h, t.min, 0, 0); if (c5 <= n) return c5; m--; if (m < 0) { m = 11; y--; } }
+    return null;
+  }
+  if (t.freq === "yearly") {
+    var y2 = n.getFullYear();
+    for (var k2 = 0; k2 < 2; k2++) { var last2 = new Date(y2, t.month, 0).getDate(); var c6 = new Date(y2, t.month - 1, Math.min(t.day, last2), h, t.min, 0, 0); if (c6 <= n) return c6; y2--; }
+    return null;
+  }
+  return null;
+}
+
+export function graphTrigSummary(t) {
+  if (!t) return "";
+  if (t.type === "manual") return tr("graph.trig.manual");
+  if (t.type === "webhook") return tr("graph.trig.webhook");
+  t = graphTrigFill(t);
+  var freq = tr("graph.freq." + t.freq);
+  var time = t.hour + ":" + ("0" + t.min).slice(-2) + " " + t.ampm;
+  var days = "";
+  if (t.freq === "daily") days = tr("graph.every_day");
+  else if (t.freq === "weekly") days = t.days.length >= 7 ? tr("graph.every_day") : t.days.slice().sort(function (a, b) { return a - b; }).map(function (d) { return "SMTWTFS"[d]; }).join(" ");
+  else if (t.freq === "hourly") days = tr("graph.every_hour");
+  else if (t.freq === "monthly") days = String(t.monthDay);
+  else if (t.freq === "yearly") days = t.day + " " + MONTHS[getLang()][t.month - 1];
+  else if (t.freq === "once") days = t.date;
+  else days = t.cron || tr("graph.freq.custom");
+  return freq + " • " + days + " • " + time;
+}
+
+export function graphNextText(t, now) {
+  var c = graphNextRun(t, now);
+  if (!c) return tr("graph.next_none");
+  return c.toLocaleDateString(graphLocale(), { weekday: "short", day: "numeric", month: "short" }) + ", " + ("0" + c.getHours()).slice(-2) + ":" + ("0" + c.getMinutes()).slice(-2);
+}
+
+export function saveGraphState() {
+  try { localStorage.setItem("minime.graphState", JSON.stringify({ nodes: GNODES, edges: GEDGES, counter: nodeCounter })); return true; }
+  catch (_) { return false; }
+}
+export function loadGraphState() {
+  var raw = null;
+  try { raw = localStorage.getItem("minime.graphState"); } catch (_) {}
+  if (!raw) return false;
+  try {
+    var s = JSON.parse(raw);
+    if (!s || typeof s.nodes !== "object" || !Array.isArray(s.edges)) throw new Error("bad");
+    var ok = true;
+    Object.keys(s.nodes).forEach(function (k) { var nd = s.nodes[k]; if (!nd || typeof nd.name !== "string" || typeof nd.kind !== "string" || typeof nd.x !== "number" || typeof nd.y !== "number") ok = false; });
+    if (!ok) throw new Error("bad node");
+    GNODES = s.nodes; GEDGES = s.edges; nodeCounter = s.counter || 0;
+    Object.keys(GNODES).forEach(function (k) { if (GNODES[k].kind === "trigger") { GNODES[k].trig = graphTrigFill(GNODES[k].trig); GNODES[k].sub = graphTrigSummary(GNODES[k].trig); } });
+    return true;
+  } catch (_) {
+    try { localStorage.setItem("minime.graphState.corrupt", raw); localStorage.removeItem("minime.graphState"); } catch (_) {}
+    return false;
+  }
+}
+
+export function graphSelect(key) {
+  graphSel = GNODES[key] ? key : null;
+  graphDelAsk = false;
+  renderGraph();
+  renderGraphPanel();
+}
+export function graphClosePanel() { graphSel = null; graphDelAsk = false; renderGraph(); renderGraphPanel(); }
+function graphSelNode() { return graphSel && GNODES[graphSel] ? GNODES[graphSel] : null; }
+
+export function renderGraphPanel() {
+  var p = document.getElementById("graphPanel");
+  if (!p) return;
+  var nd = graphSelNode();
+  if (!nd) { p.style.display = "none"; p.innerHTML = ""; return; }
+  p.style.display = "block";
+  var html = "<div class='g-head'><span>" + esc(nd.icon || "") + " " + esc(nd.name) + "</span><button class='g-x' onclick='graphClosePanel()'>×</button></div>";
+  html += "<div class='g-row'><label>" + tr("graph.name") + "</label><input class='g-input' value=\"" + esc(nd.name) + "\" oninput='graphRename(this.value)'></div>";
+  html += "<div class='g-row'><label>" + tr("graph.desc") + "</label><textarea class='g-input' oninput='graphRedesc(this.value)'>" + esc(nd.desc || "") + "</textarea></div>";
+  if (nd.kind === "decision") {
+    html += "<div class='g-row'><label>" + tr("graph.branch_true") + "</label><input class='g-input' value=\"" + esc(nd.branchT || "true") + "\" onchange='graphSetBranch(\"T\", this.value)'></div>";
+    html += "<div class='g-row'><label>" + tr("graph.branch_false") + "</label><input class='g-input' value=\"" + esc(nd.branchF || "false") + "\" onchange='graphSetBranch(\"F\", this.value)'></div>";
+  }
+  if (nd.kind === "trigger") {
+    var t = graphTrigOf(nd);
+    html += "<div class='g-row'><label>" + tr("graph.type") + "</label><select class='g-input' onchange='graphSetTrig(\"type\", this.value)'>";
+    ["schedule", "manual", "webhook"].forEach(function (v) { html += "<option value='" + v + "'" + (t.type === v ? " selected" : "") + ">" + tr("graph.trig." + v) + "</option>"; });
+    html += "</select></div>";
+    if (t.type === "schedule") {
+      html += "<div class='g-row'><label>" + tr("graph.freq") + "</label><select class='g-input' onchange='graphSetTrig(\"freq\", this.value)'>";
+      ["once", "hourly", "daily", "weekly", "monthly", "yearly", "custom"].forEach(function (v) { html += "<option value='" + v + "'" + (t.freq === v ? " selected" : "") + ">" + tr("graph.freq." + v) + "</option>"; });
+      html += "</select></div>";
+      if (t.freq === "weekly") {
+        html += "<div class='g-row'><label>" + tr("graph.days") + "</label><div class='g-days'>";
+        for (var d = 0; d < 7; d++) html += "<button class='g-day" + (t.days.indexOf(d) >= 0 ? " on" : "") + "' onclick='graphToggleDay(" + d + ")'>" + "SMTWTFS"[d] + "</button>";
+        html += "</div></div>";
+      }
+      if (t.freq === "once") html += "<div class='g-row'><label>" + tr("graph.date") + "</label><input class='g-input' type='date' value='" + esc(t.date) + "' onchange='graphSetTrig(\"date\", this.value)'></div>";
+      if (t.freq === "monthly") html += "<div class='g-row'><label>" + tr("graph.date") + "</label><input class='g-input' type='number' min='1' max='31' value='" + t.monthDay + "' onchange='graphSetTrigNum(\"monthDay\", this.value)'></div>";
+      if (t.freq === "yearly") {
+        html += "<div class='g-row'><label>" + tr("graph.date") + "</label><div class='g-flex'><select class='g-input' onchange='graphSetTrigNum(\"month\", this.value)'>";
+        MONTHS[getLang()].forEach(function (m, i) { html += "<option value='" + (i + 1) + "'" + (t.month === i + 1 ? " selected" : "") + ">" + m + "</option>"; });
+        html += "</select><input class='g-input' type='number' min='1' max='31' value='" + t.day + "' onchange='graphSetTrigNum(\"day\", this.value)'></div></div>";
+      }
+      if (t.freq === "hourly") html += "<div class='g-row'><label>" + tr("graph.time") + "</label><input class='g-input' type='number' min='0' max='59' value='" + t.min + "' onchange='graphSetTrigNum(\"min\", this.value)'></div>";
+      if (t.freq === "custom") html += "<div class='g-row'><label>" + tr("graph.cron") + "</label><input class='g-input' value=\"" + esc(t.cron) + "\" onchange='graphSetTrig(\"cron\", this.value)'></div>";
+      if (t.freq !== "hourly" && t.freq !== "custom") {
+        html += "<div class='g-row'><label>" + tr("graph.time") + "</label><div class='g-flex'><input class='g-input' type='number' min='1' max='12' value='" + t.hour + "' onchange='graphSetTrigNum(\"hour\", this.value)'><span>:</span><input class='g-input' type='number' min='0' max='59' value='" + t.min + "' onchange='graphSetTrigNum(\"min\", this.value)'><button class='g-ampm" + (t.ampm === "AM" ? " on" : "") + "' onclick='graphSetAmpm(\"AM\")'>AM</button><button class='g-ampm" + (t.ampm === "PM" ? " on" : "") + "' onclick='graphSetAmpm(\"PM\")'>PM</button></div></div>";
+      }
+      html += "<div class='g-sum'>" + esc(graphTrigSummary(t)) + "</div>";
+      html += "<div class='g-next'>" + tr("graph.next") + ": <b>" + esc(graphNextText(t)) + "</b></div>";
+      html += "<label class='g-check'><input type='checkbox'" + (t.active ? " checked" : "") + " onchange='graphSetTrigBool(\"active\", this.checked)'> " + tr("graph.active") + "</label>";
+      html += "<div class='g-note'>" + tr("graph.note.open") + "</div>";
+      if (t.freq === "custom") html += "<div class='g-note'>" + tr("graph.note.custom") + "</div>";
+    } else if (t.type === "manual") {
+      html += "<div class='g-note'>" + tr("graph.note.manual") + "</div>";
+    } else {
+      html += "<div class='g-note'>" + tr("graph.note.webhook") + "</div>";
+    }
+    html += "<button class='g-run' onclick='graphRunNow()'>" + tr("graph.run_now") + "</button>";
+  }
+  html += "<div class='g-actions'><button class='btn' onclick='graphDuplicate()'>" + tr("graph.dup") + "</button><button class='btn' onclick='graphToggleLock()'>" + (nd.locked ? tr("graph.unlock") : tr("graph.lock")) + "</button><button class='btn' onclick='graphAskDelete()'>" + tr("graph.del") + "</button></div>";
+  if (graphDelAsk) html += "<div class='g-delask'>" + tr("graph.del_ask") + " <button class='btn' onclick='graphConfirmDelete()'>" + tr("graph.del_yes") + "</button> <button class='btn' onclick='graphCancelDelete()'>" + tr("graph.del_no") + "</button></div>";
+  p.innerHTML = html;
+}
+
+export function graphRename(v) { var nd = graphSelNode(); if (!nd) return; nd.name = v; saveGraphState(); renderGraph(); }
+export function graphRedesc(v) { var nd = graphSelNode(); if (!nd) return; nd.desc = v; saveGraphState(); }
+export function graphSetBranch(side, v) { var nd = graphSelNode(); if (!nd) return; if (side === "T") nd.branchT = v; else nd.branchF = v; saveGraphState(); renderGraph(); renderGraphPanel(); }
+function graphTrigSync(nd) { var t = graphTrigOf(nd); nd.sub = graphTrigSummary(t); }
+export function graphSetTrig(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return; graphTrigOf(nd)[field] = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel(); }
+export function graphSetTrigNum(field, v) {
+  var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return;
+  var n = parseInt(v, 10); if (isNaN(n)) return;
+  var max = field === "hour" ? 12 : field === "min" ? 59 : field === "month" ? 12 : 31;
+  var min = (field === "monthDay" || field === "day" || field === "hour" || field === "month") ? 1 : 0;
+  graphTrigOf(nd)[field] = Math.max(min, Math.min(max, n));
+  graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel();
+}
+export function graphSetTrigBool(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return; graphTrigOf(nd)[field] = !!v; saveGraphState(); renderGraphPanel(); }
+export function graphSetAmpm(v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return; graphTrigOf(nd).ampm = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel(); }
+export function graphToggleDay(d) {
+  var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return;
+  var t = graphTrigOf(nd);
+  var i = t.days.indexOf(d);
+  if (i >= 0) { if (t.days.length > 1) t.days.splice(i, 1); }
+  else t.days.push(d);
+  t.days.sort(function (a, b) { return a - b; });
+  graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel();
+}
+export function graphRunNow() { runGraphSim("manual"); }
+export function graphDuplicate() {
+  var nd = graphSelNode(); if (!nd) return;
+  nodeCounter++;
+  var nk = "baru" + nodeCounter;
+  var copy = JSON.parse(JSON.stringify(nd));
+  copy.x = Math.min(90, (copy.x || 10) + 6);
+  GNODES[nk] = copy;
+  saveGraphState();
+  graphSelect(nk);
+  var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.node_added"); }
+}
+export function graphToggleLock() { var nd = graphSelNode(); if (!nd) return; nd.locked = !nd.locked; saveGraphState(); renderGraph(); renderGraphPanel(); }
+export function graphAskDelete() { graphDelAsk = true; renderGraphPanel(); }
+export function graphCancelDelete() { graphDelAsk = false; renderGraphPanel(); }
+export function graphConfirmDelete() {
+  if (!graphSel || !GNODES[graphSel]) return;
+  var key = graphSel;
+  delete GNODES[key];
+  for (var i = GEDGES.length - 1; i >= 0; i--) { if (GEDGES[i].f === key || GEDGES[i].t === key) GEDGES.splice(i, 1); }
+  graphSel = null; graphDelAsk = false;
+  saveGraphState(); renderGraph(); renderGraphPanel();
+  var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.node_deleted"); }
+}
+export function graphAddNode() {
+  if (graphSel && GNODES[graphSel]) { addNodeAfter(graphSel); return; }
+  nodeCounter++;
+  var nk = "baru" + nodeCounter;
+  GNODES[nk] = { name: "Node Baru " + nodeCounter, sub: "simulasi", icon: "＋", x: 45, y: 45, w: 150, kind: "output", desc: "Node baru dari toolbar + Add node." };
+  saveGraphState();
+  graphSelect(nk);
+  var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.node_added"); }
+}
+
+function graphRunsGet() { try { return JSON.parse(localStorage.getItem("minime.graphRuns") || "[]"); } catch (_) { return []; } }
+function graphRunsAdd(kind) {
+  var r = graphRunsGet();
+  r.unshift({ at: new Date().toISOString(), kind: kind });
+  r = r.slice(0, 50);
+  try { localStorage.setItem("minime.graphRuns", JSON.stringify(r)); } catch (_) {}
+  renderGraphHist();
+}
+export function graphToggleHist() { graphHistOn = !graphHistOn; renderGraphHist(); }
+export function renderGraphHist() {
+  var el = document.getElementById("graphHist"); if (!el) return;
+  var badge = document.getElementById("graphHistBadge");
+  var runs = graphRunsGet();
+  if (badge) badge.textContent = runs.length ? String(runs.length) : "";
+  if (!graphHistOn) { el.style.display = "none"; return; }
+  el.style.display = "block";
+  if (!runs.length) { el.innerHTML = "<div class='g-hist-empty'>" + tr("graph.hist_empty") + "</div>"; return; }
+  el.innerHTML = runs.slice(0, 10).map(function (r) {
+    var d = new Date(r.at);
+    return "<div class='g-hist-row'>" + d.toLocaleString(graphLocale(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + " — " + tr("graph.hist_run") + " (" + esc(r.kind) + ")</div>";
+  }).join("");
+}
+export function initGraphScheduler() {
+  if (graphTimer) return;
+  graphLastCheck = new Date();
+  graphTimer = setInterval(function () {
+    if (graphRunning) return;
+    var now = new Date(), due = false;
+    Object.keys(GNODES).forEach(function (k) {
+      var nd = GNODES[k];
+      if (nd.kind !== "trigger") return;
+      var t = graphTrigOf(nd);
+      if (t.type !== "schedule" || !t.active) return;
+      if (t.freq === "once") {
+        if (!t.firedOnce) { var oc = graphPrevRun(t, now); if (oc && oc > graphLastCheck && oc <= now) { t.firedOnce = true; due = true; } }
+        return;
+      }
+      var prev = graphPrevRun(t, now);
+      if (prev && prev > graphLastCheck && prev <= now) due = true;
+    });
+    graphLastCheck = now;
+    if (due) { saveGraphState(); runGraphSim("auto"); }
+  }, 30000);
+}
+export function graphZoomSet(z) {
+  graphZoom = Math.max(0.5, Math.min(2, z));
+  var el = document.getElementById("graphZoom"); if (el) el.style.transform = "scale(" + graphZoom + ")";
+  var lab = document.getElementById("graphZoomLabel"); if (lab) lab.textContent = Math.round(graphZoom * 100) + "%";
+}
+export function graphZoomIn() { graphZoomSet(graphZoom + 0.25); }
+export function graphZoomOut() { graphZoomSet(graphZoom - 0.25); }
+export function graphFullscreen() { var el = document.getElementById("graphBox"); if (el && el.requestFullscreen) { try { el.requestFullscreen(); } catch (_) {} } }
 
 /* ---------- Library ---------- */
 var LIB_ADDED = loadLibAdded();
@@ -1258,13 +1579,17 @@ var _sa2 = selectAgent;
 export function initV5() {
   // Penjadwal native (v61): timer antrean mulai sekali saat app hidup.
   initSocialScheduler();
+  // v77: penjadwal trigger Graph (hanya selama app terbuka).
+  initGraphScheduler();
   // Audit v66 L-B1: Kanban tersimpan dimuat sebelum render pertama.
   loadKanban();
   // v76: agen/proyek kustom + pilihan terakhir dimuat sebelum render pertama.
   loadHomeState();
+  // v77: node Graph + setting trigger dimuat sebelum render pertama.
+  loadGraphState();
   document.addEventListener("mousemove", function (e) {
       if (!dragNode) return;
-      var box = document.getElementById("graphBox").getBoundingClientRect();
+      var box = graphZoomEl().getBoundingClientRect();
       if (dragStart && Math.abs(e.clientX - dragStart.x) + Math.abs(e.clientY - dragStart.y) > 5) dragMoved = true;
       var nx = (e.clientX - box.left) / box.width * 100 - grabDX;
       var ny = (e.clientY - box.top) / box.height * 100 - grabDY;
@@ -1272,7 +1597,9 @@ export function initV5() {
       GNODES[dragNode].y = Math.max(1, Math.min(84, ny));
       renderGraph();
     });
-  document.addEventListener("mouseup", function () { dragNode = null; });
+  document.addEventListener("mouseup", function () { if (dragNode && dragMoved) saveGraphState(); dragNode = null; });
+  var gb = document.getElementById("graphBox");
+  if (gb) gb.addEventListener("click", function (e) { if (e.target.closest && e.target.closest(".n8n-node")) return; graphClosePanel(); });
   document.querySelectorAll(".sidebar button").forEach(function (b) {
       b.addEventListener("click", function () { showView(b.getAttribute("data-view")); });
     });
@@ -1283,6 +1610,7 @@ export function initV5() {
   renderChat();
   renderKanban();
   renderGraph();
+  renderGraphHist();
   renderLib();
   renderPlanner();
   (function () {
@@ -1309,5 +1637,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, grabDY, graphRunning, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, grabDY, graphRunning, graphSelect, graphClosePanel, renderGraphPanel, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

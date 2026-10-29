@@ -286,3 +286,40 @@ h3 { font-size: 18px; }
 .chan-foot { display: flex; justify-content: flex-end; }
 .agent.ns-new input { flex: 1; background: transparent; border: none; color: #ececec; font-size: 14px; outline: none; }
 .agent.ns-new button { background: transparent; border: none; color: #a1a1a1; font-size: 14px; cursor: pointer; }
+
+/* ---------- Graph v77: panel setting per node + toolbar ---------- */
+.graph-head-btns { display: flex; gap: 8px; align-items: center; }
+.g-badge { display: inline-block; min-width: 18px; text-align: center; background: #EB87B4; color: #262626; border-radius: 9px; font-size: 11px; font-weight: 700; padding: 0 4px; }
+.g-badge:empty { display: none; }
+.graph-wrap { display: flex; gap: 12px; align-items: stretch; }
+.graph-wrap .n8n-canvas { flex: 1; min-width: 0; }
+#graphZoom { position: absolute; inset: 0; transform-origin: top left; }
+.graph-panel { width: 300px; flex-shrink: 0; background: #1f1f1f; border: 1px solid #262626; border-radius: 8px; padding: 12px; color: #ececec; overflow-y: auto; max-height: 480px; }
+.g-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 15px; margin-bottom: 10px; }
+.g-x { background: none; border: none; color: #a1a1a1; font-size: 18px; cursor: pointer; }
+.g-row { margin-bottom: 10px; }
+.g-row label { display: block; font-size: 12px; color: #a1a1a1; margin-bottom: 4px; }
+.g-input { width: 100%; box-sizing: border-box; background: #262626; border: 1px solid #3a3a3a; border-radius: 6px; color: #ececec; padding: 7px 8px; font-size: 13px; }
+.g-flex { display: flex; gap: 6px; align-items: center; }
+.g-flex .g-input { flex: 1; }
+.g-days { display: flex; gap: 4px; }
+.g-day { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #3a3a3a; background: #262626; color: #ececec; cursor: pointer; font-size: 12px; }
+.g-day.on { background: #EB87B4; color: #262626; border-color: #EB87B4; font-weight: 700; }
+.g-ampm { padding: 7px 10px; border-radius: 6px; border: 1px solid #3a3a3a; background: #262626; color: #ececec; cursor: pointer; }
+.g-ampm.on { background: #EB87B4; color: #262626; border-color: #EB87B4; font-weight: 700; }
+.g-sum { font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+.g-next { font-size: 13px; color: #a1a1a1; margin-bottom: 8px; }
+.g-next b { color: #ececec; }
+.g-check { display: flex; gap: 6px; align-items: center; font-size: 13px; margin-bottom: 6px; cursor: pointer; }
+.g-note { font-size: 12px; color: #a1a1a1; margin-bottom: 8px; }
+.g-run { width: 100%; background: #ececec; color: #262626; border: none; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin: 6px 0 12px; }
+.g-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.g-delask { margin-top: 10px; font-size: 13px; }
+.graph-toolbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.graph-toolbar #graphZoomLabel { font-size: 13px; color: #a1a1a1; min-width: 44px; text-align: center; }
+.graph-hist { background: #1f1f1f; border: 1px solid #262626; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; color: #ececec; }
+.g-hist-row { padding: 3px 0; border-bottom: 1px solid #262626; }
+.g-hist-row:last-child { border-bottom: none; }
+.n8n-node.sel { border-color: #EB87B4; box-shadow: 0 0 0 2px #EB87B4; }
+.n8n-nodebar { position: absolute; top: -34px; left: 0; display: flex; gap: 4px; z-index: 5; }
+.n8n-nodebar button { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #3a3a3a; background: #262626; color: #ececec; cursor: pointer; font-size: 13px; }

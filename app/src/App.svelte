@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -306,9 +306,23 @@
     </div>
     <div class="view" id="view-graph">
       <div class="colhead"><h2>{t('view.graph.title', lang)}</h2>
-      <button class="btn btn-primary" onclick={() => { runGraphSim() }}>{t('graph.run', lang)}</button></div>
+      <div class="graph-head-btns">
+        <button class="btn" onclick={() => { graphToggleHist() }}>{t('graph.hist', lang)} <span class="g-badge" id="graphHistBadge"></span></button>
+        <button class="btn btn-primary" onclick={() => { runGraphSim() }}>{t('graph.run', lang)}</button>
+      </div></div>
       <div class="scroll">
-        <div class="n8n-canvas" id="graphBox"><svg id="graphEdges"></svg><div id="graphNodes"></div></div>
+        <div id="graphHist" class="graph-hist" style="display:none"></div>
+        <div class="graph-wrap">
+          <div class="n8n-canvas" id="graphBox"><div id="graphZoom"><svg id="graphEdges"></svg><div id="graphNodes"></div></div></div>
+          <div id="graphPanel" class="graph-panel" style="display:none"></div>
+        </div>
+        <div class="graph-toolbar">
+          <button class="btn" onclick={() => { graphZoomOut() }}>−</button>
+          <span id="graphZoomLabel">100%</span>
+          <button class="btn" onclick={() => { graphZoomIn() }}>+</button>
+          <button class="btn" onclick={() => { graphFullscreen() }}>{t('graph.fullscreen', lang)}</button>
+          <button class="btn btn-primary" onclick={() => { graphAddNode() }}>{t('graph.add_node', lang)}</button>
+        </div>
         <div class="notice" id="graphNotice" style="display:none"></div>
       </div>
     </div>
