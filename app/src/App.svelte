@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, postizOpenBrowser, postizReload, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, postizOpenBrowser, postizReload, fbCheckStatus, fbOpenDashboard, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
@@ -628,6 +628,7 @@
         <div class="key-card"><b>{t('key.meta', lang)}</b><div class="key-row"><input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnMeta" onclick={() => { connectKey('meta') }}>{t('key.connect', lang)}</button></div><span id="keyNoteMeta"></span></div>
         <div class="key-card"><b>{t('key.postiz', lang)}</b><div class="key-row"><input type="password" id="apiKeyPostiz" placeholder={t('key.ph.postiz', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnPostiz" onclick={() => { connectKey('postiz') }}>{t('key.connect', lang)}</button></div><span id="keyNotePostiz"></span></div>
         <div class="key-card"><span>{t('key.ollama', lang)}</span></div>
+        <div class="key-card"><b>{t('fb.card.title', lang)}</b><div>{t('fb.card.desc', lang)}</div><div class="key-row"><button class="btn btn-primary" onclick={() => { fbCheckStatus() }}>{t('fb.btn.check', lang)}</button> <button class="btn" onclick={() => { fbOpenDashboard() }}>{t('fb.btn.dashboard', lang)}</button></div><span id="fbStatusNote"></span></div>
         <h3 id="gateHead">{t('settings.gates', lang)}</h3>
         <p><label><input type="checkbox" checked> {t('settings.dist.default', lang)}</label><label><input type="checkbox"> {t('settings.dist.batch', lang)}</label></p>
         <h3>{t('settings.cost', lang)}</h3>

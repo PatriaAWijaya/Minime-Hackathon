@@ -15,6 +15,8 @@ pub fn open_browser(url: String) -> Result<(), String> {
     if url != "http://localhost:4007"
         && !url.starts_with("http://localhost:4007/")
         && url != "https://www.docker.com/products/docker-desktop/"
+        && url != "https://developers.facebook.com/apps"
+        && !url.starts_with("https://developers.facebook.com/apps/")
     {
         return Err("URL tidak diizinkan".into());
     }
@@ -101,7 +103,47 @@ pub fn classify_navigation(url: &str) -> NavDecision {
     }
 }
 
-/// Buka URL eksternal di browser sistem. Hanya menerima URL yang
+/// Probe status aplikasi Facebook (v59, perintah Patria: user cukup klik
+/// di MiniMe). Mengambil halaman dialog OAuth dengan App ID yang
+/// diberikan frontend (hanya digit, jadi tidak bisa disusupi URL lain),
+/// lalu mengklasifikasi isinya — isi halaman TIDAK PERNAH dikembalikan
+/// atau di-log, hanya statusnya: "active" (form login tampil),
+/// "not_active" (teks "App not active" dari Meta), atau "unknown".
+/// App ID bersifat publik (sudah tampil di URL browser saat klik tile),
+/// bukan rahasia. Memakai curl bawaan macOS (tidak menambah dependensi).
+#[tauri::command]
+pub fn fb_app_status(app_id: String) -> Result<String, String> {
+    if app_id.is_empty() || !app_id.bytes().all(|b| b.is_ascii_digit()) {
+        return Err("App ID tidak valid".into());
+    }
+    let url = format!(
+        "https://www.facebook.com/v25.0/dialog/oauth?client_id={app_id}&redirect_uri=http://localhost:4007/integrations/social/facebook&state=minime_probe"
+    );
+    let out = Command::new("curl")
+        .args([
+            "-s",
+            "-L",
+            "--max-time",
+            "20",
+            "-A",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+            &url,
+        ])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let body = String::from_utf8_lossy(&out.stdout);
+    if body.contains("App not active") {
+        Ok("not_active".into())
+    } else if body.contains("Log Into Facebook")
+        || body.contains("Masuk ke Facebook")
+        || body.contains("login_form")
+        || body.contains("name=\"email\"")
+    {
+        Ok("active".into())
+    } else {
+        Ok("unknown".into())
+    }
+}
 /// lolos klasifikasi OpenExternal; sisanya ditolak (jalur ini tidak
 /// pernah membuka URL lokal/app). Perintah Tauri `open_external_url`
 /// (dipakai pendengar jembatan OAuth di frontend) maupun handler

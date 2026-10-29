@@ -1204,6 +1204,88 @@ var _sv2 = showView;
 
 var _sa2 = selectAgent;
 
+/* v59: pelacak login browser (perintah Patria 29 Okt 16:17 — user cukup
+   klik di MiniMe; sesudah login browser selesai, panel otomatis
+   mencatat channel baru tanpa muat ulang manual).
+   - Polling: bila API key Postiz tersimpan, tiap 5 detik (maks 5 menit)
+     hitung integrations via Rust ping; begitu jumlah bertambah, panel
+     dimuat ulang + wizard ikut siap.
+   - Kembali fokus: tanpa API key pun, saat jendela app kembali fokus
+     dalam 10 menit sesudah login browser dibuka, panel dimuat ulang
+     sekali. Hanya berjalan bila ada login yang baru dibuka. */
+var oauthPendingAt = 0;
+var oauthPollTimer = null;
+var oauthBaseline = null;
+function oauthStop() {
+  oauthPendingAt = 0;
+  oauthBaseline = null;
+  if (oauthPollTimer) { clearInterval(oauthPollTimer); oauthPollTimer = null; }
+}
+function oauthDetected(count) {
+  postizLastTest = { state: 'ok', count: count, status: 200 };
+  oauthStop();
+  postizReload();
+  renderPostizSetup();
+}
+function oauthStart() {
+  oauthStop();
+  oauthPendingAt = Date.now();
+  var key = readPostizKey();
+  if (!key) return;
+  var selfKey = key;
+  invoke('postiz_request', { req: { op: 'ping', key: selfKey } }).then(function (r) {
+    if (r.status !== 200) return;
+    var n = parseIntegrationsCount(r.body);
+    oauthBaseline = (n === null ? 0 : n);
+    var tries = 0;
+    oauthPollTimer = setInterval(function () {
+      tries++;
+      if (tries > 60) { oauthStop(); return; }
+      invoke('postiz_request', { req: { op: 'ping', key: selfKey } }).then(function (r2) {
+        if (r2.status !== 200) return;
+        var n2 = parseIntegrationsCount(r2.body);
+        if (n2 !== null && oauthBaseline !== null && n2 > oauthBaseline) oauthDetected(n2);
+      }).catch(function () {});
+    }, 5000);
+  }).catch(function () {});
+}
+function oauthFocusReload() {
+  if (!oauthPendingAt) return;
+  if (Date.now() - oauthPendingAt > 10 * 60 * 1000) { oauthStop(); return; }
+  oauthStop();
+  postizReload();
+  renderPostizSetup();
+}
+
+/* v59: kartu status app Facebook di Pengaturan. App ID ditangkap dari
+   URL OAuth saat tile Facebook diklik (ID aplikasi bersifat publik,
+   sudah tampil di URL browser) — bukan dari .env, bukan rahasia. */
+function fbStoredAppId() {
+  try { return window.localStorage.getItem('minime.fbAppId') || ''; } catch (_) { return ''; }
+}
+function fbSetNote(msg) {
+  var el = document.getElementById("fbStatusNote");
+  if (el) el.textContent = msg;
+}
+export async function fbCheckStatus() {
+  var id = fbStoredAppId();
+  if (!id) { fbSetNote(tr('fb.status.noid')); return; }
+  fbSetNote(tr('fb.status.checking'));
+  try {
+    var st = await invoke('fb_app_status', { appId: id });
+    if (st === 'active') fbSetNote(tr('fb.status.active'));
+    else if (st === 'not_active') fbSetNote(tr('fb.status.not_active'));
+    else fbSetNote(tr('fb.status.unknown'));
+  } catch (_) {
+    fbSetNote(tr('fb.status.error'));
+  }
+}
+export async function fbOpenDashboard() {
+  var id = fbStoredAppId();
+  var url = id ? ('https://developers.facebook.com/apps/' + id) : 'https://developers.facebook.com/apps';
+  try { await invoke('open_browser', { url: url }); } catch (_) {}
+}
+
 export function initV5() {
   // Jembatan OAuth panel (v57): pesan dari frame Postiz (init script
   // di main.rs) yang membawa URL OAuth hasil klik tile channel.
@@ -1215,9 +1297,23 @@ export function initV5() {
       if (ev.origin !== "http://localhost:4007" && ev.origin !== "http://127.0.0.1:4007") return;
       var d = ev.data;
       if (d && d.type === "minime-oauth-url" && typeof d.url === "string" && d.url) {
-        invoke("open_external_url", { url: d.url }).catch(function () {});
+        invoke("open_external_url", { url: d.url }).then(function () {
+          try {
+            if (d.url.indexOf("facebook.com") !== -1) {
+              var m = /[?&]client_id=([^&]+)/.exec(d.url);
+              if (m && /^\d+$/.test(m[1])) {
+                try { window.localStorage.setItem('minime.fbAppId', m[1]); } catch (_) {}
+              }
+            }
+          } catch (_) {}
+          oauthStart();
+        }).catch(function () {});
       }
     });
+  }
+  if (!window.__minimeOauthFocus) {
+    window.__minimeOauthFocus = true;
+    window.addEventListener("focus", oauthFocusReload);
   }
   document.addEventListener("mousemove", function (e) {
       if (!dragNode) return;

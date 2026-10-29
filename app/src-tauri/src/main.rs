@@ -129,6 +129,7 @@ fn main() {
             image::image_delete,
             browser::open_browser,
             browser::open_external_url,
+            browser::fb_app_status,
             postiz::postiz_request,
             postiz_install::postiz_install,
             postiz_install::open_docker_desktop

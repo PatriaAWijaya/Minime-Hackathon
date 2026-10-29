@@ -173,9 +173,13 @@ try {
 
   // 7. Kartu v53: tombol sejajar kanan input + ketikan baru membatalkan
   // hijau basi (tanpa mengubah kunci/flag tersimpan).
-  check('kartu per-kunci tampil', document.querySelectorAll('.key-card').length === 4);
-  const rowOk = [...document.querySelectorAll('.key-card .key-row')].every((row) => row.querySelector('input') && row.querySelector('button'));
-  check('tiap kartu: input + tombol sebaris', rowOk);
+  // v59: kartu ke-5 = status app Facebook (tanpa input — hanya 2 tombol
+  // + catatan status), jadi hitungan kartu jadi 5 dan cek baris hanya
+  // berlaku untuk kartu kunci yang punya input.
+  check('kartu per-kunci tampil', document.querySelectorAll('.key-card').length === 5);
+  const keyRows = [...document.querySelectorAll('.key-card .key-row')].filter((row) => row.querySelector('input'));
+  check('tiap kartu kunci: input + tombol sebaris', keyRows.length === 3 && keyRows.every((row) => row.querySelector('button')));
+  check('kartu Facebook tampil + 2 tombol', !!document.getElementById('fbStatusNote') && !!document.querySelectorAll('.key-card .key-row')[3].querySelector('button'));
   store.set('minime.geminiKey', 'gemini-ok');
   store.set('minime.keyValidated', JSON.stringify({ gemini: true }));
   document.getElementById('apiKeyGemini').value = '';
