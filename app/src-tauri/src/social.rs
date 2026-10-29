@@ -162,6 +162,55 @@ fn allow_mime(m: &str) -> &'static str {
     }
 }
 
+/// MIME dari ekstensi file (audit v79): dipakai resolve_image bila
+/// frontend tidak mengirim mime (jalur lib/saved PublishNow) — agar
+/// video tidak lolos sebagai image/jpeg lewat allow_mime.
+fn mime_from_ext(name: &str) -> &'static str {
+    let lower = name.to_ascii_lowercase();
+    if lower.ends_with(".png") {
+        "image/png"
+    } else if lower.ends_with(".webp") {
+        "image/webp"
+    } else if lower.ends_with(".gif") {
+        "image/gif"
+    } else if lower.ends_with(".mp4") || lower.ends_with(".mov") || lower.ends_with(".webm") {
+        "video/mp4"
+    } else {
+        "image/jpeg"
+    }
+}
+
+/// ID postingan dari body JSON provider ({id} | {data:{id}} |
+/// {post_id} | {data:{publish_id}}); fallback "ok" bila tak ada —
+/// frontend menyembunyikan "ok" dan hanya menampilkan id nyata.
+fn post_id(body: &str) -> String {
+    let v: serde_json::Value = match serde_json::from_str(body) {
+        Ok(v) => v,
+        Err(_) => return "ok".into(),
+    };
+    if let Some(id) = v.get("id").and_then(|i| i.as_str()) {
+        return id.to_string();
+    }
+    if let Some(id) = v
+        .get("data")
+        .and_then(|d| d.get("id"))
+        .and_then(|i| i.as_str())
+    {
+        return id.to_string();
+    }
+    if let Some(id) = v.get("post_id").and_then(|i| i.as_str()) {
+        return id.to_string();
+    }
+    if let Some(id) = v
+        .get("data")
+        .and_then(|d| d.get("publish_id"))
+        .and_then(|i| i.as_str())
+    {
+        return id.to_string();
+    }
+    "ok".into()
+}
+
 /// Argumen --form-string untuk field teks multipart. Beda dengan
 /// --form: nilainya literal (caption yang diawali '@' tidak dibaca
 /// sebagai file, newline tetap data, bukan sintaksis config).
@@ -509,11 +558,30 @@ pub struct PublishReq {
 /// localStorage, tanpa risiko kuota), fallback base64 (terbit langsung).
 /// File dibaca dari ~/minime-images/ lewat safe_name (tanpa traversal).
 fn resolve_image(req: &PublishReq) -> Result<Option<(Vec<u8>, String)>, String> {
+    // Guard video backend (audit v79): hanya YouTube menerima video.
+    // Mime mentah dari frontend dicek dulu; untuk jalur file tanpa mime
+    // (lib/saved PublishNow) mime diturunkan dari ekstensi di bawah.
+    if req.platform != "youtube" && req.image_mime.starts_with("video/") {
+        return Err(format!(
+            "Video hanya didukung untuk YouTube (bukan {})",
+            req.platform
+        ));
+    }
     if !req.image_file.is_empty() {
         let name = crate::image::safe_name(&req.image_file).ok_or("nama file tidak valid")?;
         let dir = crate::image::images_dir()?;
-        let bytes = std::fs::read(dir.join(name)).map_err(|e| e.to_string())?;
-        let mime = allow_mime(req.image_mime.as_str());
+        let bytes = std::fs::read(dir.join(&name)).map_err(|e| e.to_string())?;
+        let mime = if req.image_mime.is_empty() {
+            mime_from_ext(&name)
+        } else {
+            allow_mime(req.image_mime.as_str())
+        };
+        if req.platform != "youtube" && mime.starts_with("video/") {
+            return Err(format!(
+                "Video hanya didukung untuk YouTube (bukan {})",
+                req.platform
+            ));
+        }
         return Ok(Some((bytes, mime.to_string())));
     }
     if !req.image_b64.is_empty() {
@@ -732,7 +800,7 @@ fn fb_page_publish(req: &PublishReq) -> Result<String, String> {
         if r.status != 200 {
             return Err(format!("Publish FB Page gagal (HTTP {})", r.status));
         }
-        return Ok("ok".into());
+        return Ok(post_id(&r.body));
     }
     let (bytes, mime) = img.unwrap();
     let stamp = std::time::SystemTime::now()
@@ -755,7 +823,7 @@ fn fb_page_publish(req: &PublishReq) -> Result<String, String> {
     if r.status != 200 {
         return Err(format!("Upload foto FB Page gagal (HTTP {})", r.status));
     }
-    Ok("ok".into())
+    Ok(post_id(&r.body))
 }
 
 fn threads_publish(req: &PublishReq) -> Result<String, String> {
@@ -797,7 +865,7 @@ fn threads_publish(req: &PublishReq) -> Result<String, String> {
     if p.status != 200 {
         return Err(format!("Publish Threads gagal (HTTP {})", p.status));
     }
-    Ok("ok".into())
+    Ok(post_id(&p.body))
 }
 
 fn ig_publish(req: &PublishReq) -> Result<String, String> {
@@ -841,7 +909,7 @@ fn ig_publish(req: &PublishReq) -> Result<String, String> {
     if p.status != 200 {
         return Err(format!("Publish IG gagal (HTTP {})", p.status));
     }
-    Ok("ok".into())
+    Ok(post_id(&p.body))
 }
 
 /// Ambil ID akun IG Business/Creator yang tertaut ke satu Page.
@@ -1448,13 +1516,7 @@ fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
         if r.status != 201 && r.status != 200 {
             return Err(format!("Publish LinkedIn gagal (HTTP {})", r.status));
         }
-        return Ok("ok".into());
-    }
-    // Video ditolak jujur: alur lama mengirim video sebagai resep
-    // feedshare-image (pasti ditolak LinkedIn); upload video chunked
-    // adalah pekerjaan lanjutan, bukan sukses palsu.
-    if req.image_mime.starts_with("video/") {
-        return Err("LinkedIn video belum didukung di v71 (hanya teks + gambar)".into());
+        return Ok(post_id(&r.body));
     }
     let (bytes, mime) = img.unwrap();
     // Gambar: initializeUpload -> PUT biner -> rest/posts (content.media).
@@ -1529,7 +1591,7 @@ fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
     if r.status != 201 && r.status != 200 {
         return Err(format!("Publish LinkedIn gagal (HTTP {})", r.status));
     }
-    Ok("ok".into())
+    Ok(post_id(&r.body))
 }
 
 /// Profil X (users/me) — dipakai untuk label channel.
@@ -1640,7 +1702,7 @@ fn x_publish(req: &PublishReq) -> Result<String, String> {
     if r.status != 200 && r.status != 201 {
         return Err(format!("Publish X gagal (HTTP {})", r.status));
     }
-    Ok("ok".into())
+    Ok(post_id(&r.body))
 }
 
 /// Judul TikTok: maksimal 90 karakter — deskripsi membawa teks penuh
@@ -1742,7 +1804,7 @@ fn tiktok_publish(req: &PublishReq) -> Result<String, String> {
             .to_string();
         last_status = st.clone();
         if st == "PUBLISH_COMPLETE" {
-            return Ok("ok".into());
+            return Ok(publish_id);
         }
         if st.to_uppercase().contains("FAIL") {
             return Err(format!("Publish TikTok gagal (status {st})"));
@@ -1836,6 +1898,23 @@ mod tests {
             Some("1234567890123456789".to_string())
         );
         assert_eq!(x_media_id("{\"nope\": 1}"), None);
+    }
+
+    #[test]
+    fn post_id_shapes() {
+        assert_eq!(post_id(r#"{"id":"123_456"}"#), "123_456");
+        assert_eq!(post_id(r#"{"data":{"id":"789"}}"#), "789");
+        assert_eq!(post_id(r#"{"post_id":"abc"}"#), "abc");
+        assert_eq!(post_id(r#"{"data":{"publish_id":"tt1"}}"#), "tt1");
+        assert_eq!(post_id(""), "ok");
+        assert_eq!(post_id("bukan json"), "ok");
+    }
+
+    #[test]
+    fn mime_from_ext_video_and_images() {
+        assert_eq!(mime_from_ext("foto.png"), "image/png");
+        assert_eq!(mime_from_ext("clip.MP4"), "video/mp4");
+        assert_eq!(mime_from_ext("tanpa-ekstensi"), "image/jpeg");
     }
 
     #[test]

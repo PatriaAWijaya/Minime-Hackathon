@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, kbTeamOpen, saveSettings, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, kbTeamOpen, saveSettings, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -568,7 +568,9 @@
     </div>
     <div class="view" id="view-planner">
       <div class="scroll">
+        <div id="socNotice" style="display:none;margin:0 14px 12px;padding:10px 12px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px"></div>
         <div id="nativePlanner"></div>
+        <div id="socItemDlg"></div>
       </div>
     </div>
     <div class="view" id="view-campaign">
@@ -582,9 +584,17 @@
       <div class="scroll">
         <div id="cp-tab-leads">
           <p>{t('cp.leads.note', lang)}</p>
-          <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px"><b>Event</b> <span class="badge b-wait">{t('cp.status.draft', lang)}</span></div>
-          <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px"><b>Gift Away</b> <span class="badge b-wait">{t('cp.status.draft', lang)}</span></div>
-          <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px"><b>Ads</b> <span class="badge b-wait">{t('cp.status.draft', lang)}</span></div>
+          <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">
+              <label style="flex:1;min-width:140px">{t('cp.lead.name', lang)}<br><input id="cpLeadName" class="input" style="width:100%"></label>
+              <label style="flex:1;min-width:140px">{t('cp.lead.contact', lang)}<br><input id="cpLeadContact" class="input" style="width:100%"></label>
+              <label>{t('cp.lead.channel', lang)}<br><select id="cpLeadChannel" class="input"><option>WhatsApp</option><option>Instagram</option><option>Facebook</option><option>Email</option><option>Telepon</option><option>Lainnya</option></select></label>
+              <label>{t('cp.lead.stage', lang)}<br><select id="cpLeadStage" class="input"><option>Prioritas</option><option>Prospek</option><option>Nurture</option><option>Dingin</option></select></label>
+              <button class="btn" onclick={() => { cpAddLead() }}>{t('cp.lead.add', lang)}</button>
+            </div>
+            <p id="cpLeadNote" style="margin:8px 0 0"></p>
+          </div>
+          <div id="cp-leads-added"></div>
         </div>
         <div id="cp-tab-crm" style="display:none">
           <p>{t('cp.crm.note', lang)}</p>
@@ -596,7 +606,9 @@
         </div>
         <div id="cp-tab-followup" style="display:none">
           <p>{t('cp.followup.note', lang)}</p>
+          <div id="cp-followup-body"></div>
         </div>
+        <div id="cpDlg"></div>
       </div>
     </div>
     <div class="view" id="view-billing">

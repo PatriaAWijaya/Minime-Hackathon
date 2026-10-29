@@ -404,6 +404,23 @@ try {
   await tick(100);
   check('wizard FB Page: pakai aplikasi IG mengisi form', document.getElementById('socPopId').value === 'ig-id' && document.getElementById('socPopSec').value === 'ig-sec', document.getElementById('socPopId').value);
 
+  // 11. socConn (audit v79): tombol Hubungkan di kartu detail BUKAN
+  // mati — jalur yang menjangkaunya: kanal terhubung, lalu token
+  // kedaluwarsa (socSideSel bertahan, tokenValid false) -> kartu
+  // belum-terhubung dengan form + tombol socConn.
+  store.set('minime.social', JSON.stringify({ linkedin: { clientId: 'rig-li-id', clientSecret: 'rig-li-sec', accessToken: 'rig-token', expiresAt: Date.now() + 3600000, label: 'RigLinked' } }));
+  dom.window.renderPlanner();
+  await tick(100);
+  document.querySelector('[data-soc-side="linkedin"]').click();
+  await tick(100);
+  check('klik baris terhubung -> kartu detail + Putuskan', !!document.getElementById('socDisc-linkedin'), '');
+  store.set('minime.social', JSON.stringify({ linkedin: { clientId: 'rig-li-id', clientSecret: 'rig-li-sec', accessToken: 'rig-token', expiresAt: Date.now() - 1000, label: 'RigLinked' } }));
+  dom.window.renderPlanner();
+  await tick(100);
+  check('token kedaluwarsa + kanal terpilih -> tombol socConn-linkedin muncul', !!document.getElementById('socConn-linkedin'), '');
+  check('nota persisten #socNotice ada di view-planner', !!document.getElementById('socNotice'), '');
+  check('dialog detail chip terkirim #socItemDlg ada di view-planner', !!document.getElementById('socItemDlg'), '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-batch exception :: ' + (e && e.stack ? e.stack : e));

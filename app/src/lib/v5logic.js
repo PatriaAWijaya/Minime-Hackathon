@@ -877,27 +877,201 @@ export function campaignTab(id) {
  *  lists pipeline counts + every deduped lead with score/stage;
  *  Outreach lists the 6 draft records (draft-only, never sent).
  *  Called on init and on language switch (like renderPlanner). */
+/* Campaign operabel (audit v79): snapshot Fase 4 tetap jadi dasar, tapi
+   CRM kini bisa ditambah lead manual (minime.crmAdded, ID M1, M2, ...),
+   stage bisa diubah per lead (minime.crmStages; lead manual tersimpan
+   langsung di record-nya), draf Outreach bisa disalin, dan Follow Up
+   punya daftar tugas manual (minime.followups). Snapshot tidak pernah
+   ditulis ulang — override hanya di localStorage. */
+var CP_STAGES = ['Prioritas', 'Prospek', 'Nurture', 'Dingin'];
+function cpAddedLoad() { try { return JSON.parse(localStorage.getItem('minime.crmAdded') || '[]'); } catch (_) { return []; } }
+function cpAddedSave(a) { try { localStorage.setItem('minime.crmAdded', JSON.stringify(a)); return true; } catch (_) { return false; } }
+function cpStagesLoad() { try { return JSON.parse(localStorage.getItem('minime.crmStages') || '{}'); } catch (_) { return {}; } }
+function cpStagesSave(m) { try { localStorage.setItem('minime.crmStages', JSON.stringify(m)); return true; } catch (_) { return false; } }
+function cpFuLoad() { try { return JSON.parse(localStorage.getItem('minime.followups') || '[]'); } catch (_) { return []; } }
+function cpFuSave(a) { try { localStorage.setItem('minime.followups', JSON.stringify(a)); return true; } catch (_) { return false; } }
+function cpSeqNext() {
+  var n = parseInt(localStorage.getItem('minime.crmAddedSeq') || '0', 10) || 0;
+  n += 1;
+  try { localStorage.setItem('minime.crmAddedSeq', String(n)); } catch (_) {}
+  return 'M' + n;
+}
+function cpLeadsAll() {
+  var stages = cpStagesLoad();
+  var list = campaignLeads().map(function (l) {
+    return { id: l.id, name: l.name, channel: l.channel, score: l.score, stage: stages[l.id] || l.stage, manual: false, contact: '' };
+  });
+  cpAddedLoad().forEach(function (a) {
+    list.push({ id: a.id, name: a.name, channel: a.channel, score: null, stage: a.stage, manual: true, contact: a.contact || '' });
+  });
+  return list;
+}
+export function cpAddLead() {
+  var nameEl = document.getElementById('cpLeadName');
+  var contactEl = document.getElementById('cpLeadContact');
+  var channelEl = document.getElementById('cpLeadChannel');
+  var stageEl = document.getElementById('cpLeadStage');
+  var noteEl = document.getElementById('cpLeadNote');
+  var name = (nameEl ? nameEl.value : '').trim();
+  if (!name) { if (noteEl) noteEl.textContent = tr('cp.lead.empty'); return; }
+  var added = cpAddedLoad();
+  added.push({ id: cpSeqNext(), name: name, contact: contactEl ? contactEl.value.trim() : '', channel: channelEl ? channelEl.value : '', stage: stageEl ? stageEl.value : 'Prospek' });
+  if (!cpAddedSave(added)) { if (noteEl) noteEl.textContent = tr('lib.err.save'); return; }
+  if (nameEl) nameEl.value = '';
+  if (contactEl) contactEl.value = '';
+  if (noteEl) noteEl.textContent = tr('cp.lead.added');
+  renderCampaign();
+}
+export function cpDelAdded(id) {
+  cpAddedSave(cpAddedLoad().filter(function (a) { return String(a.id) !== String(id); }));
+  renderCampaign();
+}
+export function cpLeadDetail(id) {
+  var lead = cpLeadsAll().find(function (l) { return String(l.id) === String(id); });
+  var box = document.getElementById('cpDlg');
+  if (!box || !lead) return;
+  var stageOpts = CP_STAGES.map(function (st) { return '<option' + (st === lead.stage ? ' selected' : '') + '>' + esc(st) + '</option>'; }).join('');
+  box.innerHTML = '<div class="kb-dlg"><h3>' + esc(lead.id) + ' ' + esc(lead.name) + '</h3>'
+    + '<p>' + esc(lead.channel) + (lead.contact ? ' · ' + esc(lead.contact) : '') + ' · ' + tr('cp.score') + ' ' + (lead.score == null ? '—' : lead.score) + (lead.manual ? ' · ' + tr('cp.lead.manual') : '') + '</p>'
+    + '<label>' + tr('cp.lead.stage') + '<br><select id="cpDlgStage" class="input" style="width:100%">' + stageOpts + '</select></label>'
+    + '<div style="margin-top:12px;display:flex;gap:8px"><button class="btn" id="cpDlgSave">' + tr('cp.lead.save') + '</button>'
+    + (lead.manual ? '<button class="btn" id="cpDlgDel">' + tr('cp.lead.delete') + '</button>' : '')
+    + '<button class="btn" id="cpDlgClose">' + tr('kb.dlg.close') + '</button></div>'
+    + '<input type="hidden" id="cpDlgId" value="' + esc(lead.id) + '"></div>';
+  var saveBtn = document.getElementById('cpDlgSave');
+  if (saveBtn) saveBtn.addEventListener('click', cpLeadSaveStage);
+  var closeBtn = document.getElementById('cpDlgClose');
+  if (closeBtn) closeBtn.addEventListener('click', cpLeadClose);
+  var delBtn = document.getElementById('cpDlgDel');
+  if (delBtn) delBtn.addEventListener('click', function () {
+    delBtn.textContent = tr('cp.lead.del_ask');
+    delBtn.addEventListener('click', function () {
+      cpDelAdded(lead.id);
+      cpLeadClose();
+    }, { once: true });
+  }, { once: true });
+}
+export function cpLeadClose() {
+  var box = document.getElementById('cpDlg');
+  if (box) box.innerHTML = '';
+}
+export function cpLeadSaveStage() {
+  var idEl = document.getElementById('cpDlgId');
+  var stageEl = document.getElementById('cpDlgStage');
+  if (!idEl || !stageEl) return;
+  var id = idEl.value;
+  var stage = stageEl.value;
+  var added = cpAddedLoad();
+  var found = false;
+  added.forEach(function (a) { if (String(a.id) === String(id)) { a.stage = stage; found = true; } });
+  if (found) { cpAddedSave(added); }
+  else {
+    var stages = cpStagesLoad();
+    stages[id] = stage;
+    cpStagesSave(stages);
+  }
+  cpLeadClose();
+  renderCampaign();
+}
+export function cpCopyDraft(i) {
+  var drafts = campaignDrafts();
+  var d = drafts[i];
+  if (!d) return;
+  var btn = document.querySelector('[data-cp-copy="' + i + '"]');
+  var done = function () {
+    if (!btn) return;
+    btn.textContent = tr('cp.copied');
+    setTimeout(function () { btn.textContent = tr('cp.copy'); }, 2000);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(d.text).then(done, function () { done(); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = d.text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (_) {}
+    document.body.removeChild(ta);
+    done();
+  }
+}
+export function cpFuAdd() {
+  var leadEl = document.getElementById('cpFuLead');
+  var textEl = document.getElementById('cpFuText');
+  var noteEl = document.getElementById('cpFuNote');
+  var text = (textEl ? textEl.value : '').trim();
+  if (!text) { if (noteEl) noteEl.textContent = tr('cp.fu.empty'); return; }
+  var list = cpFuLoad();
+  list.push({ id: 'F' + Date.now(), leadId: leadEl ? leadEl.value : '', text: text, done: false });
+  cpFuSave(list);
+  if (textEl) textEl.value = '';
+  renderCampaign();
+}
+export function cpFuToggle(id) {
+  var list = cpFuLoad();
+  list.forEach(function (t) { if (String(t.id) === String(id)) t.done = !t.done; });
+  cpFuSave(list);
+  renderCampaign();
+}
+export function cpFuDel(id) {
+  cpFuSave(cpFuLoad().filter(function (t) { return String(t.id) !== String(id); }));
+  renderCampaign();
+}
 export function renderCampaign() {
   var counts = campaignCounts();
-  var pipe = campaignPipeline();
+  var leads = cpLeadsAll();
+  var added = cpAddedLoad();
   var crm = document.getElementById('cp-crm-body');
   if (crm) {
-    var rows = campaignLeads().map(function (l) {
-      // Audit v66 code m-3: field data di-escape (hari ini fixture
-      // statis, tapi pola yang sama berbahaya saat lead asli masuk).
-      return '<tr><td><b>' + esc(l.id) + '</b> ' + esc(l.name) + '</td><td>' + esc(l.channel) + '</td><td>' + tr('cp.score') + ' ' + l.score + '</td><td>' + esc(l.stage) + '</td></tr>';
+    var rows = leads.map(function (l) {
+      return '<tr data-cp-lead="' + esc(l.id) + '" style="cursor:pointer"><td><b>' + esc(l.id) + '</b> ' + esc(l.name) + '</td><td>' + esc(l.channel) + '</td><td>' + tr('cp.score') + ' ' + (l.score == null ? '—' : l.score) + '</td><td>' + esc(l.stage) + (l.manual ? ' · ' + tr('cp.lead.manual') : '') + '</td></tr>';
     }).join('');
-    var summary = pipe.map(function (s) { return s.stage + ': ' + s.ids.length; }).join(' · ');
-    crm.innerHTML = '<p>' + counts.raw + ' → ' + counts.deduped + ' lead (' + tr('cp.crm.dedupe', { merged: counts.merged }) + ') · ' + summary + '</p><table><tr><th>Lead</th><th>' + tr('word.channel') + '</th><th>' + tr('cp.score') + '</th><th>' + tr('cp.stage') + '</th></tr>' + rows + '</table>';
+    var sum = {};
+    leads.forEach(function (l) { sum[l.stage] = (sum[l.stage] || 0) + 1; });
+    var summary = CP_STAGES.filter(function (st) { return sum[st]; }).map(function (st) { return st + ': ' + sum[st]; }).join(' · ');
+    crm.innerHTML = '<p>' + counts.raw + ' → ' + counts.deduped + ' lead (' + tr('cp.crm.dedupe', { merged: counts.merged }) + ')' + (added.length ? ' + ' + added.length + ' ' + tr('cp.lead.manual') : '') + ' · ' + summary + '</p><table><tr><th>Lead</th><th>' + tr('word.channel') + '</th><th>' + tr('cp.score') + '</th><th>' + tr('cp.stage') + '</th></tr>' + rows + '</table>';
+  }
+  var addedBox = document.getElementById('cp-leads-added');
+  if (addedBox) {
+    addedBox.innerHTML = added.map(function (a) {
+      return '<div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px"><span><b>' + esc(a.id) + ' ' + esc(a.name) + '</b> · ' + esc(a.channel) + (a.contact ? ' · ' + esc(a.contact) : '') + ' · ' + esc(a.stage) + '</span><button class="btn btn-sm" data-cp-deladded="' + esc(a.id) + '">' + tr('cp.lead.delete') + '</button></div>';
+    }).join('');
   }
   var out = document.getElementById('cp-outreach-body');
   if (out) {
-    var drafts = campaignDrafts().map(function (d) {
+    var drafts = campaignDrafts().map(function (d, i) {
       var link = d.waLink ? ' · <a href="' + esc(d.waLink) + '" target="_blank" rel="noreferrer">wa.me</a>' : '';
-      return '<div style="margin-bottom:12px"><b>' + esc(d.leadId) + ' ' + esc(d.leadName) + '</b> (' + esc(d.stage) + ', ' + tr('cp.score') + ' ' + d.score + ', ' + esc(d.channel) + ') <span class="badge b-wait">' + tr('cp.status.draft') + '</span><div style="color:#a1a1a1;font-size:13px">' + esc(d.text) + link + '</div></div>';
+      return '<div style="margin-bottom:12px"><b>' + esc(d.leadId) + ' ' + esc(d.leadName) + '</b> (' + esc(d.stage) + ', ' + tr('cp.score') + ' ' + d.score + ', ' + esc(d.channel) + ') <span class="badge b-wait">' + tr('cp.status.draft') + '</span> <button class="btn btn-sm" data-cp-copy="' + i + '">' + tr('cp.copy') + '</button><div style="color:#a1a1a1;font-size:13px">' + esc(d.text) + link + '</div></div>';
     }).join('');
     out.innerHTML = drafts;
   }
+  var fu = document.getElementById('cp-followup-body');
+  if (fu) {
+    var leadOpts = leads.map(function (l) { return '<option value="' + esc(l.id) + '">' + esc(l.id) + ' ' + esc(l.name) + '</option>'; }).join('');
+    var tasks = cpFuLoad().map(function (t) {
+      var lead = leads.find(function (l) { return String(l.id) === String(t.leadId); });
+      return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><input type="checkbox" data-cp-futoggle="' + esc(t.id) + '"' + (t.done ? ' checked' : '') + '><span style="' + (t.done ? 'text-decoration:line-through;color:#a1a1a1' : '') + '">' + esc(t.text) + (lead ? ' (' + esc(lead.name) + ')' : '') + '</span><button class="btn btn-sm" data-cp-fudel="' + esc(t.id) + '">' + tr('cp.fu.delete') + '</button></div>';
+    }).join('');
+    fu.innerHTML = '<div style="display:flex;gap:8px;align-items:end;margin-bottom:12px"><label>' + tr('cp.fu.lead') + '<br><select id="cpFuLead" class="input">' + leadOpts + '</select></label><label style="flex:1">' + tr('cp.fu.task_ph') + '<br><input id="cpFuText" class="input" style="width:100%"></label><button class="btn" data-cp-fuadd="1">' + tr('cp.fu.add') + '</button></div><p id="cpFuNote" style="margin:0 0 8px"></p>' + tasks;
+  }
+  document.querySelectorAll('[data-cp-lead]').forEach(function (r) {
+    r.addEventListener('click', function () { cpLeadDetail(r.getAttribute('data-cp-lead')); });
+  });
+  document.querySelectorAll('[data-cp-deladded]').forEach(function (b) {
+    b.addEventListener('click', function () { cpDelAdded(b.getAttribute('data-cp-deladded')); });
+  });
+  document.querySelectorAll('[data-cp-copy]').forEach(function (b) {
+    b.addEventListener('click', function () { cpCopyDraft(parseInt(b.getAttribute('data-cp-copy'), 10)); });
+  });
+  document.querySelectorAll('[data-cp-fuadd]').forEach(function (b) {
+    b.addEventListener('click', cpFuAdd);
+  });
+  document.querySelectorAll('[data-cp-futoggle]').forEach(function (b) {
+    b.addEventListener('change', function () { cpFuToggle(b.getAttribute('data-cp-futoggle')); });
+  });
+  document.querySelectorAll('[data-cp-fudel]').forEach(function (b) {
+    b.addEventListener('click', function () { cpFuDel(b.getAttribute('data-cp-fudel')); });
+  });
 }
 
 export function veTool(tool) {
@@ -1957,5 +2131,5 @@ export function initV5() {
   waInputChanged();
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, grabDY, graphRunning, graphSelect, graphClosePanel, renderGraphPanel, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, saveSettings, ollamaCheck });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, grabDY, graphRunning, graphSelect, graphClosePanel, renderGraphPanel, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, saveSettings, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel });
 }

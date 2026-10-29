@@ -234,6 +234,68 @@ try {
   await tick(100);
   check('Ollama gagal -> nota tidak terjangkau', (document.getElementById('ollamaNote')?.textContent || '').includes('tidak terjangkau'), document.getElementById('ollamaNote')?.textContent);
 
+  // 7. Campaign operabel v79: tambah lead, ubah stage, salin draf, follow-up.
+  dom.window.showView('campaign');
+  dom.window.renderCampaign();
+  await tick(100);
+  document.getElementById('cpLeadName').value = 'Rig Lead';
+  document.getElementById('cpLeadContact').value = '0812-rig';
+  document.getElementById('cpLeadChannel').value = 'WhatsApp';
+  document.getElementById('cpLeadStage').value = 'Prospek';
+  W.cpAddLead();
+  await tick(100);
+  var added = JSON.parse(store.get('minime.crmAdded') || '[]');
+  check('tambah lead -> minime.crmAdded 1 item M1', added.length === 1 && added[0].id === 'M1' && added[0].name === 'Rig Lead', JSON.stringify(added));
+  check('lead manual tampil di daftar + CRM', !!document.querySelector('[data-cp-deladded="M1"]') && !!document.querySelector('[data-cp-lead="M1"]'), '');
+  document.querySelector('[data-cp-lead="M1"]').click();
+  await tick(100);
+  check('klik baris CRM -> dialog detail lead', !!document.getElementById('cpDlgStage'), '');
+  document.getElementById('cpDlgStage').value = 'Prioritas';
+  W.cpLeadSaveStage();
+  await tick(100);
+  added = JSON.parse(store.get('minime.crmAdded') || '[]');
+  check('ubah stage lead manual tersimpan', added[0].stage === 'Prioritas', JSON.stringify(added));
+  check('dialog tertutup setelah simpan', document.getElementById('cpDlg').innerHTML === '', '');
+  document.querySelector('[data-cp-lead="L01"]').click();
+  await tick(100);
+  document.getElementById('cpDlgStage').value = 'Dingin';
+  W.cpLeadSaveStage();
+  await tick(100);
+  var stages = JSON.parse(store.get('minime.crmStages') || '{}');
+  check('ubah stage lead snapshot -> override minime.crmStages', stages.L01 === 'Dingin', JSON.stringify(stages));
+  var copyBtn = document.querySelector('[data-cp-copy="0"]');
+  W.cpCopyDraft(0);
+  await tick(100);
+  check('salin draf -> tombol jadi Tersalin', (copyBtn.textContent || '').includes('Tersalin'), copyBtn.textContent);
+  document.getElementById('cpFuLead').value = 'M1';
+  document.getElementById('cpFuText').value = 'Hubungi Rig Lead';
+  W.cpFuAdd();
+  await tick(100);
+  var fus = JSON.parse(store.get('minime.followups') || '[]');
+  check('tambah follow-up tersimpan', fus.length === 1 && fus[0].text === 'Hubungi Rig Lead', JSON.stringify(fus));
+  W.cpFuToggle(fus[0].id);
+  await tick(100);
+  fus = JSON.parse(store.get('minime.followups') || '[]');
+  check('centang follow-up -> done true', fus[0].done === true, JSON.stringify(fus));
+  W.cpFuDel(fus[0].id);
+  await tick(100);
+  fus = JSON.parse(store.get('minime.followups') || '[]');
+  check('hapus follow-up -> kosong', fus.length === 0, JSON.stringify(fus));
+
+  // 8. Planner v79: chip terkirim -> detail read-only + postId (bukan komposer).
+  store.set('minime.social', JSON.stringify({ linkedin: { accessToken: 'rig-token', expiresAt: Date.now() + 3600000 } }));
+  store.set('minime.socialQueue', JSON.stringify([{ id: 'q-sent-1', platform: 'linkedin', text: 'Postingan terkirim rig', imageB64: '', imageMime: '', imageFile: '', imageUrl: '', scheduledAt: Date.now(), status: 'sent', error: '', repeat: '', postId: 'post-123' }]));
+  dom.window.showView('planner');
+  dom.window.renderPlanner();
+  await tick(100);
+  var sentChip = document.querySelector('[data-soc-view="q-sent-1"]');
+  check('chip terkirim punya data-soc-view', !!sentChip, '');
+  sentChip.click();
+  await tick(100);
+  var socDlg = document.getElementById('socItemDlg').innerHTML || '';
+  check('klik chip terkirim -> detail berisi teks + postId', socDlg.includes('Postingan terkirim rig') && socDlg.includes('post-123'), socDlg.slice(0, 200));
+  check('klik chip terkirim TIDAK membuka komposer', !document.getElementById('socCompText'), '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-audit exception :: ' + (e && e.stack ? e.stack : e));

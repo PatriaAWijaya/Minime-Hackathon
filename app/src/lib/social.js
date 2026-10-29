@@ -161,7 +161,8 @@ function renderCalendar() {
       var cls = it.status === 'sent' ? ' soc-item-sent' : (it.status === 'draft' ? ' soc-item-draft' : '');
       var title = it.status === 'draft' ? tr('soc.draft_label') + ': ' + socItemTitle(it.text) : socItemTitle(it.text);
       var editAttr = (it.status === 'draft' || it.status === 'queued' || it.status === 'failed') ? ' data-soc-edit="' + it.id + '"' : '';
-      return '<div class="soc-item' + cls + '"' + editAttr + ' title="' + esc(it.text || '') + '">' + platIconHTML(it.platform, true) + '<span class="soc-item-title">' + esc(title) + '</span>' + fail + '<button class="soc-del" data-soc-del="' + it.id + '" title="' + tr('soc.delete') + '">−</button></div>';
+      var viewAttr = it.status === 'sent' ? ' data-soc-view="' + it.id + '"' : '';
+      return '<div class="soc-item' + cls + '"' + editAttr + viewAttr + ' title="' + esc(it.text || '') + '">' + platIconHTML(it.platform, true) + '<span class="soc-item-title">' + esc(title) + '</span>' + fail + '<button class="soc-del" data-soc-del="' + it.id + '" title="' + tr('soc.delete') + '">−</button></div>';
     }).join('');
     cells += '<div class="soc-cal-day" data-day="' + k + '"><div class="soc-day-head"><b>' + d + '</b><button class="soc-add" data-soc-add="' + k + '" title="' + tr('soc.create_post') + '">+</button></div>' + chips + '</div>';
   }
@@ -490,6 +491,12 @@ export function renderNativePlanner() {
       if (it) socComposerOpen(dayKey(it.scheduledAt), it.id);
     });
   });
+  el.querySelectorAll('[data-soc-view]').forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      socItemView(b.getAttribute('data-soc-view'));
+    });
+  });
   // Tombol Buat Postingan di sidebar = komposer untuk hari ini.
   socBind('socCreatePost', function () { socComposerOpen(dayKey(Date.now()), null); });
   el.querySelectorAll('[data-soc-ytpick]').forEach(function (b) {
@@ -551,11 +558,38 @@ export function renderNativePlanner() {
   });
 }
 
+// Detail read-only item terkirim (audit v79): platform, status, waktu
+// terjadwal, teks penuh, dan ID postingan bila ada. Overlay dirender
+// ke #socItemDlg (di view-planner, DI LUAR #nativePlanner) agar tidak
+// hilang saat kalender di-render ulang.
+function socItemView(id) {
+  var it = queueLoad().find(function (x) { return String(x.id) === String(id); });
+  var box = document.getElementById('socItemDlg');
+  if (!box) return;
+  if (!it) { box.innerHTML = ''; return; }
+  var when = new Date(it.scheduledAt).toLocaleString();
+  box.innerHTML = '<div class="soc-dlg"><h4>' + esc(platName(it.platform)) + ' · ' + tr('soc.status.sent') + '</h4>'
+    + '<p>' + esc(when) + (it.postId ? ' · id ' + esc(it.postId) : '') + '</p>'
+    + '<p>' + esc(it.text || '') + '</p>'
+    + '<button class="btn" id="socItemCloseBtn">' + tr('kb.dlg.close') + '</button></div>';
+  var btn = document.getElementById('socItemCloseBtn');
+  if (btn) btn.addEventListener('click', socItemClose);
+}
+function socItemClose() {
+  var box = document.getElementById('socItemDlg');
+  if (box) box.innerHTML = '';
+}
+
 function socNote(m) {
   // v68: composer (#socNote) dihapus bersama layout lama — catatan
   // jatuh ke #socDayNote bila dialog tanggal sedang terbuka.
   var el = document.getElementById('socNote') || document.getElementById('socComposerNote');
   if (el) el.textContent = m;
+  // v79: nota persisten — #socNotice ada di view-planner DI LUAR
+  // #nativePlanner, jadi tidak hilang saat renderNativePlanner mengganti
+  // innerHTML, dan tetap terlihat meski komposer tertutup.
+  var pn = document.getElementById('socNotice');
+  if (pn) { pn.style.display = 'block'; pn.textContent = m; }
 }
 
 function readFileB64(file) {
@@ -592,6 +626,12 @@ async function socPublishDirect(platform, text, img, imgUrl, imageFile) {
   if (img && (img.mime || '').indexOf('video/') === 0 && platform !== 'youtube') {
     return { ok: false, msg: platName(platform) + ': ' + tr('soc.err.yt_only') };
   }
+  // v79: blok file lokal — Threads/IG/TikTok hanya menerima URL gambar
+  // publik. Sebelumnya blok ini hanya ada di jalur SIMPAN, sehingga
+  // Terbit sekarang dari media Library/saved lolos ke backend.
+  if ((platform === 'threads' || platform === 'instagram' || platform === 'tiktok') && (imageFile || img)) {
+    return { ok: false, msg: platName(platform) + ': ' + tr('soc.err.file_url_now') };
+  }
   var s = socStore();
   var ch = s[platform];
   if (platform === 'x') ch = await socEnsureXToken(ch);
@@ -601,8 +641,10 @@ async function socPublishDirect(platform, text, img, imgUrl, imageFile) {
   if (platform === 'youtube') ch = await socEnsureRefresh(ch, 'social_youtube_refresh', 'youtube');
   if (!tokenValid(ch)) { return { ok: false, msg: platName(platform) + ': ' + tr('soc.err.token') }; }
   try {
-    await invoke('social_publish', { req: socPublishArgs(platform, ch, text, img, imgUrl, imageFile) });
-    return { ok: true, msg: platName(platform) + ': ' + tr('soc.status.sent') };
+    var pid = await invoke('social_publish', { req: socPublishArgs(platform, ch, text, img, imgUrl, imageFile) });
+    var msg = platName(platform) + ': ' + tr('soc.status.sent');
+    if (pid && pid !== 'ok') msg += ' · id ' + pid;
+    return { ok: true, msg: msg };
   } catch (e) {
     return { ok: false, msg: platName(platform) + ': ' + String(e || '') };
   }
@@ -1334,8 +1376,9 @@ export function initSocialScheduler() {
       // token tiap 30 detik selamanya). Simpan SEBELUM continue.
       if (!tokenValid(ch)) { it.status = 'failed'; it.error = tr('soc.err.token'); queueSave(q); continue; }
       try {
-        await invoke('social_publish', { req: socPublishArgs(it.platform, ch, it.text, null, it.imageUrl || '', it.imageFile || '', it.imageMime || '') });
+        var pid = await invoke('social_publish', { req: socPublishArgs(it.platform, ch, it.text, null, it.imageUrl || '', it.imageFile || '', it.imageMime || '') });
         it.status = 'sent'; it.error = '';
+        if (pid && pid !== 'ok') it.postId = pid;
         if (it.repeat) {
           var nxt = socNextRepeat(it.scheduledAt, it.repeat);
           if (nxt) {
