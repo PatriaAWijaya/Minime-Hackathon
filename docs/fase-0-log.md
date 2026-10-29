@@ -1796,3 +1796,8 @@ dokumen lama yang dipakai.
 - Perbaikan: (1) pelacak login browser — sesudah jembatan membuka URL OAuth, app menandai login tertunda; polling integrations tiap 5 dtk (maks 5 mnt) bila API key tersimpan, atau muat ulang panel sekali saat fokus kembali (tanpa key); panel + wizard ikut siap otomatis. (2) kartu status app Facebook di Pengaturan: Periksa status (probe Rust atas halaman dialog OAuth, hanya status dikembalikan) + Buka dashboard Meta (allowlist diperluas). App ID ditangkap dari URL OAuth (publik, bukan dari .env).
 - BATAS JUJUR: mengaktifkan ulang app di Meta dan membuat app LinkedIn/Instagram tetap harus lewat dashboard provider (login + persetujuan pemilik akun tidak bisa diwakilkan app) — yang dipangkas: buka halaman tepat satu klik dari app, cek status dari app, dan pencatatan login otomatis. v60: form kredensial provider di app + tulis .env + restart Postiz otomatis (LinkedIn, IG).
 - Push: kode 178c806 <-> 65146fb (tree identik).
+
+## v60 form kredensial provider (29 Okt, screenshot Patria 16:35)
+- Bukti: tab LinkedIn client_id kosong — kredensial aplikasi memang belum ada di env (beda dari FB yang soal akun). Perintah ringkas: isi cukup di MiniMe.
+- Perbaikan: kartu "Kredensial provider Postiz" di Pengaturan (LinkedIn ID/Secret + IG ID/Secret + Terapkan + Buka developer LinkedIn). Perintah Rust postiz_provider_env: temukan Postiz jalan via port 4007 + label compose, upsert hanya 4 kunci ke .env (lainnya utuh, tulis via tmp+rename, tolak baris baru), restart hanya service postiz. Nilai tidak pernah disimpan di MiniMe/di-log. Allowlist open_browser +linkedin.com/developers/apps. Probe FB disamakan URL asli (tambah scope).
+- Push: kode fe0cea1 <-> 3d5d0dd (tree identik).
