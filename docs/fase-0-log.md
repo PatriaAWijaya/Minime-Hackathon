@@ -1897,4 +1897,4 @@ dokumen lama yang dipakai.
 - TIDAK diganti (jujur): Threads — berkas kiriman Patria (logo_threads_square_black_background_threads_icon_255047.png) diperiksa piksel per piksel: mode LA, SELURUH piksel transparan (alpha 0), tidak ada piksel terang sama sekali — berkasnya kosong, bukan logo; chip/sidebar Threads tetap monogram TH sampai Patria mengirim ulang berkas yang benar. X — belum ada berkas kiriman; tetap monogram X.
 - Rig-batch seksi 7 ditambah cek ikon: 6 kanal berlogo mengandung img "-icon.png" di tombol sidebar; Threads + X tetap span .soc-mono (TH/X).
 - Gerbang penuh v69: app tsc 0, svelte-check 0 error / 39 warning, vite 348,22 KB JS, 9 rig ALL PASSED, root tsc 0, gate-test 14/14, scan PASSED, ledger md5 tetap, cargo fmt --check 0 + cargo check 0 warning. Berkas dist memuat kelima PNG (public disalin Vite). 3 file diubah + 5 PNG baru.
-- Push: kode MENYUSUL (di bawah log ini).
+- Push: kode cb28cd7 <-> b0d728d (tree identik).
