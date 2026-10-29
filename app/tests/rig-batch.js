@@ -203,15 +203,13 @@ try {
   document.querySelector('[data-soc-side="linkedin"]').click();
   await tick(100);
   check('klik kanal LinkedIn -> tombol Putuskan muncul', !!document.getElementById('socDisc-linkedin'), '');
-  // YouTube tanpa tombol hubung (can: false).
+  // YouTube v71: sudah bisa dihubungkan (can: true, OAuth Google + picker channel).
   document.querySelector('[data-soc-side="youtube"]').click();
   await tick(100);
-  check('kanal YouTube tanpa tombol hubung', !document.getElementById('socConn-youtube'), '');
-  // Ikon kanal v69: logo asli untuk 7 kanal berkas, monogram hanya
-  // untuk Threads (berkas kiriman kosong).
+  check('kanal YouTube punya tombol hubung', !!document.getElementById('socConn-youtube'), '');
+  // Ikon kanal v69-v71: logo asli untuk 8 kanal.
   const sideImg = (id) => document.querySelector('[data-soc-side="' + id + '"] img')?.getAttribute('src') || '';
-  check('logo asli FB/FB Page/IG/LinkedIn/TikTok/YouTube/X di sidebar', ['facebook', 'facebook_page', 'instagram', 'linkedin', 'tiktok', 'youtube', 'x'].every((id) => sideImg(id).includes('-icon.png')), ['facebook', 'facebook_page', 'instagram', 'linkedin', 'tiktok', 'youtube', 'x'].map(sideImg).join(','));
-  check('Threads masih monogram', (document.querySelector('[data-soc-side="threads"] .soc-mono')?.textContent || '') === 'TH', '');
+  check('logo asli 8 kanal di sidebar', ['facebook', 'facebook_page', 'instagram', 'threads', 'linkedin', 'tiktok', 'youtube', 'x'].every((id) => sideImg(id).includes('-icon.png')), ['facebook', 'facebook_page', 'instagram', 'threads', 'linkedin', 'tiktok', 'youtube', 'x'].map(sideImg).join(','));
   // Klik hari kalender (bukan hari ini, supaya tidak bercampur item
   // Batch hari ini) -> dialog tanggal terbuka.
   const today = new Date();

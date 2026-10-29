@@ -26,9 +26,9 @@ var PLATFORMS = [
   { id: 'facebook', name: 'Facebook', mono: 'FB', icon: 'fb-icon.png', note: 'soc.note.fb_profile', can: false },
   { id: 'facebook_page', name: 'Facebook Page', mono: 'FP', icon: 'fb-icon.png', note: '', can: true },
   { id: 'instagram', name: 'Instagram', mono: 'IG', icon: 'ig-icon.png', note: 'soc.note.ig_url', can: true },
-  { id: 'threads', name: 'Threads', mono: 'TH', note: 'soc.note.threads_text', can: true },
+  { id: 'threads', name: 'Threads', mono: 'TH', icon: 'threads-icon.png', note: 'soc.note.threads_text', can: true },
   { id: 'linkedin', name: 'LinkedIn', mono: 'IN', icon: 'linkedin-icon.png', note: '', can: true },
-  { id: 'youtube', name: 'YouTube', mono: 'YT', icon: 'youtube-icon.png', note: 'soc.note.youtube_video', can: false },
+  { id: 'youtube', name: 'YouTube', mono: 'YT', icon: 'youtube-icon.png', note: 'soc.note.youtube_video', can: true },
   { id: 'tiktok', name: 'TikTok', mono: 'TT', icon: 'tiktok-icon.png', note: 'soc.note.tiktok_url', can: true },
   { id: 'x', name: 'X', mono: 'X', icon: 'x-icon.png', note: 'soc.note.x_cost', can: true },
 ];
@@ -66,8 +66,7 @@ function platMono(id) {
 // Ikon kanal v69: logo asli dari app/public (pola yang sama dengan
 // ikon rail di App.svelte: src relatif "./nama.png", TANPA invert —
 // logo brand harus tampil apa adanya). Kanal tanpa berkas logo
-// (threads: berkas kiriman Patria kosong total/transparan) tetap
-// memakai monogram.
+// tetap memakai monogram sebagai fallback.
 function platIconHTML(id, sm) {
   var p = PLATFORMS.find(function (x) { return x.id === id; });
   var cls = sm ? 'soc-icon sm' : 'soc-icon';
@@ -107,10 +106,16 @@ function renderChannels(list) {
       body = '<div>' + tr('soc.pick_page') + '</div>' + socMetaPending.pages.map(function (pg) {
         return '<div class="soc-row"><button class="btn btn-sm" data-soc-pick="' + esc(pg.id) + '">' + esc(pg.name) + '</button></div>';
       }).join('');
+    } else if (socYtPending && socYtPending.platform === p.id) {
+      body = '<div>' + tr('soc.yt_pick') + '</div>' + socYtPending.channels.map(function (ch) {
+        return '<div class="soc-row"><button class="btn btn-sm" data-soc-ytpick="' + esc(ch.id) + '">' + esc(ch.name) + '</button></div>';
+      }).join('');
     } else if (connected) {
       body = '<div class="soc-row"><button id="socDisc-' + p.id + '" class="btn btn-sm">' + tr('soc.disconnect') + '</button></div>';
     } else {
-      var hint = p.id === 'facebook_page' || p.id === 'threads' ? tr('soc.meta_hint')
+      var hint = p.id === 'facebook_page' ? tr('soc.meta_hint')
+        : p.id === 'threads' ? tr('soc.threads_hint')
+        : p.id === 'youtube' ? tr('soc.yt_hint')
         : p.id === 'x' ? tr('soc.x_hint')
         : p.id === 'tiktok' ? tr('soc.tiktok_hint')
         : tr('soc.cred_hint');
@@ -225,7 +230,7 @@ function socSourceHTML(prefix) {
     + '<option value="library">' + tr('soc.source.lib') + '</option>'
     + '<option value="custom">' + tr('soc.source.custom') + '</option></select></label></div>'
     + '<div id="socLib-' + prefix + '" class="soc-row">' + libSel + '</div>'
-    + '<div id="socCustom-' + prefix + '" class="soc-row" style="display:none"><input type="file" id="socFile-' + prefix + '" accept="image/*"> '
+    + '<div id="socCustom-' + prefix + '" class="soc-row" style="display:none"><input type="file" id="socFile-' + prefix + '" accept="image/*,video/*"> '
     + '<input type="text" id="socUrl-' + prefix + '" placeholder="' + tr('soc.ph.imgurl') + '" style="width:260px"></div>';
 }
 function socBindSource(prefix, textElId) {
@@ -379,6 +384,23 @@ export function renderNativePlanner() {
   socBind('socDayCloseBtn', function () { socDayOpen = null; renderNativePlanner(); });
   socBind('socDayScheduleBtn', function () { socScheduleDay(); });
   socBind('socDayNowBtn', function () { socPublishDayNow(); });
+  el.querySelectorAll('[data-soc-ytpick]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (!socYtPending) return;
+      var ch = socYtPending.channels.find(function (x) { return String(x.id) === b.getAttribute('data-soc-ytpick'); });
+      if (!ch) return;
+      var s = socStore();
+      s.youtube = {
+        clientId: socYtPending.clientId, clientSecret: socYtPending.clientSecret,
+        accessToken: socYtPending.accessToken, refreshToken: socYtPending.refreshToken || '',
+        expiresAt: socYtPending.expiresAt || 0,
+        channelId: ch.id, label: ch.name,
+      };
+      socSave(s);
+      socYtPending = null;
+      renderNativePlanner();
+    });
+  });
   socBindSource('day', 'socDayText');
   el.querySelectorAll('[data-soc-daydel]').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -533,6 +555,10 @@ async function socScheduleDay() {
   var plats = Array.prototype.slice.call(document.querySelectorAll('.soc-day-chk:checked')).map(function (c) { return c.value; });
   if (!plats.length) { note(tr('soc.err.no_channel')); return; }
   var media = await socReadSource('day');
+  // Video hanya untuk YouTube (cara Postiz: YouTube = video-only).
+  if ((media.imageMime || '').indexOf('video/') === 0 && plats.some(function (pl) { return pl !== 'youtube'; })) {
+    note(tr('soc.err.yt_only')); return;
+  }
   var imageFile = media.imageFile || '';
   if (media.imageB64) {
     try {
@@ -558,9 +584,16 @@ async function socScheduleDay() {
 }
 
 async function socPublishDirect(platform, text, img, imgUrl, imageFile) {
+  if (img && (img.mime || '').indexOf('video/') === 0 && platform !== 'youtube') {
+    socNote(platName(platform) + ': ' + tr('soc.err.yt_only')); return;
+  }
   var s = socStore();
   var ch = s[platform];
   if (platform === 'x') ch = await socEnsureXToken(ch);
+  if (platform === 'threads') ch = await socEnsureThreadsToken(ch);
+  if (platform === 'linkedin') ch = await socEnsureRefresh(ch, 'social_linkedin_refresh', 'linkedin');
+  if (platform === 'tiktok') ch = await socEnsureRefresh(ch, 'social_tiktok_refresh', 'tiktok');
+  if (platform === 'youtube') ch = await socEnsureRefresh(ch, 'social_youtube_refresh', 'youtube');
   if (!tokenValid(ch)) { socNote(platName(platform) + ': ' + tr('soc.err.token')); return; }
   try {
     await invoke('social_publish', { req: socPublishArgs(platform, ch, text, img, imgUrl, imageFile) });
@@ -646,7 +679,7 @@ async function socConnectX(clientId, clientSecret) {
 async function socConnectTiktok(clientId, clientSecret) {
   var state = Math.random().toString(36).slice(2) + Date.now().toString(36);
   var authUrl = 'https://www.tiktok.com/v2/auth/authorize/?client_key=' + encodeURIComponent(clientId)
-    + '&scope=' + encodeURIComponent('user.info.basic,video.publish')
+    + '&scope=' + encodeURIComponent('video.list,user.info.basic,video.publish,video.upload,user.info.profile,user.info.stats')
     + '&response_type=code'
     + '&redirect_uri=' + encodeURIComponent(OAUTH_REDIRECT)
     + '&state=' + encodeURIComponent(state);
@@ -697,11 +730,11 @@ async function socEnsureXToken(ch) {
 }
 
 async function socConnectMeta(platform, clientId, clientSecret) {
+  // Scope cara Postiz (v71): FB Page +pages_manage_engagement
+  // +read_insights; IG +pages_read_engagement +manage_comments.
   var scope = platform === 'facebook_page'
-    ? 'pages_show_list,pages_manage_posts,pages_read_engagement,business_management'
-    : platform === 'instagram'
-    ? 'instagram_basic,pages_show_list,business_management,instagram_content_publish,instagram_manage_insights'
-    : 'threads_basic,threads_content_publish';
+    ? 'pages_show_list,business_management,pages_manage_posts,pages_manage_engagement,pages_read_engagement,read_insights'
+    : 'instagram_basic,pages_show_list,pages_read_engagement,business_management,instagram_content_publish,instagram_manage_comments,instagram_manage_insights';
   var state = Math.random().toString(36).slice(2) + Date.now().toString(36);
   var authUrl = 'https://www.facebook.com/v25.0/dialog/oauth?client_id=' + encodeURIComponent(clientId)
     + '&redirect_uri=' + encodeURIComponent(OAUTH_REDIRECT)
@@ -724,18 +757,6 @@ async function socConnectMeta(platform, clientId, clientSecret) {
   var tj;
   try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return; }
   if (!tj.access_token) { socNote(tr('soc.err.token_body')); return; }
-  if (platform === 'threads') {
-    var s = socStore();
-    s.threads = {
-      clientId: clientId, clientSecret: clientSecret,
-      accessToken: tj.access_token,
-      expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
-      label: 'Threads',
-    };
-    socSave(s);
-    renderNativePlanner();
-    return;
-  }
   // facebook_page + instagram: ambil daftar Page, tampilkan picker.
   var pagesBody;
   try { pagesBody = await invoke('social_meta_pages', { token: tj.access_token }); }
@@ -753,13 +774,144 @@ async function socConnectMeta(platform, clientId, clientSecret) {
   renderNativePlanner();
 }
 
+// Threads mandiri (cara Postiz, v71): authorize di threads.net +
+// tukar code di graph.threads.net + th_exchange_token (58 hari).
+// Alur lama (dialog Facebook + fb_exchange_token) menghasilkan token
+// Facebook yang ditolak graph.threads.net — connect Threads lama
+// tidak pernah bisa live.
+async function socConnectThreads(clientId, clientSecret) {
+  var scope = 'threads_basic,threads_content_publish,threads_manage_replies,threads_manage_insights';
+  var state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var authUrl = 'https://www.threads.net/oauth/authorize?client_id=' + encodeURIComponent(clientId)
+    + '&redirect_uri=' + encodeURIComponent(OAUTH_REDIRECT)
+    + '&scope=' + encodeURIComponent(scope)
+    + '&state=' + encodeURIComponent(state);
+  socNote(tr('soc.wait_login'));
+  var listenP = invoke('social_oauth_listen');
+  try { await invoke('open_external_url', { url: authUrl }); }
+  catch (e) { socNote(String(e || '')); return; }
+  var res;
+  try { res = await listenP; }
+  catch (e) { socNote(String(e || '')); return; }
+  var parsed;
+  try { parsed = JSON.parse(res); } catch (_) { socNote(tr('soc.err.callback')); return; }
+  if (parsed.state !== state) { socNote(tr('soc.err.state')); return; }
+  var tok;
+  try {
+    tok = await invoke('social_threads_exchange', { req: { code: parsed.code, redirectUri: OAUTH_REDIRECT, clientId: clientId, clientSecret: clientSecret } });
+  } catch (e) { socNote(String(e || '')); return; }
+  var tj;
+  try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return; }
+  if (!tj.access_token) { socNote(tr('soc.err.token_body')); return; }
+  var label = '';
+  try {
+    var me = await invoke('social_threads_me', { token: tj.access_token });
+    var mj = JSON.parse(me);
+    label = mj.username || '';
+  } catch (_) {}
+  var s = socStore();
+  s.threads = {
+    clientId: clientId, clientSecret: clientSecret,
+    accessToken: tj.access_token, refreshToken: tj.access_token,
+    expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
+    label: label || 'Threads',
+  };
+  socSave(s);
+  renderNativePlanner();
+}
+
+var socYtPending = null; // {platform, clientId, clientSecret, accessToken, refreshToken, expiresAt, channels}
+
+// YouTube (cara Postiz, v71): OAuth Google (offline + consent) ->
+// tukar code -> daftar channel (channels.list mine=true) -> picker.
+async function socConnectYoutube(clientId, clientSecret) {
+  var scope = 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/youtube.readonly';
+  var state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?client_id=' + encodeURIComponent(clientId)
+    + '&redirect_uri=' + encodeURIComponent(OAUTH_REDIRECT)
+    + '&response_type=code'
+    + '&scope=' + encodeURIComponent(scope)
+    + '&access_type=offline&prompt=consent'
+    + '&state=' + encodeURIComponent(state);
+  socNote(tr('soc.wait_login'));
+  var listenP = invoke('social_oauth_listen');
+  try { await invoke('open_external_url', { url: authUrl }); }
+  catch (e) { socNote(String(e || '')); return; }
+  var res;
+  try { res = await listenP; }
+  catch (e) { socNote(String(e || '')); return; }
+  var parsed;
+  try { parsed = JSON.parse(res); } catch (_) { socNote(tr('soc.err.callback')); return; }
+  if (parsed.state !== state) { socNote(tr('soc.err.state')); return; }
+  var tok;
+  try {
+    tok = await invoke('social_youtube_exchange', { req: { code: parsed.code, redirectUri: OAUTH_REDIRECT, clientId: clientId, clientSecret: clientSecret } });
+  } catch (e) { socNote(String(e || '')); return; }
+  var tj;
+  try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return; }
+  if (!tj.access_token) { socNote(tr('soc.err.token_body')); return; }
+  var chBody;
+  try { chBody = await invoke('social_youtube_channels', { token: tj.access_token }); }
+  catch (e) { socNote(String(e || '')); return; }
+  var cj;
+  try { cj = JSON.parse(chBody); } catch (_) { socNote(tr('soc.err.channels')); return; }
+  var channels = (cj.items || []).map(function (it) {
+    return { id: it.id || '', name: (it.snippet && it.snippet.title) || it.id || '' };
+  }).filter(function (c) { return c.id; });
+  if (!channels.length) { socNote(tr('soc.err.channels')); return; }
+  socYtPending = {
+    platform: 'youtube', clientId: clientId, clientSecret: clientSecret,
+    accessToken: tj.access_token, refreshToken: tj.refresh_token || '',
+    expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
+    channels: channels,
+  };
+  renderNativePlanner();
+}
+
+// Refresh generik ala Postiz (v71): LinkedIn + TikTok + YouTube
+// memutar refresh token sebelum publish bila kedaluwarsa.
+// Gagal refresh = token lama dipakai, publish gagal jujur.
+async function socEnsureRefresh(ch, cmd, storeKey) {
+  if (!ch || !ch.refreshToken) return ch;
+  if (ch.expiresAt && ch.expiresAt > Date.now() + 60000) return ch;
+  try {
+    var body = await invoke(cmd, { req: { clientId: ch.clientId || '', clientSecret: ch.clientSecret || '', refreshToken: ch.refreshToken } });
+    var j = JSON.parse(body);
+    if (!j.access_token) return ch;
+    ch.accessToken = j.access_token;
+    if (j.refresh_token) ch.refreshToken = j.refresh_token;
+    if (j.expires_in) ch.expiresAt = Date.now() + j.expires_in * 1000;
+    var s = socStore(); s[storeKey] = ch; socSave(s);
+  } catch (_) {}
+  return ch;
+}
+
+// Refresh Threads (cara Postiz): token baru disimpan sebagai
+// access DAN refresh (rotasi 58 hari).
+async function socEnsureThreadsToken(ch) {
+  if (!ch || !ch.refreshToken) return ch;
+  if (ch.expiresAt && ch.expiresAt > Date.now() + 60000) return ch;
+  try {
+    var body = await invoke('social_threads_refresh', { token: ch.refreshToken });
+    var j = JSON.parse(body);
+    if (!j.access_token) return ch;
+    ch.accessToken = j.access_token;
+    ch.refreshToken = j.access_token;
+    if (j.expires_in) ch.expiresAt = Date.now() + j.expires_in * 1000;
+    var s = socStore(); s.threads = ch; socSave(s);
+  } catch (_) {}
+  return ch;
+}
+
 async function socConnect(platform) {
   var idEl = document.getElementById('socId-' + platform);
   var secEl = document.getElementById('socSec-' + platform);
   var clientId = idEl ? idEl.value.trim() : '';
   var clientSecret = secEl ? secEl.value.trim() : '';
   if (!clientId || !clientSecret) { socNote(tr('soc.err.cred')); return; }
-  if (platform === 'facebook_page' || platform === 'threads' || platform === 'instagram') {
+  if (platform === 'threads') { await socConnectThreads(clientId, clientSecret); return; }
+  if (platform === 'youtube') { await socConnectYoutube(clientId, clientSecret); return; }
+  if (platform === 'facebook_page' || platform === 'instagram') {
     await socConnectMeta(platform, clientId, clientSecret);
     return;
   }
@@ -837,6 +989,10 @@ export function initSocialScheduler() {
       var s = socStore();
       var ch = s[it.platform];
       if (it.platform === 'x') ch = await socEnsureXToken(ch);
+      if (it.platform === 'threads') ch = await socEnsureThreadsToken(ch);
+      if (it.platform === 'linkedin') ch = await socEnsureRefresh(ch, 'social_linkedin_refresh', 'linkedin');
+      if (it.platform === 'tiktok') ch = await socEnsureRefresh(ch, 'social_tiktok_refresh', 'tiktok');
+      if (it.platform === 'youtube') ch = await socEnsureRefresh(ch, 'social_youtube_refresh', 'youtube');
       // Audit v66 S-B1: 'continue' di sini dulu melompati queueSave
       // di akhir loop, sehingga status 'failed' hilang dan tick berikut
       // memproses ulang item yang sama tanpa henti (untuk X: refresh

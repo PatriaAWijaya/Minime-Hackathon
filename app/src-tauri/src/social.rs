@@ -6,10 +6,10 @@
 //! bertoken memakai file konfigurasi curl sementara (0600) yang
 //! dihapus sesudah dipakai, bukan argv (argv terlihat di `ps`).
 //!
-//! Batas jujur: LinkedIn, FB Page, Threads, IG, X, dan TikTok
-//! dibangun end-to-end (connect + terbit). YouTube TIDAK dibangun:
-//! API-nya tidak punya endpoint Community post, hanya upload video
-//! (videos.insert) — butuh input video yang belum ada di composer.
+//! Batas jujur: LinkedIn, FB Page, Threads, IG, X, TikTok, dan
+//! YouTube dibangun end-to-end (connect + terbit). YouTube HANYA
+//! upload video MP4 (resumable, cara Postiz) — API-nya tidak punya
+//! endpoint Community post, jadi teks/gambar saja ditolak jujur.
 //! Platform yang belum dibangun mengembalikan error "belum dibangun"
 //! — BUKAN sukses palsu. Penjadwal berjalan selama app terbuka
 //! (timer 30 detik di frontend); penjadwalan level OS (launchd)
@@ -178,13 +178,17 @@ fn multipart_field_args(text_fields: &[(&str, &str)]) -> Vec<String> {
 /// (0600, dihapus sesudah dipakai). `json_body` ditulis ke file data
 /// terpisah agar tanda kutip JSON tidak pecah di config. `upload_file`
 /// = path file biner untuk PUT (dipakai upload media LinkedIn).
-fn curl_api(
+/// Varian curl_api dengan header tambahan (dipakai LinkedIn /rest
+/// yang wajib LinkedIn-Version; nilai header tervalidasi no_crlf
+/// seperti nilai config lainnya).
+fn curl_api_h(
     method: &str,
     url: &str,
     token: Option<&str>,
     json_body: Option<&str>,
     upload_file: Option<&std::path::Path>,
     content_type: Option<&str>,
+    extra_headers: &[(&str, &str)],
 ) -> Result<CurlRes, String> {
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -219,6 +223,11 @@ fn curl_api(
     }
     // Header LinkedIn (diabaikan platform lain yang tidak mengenalnya).
     cfg_text.push_str("header = \"X-Restli-Protocol-Version: 2.0.0\"\n");
+    for (hn, hv) in extra_headers {
+        no_crlf(hn, "header")?;
+        no_crlf(hv, "header")?;
+        cfg_text.push_str(&format!("header = \"{hn}: {hv}\"\n"));
+    }
     if let Some(j) = json_body {
         let dp = dir.join(format!("minime-curl-{stamp}.json"));
         std::fs::write(&dp, j).map_err(|e| e.to_string())?;
@@ -259,6 +268,26 @@ fn curl_api(
         ));
     }
     Ok(CurlRes { status, body })
+}
+
+/// Wrapper curl_api_h tanpa header tambahan (seluruh call-site lama).
+fn curl_api(
+    method: &str,
+    url: &str,
+    token: Option<&str>,
+    json_body: Option<&str>,
+    upload_file: Option<&std::path::Path>,
+    content_type: Option<&str>,
+) -> Result<CurlRes, String> {
+    curl_api_h(
+        method,
+        url,
+        token,
+        json_body,
+        upload_file,
+        content_type,
+        &[],
+    )
 }
 
 fn form_encode(pairs: &[(&str, &str)]) -> String {
@@ -610,8 +639,28 @@ pub fn social_meta_exchange(req: MetaExchangeReq) -> Result<String, String> {
 }
 
 /// Daftar Page yang dikelola token user Meta (untuk dipilih di kartu).
+/// Cara Postiz: selain /me/accounts, ambil juga owned_pages +
+/// client_pages tiap bisnis (menangkap Page yang tidak dicentang
+/// di dialog OAuth). Kegagalan lapis bisnis ditoleransi — daftar
+/// /me/accounts tetap dipakai. Bentuk kembali {data:[...]} agar
+/// frontend lama (pj.data) tidak berubah.
 #[tauri::command]
 pub fn social_meta_pages(token: String) -> Result<String, String> {
+    let mut out: Vec<serde_json::Value> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let mut push_pages = |v: &serde_json::Value,
+                          out: &mut Vec<serde_json::Value>,
+                          seen: &mut std::collections::HashSet<String>| {
+        if let Some(arr) = v.get("data").and_then(|d| d.as_array()) {
+            for pg in arr {
+                let id = pg.get("id").and_then(|i| i.as_str()).unwrap_or("");
+                let has_token = pg.get("access_token").and_then(|t| t.as_str()).is_some();
+                if !id.is_empty() && has_token && seen.insert(id.to_string()) {
+                    out.push(pg.clone());
+                }
+            }
+        }
+    };
     let r = curl_api(
         "GET",
         "https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token&limit=100",
@@ -623,7 +672,45 @@ pub fn social_meta_pages(token: String) -> Result<String, String> {
     if r.status != 200 {
         return Err(format!("Daftar Page gagal (HTTP {})", r.status));
     }
-    Ok(r.body)
+    let v: serde_json::Value =
+        serde_json::from_str(&r.body).map_err(|_| "Daftar Page tidak terbaca")?;
+    push_pages(&v, &mut out, &mut seen);
+    if let Ok(biz) = curl_api(
+        "GET",
+        "https://graph.facebook.com/v25.0/me/businesses?fields=id&limit=100",
+        Some(&token),
+        None,
+        None,
+        None,
+    ) {
+        if biz.status == 200 {
+            if let Ok(bv) = serde_json::from_str::<serde_json::Value>(&biz.body) {
+                if let Some(arr) = bv.get("data").and_then(|d| d.as_array()) {
+                    for b in arr {
+                        let bid = b.get("id").and_then(|i| i.as_str()).unwrap_or("");
+                        if bid.is_empty() {
+                            continue;
+                        }
+                        for kind in ["owned_pages", "client_pages"] {
+                            let url = format!(
+                                "https://graph.facebook.com/v25.0/{bid}/{kind}?fields=id,name,access_token&limit=100"
+                            );
+                            if let Ok(pr) = curl_api("GET", &url, Some(&token), None, None, None) {
+                                if pr.status == 200 {
+                                    if let Ok(pv) =
+                                        serde_json::from_str::<serde_json::Value>(&pr.body)
+                                    {
+                                        push_pages(&pv, &mut out, &mut seen);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(serde_json::json!({ "data": out }).to_string())
 }
 
 fn fb_page_publish(req: &PublishReq) -> Result<String, String> {
@@ -773,6 +860,183 @@ pub fn social_meta_ig_id(page_id: String, token: String) -> Result<String, Strin
 /// v62a: + FB Page + Threads teks; v62b: + IG via URL gambar;
 /// v64: + X teks/gambar, + TikTok foto via URL publik).
 /// Platform lain mengembalikan error jelas — tidak ada sukses palsu.
+/// Permintaan refresh generik (LinkedIn / TikTok / YouTube):
+/// client_id + client_secret + refresh_token, grant refresh_token.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshReq {
+    pub client_id: String,
+    pub client_secret: String,
+    pub refresh_token: String,
+}
+
+#[tauri::command]
+pub fn social_linkedin_refresh(req: RefreshReq) -> Result<String, String> {
+    let form = form_encode(&[
+        ("grant_type", "refresh_token"),
+        ("refresh_token", &req.refresh_token),
+        ("client_id", &req.client_id),
+        ("client_secret", &req.client_secret),
+    ]);
+    let r = curl_form_urlencoded("https://www.linkedin.com/oauth/v2/accessToken", &form)?;
+    if r.status != 200 {
+        return Err(format!("Refresh LinkedIn gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
+#[tauri::command]
+pub fn social_tiktok_refresh(req: RefreshReq) -> Result<String, String> {
+    let form = form_encode(&[
+        ("client_key", &req.client_id),
+        ("client_secret", &req.client_secret),
+        ("grant_type", "refresh_token"),
+        ("refresh_token", &req.refresh_token),
+    ]);
+    let r = curl_form_urlencoded("https://open.tiktokapis.com/v2/oauth/token/", &form)?;
+    if r.status != 200 {
+        return Err(format!("Refresh TikTok gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
+/// Threads (cara Postiz — BUKAN alur Facebook): authorize di
+/// threads.net, tukar code di graph.threads.net, lalu perpanjang
+/// dengan th_exchange_token menjadi token 58 hari. Alur lama
+/// (dialog Facebook + fb_exchange_token) menghasilkan token
+/// Facebook, bukan token Threads — publish ke graph.threads.net
+/// dengan token itu pasti 401. Perintah ini memperbaiki connect
+/// Threads yang belum pernah terbukti live.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadsExchangeReq {
+    pub code: String,
+    pub redirect_uri: String,
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+#[tauri::command]
+pub fn social_threads_exchange(req: ThreadsExchangeReq) -> Result<String, String> {
+    let short_url = format!(
+        "https://graph.threads.net/oauth/access_token?client_id={}&redirect_uri={}&grant_type=authorization_code&client_secret={}&code={}",
+        req.client_id, req.redirect_uri, req.client_secret, req.code
+    );
+    let short = curl_api("GET", &short_url, None, None, None, None)?;
+    if short.status != 200 {
+        return Err(format!("Token Threads gagal (HTTP {})", short.status));
+    }
+    let short_tok = serde_json::from_str::<serde_json::Value>(&short.body)
+        .ok()
+        .and_then(|v| {
+            v.get("access_token")
+                .and_then(|t| t.as_str())
+                .map(|t| t.to_string())
+        })
+        .ok_or("Token Threads tanpa access_token")?;
+    let long_url = format!(
+        "https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret={}&access_token={}",
+        req.client_secret, short_tok
+    );
+    let long = curl_api("GET", &long_url, None, None, None, None)?;
+    if long.status != 200 {
+        return Err(format!(
+            "Token jangka panjang Threads gagal (HTTP {})",
+            long.status
+        ));
+    }
+    Ok(long.body)
+}
+
+#[tauri::command]
+pub fn social_threads_me(token: String) -> Result<String, String> {
+    let r = curl_api(
+        "GET",
+        "https://graph.threads.net/v1.0/me?fields=id,username,threads_profile_picture_url",
+        Some(&token),
+        None,
+        None,
+        None,
+    )?;
+    if r.status != 200 {
+        return Err(format!("Profil Threads gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
+/// Refresh Threads (cara Postiz): token baru disimpan sebagai
+/// access DAN refresh (rotasi 58 hari) di sisi frontend.
+#[tauri::command]
+pub fn social_threads_refresh(token: String) -> Result<String, String> {
+    let url = format!(
+        "https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token={token}"
+    );
+    let r = curl_api("GET", &url, None, None, None, None)?;
+    if r.status != 200 {
+        return Err(format!("Refresh Threads gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
+/// YouTube (cara Postiz): OAuth Google (scope youtube.upload),
+/// picker channel, lalu upload video resumable. Teks/gambar saja
+/// ditolak jujur — API YouTube tidak punya endpoint Community post.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct YoutubeExchangeReq {
+    pub code: String,
+    pub redirect_uri: String,
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+#[tauri::command]
+pub fn social_youtube_exchange(req: YoutubeExchangeReq) -> Result<String, String> {
+    let form = form_encode(&[
+        ("code", &req.code),
+        ("client_id", &req.client_id),
+        ("client_secret", &req.client_secret),
+        ("redirect_uri", &req.redirect_uri),
+        ("grant_type", "authorization_code"),
+    ]);
+    let r = curl_form_urlencoded("https://oauth2.googleapis.com/token", &form)?;
+    if r.status != 200 {
+        return Err(format!("Token YouTube gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
+#[tauri::command]
+pub fn social_youtube_channels(token: String) -> Result<String, String> {
+    let r = curl_api(
+        "GET",
+        "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
+        Some(&token),
+        None,
+        None,
+        None,
+    )?;
+    if r.status != 200 {
+        return Err(format!("Daftar channel YouTube gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
+#[tauri::command]
+pub fn social_youtube_refresh(req: RefreshReq) -> Result<String, String> {
+    let form = form_encode(&[
+        ("client_id", &req.client_id),
+        ("client_secret", &req.client_secret),
+        ("refresh_token", &req.refresh_token),
+        ("grant_type", "refresh_token"),
+    ]);
+    let r = curl_form_urlencoded("https://oauth2.googleapis.com/token", &form)?;
+    if r.status != 200 {
+        return Err(format!("Refresh YouTube gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
 #[tauri::command]
 pub fn social_publish(req: PublishReq) -> Result<String, String> {
     match req.platform.as_str() {
@@ -782,11 +1046,316 @@ pub fn social_publish(req: PublishReq) -> Result<String, String> {
         "instagram" => ig_publish(&req),
         "x" => x_publish(&req),
         "tiktok" => tiktok_publish(&req),
+        "youtube" => youtube_publish(&req),
         other => Err(format!("Publish {other} belum dibangun")),
     }
 }
 
+/// POST JSON dengan tangkapan header respons (YouTube: URI sesi
+/// resumable ada di header `location`, bukan body). Pola config-file
+/// yang sama dengan curl_api (0600, no_crlf, token tidak di argv).
+fn curl_post_capture_headers(
+    url: &str,
+    token: &str,
+    body: &str,
+    extra_headers: &[(&str, &str)],
+) -> Result<(u16, String, String), String> {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let dir = std::env::temp_dir();
+    let cfg = dir.join(format!("minime-yt-{stamp}.cfg"));
+    let body_path = dir.join(format!("minime-yt-{stamp}.body"));
+    let header_path = dir.join(format!("minime-yt-{stamp}.hdr"));
+    let json_path = dir.join(format!("minime-yt-{stamp}.json"));
+    no_crlf(url, "URL")?;
+    no_crlf(token, "token")?;
+    let mut cfg_text = String::new();
+    cfg_text.push_str("silent = true\n");
+    cfg_text.push_str(&format!("url = \"{url}\"\n"));
+    cfg_text.push_str("request = \"POST\"\n");
+    cfg_text.push_str(&format!("output = \"{}\"\n", body_path.to_string_lossy()));
+    cfg_text.push_str(&format!(
+        "dump-header = \"{}\"\n",
+        header_path.to_string_lossy()
+    ));
+    cfg_text.push_str("write-out = \"%{http_code}\"\n");
+    cfg_text.push_str(&format!("header = \"Authorization: Bearer {token}\"\n"));
+    cfg_text.push_str("header = \"Content-Type: application/json\"\n");
+    for (hn, hv) in extra_headers {
+        no_crlf(hn, "header")?;
+        no_crlf(hv, "header")?;
+        cfg_text.push_str(&format!("header = \"{hn}: {hv}\"\n"));
+    }
+    cfg_text.push_str(&format!(
+        "data-binary = \"@{}\"\n",
+        json_path.to_string_lossy()
+    ));
+    std::fs::write(&json_path, body).map_err(|e| e.to_string())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::write(&cfg, &cfg_text).map_err(|e| e.to_string())?;
+        let _ = std::fs::set_permissions(&cfg, std::fs::Permissions::from_mode(0o600));
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(&cfg, &cfg_text).map_err(|e| e.to_string())?;
+    }
+    let out = std::process::Command::new("curl")
+        .args(["-K", &cfg.to_string_lossy()])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let status: u16 = String::from_utf8_lossy(&out.stdout)
+        .trim()
+        .parse()
+        .unwrap_or(0);
+    let resp_body = std::fs::read_to_string(&body_path).unwrap_or_default();
+    let headers = std::fs::read_to_string(&header_path).unwrap_or_default();
+    let _ = std::fs::remove_file(&cfg);
+    let _ = std::fs::remove_file(&body_path);
+    let _ = std::fs::remove_file(&header_path);
+    let _ = std::fs::remove_file(&json_path);
+    if status == 0 {
+        return Err(format!(
+            "curl gagal: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    // Nilai header TIDAK dilowercase (URI sesi case-sensitive).
+    Ok((status, resp_body, header_value(&headers, "location")))
+}
+
+/// PUT satu chunk video ke URI sesi resumable; kembalikan
+/// (status, body, header respons) agar 308 bisa dibaca Range-nya.
+fn curl_put_chunk(
+    url: &str,
+    token: &str,
+    chunk_file: &std::path::Path,
+    content_range: &str,
+) -> Result<(u16, String, String), String> {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let dir = std::env::temp_dir();
+    let cfg = dir.join(format!("minime-ytc-{stamp}.cfg"));
+    let body_path = dir.join(format!("minime-ytc-{stamp}.body"));
+    let header_path = dir.join(format!("minime-ytc-{stamp}.hdr"));
+    no_crlf(url, "URL")?;
+    no_crlf(token, "token")?;
+    no_crlf(content_range, "range")?;
+    let mut cfg_text = String::new();
+    cfg_text.push_str("silent = true\n");
+    cfg_text.push_str(&format!("url = \"{url}\"\n"));
+    cfg_text.push_str("request = \"PUT\"\n");
+    cfg_text.push_str(&format!("output = \"{}\"\n", body_path.to_string_lossy()));
+    cfg_text.push_str(&format!(
+        "dump-header = \"{}\"\n",
+        header_path.to_string_lossy()
+    ));
+    cfg_text.push_str("write-out = \"%{http_code}\"\n");
+    cfg_text.push_str(&format!("header = \"Authorization: Bearer {token}\"\n"));
+    cfg_text.push_str("header = \"Content-Type: video/mp4\"\n");
+    cfg_text.push_str(&format!("header = \"Content-Range: {content_range}\"\n"));
+    cfg_text.push_str(&format!(
+        "data-binary = \"@{}\"\n",
+        chunk_file.to_string_lossy()
+    ));
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::write(&cfg, &cfg_text).map_err(|e| e.to_string())?;
+        let _ = std::fs::set_permissions(&cfg, std::fs::Permissions::from_mode(0o600));
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(&cfg, &cfg_text).map_err(|e| e.to_string())?;
+    }
+    let out = std::process::Command::new("curl")
+        .args(["-K", &cfg.to_string_lossy()])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let status: u16 = String::from_utf8_lossy(&out.stdout)
+        .trim()
+        .parse()
+        .unwrap_or(0);
+    let resp_body = std::fs::read_to_string(&body_path).unwrap_or_default();
+    let headers = std::fs::read_to_string(&header_path).unwrap_or_default();
+    let _ = std::fs::remove_file(&cfg);
+    let _ = std::fs::remove_file(&body_path);
+    let _ = std::fs::remove_file(&header_path);
+    if status == 0 {
+        return Err(format!(
+            "curl gagal: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    Ok((status, resp_body, headers))
+}
+
+/// Nilai satu header respons (nama case-insensitive, nilai
+/// apa adanya — URI sesi YouTube case-sensitive).
+fn header_value(headers: &str, name: &str) -> String {
+    for line in headers.lines() {
+        if let Some((k, v)) = line.split_once(':') {
+            if k.trim().eq_ignore_ascii_case(name) {
+                return v.trim().to_string();
+            }
+        }
+    }
+    String::new()
+}
+
+/// Ujung range dari header `Range: bytes=A-B` (balasan 308
+/// resumable upload) — None bila tidak ada / tidak terbaca.
+fn range_end(headers: &str) -> Option<u64> {
+    let v = header_value(headers, "range");
+    let rest = v.trim().trim_start_matches("bytes=");
+    let (_, e) = rest.split_once('-')?;
+    e.trim().parse::<u64>().ok()
+}
+
+/// Byte video untuk YouTube: file dari ~/minime-images/ (antrean)
+/// atau base64 (terbit langsung). MIME mentah dari pemanggil —
+/// BUKAN allow_mime (yang memetakan video ke image/jpeg).
+fn youtube_bytes(req: &PublishReq) -> Result<(Vec<u8>, String), String> {
+    if !req.image_file.is_empty() {
+        let name = crate::image::safe_name(&req.image_file).ok_or("nama file video tidak valid")?;
+        let dir = crate::image::images_dir()?;
+        let bytes = std::fs::read(dir.join(&name)).map_err(|_| "file video tidak ditemukan")?;
+        let mime = if req.image_mime.is_empty() {
+            "video/mp4".to_string()
+        } else {
+            req.image_mime.clone()
+        };
+        return Ok((bytes, mime));
+    }
+    if !req.image_b64.is_empty() {
+        let bytes =
+            base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &req.image_b64)
+                .map_err(|e| e.to_string())?;
+        let mime = if req.image_mime.is_empty() {
+            "video/mp4".to_string()
+        } else {
+            req.image_mime.clone()
+        };
+        return Ok((bytes, mime));
+    }
+    Err("YouTube butuh file video MP4".into())
+}
+
+fn youtube_publish(req: &PublishReq) -> Result<String, String> {
+    let (bytes, mime) = youtube_bytes(req)?;
+    if mime != "video/mp4" {
+        return Err("YouTube v71 hanya menerima video MP4".into());
+    }
+    let total = bytes.len() as u64;
+    if total == 0 {
+        return Err("File video kosong".into());
+    }
+    let title_raw: String = req
+        .text
+        .lines()
+        .next()
+        .unwrap_or("")
+        .chars()
+        .take(100)
+        .collect();
+    let title = if title_raw.trim().is_empty() {
+        "MiniMe".to_string()
+    } else {
+        title_raw
+    };
+    let desc: String = req.text.chars().take(5000).collect();
+    let meta = serde_json::json!({
+        "snippet": { "title": title, "description": desc },
+        "status": { "privacyStatus": "public" },
+    })
+    .to_string();
+    // (1) Sesi resumable — URI ada di header location.
+    let (status, _body, location) = curl_post_capture_headers(
+        "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+        &req.access_token,
+        &meta,
+        &[
+            ("X-Upload-Content-Type", "video/mp4"),
+            ("X-Upload-Content-Length", &total.to_string()),
+        ],
+    )?;
+    if status != 200 && status != 201 {
+        return Err(format!("Sesi upload YouTube gagal (HTTP {status})"));
+    }
+    if location.is_empty() {
+        return Err("Sesi upload YouTube tanpa URI".into());
+    }
+    // (2) Chunk 8 MB (cara Postiz); 308 = lanjut dari offset Range.
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let tmp = std::env::temp_dir().join(format!("minime-yt-{stamp}.bin"));
+    let result = (|| -> Result<String, String> {
+        let mut offset: u64 = 0;
+        let mut retries = 0;
+        while offset < total {
+            let end = (offset + 8 * 1024 * 1024).min(total) - 1;
+            std::fs::write(&tmp, &bytes[offset as usize..=end as usize])
+                .map_err(|e| e.to_string())?;
+            let range = format!("bytes {offset}-{end}/{total}");
+            let (st, body, headers) = curl_put_chunk(&location, &req.access_token, &tmp, &range)?;
+            if st == 200 || st == 201 {
+                let v: serde_json::Value = serde_json::from_str(&body)
+                    .map_err(|_| "Respons upload YouTube tidak terbaca")?;
+                let id = v
+                    .get("id")
+                    .and_then(|i| i.as_str())
+                    .ok_or("Upload YouTube tanpa id video")?;
+                return Ok(id.to_string());
+            }
+            if st == 308 {
+                let mut next = offset;
+                if let Some(e2) = range_end(&headers) {
+                    next = e2 + 1;
+                }
+                if next == offset {
+                    retries += 1;
+                    if retries > 3 {
+                        return Err(
+                            "Upload YouTube macet (server tidak mengonfirmasi progres)".into()
+                        );
+                    }
+                } else {
+                    retries = 0;
+                    offset = next;
+                }
+                continue;
+            }
+            if st == 401 {
+                return Err("Token YouTube kedaluwarsa saat upload (HTTP 401)".into());
+            }
+            if st == 404 || st == 410 {
+                return Err("Sesi upload YouTube kedaluwarsa (HTTP 404/410) — ulangi".into());
+            }
+            if st == 429 || (500..600).contains(&st) {
+                retries += 1;
+                if retries > 3 {
+                    return Err(format!("Upload YouTube gagal (HTTP {st})"));
+                }
+                std::thread::sleep(Duration::from_secs(2));
+                continue;
+            }
+            return Err(format!("Upload YouTube gagal (HTTP {st})"));
+        }
+        Err("Upload YouTube selesai tanpa id video".into())
+    })();
+    let _ = std::fs::remove_file(&tmp);
+    result.map(|_| "ok".into())
+}
+
 fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
+    // Posts API modern (cara Postiz) — ugcPosts legacy ditinggalkan.
     let me = curl_api(
         "GET",
         "https://api.linkedin.com/v2/userinfo",
@@ -803,59 +1372,64 @@ fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
         .and_then(|v| v.get("sub").and_then(|s| s.as_str()).map(|s| s.to_string()))
         .ok_or("Profil LinkedIn tanpa sub")?;
     let author = format!("urn:li:person:{sub}");
-    let text_json = serde_json::Value::String(req.text.clone()).to_string();
     let img = resolve_image(req)?;
     if img.is_none() {
-        let body = format!(
-            "{{\"author\":\"{author}\",\"lifecycleState\":\"PUBLISHED\",\"specificContent\":{{\"com.linkedin.ugc.ShareContent\":{{\"shareCommentary\":{{\"text\":{text_json}}},\"shareMediaCategory\":\"NONE\"}}}},\"visibility\":{{\"com.linkedin.ugc.MemberNetworkVisibility\":\"PUBLIC\"}}}}"
-        );
-        let r = curl_api(
+        let body = serde_json::json!({
+            "author": author,
+            "commentary": req.text,
+            "visibility": "PUBLIC",
+            "distribution": { "feedDistribution": "MAIN_FEED" },
+            "lifecycleState": "PUBLISHED",
+        })
+        .to_string();
+        let r = curl_api_h(
             "POST",
-            "https://api.linkedin.com/v2/ugcPosts",
+            "https://api.linkedin.com/rest/posts",
             Some(&req.access_token),
             Some(&body),
             None,
             Some("application/json"),
+            &[("LinkedIn-Version", "202601")],
         )?;
-        if r.status != 201 {
+        if r.status != 201 && r.status != 200 {
             return Err(format!("Publish LinkedIn gagal (HTTP {})", r.status));
         }
         return Ok("ok".into());
     }
-    // Dengan gambar: registerUpload -> PUT biner -> ugcPost IMAGE.
+    // Video ditolak jujur: alur lama mengirim video sebagai resep
+    // feedshare-image (pasti ditolak LinkedIn); upload video chunked
+    // adalah pekerjaan lanjutan, bukan sukses palsu.
+    if req.image_mime.starts_with("video/") {
+        return Err("LinkedIn video belum didukung di v71 (hanya teks + gambar)".into());
+    }
     let (bytes, mime) = img.unwrap();
-    let reg_body = format!(
-        "{{\"registerUploadRequest\":{{\"recipes\":[\"urn:li:digitalmediaRecipe:feedshare-image\"],\"owner\":\"{author}\",\"serviceRelationships\":[{{\"relationshipType\":\"OWNER\",\"identifier\":\"urn:li:userGeneratedContent\"}}]}}}}"
-    );
-    let reg = curl_api(
+    // Gambar: initializeUpload -> PUT biner -> rest/posts (content.media).
+    let init_body = serde_json::json!({ "owner": author }).to_string();
+    let init = curl_api_h(
         "POST",
-        "https://api.linkedin.com/v2/assets?action=registerUpload",
+        "https://api.linkedin.com/rest/images?action=initializeUpload",
         Some(&req.access_token),
-        Some(&reg_body),
+        Some(&init_body),
         None,
         Some("application/json"),
+        &[("LinkedIn-Version", "202601")],
     )?;
-    if reg.status != 200 {
-        return Err(format!(
-            "Register upload LinkedIn gagal (HTTP {})",
-            reg.status
-        ));
+    if init.status != 200 && init.status != 201 {
+        return Err(format!("Init upload LinkedIn gagal (HTTP {})", init.status));
     }
-    let reg_v: serde_json::Value =
-        serde_json::from_str(&reg.body).map_err(|_| "Respons registerUpload tidak terbaca")?;
-    let asset = reg_v
+    let init_v: serde_json::Value =
+        serde_json::from_str(&init.body).map_err(|_| "Respons initializeUpload tidak terbaca")?;
+    let upload_url = init_v
         .get("value")
-        .and_then(|v| v.get("asset"))
-        .and_then(|a| a.as_str())
-        .ok_or("registerUpload tanpa asset")?
-        .to_string();
-    let upload_url = reg_v
-        .get("value")
-        .and_then(|v| v.get("uploadMechanism"))
-        .and_then(|m| m.get("com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"))
-        .and_then(|m| m.get("uploadUrl"))
+        .and_then(|v| v.get("uploadUrl"))
         .and_then(|u| u.as_str())
-        .ok_or("registerUpload tanpa uploadUrl")?
+        .ok_or("initializeUpload tanpa uploadUrl")?
+        .to_string();
+    let image_urn = init_v
+        .get("value")
+        .and_then(|v| v.get("image"))
+        .and_then(|u| u.as_str())
+        .ok_or("initializeUpload tanpa image URN")?
         .to_string();
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -876,18 +1450,29 @@ fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
     if up.status != 201 && up.status != 200 {
         return Err(format!("Upload media LinkedIn gagal (HTTP {})", up.status));
     }
-    let body = format!(
-        "{{\"author\":\"{author}\",\"lifecycleState\":\"PUBLISHED\",\"specificContent\":{{\"com.linkedin.ugc.ShareContent\":{{\"shareCommentary\":{{\"text\":{text_json}}},\"shareMediaCategory\":\"IMAGE\",\"media\":[{{\"status\":\"READY\",\"media\":\"{asset}\"}}]}}}},\"visibility\":{{\"com.linkedin.ugc.MemberNetworkVisibility\":\"PUBLIC\"}}}}"
-    );
-    let r = curl_api(
+    // Catatan Postiz: gambar personal tidak bisa dipoll statusnya
+    // (token w_member_social tidak bisa membaca kembali asetnya) —
+    // Postiz menunggu grace period; kami posting langsung seperti
+    // alur lama (PUT 201 = siap).
+    let body = serde_json::json!({
+        "author": author,
+        "commentary": req.text,
+        "visibility": "PUBLIC",
+        "distribution": { "feedDistribution": "MAIN_FEED" },
+        "lifecycleState": "PUBLISHED",
+        "content": { "media": { "id": image_urn } },
+    })
+    .to_string();
+    let r = curl_api_h(
         "POST",
-        "https://api.linkedin.com/v2/ugcPosts",
+        "https://api.linkedin.com/rest/posts",
         Some(&req.access_token),
         Some(&body),
         None,
         Some("application/json"),
+        &[("LinkedIn-Version", "202601")],
     )?;
-    if r.status != 201 {
+    if r.status != 201 && r.status != 200 {
         return Err(format!("Publish LinkedIn gagal (HTTP {})", r.status));
     }
     Ok("ok".into())
@@ -1153,6 +1738,24 @@ mod tests {
         // Tak dikenal / ber-newline -> fallback aman, bukan string asing.
         assert_eq!(allow_mime(""), "image/jpeg");
         assert_eq!(allow_mime("image/jpeg\noutput = \"/tmp/x\""), "image/jpeg");
+    }
+
+    #[test]
+    fn header_value_keeps_case_and_range_end() {
+        let h = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nLocation: https://Upload.Example/Session/AbC123\r\n\r\n";
+        assert_eq!(
+            header_value(h, "location"),
+            "https://Upload.Example/Session/AbC123"
+        );
+        assert_eq!(
+            header_value(h, "LOCATION"),
+            "https://Upload.Example/Session/AbC123"
+        );
+        assert_eq!(header_value(h, "x-tidak-ada"), "");
+        let h308 = "HTTP/1.1 308 Resume Incomplete\r\nRange: bytes=0-8388607\r\n\r\n";
+        assert_eq!(range_end(h308), Some(8388607));
+        assert_eq!(range_end("HTTP/1.1 308\r\n\r\n"), None);
+        assert_eq!(range_end("HTTP/1.1 308\r\nRange: bytes=0-abc\r\n"), None);
     }
 
     #[test]
