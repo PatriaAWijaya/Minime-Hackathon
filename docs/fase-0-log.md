@@ -1808,3 +1808,12 @@ dokumen lama yang dipakai.
 - URUTAN KEAMANAN: Planner native tampil DI ATAS embed Postiz selama satu versi; embed + wizard + kartu/kunci Postiz + perintah Rust Postiz dihapus v62 sesudah publish native pertama terbukti (supaya tidak ada versi tanpa penjadwal). Batch dialihkan ke native di v62 yang sama.
 - KOREKSI LINGKUP: profil Facebook pribadi TIDAK BISA autopost via API — hanya Page. Platform selain LinkedIn di v61 mengembalikan error 'belum dibangun' (bukan sukses palsu). Penjadwal v61 hanya jalan selama app terbuka (launchd menyusul).
 - Push: kode ce52ae5 <-> 0da66b4 (tree identik).
+
+## v61 LIVE terverifikasi (29 Okt 17:09)
+- Rantai v61 selesai sendiri via nohup selama SSH putus: marker MH_BUILD61_OK, HEAD MacBook 7c4f531 (memuat kode v61), proses tunggal, dist memuat nativePlanner, app mulai 17:09. SSH pulih 17:34.
+- Catatan: aturan AGENTS.md soal Postiz draft-only DIGANTIKAN oleh perintah Patria 29 Okt 17:01 (native menggantikan Postiz; user outranks house rules).
+
+## v62a FB Page + Threads native (29 Okt, perintah 'lanjutkan' 17:34)
+- Rust: social_meta_exchange (short->long-lived 60 hari), social_meta_pages, fb_page_publish (teks + foto multipart), threads_publish (teks: container + publish). social_publish: linkedin + facebook_page + threads.
+- Frontend: kartu facebook_page + threads bisa dihubungkan (OAuth dialog Meta v25.0 + loopback 4317); FB Page pakai picker Page (token Page disimpan); Threads v62a teks saja (gambar butuh URL publik, menyusul).
+- Push: kode 4453baf <-> fb6586a.
