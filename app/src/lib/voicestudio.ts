@@ -140,12 +140,17 @@ export async function vsEmbedCheck(): Promise<void> {
     status.className = 'badge';
   }
   // 1. Probe UI :3901 (no-cors: resolve = port menjawab).
+  // v89 (audit m3): samakan dengan vsFetch — timeout 8 dtk, jangan gantung.
   let uiAlive = false;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 8000);
   try {
-    await fetch(VS_UI + '/', { mode: 'no-cors' });
+    await fetch(VS_UI + '/', { mode: 'no-cors', signal: ctrl.signal });
     uiAlive = true;
   } catch {
     uiAlive = false;
+  } finally {
+    clearTimeout(t);
   }
   if (frame) {
     if (uiAlive) {

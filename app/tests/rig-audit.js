@@ -65,7 +65,6 @@ try {
   const dom = makeDom(store);
   const { document } = dom.window;
   const W = dom.window;
-  await tick(500);
   for (let i = 0; i < 60 && typeof W.showView !== 'function'; i++) await tick(50);
 
   // 0. v84: mulai nol -> buat proyek uji berisi semua agen roster.
@@ -170,7 +169,7 @@ try {
   W.addKanbanList();
   await tick(50);
   const dom2 = makeDom(store);
-  await tick(500);
+  for (let i = 0; i < 60 && typeof dom2.window.showView !== 'function'; i++) await tick(50);
   dom2.window.showView('kanban');
   dom2.window.renderKanban();
   await tick(100);
@@ -191,7 +190,6 @@ try {
   btn(document.getElementById('kbDlg'), 'Simpan').click();
   await tick(50);
   const dom3 = makeDom(store);
-  await tick(500);
   for (let i = 0; i < 60 && typeof dom3.window.showView !== 'function'; i++) await tick(50);
   dom3.window.showView('kanban');
   dom3.window.renderKanban();
@@ -337,7 +335,6 @@ try {
   // 9. v85 (audit B2): Simpan tim saat nol proyek tidak crash.
   const store0 = new Map();
   const dom0 = makeDom(store0);
-  await tick(500);
   for (let i = 0; i < 60 && typeof dom0.window.showView !== 'function'; i++) await tick(50);
   dom0.window.showView('kanban');
   dom0.window.renderKanban();

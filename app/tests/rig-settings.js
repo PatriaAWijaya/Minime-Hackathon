@@ -108,7 +108,7 @@ const validated = () => { try { return JSON.parse(store.get('minime.keyValidated
 const fetchCount = (part) => log.filter((l) => l.startsWith('fetch:') && l.includes(part)).length;
 
 try {
-  await tick(500);
+  await waitFor(() => typeof dom.window.showView === 'function', 'mount showView', 120);
 
   // 1. Tombol per-kunci tampil (Gemini/Meta); kartu Postiz hilang.
   check('tombol per-kunci tampil', !!btn('gemini') && !!btn('meta') && !document.getElementById('keyBtnPostiz') && !document.getElementById('apiKeyPostiz'));

@@ -207,6 +207,10 @@ export function activateAgent(key) {
 export function postChat(who, name, color, text, curation) {
     if (!PROJECTS[currentProj]) return;
     PROJECTS[currentProj].chat.push({ who: who, name: name, color: color, text: text, curation: !!curation });
+    // v89 (audit m2): cap 500 pesan/proyek — tanpa cap, tiap aksi menulis
+    // ulang seluruh riwayat (saveHomeState men-stringify semua chat).
+    var _c = PROJECTS[currentProj].chat;
+    if (_c.length > 500) _c.splice(0, _c.length - 500);
     renderChat();
   }
 
@@ -439,6 +443,7 @@ export function renderGraph() {
         grabDX = (e.clientX - r.left) / box.width * 100;
         grabDY = (e.clientY - r.top) / box.height * 100;
         dragStart = { x: e.clientX, y: e.clientY };
+        dragWH = { w: r.width / box.width * 100, h: r.height / box.height * 100 };
         e.preventDefault();
       });
       el.addEventListener("click", function () { if (!dragMoved) graphSelect(k); });
@@ -446,6 +451,7 @@ export function renderGraph() {
       wrap.appendChild(el);
     });
     var rects = nodeRects();
+    lastNodeRects = rects;
     var svg = document.getElementById("graphEdges");
     svg.innerHTML = ""; svg.setAttribute("viewBox", "0 0 100 100"); svg.setAttribute("preserveAspectRatio", "none");
     var NS = "http://www.w3.org/2000/svg";
@@ -463,6 +469,7 @@ export function renderGraph() {
       if (GNODES[e.t].kind === "circle") { x1 = a.cx; y1 = a.b; x2 = b.cx; y2 = b.t; }
       else { x1 = a.r; y1 = a.cy; x2 = b.l; y2 = b.cy; }
       var path = document.createElementNS(NS, "path");
+      path.setAttribute("data-f", e.f); path.setAttribute("data-t", e.t);
       path.setAttribute("d", curvePath(x1, y1, x2, y2));
       path.setAttribute("fill", "none"); path.setAttribute("stroke", "#9ca3af"); path.setAttribute("stroke-width", "0.35");
       path.setAttribute("marker-end", "url(#arr)");
@@ -1441,6 +1448,7 @@ var GEDGES = [
   ];
 
 var dragNode = null, dragMoved = false, dragStart = null, grabDX = 0, grabDY = 0, graphRunning = false;
+var lastNodeRects = {}, dragWH = null;
 
 var nodeCounter = 0;
 
@@ -1544,6 +1552,24 @@ export function loadGraphState() {
   }
 }
 
+/* v89 (audit M1): perbarui hanya garis yang menyentuh node yang di-drag,
+   dari rect terakhir + posisi baru node (matematika murni, tanpa DOM read). */
+function updateDragEdges() {
+  var nd = GNODES[dragNode]; if (!nd || !dragWH) return;
+  var dr = { l: nd.x, t: nd.y, r: nd.x + dragWH.w, b: nd.y + dragWH.h, cx: nd.x + dragWH.w / 2, cy: nd.y + dragWH.h / 2 };
+  GEDGES.forEach(function (e) {
+    if (e.f !== dragNode && e.t !== dragNode) return;
+    var a = e.f === dragNode ? dr : lastNodeRects[e.f];
+    var b = e.t === dragNode ? dr : lastNodeRects[e.t];
+    if (!a || !b || !GNODES[e.t]) return;
+    var path = document.querySelector('#graphEdges path[data-f="' + e.f + '"][data-t="' + e.t + '"]');
+    if (!path) return;
+    var x1, y1, x2, y2;
+    if (GNODES[e.t].kind === "circle") { x1 = a.cx; y1 = a.b; x2 = b.cx; y2 = b.t; }
+    else { x1 = a.r; y1 = a.cy; x2 = b.l; y2 = b.cy; }
+    path.setAttribute("d", curvePath(x1, y1, x2, y2));
+  });
+}
 export function graphSelect(key) { graphSel = GNODES[key] ? key : null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
 export function graphClosePanel() { graphPopupOpen = false; graphSel = null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
 function graphOpenPopup(k) { if (!GNODES[k]) return; graphSelect(k); graphPopupOpen = true; renderGraphPopup(); }
@@ -1632,7 +1658,7 @@ export function renderGraphPopup() {
 
 function graphPopupSaved() { var el = document.getElementById("graphPopupSaved"); if (el) el.textContent = "✓ " + tr("graph.saved"); }
 function graphPopupTitle(nd) { var el = document.getElementById("graphPopupTitle"); if (el) el.textContent = (nd.icon || "") + " " + nd.name + (nd.locked ? " 🔒" : ""); }
-export function graphRename(v) { var nd = graphSelNode(); if (!nd || nd.locked) return; nd.name = v; saveGraphState(); renderGraph(); graphPopupTitle(nd); graphPopupSaved(); }
+export function graphRename(v) { var nd = graphSelNode(); if (!nd || nd.locked) return; nd.name = v; saveGraphState(); var nl = document.querySelector('[data-nkey="' + graphSel + '"] .nname'); if (nl) nl.textContent = v; graphPopupTitle(nd); graphPopupSaved(); }
 export function graphRedesc(v) { var nd = graphSelNode(); if (!nd || nd.locked) return; nd.desc = v; saveGraphState(); graphPopupSaved(); }
 export function graphSetBranch(side, v) { var nd = graphSelNode(); if (!nd || nd.locked) return; if (side === "T") nd.branchT = v; else nd.branchF = v; saveGraphState(); renderGraph(); renderGraphPopup(); }
 function graphTrigSync(nd) { var t = graphTrigOf(nd); nd.sub = graphTrigSummary(t); }
@@ -2092,9 +2118,13 @@ export function initV5() {
       var ny = (e.clientY - box.top) / box.height * 100 - grabDY;
       GNODES[dragNode].x = Math.max(1, Math.min(90, nx));
       GNODES[dragNode].y = Math.max(1, Math.min(84, ny));
-      renderGraph();
+      // v89 (audit M1): geser elemen yang di-drag + garis yang menyentuhnya saja;
+      // renderGraph penuh hanya sekali saat mouseup, bukan per mousemove.
+      var del = document.querySelector('[data-nkey="' + dragNode + '"]');
+      if (del) { del.style.left = GNODES[dragNode].x + "%"; del.style.top = GNODES[dragNode].y + "%"; }
+      updateDragEdges();
     });
-  document.addEventListener("mouseup", function () { if (dragNode && dragMoved) saveGraphState(); dragNode = null; });
+  document.addEventListener("mouseup", function () { if (dragNode && dragMoved) { saveGraphState(); renderGraph(); } dragNode = null; });
   var gb = document.getElementById("graphBox");
   if (gb) gb.addEventListener("click", function (e) { if (e.target.closest && e.target.closest(".n8n-node")) return; graphClosePanel(); });
   document.querySelectorAll(".sidebar button").forEach(function (b) {

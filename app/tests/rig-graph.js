@@ -53,6 +53,15 @@ function makeDom(store) {
 }
 
 const tick = (ms = 50) => new Promise((r) => setTimeout(r, ms));
+async function waitFor(fn, label, tries = 120) {
+  for (let i = 0; i < tries; i++) {
+    const v = fn();
+    if (v) return v;
+    await tick();
+  }
+  throw new Error('timeout: ' + label);
+}
+
 let failed = 0;
 function check(name, ok, extra = '') {
   // eslint-disable-next-line no-console
@@ -66,7 +75,7 @@ const D = (y, m, d, h, mi) => new Date(y, m, d, h, mi, 0, 0);
 try {
   const dom = makeDom(store);
   const { document } = dom.window;
-  await tick(500);
+  await waitFor(() => typeof dom.window.showView === 'function', 'mount showView', 120);
   dom.window.showView('graph');
   dom.window.renderGraph();
   await tick(100);
@@ -158,7 +167,7 @@ try {
   await tick(100);
   check('rename tersimpan di localStorage', (store.get('minime.graphState') || '').includes('Trigger Uji'), '');
   const dom2 = makeDom(store);
-  await tick(500);
+  await waitFor(() => typeof dom2.window.showView === 'function', 'mount showView', 120);
   dom2.window.showView('graph');
   dom2.window.renderGraph();
   await tick(100);
@@ -373,13 +382,24 @@ try {
   store16.set('minime.graphState', JSON.stringify({ nodes: { trigger: { name: 'Dummy', sub: '', icon: 'x', x: 1, y: 1, w: 100, kind: 'trigger', desc: '' } }, edges: [], counter: 1 }));
   store16.set('minime.graphRuns', JSON.stringify([{ at: '2026-10-29T21:01:29', kind: 'manual' }]));
   const dom16 = makeDom(store16);
-  await tick(500);
+  await waitFor(() => typeof dom16.window.showView === 'function', 'mount showView', 120);
   dom16.window.showView('graph');
   dom16.window.renderGraph();
   await tick(100);
   const gs16 = JSON.parse(store16.get('minime.graphState') || '{}');
   check('migrasi v88 -> kanvas kosong', dom16.window.document.querySelectorAll('#graphNodes .n8n-node').length === 0 && Object.keys(gs16.nodes || {}).length === 0, dom16.window.document.querySelectorAll('#graphNodes .n8n-node').length + '|' + JSON.stringify(gs16.nodes));
   check('migrasi v88 -> backup + flag + riwayat kosong', !!store16.get('minime.graphState.pre-v88') && !!store16.get('minime.graphRuns.pre-v88') && store16.get('minime.graphRuns') === '[]' && store16.get('minime.cleaned-graph-v88') === '1', store16.get('minime.graphRuns'));
+
+  // 17. v89 (M1): drag tidak rebuild DOM — elemen node sama selama mousemove.
+  const primeEl17 = document.querySelector('[data-nkey="prime"]');
+  primeEl17.dispatchEvent(new dom.window.MouseEvent('mousedown', { bubbles: true, clientX: 100, clientY: 100 }));
+  await tick(50);
+  document.dispatchEvent(new dom.window.MouseEvent('mousemove', { bubbles: true, clientX: 120, clientY: 120 }));
+  await tick(50);
+  check('drag mousemove -> elemen node sama (tanpa rebuild)', document.querySelector('[data-nkey="prime"]') === primeEl17, '');
+  document.dispatchEvent(new dom.window.MouseEvent('mouseup', { bubbles: true }));
+  await tick(50);
+  check('drag mouseup -> node tetap ada', !!document.querySelector('[data-nkey="prime"]'), '');
 
 } catch (e) {
   // eslint-disable-next-line no-console

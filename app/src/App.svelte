@@ -268,6 +268,17 @@
   let ve2AudioEls: HTMLAudioElement[] = [];
   let ve2VidTimer: ReturnType<typeof setTimeout> | null = null;
   let ve2VidList: Ve2Clip[] = [];
+  // v89 (audit M2): cache base64 per path selama satu sesi preview (maks 3
+  // entri) — tanpa ini tiap klip dibaca ulang penuh (cap 20 MB) per preview.
+  const ve2B64Cache = new Map<string, string>();
+  async function ve2ReadB64(path: string): Promise<string> {
+    const hit = ve2B64Cache.get(path);
+    if (hit !== undefined) return hit;
+    const r = await invoke<{ b64: string }>('video_read', { req: { path } });
+    if (ve2B64Cache.size >= 3) { const first = ve2B64Cache.keys().next().value; if (first !== undefined) ve2B64Cache.delete(first); }
+    ve2B64Cache.set(path, r.b64);
+    return r.b64;
+  }
   let ve2Total = $derived(Math.max(30, ...ve2Clips.map((c) => c.start + c.dur)));
   let ve2PlayheadPct = $derived((ve2Playhead / ve2Total) * 100);
   let ve2RulerTicks = $derived(Array.from({ length: Math.floor(ve2Total / 10) + 1 }, (_, i) => i * 10));
@@ -405,16 +416,17 @@
     if (ve2VideoEl) { try { ve2VideoEl.pause(); } catch { /* noop */ } ve2VideoEl.removeAttribute('src'); ve2VideoEl.load(); }
     ve2VideoOn = false;
     ve2Playing = false;
+    ve2B64Cache.clear();
   }
   async function ve2PlayVideoAt(idx: number) {
     if (idx >= ve2VidList.length) return;
     const clip = ve2VidList[idx];
     try {
-      const r = await invoke<{ b64: string }>('video_read', { req: { path: clip.src } });
+      const b64 = await ve2ReadB64(clip.src);
       if (!ve2Playing) return;
       const el = ve2VideoEl;
       if (!el) return;
-      el.src = `data:${ve2MimeFor(clip.src)};base64,${r.b64}`;
+      el.src = `data:${ve2MimeFor(clip.src)};base64,${b64}`;
       ve2VideoOn = true;
       el.style.transform = clip.effect === 'zoom' ? 'scale(1.25)' : '';
       try { await el.play(); } catch { /* autoplay ditolak: playhead tetap jalan */ }
@@ -435,9 +447,9 @@
       const id = setTimeout(async () => {
         if (!ve2Playing) return;
         try {
-          const r = await invoke<{ b64: string }>('video_read', { req: { path: c.src } });
+          const b64 = await ve2ReadB64(c.src);
           if (!ve2Playing) return;
-          const a = new Audio(`data:${ve2MimeFor(c.src)};base64,${r.b64}`);
+          const a = new Audio(`data:${ve2MimeFor(c.src)};base64,${b64}`);
           ve2AudioEls.push(a);
           try { await a.play(); } catch { /* noop */ }
           const stopId = setTimeout(() => { try { a.pause(); } catch { /* noop */ } }, Math.max(0, (c.start + c.dur - Math.max(startAt, c.start))) * 1000);

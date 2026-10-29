@@ -121,7 +121,7 @@ const fetchCount = (part) => log.filter((l) => l.startsWith('fetch:') && l.inclu
 const invokeCount = (part) => log.filter((l) => l.startsWith('invoke:') && l.includes(part)).length;
 
 try {
-  await tick(500);
+  await waitFor(() => typeof dom.window.showView === 'function', 'mount showView', 120);
   dom.window.showView('media');
   dom.window.mediaTab('batch');
   await tick(100);

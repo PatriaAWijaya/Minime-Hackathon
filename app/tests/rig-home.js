@@ -57,6 +57,15 @@ function makeDom(store) {
 }
 
 const tick = (ms = 50) => new Promise((r) => setTimeout(r, ms));
+async function waitFor(fn, label, tries = 120) {
+  for (let i = 0; i < tries; i++) {
+    const v = fn();
+    if (v) return v;
+    await tick();
+  }
+  throw new Error('timeout: ' + label);
+}
+
 let failed = 0;
 function check(name, ok, extra = '') {
   // eslint-disable-next-line no-console
@@ -69,7 +78,7 @@ const store = new Map();
 try {
   const dom = makeDom(store);
   const { document } = dom.window;
-  await tick(500);
+  await waitFor(() => typeof dom.window.showView === 'function', 'mount showView', 120);
   dom.window.showView('home');
   dom.window.renderAgents();
   dom.window.renderDetail();
@@ -203,7 +212,7 @@ try {
 
   // 11. Persistensi: DOM baru dengan store yang sama.
   const dom2 = makeDom(store);
-  await tick(500);
+  await waitFor(() => typeof dom2.window.showView === 'function', 'mount showView', 120);
   dom2.window.renderAgents();
   await tick(100);
   const list2 = dom2.window.document.getElementById('agentList').textContent;

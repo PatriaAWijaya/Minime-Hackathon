@@ -86,7 +86,7 @@ function check(name, ok, extra = '') {
 const brand = () => JSON.parse(store.get('minime.brand') || '{}');
 
 try {
-  await tick(500);
+  await waitFor(() => typeof dom.window.showView === 'function', 'mount showView', 120);
   dom.window.showView('media');
   dom.window.mediaTab('image');
   await tick(100);
