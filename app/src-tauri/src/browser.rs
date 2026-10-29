@@ -77,10 +77,14 @@ pub fn classify_navigation(url: &str) -> NavDecision {
         return NavDecision::Allow;
     }
     // Frame pihak ketiga yang wajib tetap di dalam halaman (mis.
-    // Stripe.js di UI billing Postiz): membukanya di browser sistem
-    // tidak berguna dan merusak UI-nya. Entri nav log v56.1
-    // membuktikan frame ini bernavigasi di dalam panel.
-    if host == "js.stripe.com" {
+    // Stripe.js di UI billing Postiz: js.stripe.com + *.stripe.network):
+    // membukanya di browser sistem tidak berguna dan merusak UI-nya.
+    // Aturan sufiks, bukan daftar host satu per satu, karena Stripe
+    // memakai beberapa host frame (m-outer, inner, dsb.).
+    if host == "js.stripe.com"
+        || host.ends_with(".stripe.com")
+        || host.ends_with(".stripe.network")
+    {
         return NavDecision::Allow;
     }
     if host == "localhost" || host == "127.0.0.1" || host == "::1" {
@@ -189,6 +193,10 @@ mod tests {
         // Frame Stripe.js wajib tetap di halaman (bukan tab browser).
         assert_eq!(
             classify_navigation("https://js.stripe.com/v3/m-outer.html"),
+            NavDecision::Allow
+        );
+        assert_eq!(
+            classify_navigation("https://m.stripe.network/inner.html"),
             NavDecision::Allow
         );
         assert_eq!(
