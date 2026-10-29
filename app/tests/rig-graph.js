@@ -72,19 +72,25 @@ try {
   await tick(100);
 
   const nodeCount = () => document.querySelectorAll('#graphNodes .n8n-node').length;
-  const panel = () => document.getElementById('graphPanel');
+  const panel = () => document.getElementById('graphPopupCard');
+  const popup = () => document.getElementById('graphPopup');
+  const dbl = (el) => el.dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true }));
   const trigEl = () => document.querySelector('[data-nkey="trigger"]');
 
   // 1. Node trigger ada + panel tersembunyi.
   check('node trigger ada', !!trigEl(), '');
-  check('panel tersembunyi sebelum pilih', panel().style.display === 'none', panel().style.display);
+  check('popup tersembunyi sebelum dblclick', popup().style.display === 'none', popup().style.display);
+  check('elemen panel fixed sudah tidak ada', document.getElementById('graphPanel') === null, '');
   check('9 node awal', nodeCount() === 9, nodeCount());
 
-  // 2. Klik trigger -> panel tampil.
+  // 2. Klik saja tidak membuka popup; dblclick membuka popup.
   trigEl().click();
   await tick(100);
+  check('klik saja tidak membuka popup', popup().style.display === 'none', popup().style.display);
+  dbl(trigEl());
+  await tick(100);
   const panelText = () => panel().textContent || '';
-  check('klik trigger -> panel tampil', panel().style.display === 'block', panel().style.display);
+  check('dblclick trigger -> popup tampil', popup().style.display === 'flex', popup().style.display);
   check('panel berisi Tipe Trigger', panelText().includes('Tipe Trigger'), panelText().slice(0, 200));
   check('panel berisi Frekuensi', panelText().includes('Frekuensi'), '');
   check('panel berisi Run now', panelText().includes('Run now'), '');
@@ -130,10 +136,10 @@ try {
   check('klik Hapus -> baris konfirmasi tampil', panelText().includes('Hapus node ini?'), panelText().slice(0, 200));
   [...panel().querySelectorAll('button')].find((b) => b.textContent === 'Ya, hapus').click();
   await tick(100);
-  check('konfirmasi hapus -> kembali 9 node + panel tutup', nodeCount() === 9 && panel().style.display === 'none', nodeCount() + ' ' + panel().style.display);
+  check('konfirmasi hapus -> kembali 9 node + popup tutup', nodeCount() === 9 && popup().style.display === 'none', nodeCount() + ' ' + popup().style.display);
 
   // 7. Label cabang decision.
-  document.querySelector('[data-nkey="gate"]').click();
+  dbl(document.querySelector('[data-nkey="gate"]'));
   await tick(100);
   const branchInput = [...panel().querySelectorAll('input')].find((el) => (el.value || '') === 'true');
   check('panel gate berisi input cabang true', !!branchInput, '');
@@ -144,7 +150,7 @@ try {
   check('label edge ikut berubah jadi lanjut', edgeTexts.includes('lanjut'), edgeTexts.join('|'));
 
   // 8. Rename trigger tersimpan.
-  trigEl().click();
+  dbl(trigEl());
   await tick(100);
   const nameInput = panel().querySelector('input.g-input');
   nameInput.value = 'Trigger Uji';
@@ -159,14 +165,14 @@ try {
   check('DOM baru: nama Trigger Uji bertahan', (dom2.window.document.querySelector('[data-nkey="trigger"]')?.textContent || '').includes('Trigger Uji'), '');
 
   // 9. Run now -> selesai + riwayat.
-  trigEl().click();
+  dbl(trigEl());
   await tick(100);
   document.querySelector('.g-run').click();
   await tick(4200);
   const notice = document.getElementById('graphNotice')?.textContent || '';
   check('Run now -> notice selesai', notice.includes('selesai'), notice.slice(0, 120));
   check('badge riwayat = 1', document.getElementById('graphHistBadge')?.textContent === '1', document.getElementById('graphHistBadge')?.textContent);
-  document.querySelector('.graph-head-btns button').click();
+  [...document.querySelectorAll('.graph-head-btns button')].find((b) => b.textContent.includes('Riwayat')).click();
   await tick(100);
   check('riwayat tampil + baris Simulasi selesai', (document.getElementById('graphHist')?.textContent || '').includes('Simulasi selesai'), document.getElementById('graphHist')?.textContent);
 
@@ -196,10 +202,55 @@ try {
   check('play node pertama -> badge riwayat = 2', document.getElementById('graphHistBadge')?.textContent === '2', document.getElementById('graphHistBadge')?.textContent);
   document.querySelector('.n8n-node.sel .n8n-del').click();
   await tick(100);
-  check('klik hapus node -> panel konfirmasi tampil', !!document.querySelector('.g-delask'), document.getElementById('graphPanel')?.textContent?.slice(0, 80));
+  check('klik hapus node -> popup konfirmasi tampil', !!document.querySelector('.g-delask'), document.getElementById('graphPopupCard')?.textContent?.slice(0, 80));
   document.querySelector('.g-delask button').click();
   await tick(100);
   check('konfirmasi hapus -> node 11 -> 10', nodeCount() === 10, nodeCount());
+
+  // 12. v83: node seragam + outline sehat + popup + topbar.
+  check('semua node punya avatar + nama/job', [...document.querySelectorAll('.n8n-node')].every((el) => el.querySelector('.nrow .nava') && el.querySelector('.nrow .nname') && el.querySelector('.nrow .nsub')), '');
+  check('sub-node lingkaran ikut seragam (punya .nava)', !!document.querySelector('[data-nkey="model"] .nava'), '');
+  check('semua node sehat (outline hijau) saat terhubung', [...document.querySelectorAll('.n8n-node')].every((el) => el.classList.contains('ok')) && !document.querySelector('.n8n-node.bad'), [...document.querySelectorAll('.n8n-node')].map((el) => el.getAttribute('data-nkey') + ':' + [...el.classList].join('.')).join(' '));
+  check('wrap Graph hanya berisi kanvas (tanpa panel fixed)', document.querySelector('.graph-wrap').children.length === 1, document.querySelector('.graph-wrap').children.length);
+  check('topbar punya dropdown proyek', !!document.getElementById('graphProjSel'), '');
+  check('dropdown proyek berisi kopi + produk', [...document.getElementById('graphProjSel').options].map((o) => o.value).join(',') === 'kopi,produk', [...document.getElementById('graphProjSel').options].map((o) => o.value).join(','));
+  check('zoom label pindah ke topbar', !!document.querySelector('.graph-head-btns #graphZoomLabel'), '');
+  check('topbar punya tombol Hentikan', [...document.querySelectorAll('.graph-head-btns button')].some((b) => b.textContent.includes('Hentikan')), '');
+  document.querySelector('[data-nkey="prime"]').click();
+  await tick(100);
+  check('klik node tidak membuka popup', popup().style.display === 'none', popup().style.display);
+  dbl(document.querySelector('[data-nkey="prime"]'));
+  await tick(100);
+  check('dblclick node -> popup berisi nama + tombol tutup', popup().style.display === 'flex' && !!document.querySelector('#graphPopupCard .g-x') && panelText().includes('Prime Agent'), popup().style.display);
+  document.querySelector('#graphPopupCard .g-x').click();
+  await tick(100);
+  check('tombol tutup popup -> popup hilang', popup().style.display === 'none', popup().style.display);
+  dbl(trigEl());
+  await tick(100);
+  panel().querySelector('.g-check input').click();
+  await tick(100);
+  check('trigger jadwal nonaktif -> outline pink', document.querySelector('[data-nkey="trigger"]').classList.contains('bad'), document.querySelector('[data-nkey="trigger"]').className);
+  panel().querySelector('.g-check input').click();
+  await tick(100);
+  check('trigger diaktifkan lagi -> outline hijau', document.querySelector('[data-nkey="trigger"]').classList.contains('ok'), '');
+  document.querySelector('#graphPopupCard .g-x').click();
+  await tick(100);
+  dbl(document.querySelector('[data-nkey="gate"]'));
+  await tick(100);
+  [...panel().querySelectorAll('button')].find((b) => b.textContent === 'Hapus').click();
+  await tick(100);
+  [...panel().querySelectorAll('button')].find((b) => b.textContent === 'Ya, hapus').click();
+  await tick(100);
+  check('hapus gate -> dist + revisi jadi yatim (pink)', document.querySelector('[data-nkey="dist"]').classList.contains('bad') && document.querySelector('[data-nkey="revisi"]').classList.contains('bad'), '');
+  document.getElementById('graphProjSel').value = 'produk';
+  document.getElementById('graphProjSel').dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  await tick(100);
+  check('ganti proyek via dropdown -> chatProj produk', (document.getElementById('chatProj')?.textContent || '') === 'TEST Produk Digital', document.getElementById('chatProj')?.textContent);
+  document.querySelector('.graph-head-btns button.btn-primary').click();
+  await tick(150);
+  [...document.querySelectorAll('.graph-head-btns button')].find((b) => b.textContent.includes('Hentikan')).click();
+  await tick(100);
+  check('play lalu stop di topbar -> notice dihentikan', (document.getElementById('graphNotice')?.textContent || '').includes('dihentikan') && !document.querySelector('.n8n-node.exec'), document.getElementById('graphNotice')?.textContent);
 
 } catch (e) {
   // eslint-disable-next-line no-console

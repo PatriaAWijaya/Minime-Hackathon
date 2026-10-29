@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, kbTeamOpen, saveSettings, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, saveSettings, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -631,22 +631,24 @@
     <div class="view" id="view-graph">
       <div class="colhead"><h2>{t('view.graph.title', lang)}</h2>
       <div class="graph-head-btns">
+        <select id="graphProjSel" onchange={(e) => { switchProject((e.target as HTMLSelectElement).value); renderGraphProjSel(); }}></select>
+        <button class="btn" onclick={() => { graphZoomOut() }}>−</button>
+        <span id="graphZoomLabel">100%</span>
+        <button class="btn" onclick={() => { graphZoomIn() }}>+</button>
         <button class="btn" onclick={() => { graphToggleHist() }}>{t('graph.hist', lang)} <span class="g-badge" id="graphHistBadge"></span></button>
         <button class="btn btn-primary" onclick={() => { runGraphSim() }}>{t('graph.run', lang)}</button>
+        <button class="btn" onclick={() => { graphStopSim() }}>{t('graph.stop', lang)}</button>
       </div></div>
       <div class="scroll">
         <div id="graphHist" class="graph-hist" style="display:none"></div>
         <div class="graph-wrap">
           <div class="n8n-canvas" id="graphBox"><div id="graphZoom"><svg id="graphEdges"></svg><div id="graphNodes"></div></div></div>
-          <div id="graphPanel" class="graph-panel" style="display:none"></div>
         </div>
+        <div id="graphPopup" class="g-popup" style="display:none" onclick={(e) => { if (e.target === e.currentTarget) graphClosePanel(); }}><div class="g-popup-card" id="graphPopupCard"></div></div>
         <div class="graph-toolbar">
-          <button class="btn" onclick={() => { graphZoomOut() }}>−</button>
-          <span id="graphZoomLabel">100%</span>
-          <button class="btn" onclick={() => { graphZoomIn() }}>+</button>
           <button class="btn" onclick={() => { graphFullscreen() }}>{t('graph.fullscreen', lang)}</button>
-          <button class="btn" onclick={() => { graphStopSim() }}>{t('graph.stop', lang)}</button>
           <button class="btn btn-primary" onclick={() => { graphAddNode() }}>{t('graph.add_node', lang)}</button>
+          <span class="g-legend"><i class="g-dot ok"></i>{t('graph.legend.ok', lang)} <i class="g-dot bad"></i>{t('graph.legend.bad', lang)}</span>
         </div>
         <div class="notice" id="graphNotice" style="display:none"></div>
       </div>

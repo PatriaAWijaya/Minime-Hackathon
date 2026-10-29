@@ -339,24 +339,30 @@ export function curvePath(x1, y1, x2, y2) {
     return "M " + x1 + " " + y1 + " C " + x1 + " " + (y1 + dy * 0.5) + ", " + x2 + " " + (y2 - dy * 0.5) + ", " + x2 + " " + y2;
   }
 
+/* v83: kesehatan node — hijau = terhubung ke alur (+ trigger jadwal aktif); pink = yatim / trigger jadwal nonaktif. Dihitung dari GEDGES + status trigger, bukan bendera simpanan. */
+function graphHealth(k) {
+  var nd = GNODES[k]; if (!nd) return "bad";
+  if (nd.kind === "trigger") { var t = graphTrigOf(nd); if (t.type === "schedule" && !t.active) return "bad"; }
+  for (var i = 0; i < GEDGES.length; i++) {
+    var e = GEDGES[i];
+    if ((e.f === k || e.t === k) && GNODES[e.f] && GNODES[e.t]) return "ok";
+  }
+  return "bad";
+}
 export function renderGraph() {
     var wrap = document.getElementById("graphNodes");
     wrap.innerHTML = "";
     var firstKey = Object.keys(GNODES)[0];
+    renderGraphProjSel();
     Object.keys(GNODES).forEach(function (k) {
       var nd = GNODES[k];
       var el = document.createElement("div");
-      el.className = "n8n-node " + nd.kind + (k === graphSel ? " sel" : "") + (nd.locked ? " locked" : "");
+      el.className = "n8n-node " + nd.kind + " " + graphHealth(k) + (k === graphSel ? " sel" : "") + (nd.locked ? " locked" : "");
       el.setAttribute("data-nkey", k);
-      if (nd.kind === "circle") {
-        el.style.left = "calc(" + nd.x + "% - 59px)";
-        el.style.top = nd.y + "%";
-      } else {
-        el.style.left = nd.x + "%";
-        el.style.top = nd.y + "%";
-        el.style.width = (nd.kind === "trigger" ? Math.max(nd.w || 0, 240) : nd.w) + "px";
-      }
-      el.innerHTML = "<div class='nname'>" + nd.icon + " " + nd.name + (nd.locked ? " \uD83D\uDD12" : "") + "</div><div class='nsub'>" + nd.sub + "</div>";
+      el.style.left = nd.x + "%";
+      el.style.top = nd.y + "%";
+      el.style.width = (nd.kind === "trigger" ? Math.max(nd.w || 0, 240) : (nd.w || 170)) + "px";
+      el.innerHTML = "<div class='nrow'><div class='nava'>" + esc(nd.icon || "") + "</div><div class='ntxt'><div class='nname'>" + esc(nd.name) + (nd.locked ? " \uD83D\uDD12" : "") + "</div><div class='nsub'>" + esc(nd.sub || "") + "</div></div></div>";
       if (k === firstKey) {
         if (nd.kind === "trigger") {
           var tt = graphTrigOf(nd);
@@ -403,7 +409,7 @@ export function renderGraph() {
       var del = document.createElement("div");
       del.className = "n8n-del"; del.textContent = "\u00D7"; del.title = tr("graph.del");
       del.addEventListener("mousedown", function (e) { e.stopPropagation(); });
-      del.addEventListener("click", function (e) { e.stopPropagation(); graphSelect(k); graphAskDelete(); });
+      del.addEventListener("click", function (e) { e.stopPropagation(); graphOpenPopup(k); graphAskDelete(); });
       el.appendChild(del);
       el.addEventListener("mousedown", function (e) {
         if (nd.locked) return;
@@ -416,6 +422,7 @@ export function renderGraph() {
         e.preventDefault();
       });
       el.addEventListener("click", function () { if (!dragMoved) graphSelect(k); });
+      el.addEventListener("dblclick", function () { if (!dragMoved) graphOpenPopup(k); });
       wrap.appendChild(el);
     });
     var rects = nodeRects();
@@ -1451,7 +1458,7 @@ var dragNode = null, dragMoved = false, dragStart = null, grabDX = 0, grabDY = 0
 var nodeCounter = 0;
 
 /* ---------- Graph v77: setting per node ala OpenBot ---------- */
-var graphSel = null, graphZoom = 1, graphDelAsk = false, graphHistOn = false, graphTimer = null, graphLastCheck = null;
+var graphSel = null, graphZoom = 1, graphDelAsk = false, graphHistOn = false, graphTimer = null, graphLastCheck = null, graphPopupOpen = false;
 
 function graphZoomEl() { return document.getElementById("graphZoom") || document.getElementById("graphBox"); }
 function graphLocale() { var l = getLang(); return l === "id" ? "id-ID" : l === "zh" ? "zh-CN" : "en-US"; }
@@ -1573,14 +1580,24 @@ export function loadGraphState() {
 }
 
 export function graphSelect(key) { graphSel = GNODES[key] ? key : null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
-export function graphClosePanel() { graphSel = null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
+export function graphClosePanel() { graphPopupOpen = false; graphSel = null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
+export function graphOpenPopup(k) { if (!GNODES[k]) return; graphSelect(k); graphPopupOpen = true; renderGraphPanel(); }
+export function renderGraphProjSel() {
+  var el = document.getElementById("graphProjSel"); if (!el) return;
+  el.innerHTML = "";
+  Object.keys(PROJECTS).forEach(function (pid) {
+    var o = document.createElement("option"); o.value = pid; o.textContent = PROJECTS[pid].name; if (pid === currentProj) o.selected = true; el.appendChild(o);
+  });
+}
 function graphSelNode() { return graphSel && GNODES[graphSel] ? GNODES[graphSel] : null; }
 
 export function renderGraphPanel() {
-  var p = document.getElementById("graphPanel");
-  if (!p) return;
+  var p = document.getElementById("graphPopupCard");
+  var ov = document.getElementById("graphPopup");
+  if (!p || !ov) return;
+  if (!graphPopupOpen) { ov.style.display = "none"; p.innerHTML = ""; return; }
+  ov.style.display = "flex";
   if (graphSelEdge) {
-    p.style.display = "block";
     var ef = GNODES[graphSelEdge.f], et = GNODES[graphSelEdge.t];
     var eh = "<div class='g-head'><span>" + tr("graph.edge.title") + "</span><button class='g-x' onclick='graphClosePanel()'>×</button></div>";
     eh += "<div class='g-row'><label>" + tr("graph.edge.from") + "</label><div>" + esc(ef ? ef.name : graphSelEdge.f) + "</div></div>";
@@ -1591,8 +1608,7 @@ export function renderGraphPanel() {
     return;
   }
   var nd = graphSelNode();
-  if (!nd) { p.style.display = "none"; p.innerHTML = ""; return; }
-  p.style.display = "block";
+  if (!nd) { ov.style.display = "none"; p.innerHTML = ""; return; }
   var html = "<div class='g-head'><span>" + esc(nd.icon || "") + " " + esc(nd.name) + "</span><button class='g-x' onclick='graphClosePanel()'>×</button></div>";
   html += "<div class='g-row'><label>" + tr("graph.name") + "</label><input class='g-input' value=\"" + esc(nd.name) + "\" oninput='graphRename(this.value)'></div>";
   html += "<div class='g-row'><label>" + tr("graph.desc") + "</label><textarea class='g-input' oninput='graphRedesc(this.value)'>" + esc(nd.desc || "") + "</textarea></div>";
@@ -1656,7 +1672,7 @@ export function graphSetTrigNum(field, v) {
   graphTrigOf(nd)[field] = Math.max(min, Math.min(max, n));
   graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel();
 }
-export function graphSetTrigBool(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return; graphTrigOf(nd)[field] = !!v; saveGraphState(); renderGraphPanel(); }
+export function graphSetTrigBool(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return; graphTrigOf(nd)[field] = !!v; saveGraphState(); renderGraph(); renderGraphPanel(); }
 export function graphSetAmpm(v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return; graphTrigOf(nd).ampm = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel(); }
 export function graphToggleDay(d) {
   var nd = graphSelNode(); if (!nd || nd.kind !== "trigger") return;
@@ -1680,14 +1696,14 @@ export function graphDuplicate() {
   var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.node_added"); }
 }
 export function graphToggleLock() { var nd = graphSelNode(); if (!nd) return; nd.locked = !nd.locked; saveGraphState(); renderGraph(); renderGraphPanel(); }
-export function graphAskDelete() { graphDelAsk = true; renderGraphPanel(); }
+export function graphAskDelete() { if (graphSel && GNODES[graphSel]) graphPopupOpen = true; graphDelAsk = true; renderGraphPanel(); }
 export function graphCancelDelete() { graphDelAsk = false; renderGraphPanel(); }
 export function graphConfirmDelete() {
   if (!graphSel || !GNODES[graphSel]) return;
   var key = graphSel;
   delete GNODES[key];
   for (var i = GEDGES.length - 1; i >= 0; i--) { if (GEDGES[i].f === key || GEDGES[i].t === key) GEDGES.splice(i, 1); }
-  graphSel = null; graphDelAsk = false;
+  graphSel = null; graphDelAsk = false; graphPopupOpen = false;
   saveGraphState(); renderGraph(); renderGraphPanel();
   var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.node_deleted"); }
 }
@@ -1969,12 +1985,12 @@ export function graphStopSim() {
   var n = document.getElementById("graphNotice");
   if (n) { n.style.display = "block"; n.textContent = tr("graph.stopped"); }
 }
-export function graphSelectEdge(f, t) { graphSelEdge = { f: f, t: t }; graphSel = null; graphDelAsk = false; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
+export function graphSelectEdge(f, t) { graphSelEdge = { f: f, t: t }; graphSel = null; graphPopupOpen = true; graphDelAsk = false; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
 export function graphConfirmEdgeDel() {
   if (!graphSelEdge) return;
   var f = graphSelEdge.f, t = graphSelEdge.t;
   for (var i = GEDGES.length - 1; i >= 0; i--) { if (GEDGES[i].f === f && GEDGES[i].t === t) GEDGES.splice(i, 1); }
-  graphSelEdge = null; graphEdgeDelAsk = false;
+  graphSelEdge = null; graphEdgeDelAsk = false; graphPopupOpen = false;
   saveGraphState(); renderGraph(); renderGraphPanel();
   var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.edge.deleted"); }
 }

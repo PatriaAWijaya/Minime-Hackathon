@@ -211,10 +211,10 @@ try {
   const edgesBefore = document.querySelectorAll('#graphEdges path').length;
   W.graphSelectEdge('gate', 'dist');
   await tick(50);
-  check('panel garis tampil', (document.getElementById('graphPanel')?.textContent || '').includes('Pengaturan garis'), document.getElementById('graphPanel')?.textContent.slice(0, 120));
-  btn(document.getElementById('graphPanel'), 'Hapus garis').click();
+  check('popup garis tampil', (document.getElementById('graphPopupCard')?.textContent || '').includes('Pengaturan garis'), document.getElementById('graphPopupCard')?.textContent.slice(0, 120));
+  btn(document.getElementById('graphPopupCard'), 'Hapus garis').click();
   await tick(50);
-  const edgeDel = document.querySelector('#graphPanel .g-delask button');
+  const edgeDel = document.querySelector('#graphPopupCard .g-delask button');
   check('konfirmasi hapus garis tampil', !!edgeDel, '');
   edgeDel.click();
   await tick(50);
