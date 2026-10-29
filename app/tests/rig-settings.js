@@ -200,8 +200,8 @@ try {
   check('nav kanban + media memakai file ikon', !!kanbanImg && kanbanImg.getAttribute('src') === './kanban-icon.png' && !!mediaImg && mediaImg.getAttribute('src') === './media-icon.png');
   const kanbanDist = pngSize(fs.readFileSync(path.join(distDir, 'kanban-icon.png')));
   const mediaDist = pngSize(fs.readFileSync(path.join(distDir, 'media-icon.png')));
-  check('dist kanban-icon = ikon baru 741x740', kanbanDist.w === 741 && kanbanDist.h === 740, JSON.stringify(kanbanDist));
-  check('dist media-icon = ikon baru 814x815', mediaDist.w === 814 && mediaDist.h === 815, JSON.stringify(mediaDist));
+  check('dist kanban-icon = ikon baru 712x678', kanbanDist.w === 712 && kanbanDist.h === 678, JSON.stringify(kanbanDist));
+  check('dist media-icon = ikon baru 712x541', mediaDist.w === 712 && mediaDist.h === 541, JSON.stringify(mediaDist));
 } catch (e) {
   check('rig-settings exception', false, e && e.stack ? e.stack : String(e));
 }
