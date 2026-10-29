@@ -1770,3 +1770,6 @@ dokumen lama yang dipakai.
 ## Jembatan OAuth panel v57.1 (29 Okt, susulan v57)
 - Temuan dari log nav v57 live: frame Stripe kedua (m.stripe.network/inner.html) masih terlempar ke tab browser (open-ok) — daftar host satu per satu kalah dengan banyaknya host frame Stripe. Perbaikan: aturan sufiks *.stripe.com + *.stripe.network -> Allow (frame pembayaran wajib tetap di halaman). Unit test kedua host. Koreksi proses: commit v57.1 pertama lolos fmt=1 (kondisi multi-baris) — diperbaiki cargo fmt pada commit susulan sebelum rantai. Gerbang ulang: cargo fmt/check--tests 0, gate-test 14/14, scan PASSED, ledger md5 tak berubah.
 - Push: kode 096b0ff <-> 9d5c532; fmt ... (lihat pasangan berikutnya).
+
+## Koreksi catatan v57.1 (29 Okt)
+- Koreksi atas entri v57.1 di atas: TIDAK ADA sesi paralel yang menyentuh browser.rs. Yang terjadi: commit fmt 87ffccc belum ter-push saat push_rebased 085cea1 dijalankan, sehingga tree remote (9d5c532 = isi 096b0ff) wajar berbeda dari tree parent lokal (87ffccc). Push relaxed berurutan memperbaikinya: 096b0ff ditolak verifikasi (isinya sudah ada di remote — aman, tidak ada yang hilang), 87ffccc (fmt) -> 66e86f6, 085cea1 (log) -> 2e06344. Remote main kini 2e06344 = kode v57.1 + fmt + log, tanpa ada kerja yang tertimpa.
