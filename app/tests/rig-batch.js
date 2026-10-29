@@ -44,6 +44,12 @@ function makeResp({ ok = true, status = 200, jsonData = null } = {}) {
 async function invokeStub(cmd, args) {
   log.push('invoke:' + cmd);
   const req = (args && args.req) || {};
+  if (cmd === 'postiz_install') {
+    if (installMode === 'need_docker') return { status: 'need_docker', detail: '' };
+    postizUp = true;
+    return { status: 'ok', detail: '' };
+  }
+  if (cmd === 'open_docker_desktop') return { ok: true };
   if (cmd === 'image_save') {
     imgFiles.set(req.name, req.b64);
     return { file: req.name, bytes: req.b64 ? req.b64.length : 0 };
@@ -69,9 +75,16 @@ async function invokeStub(cmd, args) {
   throw new Error('unexpected invoke ' + cmd);
 }
 
+let postizUp = false;
+let installMode = 'ok';
+
 async function fetchStub(url) {
   const u = String(url);
   log.push('fetch:' + u);
+  if (u.includes('4007')) {
+    if (!postizUp) throw new Error('postiz down');
+    return makeResp({});
+  }
   if (u.includes('images/generations')) {
     return makeResp({ jsonData: { created: 1793000000, data: [{ b64_json: PNG_1X1 }], output_format: 'webp', usage: {} } });
   }
@@ -190,12 +203,16 @@ try {
   await waitFor(() => batch().cards.length === 1 && batch().cards[0].status === 'ready', 'kartu carousel ready', 200);
   check('pilihan carousel berisi 3 file', batch().cards[0].choices.every((ch) => ch.files.length === 3), JSON.stringify(batch().cards[0].choices.map((ch) => ch.files.length)));
 
-  // 7. Wizard Setup Postiz: uji koneksi via ping (Rust).
+  // 7. Wizard Setup Postiz: instalasi satu klik + uji koneksi via ping (Rust).
   dom.window.showView('planner');
   dom.window.renderPlanner();
   await tick(200);
   const setupText = () => document.getElementById('postizSetup')?.textContent || '';
   check('wizard Setup tampil', !!document.getElementById('postizSetup') && setupText().includes('Setup Postiz'), setupText());
+  check('tombol Pasang tampil saat Postiz offline', !!document.getElementById('postizSetupInstallBtn'), setupText());
+  document.getElementById('postizSetupInstallBtn').click();
+  await waitFor(() => !!document.querySelector('#postizSetup .setup-step .badge.b-ok'), 'langkah 1 centang sesudah instalasi', 200);
+  check('instalasi satu klik -> langkah 1 centang', invokeCount('postiz_install') === 1, 'postiz_install=' + invokeCount('postiz_install'));
   const pingBefore = invokeCount('postiz_request');
   store.set('minime.postizKey', 'rig-postiz-key');
   document.getElementById('postizSetupTestBtn').click();
@@ -215,6 +232,17 @@ try {
   await tick(100);
   check('konfirmasi manual channel -> wizard siap', setupText().includes('Postiz siap'), setupText());
   check('ping dipanggil 3x via Rust', invokeCount('postiz_request') === pingBefore + 3, 'postiz_request=' + invokeCount('postiz_request'));
+
+  // 8. Instalasi need_docker: pesan + tombol Docker.
+  postizUp = false;
+  installMode = 'need_docker';
+  document.getElementById('postizSetupResetBtn').click();
+  await tick(200);
+  check('tombol Pasang tampil lagi sesudah reset', !!document.getElementById('postizSetupInstallBtn'), setupText());
+  document.getElementById('postizSetupInstallBtn').click();
+  await waitFor(() => setupText().includes('belum berjalan'), 'pesan need_docker', 200);
+  check('need_docker -> pesan + tombol Docker', setupText().includes('belum berjalan') && !!document.getElementById('postizSetupDockerBtn'), setupText());
+  check('instalasi dipanggil 2x total', invokeCount('postiz_install') === 2, 'postiz_install=' + invokeCount('postiz_install'));
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-batch exception :: ' + (e && e.stack ? e.stack : e));

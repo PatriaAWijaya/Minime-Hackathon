@@ -753,6 +753,26 @@ export function postizReload() {
 var postizOnline = false;
 var postizLastTest = null;
 var postizTesting = false;
+var postizInstallState = null;
+export async function postizInstall() {
+  if (postizInstallState === 'installing') return;
+  postizInstallState = 'installing';
+  renderPostizSetup();
+  try {
+    var r = await invoke('postiz_install');
+    postizInstallState = { status: r.status, detail: r.detail || '' };
+    if (r.status === 'ok') postizCheck();
+  } catch (e) {
+    postizInstallState = { status: 'failed', detail: String(e && e.message ? e.message : e).slice(0, 300) };
+  }
+  renderPostizSetup();
+}
+export async function postizOpenDocker() {
+  try { await invoke('open_docker_desktop'); } catch (_) {}
+}
+export async function postizOpenDockerDownload() {
+  try { await invoke('open_browser', { url: 'https://www.docker.com/products/docker-desktop/' }); } catch (_) {}
+}
 function postizSetupManual() {
   try {
     var raw = window.localStorage.getItem('minime.postizSetup');
@@ -812,6 +832,7 @@ export function postizSetupConfirm() {
 export function postizSetupReset() {
   try { window.localStorage.removeItem('minime.postizSetup'); } catch (_) {}
   postizLastTest = null;
+  postizInstallState = null;
   renderPostizSetup();
   postizCheck();
 }
@@ -841,7 +862,26 @@ export function renderPostizSetup() {
   else if (t && t.state === 'nochannel') testMsg = tr('setup.test.nochannel');
   var s1 = '<div class="setup-step"><span class="setup-mk">' + mk(step1) + '</span><div><b>' + tr('setup.step1') + '</b>';
   if (!step1) {
-    s1 += '<div>' + tr('setup.step1.off') + '</div><pre>git clone https://github.com/gitroomhq/postiz-app.git\ncd postiz-app\ncp .env.example .env\ndocker compose up -d</pre><div>' + tr('setup.step1.port') + '</div><div class="setup-btns"><button id="postizSetupReloadBtn" class="btn btn-sm">' + tr('planner.postiz.reload') + '</button></div>';
+    var ist = postizInstallState;
+    var showInstall = !ist || (ist.status && ['failed', 'need_docker', 'no_docker', 'incomplete'].indexOf(ist.status) !== -1);
+    s1 += '<div>' + tr('setup.step1.off') + '</div><div class="setup-btns">';
+    if (showInstall) s1 += '<button id="postizSetupInstallBtn" class="btn btn-sm">' + tr('install.btn') + '</button>';
+    s1 += '<button id="postizSetupReloadBtn" class="btn btn-sm">' + tr('planner.postiz.reload') + '</button></div>';
+    s1 += '<div>' + tr('install.note') + '</div>';
+    if (ist === 'installing') {
+      s1 += '<div>' + tr('install.installing') + '</div>';
+    } else if (ist && ist.status === 'need_docker') {
+      s1 += '<div>' + tr('install.need_docker') + '</div><div class="setup-btns"><button id="postizSetupDockerBtn" class="btn btn-sm">' + tr('install.docker.btn') + '</button></div>';
+    } else if (ist && ist.status === 'no_docker') {
+      s1 += '<div>' + tr('install.no_docker') + '</div><div class="setup-btns"><button id="postizSetupDownloadBtn" class="btn btn-sm">' + tr('install.download.btn') + '</button></div>';
+    } else if (ist && ist.status === 'failed') {
+      s1 += '<div>' + tr('install.failed', { detail: ist.detail }) + '</div>';
+    } else if (ist && ist.status === 'incomplete') {
+      s1 += '<div>' + ist.detail + '</div>';
+    } else if (ist && ist.status === 'starting') {
+      s1 += '<div>' + tr('install.starting') + '</div>';
+    }
+    s1 += '<div>' + tr('install.manual') + '</div><pre>git clone https://github.com/gitroomhq/postiz-app.git\ncd postiz-app\ncp .env.example .env\ndocker compose up -d</pre><div>' + tr('setup.step1.port') + '</div>';
   }
   s1 += '</div></div>';
   var s2 = '<div class="setup-step"><span class="setup-mk">' + mk(step2) + '</span><div><b>' + tr('setup.step2') + '</b><div>' + tr('setup.step2.hint') + '</div><div class="setup-btns"><button id="postizSetupSettingsBtn" class="btn btn-sm">' + tr('setup.btn.settings') + '</button><button id="postizSetupTestBtn" class="btn btn-sm">' + tr('setup.btn.test') + '</button></div>' + (testMsg ? '<div>' + testMsg + '</div>' : '') + '</div></div>';
@@ -850,6 +890,9 @@ export function renderPostizSetup() {
   s3 += '</div></div></div>';
   el.innerHTML = '<div class="postiz-setup"><h3>' + tr('setup.title') + '</h3><div>' + tr('setup.browser.note') + '</div>' + s1 + s2 + s3 + '</div>';
   postizSetupBind('postizSetupReloadBtn', postizReload);
+  postizSetupBind('postizSetupInstallBtn', postizInstall);
+  postizSetupBind('postizSetupDockerBtn', postizOpenDocker);
+  postizSetupBind('postizSetupDownloadBtn', postizOpenDockerDownload);
   postizSetupBind('postizSetupSettingsBtn', function () { showView('settings'); });
   postizSetupBind('postizSetupTestBtn', postizTestKey);
   postizSetupBind('postizSetupOpenBtn', postizOpenBrowser);
@@ -1197,5 +1240,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizOpenBrowser, postizReload, postizSetupConfirm, postizSetupReset, postizTestKey, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizInstall, postizOpenBrowser, postizOpenDocker, postizOpenDockerDownload, postizReload, postizSetupConfirm, postizSetupReset, postizTestKey, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

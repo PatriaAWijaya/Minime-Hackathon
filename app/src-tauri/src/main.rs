@@ -3,6 +3,7 @@
 mod browser;
 mod image;
 mod postiz;
+mod postiz_install;
 mod sherpa;
 mod video;
 mod voicestudio;
@@ -25,7 +26,9 @@ fn main() {
             image::image_read,
             image::image_delete,
             browser::open_browser,
-            postiz::postiz_request
+            postiz::postiz_request,
+            postiz_install::postiz_install,
+            postiz_install::open_docker_desktop
         ])
         .run(tauri::generate_context!())
     {
