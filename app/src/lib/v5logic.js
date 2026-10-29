@@ -842,7 +842,13 @@ export function renderPostizSetup() {
   var manual = postizSetupManual();
   var t = postizLastTest;
   var step1 = postizOnline;
-  var step2 = !!t && (t.state === 'ok' || t.state === 'nochannel');
+  // Langkah 2 terpenuhi bila kunci Postiz SUDAH tersimpan di Pengaturan
+  // (keputusan Patria 29 Okt 16:05: yang sudah ada di menu Setting
+  // tidak perlu lagi muncul di wizard). Uji koneksi tetap tersedia di
+  // Pengaturan (kartu kunci) untuk validasi; wizard tidak lagi menagih
+  // langkah ini tiap restart hanya karena postizLastTest sesi habis.
+  var keySaved = !!readPostizKey();
+  var step2 = keySaved || (!!t && (t.state === 'ok' || t.state === 'nochannel'));
   var step3auto = !!t && t.state === 'ok' && typeof t.count === 'number' && t.count > 0;
   var step3 = step3auto || !!manual.channel;
   if (step1 && step2 && step3) {
@@ -884,7 +890,13 @@ export function renderPostizSetup() {
     s1 += '<div>' + tr('install.manual') + '</div><pre>git clone https://github.com/gitroomhq/postiz-app.git\ncd postiz-app\ncp .env.example .env\ndocker compose up -d</pre><div>' + tr('setup.step1.port') + '</div>';
   }
   s1 += '</div></div>';
-  var s2 = '<div class="setup-step"><span class="setup-mk">' + mk(step2) + '</span><div><b>' + tr('setup.step2') + '</b><div>' + tr('setup.step2.hint') + '</div><div class="setup-btns"><button id="postizSetupSettingsBtn" class="btn btn-sm">' + tr('setup.btn.settings') + '</button><button id="postizSetupTestBtn" class="btn btn-sm">' + tr('setup.btn.test') + '</button></div>' + (testMsg ? '<div>' + testMsg + '</div>' : '') + '</div></div>';
+  // Bila kunci sudah tersimpan, langkah 2 tampil sebagai baris centang
+  // ringkas (tanpa lagi menagih Buka Pengaturan) — tombol Uji tetap ada
+  // karena ping inilah yang membuktikan langkah 3 otomatis (jumlah
+  // channel); tanpanya, wizard tidak bisa ciut sendiri.
+  var s2 = keySaved
+    ? '<div class="setup-step"><span class="setup-mk">' + mk(true) + '</span><div><b>' + tr('setup.step2') + '</b><div class="setup-btns"><button id="postizSetupTestBtn" class="btn btn-sm">' + tr('setup.btn.test') + '</button></div>' + (testMsg ? '<div>' + testMsg + '</div>' : '') + '</div></div>'
+    : '<div class="setup-step"><span class="setup-mk">' + mk(step2) + '</span><div><b>' + tr('setup.step2') + '</b><div>' + tr('setup.step2.hint') + '</div><div class="setup-btns"><button id="postizSetupSettingsBtn" class="btn btn-sm">' + tr('setup.btn.settings') + '</button><button id="postizSetupTestBtn" class="btn btn-sm">' + tr('setup.btn.test') + '</button></div>' + (testMsg ? '<div>' + testMsg + '</div>' : '') + '</div></div>';
   var s3 = '<div class="setup-step"><span class="setup-mk">' + mk(step3) + '</span><div><b>' + tr('setup.step3') + '</b><div>' + tr('setup.step3.hint') + '</div><div class="setup-btns"><button id="postizSetupOpenBtn" class="btn btn-sm">' + tr('planner.postiz.open') + '</button>';
   if (!step3auto) s3 += '<button id="postizSetupConfirmBtn" class="btn btn-sm">' + tr('setup.btn.confirm') + '</button>';
   s3 += '</div></div></div>';
