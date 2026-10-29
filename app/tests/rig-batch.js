@@ -207,6 +207,11 @@ try {
   document.querySelector('[data-soc-side="youtube"]').click();
   await tick(100);
   check('kanal YouTube tanpa tombol hubung', !document.getElementById('socConn-youtube'), '');
+  // Ikon kanal v69: logo asli untuk 6 kanal berkas, monogram untuk
+  // Threads (berkas kiriman kosong) + X (belum dikirim).
+  const sideImg = (id) => document.querySelector('[data-soc-side="' + id + '"] img')?.getAttribute('src') || '';
+  check('logo asli FB/FB Page/IG/LinkedIn/TikTok/YouTube di sidebar', ['facebook', 'facebook_page', 'instagram', 'linkedin', 'tiktok', 'youtube'].every((id) => sideImg(id).includes('-icon.png')), ['facebook', 'facebook_page', 'instagram', 'linkedin', 'tiktok', 'youtube'].map(sideImg).join(','));
+  check('Threads + X masih monogram', (document.querySelector('[data-soc-side="threads"] .soc-mono')?.textContent || '') === 'TH' && (document.querySelector('[data-soc-side="x"] .soc-mono')?.textContent || '') === 'X', '');
   // Klik hari kalender (bukan hari ini, supaya tidak bercampur item
   // Batch hari ini) -> dialog tanggal terbuka.
   const today = new Date();

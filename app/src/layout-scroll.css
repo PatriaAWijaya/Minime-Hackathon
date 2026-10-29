@@ -188,3 +188,7 @@ h3 { font-size: 18px; }
 .soc-item-sent { opacity: 0.6; }
 .soc-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .soc-item-fail { color: #EB87B4; font-size: 12px; flex-shrink: 0; }
+
+/* Ikon kanal Planner v69: logo asli (tanpa invert, tampil apa adanya). */
+.soc-icon { width: 28px; height: 28px; border-radius: 8px; object-fit: contain; flex-shrink: 0; }
+.soc-icon.sm { width: 20px; height: 20px; border-radius: 6px; }

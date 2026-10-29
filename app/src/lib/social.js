@@ -23,13 +23,13 @@ var OAUTH_REDIRECT = 'http://127.0.0.1:4317/callback';
 // v62b: instagram; v64: x + tiktok. youtube TIDAK dibangun (API-nya
 // tidak punya endpoint Community post — hanya upload video).
 var PLATFORMS = [
-  { id: 'facebook', name: 'Facebook', mono: 'FB', note: 'soc.note.fb_profile', can: false },
-  { id: 'facebook_page', name: 'Facebook Page', mono: 'FP', note: '', can: true },
-  { id: 'instagram', name: 'Instagram', mono: 'IG', note: 'soc.note.ig_url', can: true },
+  { id: 'facebook', name: 'Facebook', mono: 'FB', icon: 'fb-icon.png', note: 'soc.note.fb_profile', can: false },
+  { id: 'facebook_page', name: 'Facebook Page', mono: 'FP', icon: 'fb-icon.png', note: '', can: true },
+  { id: 'instagram', name: 'Instagram', mono: 'IG', icon: 'ig-icon.png', note: 'soc.note.ig_url', can: true },
   { id: 'threads', name: 'Threads', mono: 'TH', note: 'soc.note.threads_text', can: true },
-  { id: 'linkedin', name: 'LinkedIn', mono: 'IN', note: '', can: true },
-  { id: 'youtube', name: 'YouTube', mono: 'YT', note: 'soc.note.youtube_video', can: false },
-  { id: 'tiktok', name: 'TikTok', mono: 'TT', note: 'soc.note.tiktok_url', can: true },
+  { id: 'linkedin', name: 'LinkedIn', mono: 'IN', icon: 'linkedin-icon.png', note: '', can: true },
+  { id: 'youtube', name: 'YouTube', mono: 'YT', icon: 'youtube-icon.png', note: 'soc.note.youtube_video', can: false },
+  { id: 'tiktok', name: 'TikTok', mono: 'TT', icon: 'tiktok-icon.png', note: 'soc.note.tiktok_url', can: true },
   { id: 'x', name: 'X', mono: 'X', note: 'soc.note.x_cost', can: true },
 ];
 
@@ -62,6 +62,18 @@ function platName(id) {
 function platMono(id) {
   var p = PLATFORMS.find(function (x) { return x.id === id; });
   return p ? p.mono : '?';
+}
+// Ikon kanal v69: logo asli dari app/public (pola yang sama dengan
+// ikon rail di App.svelte: src relatif "./nama.png", TANPA invert —
+// logo brand harus tampil apa adanya). Kanal tanpa berkas logo
+// (threads: berkas kiriman Patria kosong total/transparan; x: belum
+// dikirim) tetap memakai monogram.
+function platIconHTML(id, sm) {
+  var p = PLATFORMS.find(function (x) { return x.id === id; });
+  var cls = sm ? 'soc-icon sm' : 'soc-icon';
+  if (p && p.icon) return '<img class="' + cls + '" src="./' + p.icon + '" alt="">';
+  var mcls = sm ? 'soc-mono sm' : 'soc-mono';
+  return '<span class="' + mcls + '">' + (p ? p.mono : '?') + '</span>';
 }
 function fmtTime(ms) {
   try { return new Date(ms).toLocaleString(); } catch (_) { return String(ms); }
@@ -142,7 +154,7 @@ function renderCalendar() {
     var chips = (byDay[k] || []).map(function (it) {
       var fail = it.status === 'failed' ? ' <span class="soc-item-fail">' + tr('soc.status.failed') + '</span>' : '';
       var cls = it.status === 'sent' ? ' soc-item-sent' : '';
-      return '<div class="soc-item' + cls + '" title="' + esc(it.text || '') + '"><span class="soc-mono sm">' + platMono(it.platform) + '</span><span class="soc-item-title">' + esc(socItemTitle(it.text)) + '</span>' + fail + '<button class="soc-del" data-soc-del="' + it.id + '" title="' + tr('soc.delete') + '">−</button></div>';
+      return '<div class="soc-item' + cls + '" title="' + esc(it.text || '') + '">' + platIconHTML(it.platform, true) + '<span class="soc-item-title">' + esc(socItemTitle(it.text)) + '</span>' + fail + '<button class="soc-del" data-soc-del="' + it.id + '" title="' + tr('soc.delete') + '">−</button></div>';
     }).join('');
     cells += '<div class="soc-cal-day" data-day="' + k + '"><div class="soc-day-head"><b>' + d + '</b><button class="soc-add" data-soc-add="' + k + '" title="' + tr('soc.day.add') + '">+</button></div>' + chips + '</div>';
   }
@@ -300,7 +312,7 @@ function renderSideBar() {
   var list = PLATFORMS.map(function (p) {
     var connected = tokenValid(s[p.id]);
     var sel = socSideSel === p.id ? ' sel' : '';
-    return '<button class="soc-side-btn' + sel + '" data-soc-side="' + p.id + '"><span class="soc-mono">' + platMono(p.id) + '</span><span class="soc-side-name">' + esc(p.name) + '</span><span class="badge ' + (connected ? 'b-ok' : '') + '">' + (connected ? tr('soc.connected') : tr('soc.not_connected')) + '</span></button>';
+    return '<button class="soc-side-btn' + sel + '" data-soc-side="' + p.id + '">' + platIconHTML(p.id, false) + '<span class="soc-side-name">' + esc(p.name) + '</span><span class="badge ' + (connected ? 'b-ok' : '') + '">' + (connected ? tr('soc.connected') : tr('soc.not_connected')) + '</span></button>';
   }).join('');
   var detail = '';
   if (!socSideSel) {
