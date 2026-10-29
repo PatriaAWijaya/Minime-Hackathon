@@ -1773,3 +1773,9 @@ dokumen lama yang dipakai.
 
 ## Koreksi catatan v57.1 (29 Okt)
 - Koreksi atas entri v57.1 di atas: TIDAK ADA sesi paralel yang menyentuh browser.rs. Yang terjadi: commit fmt 87ffccc belum ter-push saat push_rebased 085cea1 dijalankan, sehingga tree remote (9d5c532 = isi 096b0ff) wajar berbeda dari tree parent lokal (87ffccc). Push relaxed berurutan memperbaikinya: 096b0ff ditolak verifikasi (isinya sudah ada di remote — aman, tidak ada yang hilang), 87ffccc (fmt) -> 66e86f6, 085cea1 (log) -> 2e06344. Remote main kini 2e06344 = kode v57.1 + fmt + log, tanpa ada kerja yang tertimpa.
+
+## v57.1 live + bukti jembatan jalan + diagnosis LinkedIn (29 Okt ~15:52)
+- Rantai v57.1: MH_BUILD571_OK, PID 16387, HEAD 5cd8d04, proses tunggal, jendela 1, biner memuat jembatan + aturan Stripe. Log nav v57.1: startup Allow + KEDUA frame Stripe kini Allow (js.stripe.com + m.stripe.network) — tidak ada lagi tab Stripe nyasar (tab lama hasil v56/v57 dibersihkan manual dari Chrome).
+- BUKTI JEMBATAN: klik LinkedIn Patria membuka tab Chrome linkedin.com/oauth/v2/authorization — jalur klik->browser TERBUKTI jalan. Tapi LinkedIn menolak: "You need to pass the client_id parameter" — URL-nya client_id= (kosong).
+- Akar masalah baru (bukan handler): provider LinkedIn membaca LINKEDIN_CLIENT_ID/SECRET; di container keduanya ADA namanya tapi NILAINYA KOSONG (panjang 1 = hanya newline). Sebaliknya FACEBOOK_APP_ID (16 karakter) + FACEBOOK_APP_SECRET (32 karakter) TERISI — jadi klik Facebook/Instagram seharusnya membuka dialog OAuth Facebook beneran (tes klik menunggu Patria). WhatsApp: tidak ada variabel env WhatsApp sama sekali di container (provider WA belum terkonfigurasi / perlu dicek terpisah).
+- Perbaikan LinkedIn butuh Client ID + Secret dari aplikasi developer LinkedIn Patria (linkedin.com/developers) diisi ke .env Postiz + recreate container — menunggu keputusan/kredensial Patria (tidak diminta lewat chat mentah).
