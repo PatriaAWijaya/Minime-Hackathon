@@ -243,6 +243,11 @@ try {
   await waitFor(() => setupText().includes('belum berjalan'), 'pesan need_docker', 200);
   check('need_docker -> pesan + tombol Docker', setupText().includes('belum berjalan') && !!document.getElementById('postizSetupDockerBtn'), setupText());
   check('instalasi dipanggil 2x total', invokeCount('postiz_install') === 2, 'postiz_install=' + invokeCount('postiz_install'));
+
+  // 8. Planner native v61 (di atas embed Postiz): 8 kartu kanal +
+  // composer + kalender + antrean.
+  check('planner native tampil', !!document.getElementById('nativePlanner') && document.querySelectorAll('.soc-card').length === 8, document.getElementById('nativePlanner')?.textContent.slice(0, 120));
+  check('composer + kalender tampil', !!document.getElementById('socText') && !!document.querySelector('.soc-cal-grid'), '');
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-batch exception :: ' + (e && e.stack ? e.stack : e));

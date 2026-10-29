@@ -170,4 +170,15 @@ h3 { font-size: 18px; }
 .prov-card .prov-row { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
 .prov-card .prov-row span { min-width: 80px; }
 .prov-card .prov-row button { flex-shrink: 0; }
+.soc-wrap { border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.soc-channels { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0; }
+.soc-card { border: 1px solid #2a2a2a; border-radius: 10px; padding: 10px 12px; min-width: 220px; flex: 1; }
+.soc-row { display: flex; gap: 10px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.soc-row span { min-width: 80px; }
+.soc-cal-head { display: flex; gap: 10px; align-items: center; margin: 12px 0 6px; }
+.soc-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.soc-cal-day { border: 1px solid #2a2a2a; border-radius: 8px; min-height: 44px; padding: 4px 6px; cursor: pointer; }
+.soc-cal-day.empty { border: none; cursor: default; }
+.soc-dot { display: inline-block; background: #EB87B4; color: #262626; border-radius: 10px; padding: 0 6px; margin-left: 4px; font-size: 12px; }
+.soc-q { border: 1px solid #2a2a2a; border-radius: 10px; padding: 8px 10px; margin-top: 6px; }
 .key-card .key-row button { flex-shrink: 0; }

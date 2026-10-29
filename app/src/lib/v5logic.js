@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { readPostizKey } from './postiz.js';
+import { renderNativePlanner, initSocialScheduler } from './social.js';
 import { esc, jsEsc } from './esc.js';
 import { readThumb } from './image-api.js';
 // Mechanical migration of prototype-v5/index.html <script> blocks.
@@ -914,6 +915,7 @@ export function renderPostizSetup() {
 export function renderPlanner() {
     postizCheck();
     renderPostizSetup();
+    renderNativePlanner();
   }
 
 /** B7: re-derive backend data in the current language (after a language switch). */
@@ -1318,6 +1320,8 @@ export async function provOpenLinkedIn() {
 }
 
 export function initV5() {
+  // Penjadwal native (v61): timer antrean mulai sekali saat app hidup.
+  initSocialScheduler();
   // Jembatan OAuth panel (v57): pesan dari frame Postiz (init script
   // di main.rs) yang membawa URL OAuth hasil klik tile channel.
   // Asal wajib panel Postiz; URL divalidasi ulang di Rust

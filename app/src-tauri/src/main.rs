@@ -5,6 +5,7 @@ mod image;
 mod postiz;
 mod postiz_install;
 mod sherpa;
+mod social;
 mod video;
 mod voicestudio;
 
@@ -134,6 +135,10 @@ fn main() {
             postiz_install::postiz_install,
             postiz_install::open_docker_desktop,
             postiz_install::postiz_provider_env,
+            social::social_oauth_listen,
+            social::social_token_exchange,
+            social::social_linkedin_me,
+            social::social_publish,
         ])
         .run(tauri::generate_context!())
     {
