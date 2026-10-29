@@ -5,6 +5,13 @@
 //     fetch /v1/audio/speech (urutan auto-launch agen).
 //  3. Bila backend sudah hidup, Generate TIDAK memanggil vs_launch lagi.
 //  4. Audio hasil kembali ke MiniMe: #vsAudio.src terisi + note selesai.
+//  5. Voice Editor (v65): kanvas waveform + daftar aset + panel transkrip
+//     + input unggah ada; aset seed tampil dengan tombol Muat/Transkrip/
+//     Hapus — TANPA tombol Unduh (dedup: unduh sudah ada di player
+//     generasi) dan TANPA tombol Putar seleksi (dedup: Putar memutar
+//     seleksi bila ada).
+//  6. Transkrip: klik Transkrip memanggil whisper_transcribe, segmen
+//     tampil dengan waktu + teks, klik segmen memuat aset + seek.
 // Jalankan: npm run rig:vs (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -46,6 +53,12 @@ async function invokeStub(cmd) {
     backendAlive = true;
     return { installed: true, skippedDownload: true, appPath: '/Applications/VoiceStudio.app', backendUp: true, version: 'existing' };
   }
+  if (cmd === 'audio_save') return { file: 'ved-test.wav', bytes: 4 };
+  if (cmd === 'audio_read') return { file: 'ved-test.wav', b64: 'UklGRg==', bytes: 4 };
+  if (cmd === 'audio_delete') return { file: 'ved-test.wav', deleted: true };
+  if (cmd === 'whisper_transcribe') {
+    return { segments: [{ start: 2.5, end: 4.0, text: 'Halo dunia' }], text: 'Halo dunia' };
+  }
   throw new Error('unexpected invoke ' + cmd);
 }
 
@@ -86,6 +99,19 @@ const dom = new JSDOM(html, {
     window.__TAURI_INTERNALS__ = { invoke: invokeStub };
     window.fetch = fetchStub;
     window.URL.createObjectURL = () => 'blob:vs-test';
+    // jsdom dengan URL file:// = opaque origin: akses localStorage asli
+    // melempar. Shim memori ini dipakai app + rig (seed aset v65).
+    const mem = {};
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: (k) => (k in mem ? mem[k] : null),
+        setItem: (k, v) => { mem[k] = String(v); },
+        removeItem: (k) => { delete mem[k]; },
+        clear: () => { for (const k of Object.keys(mem)) delete mem[k]; },
+      },
+      configurable: true,
+      writable: true,
+    });
   },
 });
 
@@ -155,6 +181,32 @@ try {
   await tick(500);
   check('Generate tanpa vs_launch saat backend hidup', !log.includes('invoke:vs_launch'), log.join(','));
   check('speech tetap terpanggil', log.includes('fetch:/v1/audio/speech'), log.join(','));
+
+  // Voice Editor v65: elemen statis + daftar aset + transkrip.
+  check('editor: kanvas + transport + unggah + panel ada',
+    !!document.getElementById('vedCanvas') && !!document.getElementById('vedPlay') &&
+    !!document.getElementById('vedUpload') && !!document.getElementById('vedAssets') &&
+    !!document.getElementById('vedTranscript') && !!document.getElementById('vedAudio'));
+  dom.window.localStorage.setItem('minime.voiceAssets', JSON.stringify([
+    { id: 'ved-test-1', name: 'Uji Suara', file: 'ved-test.wav', source: 'tts', createdAt: Date.now(), duration: 0, transcript: null },
+  ]));
+  voiceBtn.click();
+  await tick(200);
+  const assetBox = document.getElementById('vedAssets');
+  const assetBtns = [...assetBox.querySelectorAll('button')].map((b) => b.textContent.trim());
+  check('editor: aset seed tampil + tombol Muat/Transkrip/Hapus', assetBox.textContent.includes('Uji Suara') &&
+    assetBtns.includes('Muat ke editor') && assetBtns.includes('Transkrip') && assetBtns.includes('Hapus'), assetBtns.join('|'));
+  check('editor: TANPA tombol Unduh (dedup)', !assetBtns.includes('Unduh'), assetBtns.join('|'));
+  check('editor: TANPA tombol Putar seleksi (dedup)', ![...panel.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Putar seleksi'));
+  log.length = 0;
+  assetBox.querySelector('[data-ved-tr]').click();
+  await tick(500);
+  check('Transkrip memanggil whisper_transcribe', log.includes('invoke:whisper_transcribe'), log.join(','));
+  const trBox = document.getElementById('vedTranscript');
+  check('segmen transkrip tampil (waktu + teks)', trBox.textContent.includes('Halo dunia') && trBox.textContent.includes('0:02.5'), trBox.textContent);
+  trBox.querySelector('[data-ved-seek]').click();
+  await waitFor(() => document.getElementById('vedAudio')?.currentTime === 2.5, 'seek ke segmen');
+  check('klik segmen: seek ke 2.5 dtk', document.getElementById('vedAudio').currentTime === 2.5);
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));
   failures.push('rig error');

@@ -5,6 +5,7 @@
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
   import { sherpaSetup, sherpaTtsFromTab, sherpaRenderStatus, sherpaRefreshUI } from "./lib/sherpa.js";
+  import { vedPlay, vedTrimSel, vedCutSel, vedClearSel, vedRefresh } from "./lib/voice-editor.js";
   import { initScriptEditor, setSeMenu, seRefreshUI } from "./lib/script-editor.js";
   import { initImageFlow, imgRefreshUI } from "./lib/image-flow.js";
   import { initBrand, brandRefreshUI } from "./lib/brand.js";
@@ -348,7 +349,7 @@
         <button id="ms-tabbtn-script" onclick={() => { mediaTab('script') }}>{t('ms.tab.script', lang)}</button>
         <button id="ms-tabbtn-image" onclick={() => { mediaTab('image') }}>{t('ms.tab.image', lang)}</button>
         <button id="ms-tabbtn-batch" onclick={() => { mediaTab('batch') }}>{t('ms.tab.batch', lang)}</button>
-        <button id="ms-tabbtn-voice" onclick={() => { mediaTab('voice') }}>{t('ms.tab.voice', lang)}</button>
+        <button id="ms-tabbtn-voice" onclick={() => { mediaTab('voice'); vedRefresh(); }}>{t('ms.tab.voice', lang)}</button>
         <button id="ms-tabbtn-video" class="active" onclick={() => { mediaTab('video') }}>{t('ms.tab.video', lang)}</button>
       </div>
       <div class="scroll">
@@ -436,11 +437,17 @@
           <a id="vsCloneDownload" style="display:none">{t('vs.download', lang)}</a>
           <h4>{t('vs.models.title', lang)}</h4>
           <ul id="vsModelList" style="font-size:14px;line-height:1.8"><li>{t('vs.models.empty', lang)}</li></ul>
-          <h4>{t('vs.assets.title', lang)}</h4>
-          <ul style="font-size:14px;line-height:1.8">
-            <li>🎙 Voice-over: Promo bundling (30 dtk)</li>
-            <li>🎵 Musik: Akustik ringan</li>
-          </ul>
+          <h4>{t('ved.title', lang)}</h4>
+          <p style="color:#a1a1a1;font-size:13px">{t('ved.note', lang)}</p>
+          <canvas id="vedCanvas" width="900" height="120" style="width:100%;height:120px;background:#161616;border:1px solid #2a2a2a;cursor:crosshair"></canvas>
+          <p><button class="btn btn-primary" id="vedPlay" onclick={() => { vedPlay() }}>{t('ved.play', lang)}</button> <span id="vedTime" style="color:#a1a1a1;font-size:13px;margin-left:8px">—</span> <span id="vedSelInfo" style="color:#A6EBB1;font-size:13px;margin-left:8px"></span></p>
+          <p><button class="btn btn-sm" onclick={() => { vedTrimSel() }}>{t('ved.trim', lang)}</button> <button class="btn btn-sm" onclick={() => { vedCutSel() }}>{t('ved.cut', lang)}</button> <button class="btn btn-sm" onclick={() => { vedClearSel() }}>{t('ved.clear_sel', lang)}</button></p>
+          <audio id="vedAudio" style="display:none"></audio>
+          <p><label for="vedUpload">{t('ved.upload', lang)}</label> <input id="vedUpload" type="file" accept="audio/*"> <span id="vedNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span></p>
+          <h4>{t('ved.assets', lang)}</h4>
+          <div id="vedAssets"></div>
+          <h4>{t('ved.transcript', lang)}</h4>
+          <div id="vedTranscript"></div>
         </div>
         <div id="ms-tab-video">
           <div class="ve-toolbar">

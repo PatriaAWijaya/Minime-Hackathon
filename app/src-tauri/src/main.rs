@@ -1,11 +1,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod audio;
 mod browser;
 mod image;
 mod sherpa;
 mod social;
 mod video;
 mod voicestudio;
+mod whisper;
 
 use tauri::utils::config::WebviewUrl;
 use tauri::webview::{NewWindowResponse, WebviewWindowBuilder};
@@ -59,6 +61,10 @@ fn main() {
             image::image_save,
             image::image_read,
             image::image_delete,
+            audio::audio_save,
+            audio::audio_read,
+            audio::audio_delete,
+            whisper::whisper_transcribe,
             browser::open_browser,
             browser::open_external_url,
             social::social_oauth_listen,

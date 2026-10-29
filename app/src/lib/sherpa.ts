@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
 import { showAudio } from './voicestudio.js';
+import { vedRegisterDataUrl } from './voice-editor.js';
 
 // Klien engine TTS native Sherpa-ONNX (prototipe tahap 2, berdampingan
 // dengan VoiceStudio). Aset di ~/minime-voices/sherpa-id (TIDAK di git):
@@ -73,6 +74,7 @@ export async function sherpaTtsFromTab(): Promise<void> {
     const r = await invoke<SherpaTtsResult>('sherpa_tts', { req: { text, speed } });
     showAudio('vsAudio', 'vsDownload', r.dataUrl, 'voice-sherpa.wav');
     setNote(tr('vs.done') + ' (Sherpa, ' + r.sampleRate + ' Hz, ' + r.durationSecs.toFixed(2) + ' dtk)');
+    void vedRegisterDataUrl(r.dataUrl, 'voice-sherpa.wav', 'sherpa');
   } catch (e) {
     setNote(tr('vs.error') + (e instanceof Error ? e.message : String(e)));
   }

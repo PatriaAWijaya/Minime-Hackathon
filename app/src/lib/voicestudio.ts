@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
+import { vedRegisterBlob } from './voice-editor.js';
 
 // Klien VoiceStudio lokal (proses terpisah, TIDAK di-bundle — aturan AGPL).
 // API terverifikasi dari backend v0.5.6 di MacBook + pemakaian terbukti 22 Okt:
@@ -357,6 +358,7 @@ export async function vsGenerateTts(): Promise<void> {
     const { url, filename } = await agentVoiceTts(text, voice, speed);
     showAudio('vsAudio', 'vsDownload', url, filename);
     setNote('vsNote', tr('vs.done'));
+    void vedRegisterBlob(url, filename, 'tts');
   } catch (e) {
     setNote('vsNote', tr('vs.error') + (e instanceof Error ? e.message : String(e)));
   }
@@ -380,6 +382,7 @@ export async function vsGenerateClone(): Promise<void> {
     const { url, filename } = await agentVoiceClone(text, file, refText, speed);
     showAudio('vsCloneAudio', 'vsCloneDownload', url, filename);
     setNote('vsCloneNote', tr('vs.done'));
+    void vedRegisterBlob(url, filename, 'clone');
   } catch (e) {
     setNote('vsCloneNote', tr('vs.error') + (e instanceof Error ? e.message : String(e)));
   }
