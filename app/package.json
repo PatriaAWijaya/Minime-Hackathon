@@ -25,7 +25,8 @@
     "rig:image": "node tests/rig-image.js",
     "rig:brand": "node tests/rig-brand.js",
     "rig:batch": "node tests/rig-batch.js",
-    "rig:lib": "node tests/rig-lib.js"
+    "rig:lib": "node tests/rig-lib.js",
+    "rig:settings": "node tests/rig-settings.js"
   },
   "type": "module",
   "version": "0.1.0"

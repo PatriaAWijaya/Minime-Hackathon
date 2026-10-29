@@ -15,9 +15,11 @@ import { AGENTS, activateAgent, mediaTab, postChat, showView } from './v5logic.j
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { POSTIZ_KEY_LS, readPostizKey } from './postiz.js';
 import { esc } from './esc.js';
+import { invoke } from '@tauri-apps/api/core';
 
 const GEMINI_KEY_LS = 'minime.geminiKey';
 const META_KEY_LS = 'minime.metaKey';
+const VALIDATED_LS = 'minime.keyValidated';
 
 export function readKeys(): { gemini: string | null; meta: string | null } {
   try {
@@ -30,36 +32,139 @@ export function readKeys(): { gemini: string | null; meta: string | null } {
   }
 }
 
-export function keyStatusText(): string {
-  const k = readKeys();
-  return (
-    'Gemini: ' + (k.gemini ? tr('key.saved') : tr('key.empty')) +
-    ' · Meta: ' + (k.meta ? tr('key.saved') : tr('key.empty')) +
-    ' · Postiz: ' + (readPostizKey() ? tr('key.saved') : tr('key.empty')) +
-    ' · ' + tr('key.ollama.short')
-  );
+export type KeyKind = 'gemini' | 'meta' | 'postiz';
+
+function savedKey(kind: KeyKind): string | null {
+  if (kind === 'postiz') return readPostizKey();
+  return readKeys()[kind];
 }
 
-export function updateKeyStatus(): void {
-  const el = document.getElementById('keyStatus');
-  if (el) el.textContent = keyStatusText();
-}
-
-export function saveKeys(): void {
-  const g = document.getElementById('apiKeyGemini') as HTMLInputElement | null;
-  const m = document.getElementById('apiKeyMeta') as HTMLInputElement | null;
-  const p = document.getElementById('apiKeyPostiz') as HTMLInputElement | null;
+function saveKey(kind: KeyKind, value: string): void {
   try {
-    if (g && g.value.trim()) window.localStorage.setItem(GEMINI_KEY_LS, g.value.trim());
-    if (m && m.value.trim()) window.localStorage.setItem(META_KEY_LS, m.value.trim());
-    if (p && p.value.trim()) window.localStorage.setItem(POSTIZ_KEY_LS, p.value.trim());
-    if (g) g.value = '';
-    if (m) m.value = '';
-    if (p) p.value = '';
+    const ls = kind === 'gemini' ? GEMINI_KEY_LS : kind === 'meta' ? META_KEY_LS : POSTIZ_KEY_LS;
+    window.localStorage.setItem(ls, value);
   } catch {
-    // storage unavailable: keys simply stay unset for this session
+    // storage unavailable: key simply stays unset for this session
   }
-  updateKeyStatus();
+}
+
+export function isKeyValidated(kind: KeyKind): boolean {
+  try {
+    const raw = window.localStorage.getItem(VALIDATED_LS);
+    if (!raw) return false;
+    return !!(JSON.parse(raw) as Record<string, unknown>)[kind];
+  } catch {
+    return false;
+  }
+}
+
+function setKeyValidated(kind: KeyKind, value: boolean): void {
+  try {
+    const raw = window.localStorage.getItem(VALIDATED_LS);
+    const obj = (raw ? JSON.parse(raw) : {}) as Record<string, boolean>;
+    obj[kind] = value;
+    window.localStorage.setItem(VALIDATED_LS, JSON.stringify(obj));
+  } catch {
+    // storage unavailable: validation flag simply doesn't persist
+  }
+}
+
+function keyBtnId(kind: KeyKind): string {
+  return 'keyBtn' + kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+function keyNoteId(kind: KeyKind): string {
+  return 'keyNote' + kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+function keyInputId(kind: KeyKind): string {
+  return kind === 'gemini' ? 'apiKeyGemini' : kind === 'meta' ? 'apiKeyMeta' : 'apiKeyPostiz';
+}
+
+function setKeyNote(kind: KeyKind, text: string): void {
+  const el = document.getElementById(keyNoteId(kind));
+  if (el) el.textContent = text;
+}
+
+/**
+ * Gambar ulang tombol per-kunci di Settings. Satu tombol = satu kunci,
+ * dan tombol ITU SENDIRI adalah statusnya: "Hubungkan API" (belum
+ * teruji) atau "TERHUBUNG" hijau (kunci tersimpan DAN lolos uji live).
+ * Tidak ada lagi tombol simpan bersama maupun baris status bersama —
+ * keduanya dihapus total di v52 karena fungsinya tumpang tindih
+ * dengan tombol per-kunci ini.
+ */
+export function renderKeyButtons(): void {
+  (['gemini', 'meta', 'postiz'] as KeyKind[]).forEach((kind) => {
+    const btn = document.getElementById(keyBtnId(kind)) as HTMLButtonElement | null;
+    if (!btn) return;
+    const ok = isKeyValidated(kind) && !!savedKey(kind);
+    btn.textContent = ok ? tr('key.connected') : tr('key.connect');
+    btn.className = ok ? 'btn btn-connected' : 'btn btn-primary';
+    btn.disabled = false;
+  });
+}
+
+function failNote(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (/HTTP 400|HTTP 401/.test(msg)) return tr('key.fail.badkey');
+  if (/HTTP \d+/.test(msg)) return tr('key.fail.error');
+  return tr('key.fail.offline');
+}
+
+/**
+ * Hubungkan satu kunci: simpan (bila ada ketikan baru), lalu UJI LIVE
+ * kunci itu — langsung ke providernya, TANPA rantai fallback (fallback
+ * akan menutupi kunci yang salah dengan provider lain dan memberi
+ * tanda terhubung palsu). Tanda TERHUBUNG hanya muncul bila uji
+ * lolos; gagal -> tombol kembali "Hubungkan API" + catatan alasan,
+ * dan flag validasi dicabut bila sebelumnya sempat hijau.
+ * Input kosong + tidak ada kunci tersimpan -> no-op (tidak ada uji).
+ */
+export async function connectKey(kind: KeyKind): Promise<void> {
+  const btn = document.getElementById(keyBtnId(kind)) as HTMLButtonElement | null;
+  if (!btn || btn.disabled) return;
+  const input = document.getElementById(keyInputId(kind)) as HTMLInputElement | null;
+  const typed = input?.value.trim() || '';
+  const key = typed || savedKey(kind) || '';
+  if (!key) return;
+  if (typed) {
+    saveKey(kind, typed);
+    setKeyValidated(kind, false);
+    if (input) input.value = '';
+  }
+  btn.disabled = true;
+  btn.textContent = tr('key.testing');
+  btn.className = 'btn btn-primary';
+  setKeyNote(kind, '');
+  let ok = false;
+  let note = '';
+  try {
+    if (kind === 'postiz') {
+      // Pakai ulang op ping Rust (sama seperti wizard): GET read-only
+      // /api/public/v1/integrations. 200 = kunci valid.
+      const r = (await invoke('postiz_request', { req: { op: 'ping', key } })) as { status: number };
+      ok = r.status === 200;
+      if (!ok) note = r.status === 401 ? tr('key.fail.badkey') : tr('key.fail.error');
+    } else {
+      // Uji langsung ke provider itu saja (callMeta/callGemini tanpa
+      // callWithFallback): satu panggilan minimal, biaya nyaris nol
+      // (Meta: puluhan token; Gemini: free tier).
+      const cfg = defaultRouterConfig();
+      cfg.geminiApiKey = kind === 'gemini' ? key : null;
+      cfg.metaApiKey = kind === 'meta' ? key : null;
+      const router = new ModelRouter(cfg);
+      if (kind === 'gemini') await router.callGemini('Jawab satu kata: OK');
+      else await router.callMeta('Jawab satu kata: OK', 'key-test');
+      ok = true;
+    }
+  } catch (e) {
+    ok = false;
+    note = kind === 'postiz' ? tr('key.fail.offline') : failNote(e);
+  }
+  setKeyValidated(kind, ok);
+  if (!ok) setKeyNote(kind, note);
+  renderKeyButtons();
 }
 
 /* Orkestrasi chat (perintah Patria 28 Okt 18:58).

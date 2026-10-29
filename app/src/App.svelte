@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, postizOpenBrowser, postizReload, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
-  import { sendChatReal, saveKeys, updateKeyStatus } from "./lib/chat.js";
+  import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
   import { sherpaSetup, sherpaTtsFromTab, sherpaRenderStatus, sherpaRefreshUI } from "./lib/sherpa.js";
   import { initScriptEditor, setSeMenu, seRefreshUI } from "./lib/script-editor.js";
@@ -35,7 +35,7 @@
     vsRefreshVoiceUI();
     sherpaRefreshUI();
     seRefreshUI();
-    updateKeyStatus();
+    renderKeyButtons();
   }
 
   onMount(() => {
@@ -51,7 +51,7 @@
     initBrand();
     initBatchFlow();
     (window as unknown as Record<string, unknown>).refreshImgSpend = () => { imgSpend = readImgSpend(); };
-    updateKeyStatus();
+    renderKeyButtons();
   });
 
   // ---- Panel Render Video Tier 1 ----
@@ -624,9 +624,10 @@
         <h3>{t('settings.conn', lang)}</h3>
         <p><label><input type="checkbox" checked> {t('settings.meta.main', lang)}</label><label><input type="checkbox" checked> {t('settings.gemini.fb', lang)}</label><label><input type="checkbox" checked> {t('settings.ollama.fb', lang)}</label><label><input type="checkbox" checked> {t('ve.canva.title', lang)}</label><label><input type="checkbox"> {t('settings.voicestudio', lang)}</label></p>
         <h3>{t('settings.keys', lang)}</h3>
-        <p><label>{t('key.gemini', lang)} <input type="password" id="apiKeyGemini" placeholder={t('key.ph.empty', lang)} style="width:320px"></label><label>{t('key.meta', lang)} <input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px"></label><label>{t('key.postiz', lang)} <input type="password" id="apiKeyPostiz" placeholder={t('key.ph.postiz', lang)} style="width:320px"></label><span>{t('key.ollama', lang)}</span></p>
-        <button class="btn btn-primary" onclick={() => { saveKeys() }}>{t('key.save', lang)}</button>
-        <div class="notice" id="keyStatus"></div>
+        <p><label>{t('key.gemini', lang)} <input type="password" id="apiKeyGemini" placeholder={t('key.ph.empty', lang)} style="width:320px"></label> <button class="btn btn-primary" id="keyBtnGemini" onclick={() => { connectKey('gemini') }}>{t('key.connect', lang)}</button> <span id="keyNoteGemini"></span></p>
+        <p><label>{t('key.meta', lang)} <input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px"></label> <button class="btn btn-primary" id="keyBtnMeta" onclick={() => { connectKey('meta') }}>{t('key.connect', lang)}</button> <span id="keyNoteMeta"></span></p>
+        <p><label>{t('key.postiz', lang)} <input type="password" id="apiKeyPostiz" placeholder={t('key.ph.postiz', lang)} style="width:320px"></label> <button class="btn btn-primary" id="keyBtnPostiz" onclick={() => { connectKey('postiz') }}>{t('key.connect', lang)}</button> <span id="keyNotePostiz"></span></p>
+        <p><span>{t('key.ollama', lang)}</span></p>
         <h3 id="gateHead">{t('settings.gates', lang)}</h3>
         <p><label><input type="checkbox" checked> {t('settings.dist.default', lang)}</label><label><input type="checkbox"> {t('settings.dist.batch', lang)}</label></p>
         <h3>{t('settings.cost', lang)}</h3>
