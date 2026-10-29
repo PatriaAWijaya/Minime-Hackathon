@@ -32,7 +32,7 @@
 //!   `docker compose up -d` dapat me-recreate container bila
 //!   confignya berubah — itu perilaku standar compose, bukan hapus data.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -317,4 +317,181 @@ pub fn open_docker_desktop() -> Result<(), String> {
         .spawn()
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// v60: isi kredensial provider OAuth Postiz dari dalam MiniMe
+/// (perintah Patria: user cukup input/klik di aplikasi — tanpa
+/// terminal, tanpa edit .env manual).
+///
+/// Keamanan (disengaja):
+/// - Nilai TIDAK PERNAH masuk log, error string, atau nilai balik —
+///   yang dikembalikan hanya direktori Postiz yang dipakai.
+/// - Hanya 4 kunci yang boleh ditulis (LINKEDIN_CLIENT_ID/SECRET,
+///   INSTAGRAM_APP_ID/SECRET); baris .env lain dipertahankan
+///   byte-per-byte (komentar, baris kosong, kunci lain termasuk
+///   kredensial SMTP tidak disentuh). Nilai kosong = lewati kunci itu.
+/// - Nilai dengan baris baru ditolak mentah-mentah (anti injeksi
+///   baris .env); nilai di luar set aman dikutip ganda + escape.
+/// - Direktori Postiz TIDAK ditebak dari path tetap: diambil dari
+///   label compose container yang sedang melayani port 4007.
+///   Bila Postiz tidak jalan, perintah ditolak (kredensial tanpa
+///   restart tidak ada gunanya).
+/// - Restart HANYA service `postiz` (bukan postgres/redis) — data
+///   tidak disentuh; tulis .env lewat file sementara + rename agar
+///   tidak pernah setengah tertulis.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderEnvReq {
+    pub linkedin_id: String,
+    pub linkedin_secret: String,
+    pub instagram_id: String,
+    pub instagram_secret: String,
+}
+
+fn docker_bin() -> Option<String> {
+    // App GUI punya PATH minimal — coba docker di PATH dulu, lalu
+    // lokasi-lokasi umum macOS.
+    if Command::new("docker")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        return Some("docker".to_string());
+    }
+    let home = std::env::var("HOME").unwrap_or_default();
+    for p in [
+        "/Applications/Docker.app/Contents/Resources/bin/docker",
+        "/usr/local/bin/docker",
+        &format!("{home}/.docker/bin/docker"),
+    ] {
+        if Command::new(p)
+            .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+        {
+            return Some(p.to_string());
+        }
+    }
+    None
+}
+
+fn docker_out(docker: &str, args: &[&str], dir: Option<&PathBuf>) -> Result<String, String> {
+    let mut c = Command::new(docker);
+    c.args(args);
+    if let Some(d) = dir {
+        c.current_dir(d);
+    }
+    let out = c.output().map_err(|e| e.to_string())?;
+    if !out.status.success() {
+        return Err(tail_chars(&String::from_utf8_lossy(&out.stderr), 300));
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).to_string())
+}
+
+fn env_line(key: &str, val: &str) -> String {
+    if val
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || "._-".contains(c))
+    {
+        format!("{key}={val}")
+    } else {
+        let esc = val.replace('\\', "\\\\").replace('"', "\\\"");
+        format!("{key}=\"{esc}\"")
+    }
+}
+
+fn upsert_env(content: &str, pairs: &[(&str, &str)]) -> String {
+    let mut done = vec![false; pairs.len()];
+    let mut out = String::new();
+    for line in content.lines() {
+        let t = line.trim_start();
+        let body = t.strip_prefix("export ").unwrap_or(t);
+        let mut replaced = false;
+        for (i, (k, v)) in pairs.iter().enumerate() {
+            if let Some(rest) = body.strip_prefix(k) {
+                if rest.starts_with('=') {
+                    out.push_str(&env_line(k, v));
+                    out.push('\n');
+                    done[i] = true;
+                    replaced = true;
+                    break;
+                }
+            }
+        }
+        if !replaced {
+            out.push_str(line);
+            out.push('\n');
+        }
+    }
+    for (i, (k, v)) in pairs.iter().enumerate() {
+        if !done[i] {
+            out.push_str(&env_line(k, v));
+            out.push('\n');
+        }
+    }
+    out
+}
+
+#[tauri::command]
+pub fn postiz_provider_env(req: ProviderEnvReq) -> Result<String, String> {
+    let pairs: Vec<(&str, &str)> = [
+        ("LINKEDIN_CLIENT_ID", req.linkedin_id.trim()),
+        ("LINKEDIN_CLIENT_SECRET", req.linkedin_secret.trim()),
+        ("INSTAGRAM_APP_ID", req.instagram_id.trim()),
+        ("INSTAGRAM_APP_SECRET", req.instagram_secret.trim()),
+    ]
+    .into_iter()
+    .filter(|(_, v)| !v.is_empty())
+    .collect();
+    if pairs.is_empty() {
+        return Err("Tidak ada nilai yang diisi".into());
+    }
+    for (_, v) in &pairs {
+        if v.contains('\n') || v.contains('\r') {
+            return Err("Nilai tidak boleh mengandung baris baru".into());
+        }
+    }
+    let docker = docker_bin().ok_or("Docker tidak ditemukan — jalankan Docker Desktop dulu")?;
+    let ps = docker_out(&docker, &["ps", "--format", "{{.ID}} {{.Ports}}"], None)?;
+    let mut dir: Option<PathBuf> = None;
+    for line in ps.lines() {
+        if !line.contains("4007") {
+            continue;
+        }
+        let id = line.split_whitespace().next().unwrap_or("");
+        if id.is_empty() {
+            continue;
+        }
+        let wd = docker_out(
+            &docker,
+            &[
+                "inspect",
+                id,
+                "--format",
+                "{{index .Config.Labels \"com.docker.compose.project.working_dir\"}}",
+            ],
+            None,
+        )?;
+        let wd = wd.trim().to_string();
+        if !wd.is_empty() && wd != "<no value>" {
+            dir = Some(PathBuf::from(wd));
+            break;
+        }
+    }
+    let dir =
+        dir.ok_or("Postiz tidak sedang jalan di port 4007 — jalankan dulu dari wizard langkah 1")?;
+    if !dir.join("docker-compose.yml").exists() {
+        return Err("docker-compose.yml tidak ditemukan di direktori Postiz".into());
+    }
+    let env_path = dir.join(".env");
+    let old = fs::read_to_string(&env_path).unwrap_or_default();
+    let new = upsert_env(&old, &pairs);
+    let tmp = dir.join(".env.minime-tmp");
+    fs::write(&tmp, &new).map_err(|e| e.to_string())?;
+    fs::rename(&tmp, &env_path).map_err(|e| e.to_string())?;
+    docker_out(&docker, &["compose", "up", "-d", "postiz"], Some(&dir))
+        .map_err(|e| format!("Restart Postiz gagal: {e}"))?;
+    Ok(dir.to_string_lossy().to_string())
 }

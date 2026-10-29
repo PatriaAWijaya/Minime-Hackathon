@@ -132,7 +132,8 @@ fn main() {
             browser::fb_app_status,
             postiz::postiz_request,
             postiz_install::postiz_install,
-            postiz_install::open_docker_desktop
+            postiz_install::open_docker_desktop,
+            postiz_install::postiz_provider_env,
         ])
         .run(tauri::generate_context!())
     {

@@ -1286,6 +1286,37 @@ export async function fbOpenDashboard() {
   try { await invoke('open_browser', { url: url }); } catch (_) {}
 }
 
+/* v60: form kredensial provider Postiz di Pengaturan. Nilai dikirim
+   langsung ke perintah Rust (tulis .env + restart Postiz) — TIDAK
+   PERNAH disimpan di localStorage MiniMe, dan kolom dibersihkan
+   sesudah berhasil agar rahasia tidak tertinggal di DOM. */
+export async function provApply() {
+  var note = document.getElementById("provNote");
+  var set = function (m) { if (note) note.textContent = m; };
+  var v = function (id) {
+    var el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+  };
+  var liId = v('provLiId'), liSec = v('provLiSecret'), igId = v('provIgId'), igSec = v('provIgSecret');
+  if (!liId && !liSec && !igId && !igSec) { set(tr('prov.note.empty')); return; }
+  if (/[\r\n]/.test(liId + liSec + igId + igSec)) { set(tr('prov.note.bad')); return; }
+  set(tr('prov.note.applying'));
+  try {
+    await invoke('postiz_provider_env', { req: { linkedinId: liId, linkedinSecret: liSec, instagramId: igId, instagramSecret: igSec } });
+    ['provLiId', 'provLiSecret', 'provIgId', 'provIgSecret'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    set(tr('prov.note.ok'));
+    setTimeout(function () { postizCheck(); }, 5000);
+  } catch (e) {
+    set(tr('prov.note.error') + ' ' + String(e || ''));
+  }
+}
+export async function provOpenLinkedIn() {
+  try { await invoke('open_browser', { url: 'https://www.linkedin.com/developers/apps' }); } catch (_) {}
+}
+
 export function initV5() {
   // Jembatan OAuth panel (v57): pesan dari frame Postiz (init script
   // di main.rs) yang membawa URL OAuth hasil klik tile channel.

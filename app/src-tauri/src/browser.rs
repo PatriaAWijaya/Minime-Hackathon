@@ -17,6 +17,8 @@ pub fn open_browser(url: String) -> Result<(), String> {
         && url != "https://www.docker.com/products/docker-desktop/"
         && url != "https://developers.facebook.com/apps"
         && !url.starts_with("https://developers.facebook.com/apps/")
+        && url != "https://www.linkedin.com/developers/apps"
+        && !url.starts_with("https://www.linkedin.com/developers/apps/")
     {
         return Err("URL tidak diizinkan".into());
     }
@@ -117,7 +119,7 @@ pub fn fb_app_status(app_id: String) -> Result<String, String> {
         return Err("App ID tidak valid".into());
     }
     let url = format!(
-        "https://www.facebook.com/v25.0/dialog/oauth?client_id={app_id}&redirect_uri=http://localhost:4007/integrations/social/facebook&state=minime_probe"
+        "https://www.facebook.com/v25.0/dialog/oauth?client_id={app_id}&redirect_uri=http://localhost:4007/integrations/social/facebook&state=minime_probe&scope=pages_show_list,business_management,pages_manage_posts,pages_manage_engagement,pages_read_engagement,read_insights"
     );
     let out = Command::new("curl")
         .args([

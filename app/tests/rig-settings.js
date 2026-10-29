@@ -180,6 +180,8 @@ try {
   const keyRows = [...document.querySelectorAll('.key-card .key-row')].filter((row) => row.querySelector('input'));
   check('tiap kartu kunci: input + tombol sebaris', keyRows.length === 3 && keyRows.every((row) => row.querySelector('button')));
   check('kartu Facebook tampil + 2 tombol', !!document.getElementById('fbStatusNote') && !!document.querySelectorAll('.key-card .key-row')[3].querySelector('button'));
+  // v60: kartu kredensial provider (kelas sendiri, bukan key-card).
+  check('kartu provider tampil + 4 input + 2 tombol', !!document.getElementById('provNote') && document.querySelectorAll('.prov-card input').length === 4 && document.querySelectorAll('.prov-card button').length === 2);
   store.set('minime.geminiKey', 'gemini-ok');
   store.set('minime.keyValidated', JSON.stringify({ gemini: true }));
   document.getElementById('apiKeyGemini').value = '';
