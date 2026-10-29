@@ -190,6 +190,18 @@ try {
   document.getElementById('apiKeyGemini').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   await tick(100);
   check('input dikosongkan -> hijau kunci tersimpan kembali', btn('gemini').textContent === 'TERHUBUNG');
+
+  // 8. Ikon nav v54: wiring + isi file baru (bukti dist menyalin ikon
+  // kiriman Patria, bukan ikon lama). IHDR PNG: lebar di byte 16-19,
+  // tinggi di byte 20-23 (big-endian).
+  const pngSize = (buf) => ({ w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) });
+  const kanbanImg = document.querySelector('button[data-view="kanban"] img');
+  const mediaImg = document.querySelector('button[data-view="media"] img');
+  check('nav kanban + media memakai file ikon', !!kanbanImg && kanbanImg.getAttribute('src') === './kanban-icon.png' && !!mediaImg && mediaImg.getAttribute('src') === './media-icon.png');
+  const kanbanDist = pngSize(fs.readFileSync(path.join(distDir, 'kanban-icon.png')));
+  const mediaDist = pngSize(fs.readFileSync(path.join(distDir, 'media-icon.png')));
+  check('dist kanban-icon = ikon baru 741x740', kanbanDist.w === 741 && kanbanDist.h === 740, JSON.stringify(kanbanDist));
+  check('dist media-icon = ikon baru 814x815', mediaDist.w === 814 && mediaDist.h === 815, JSON.stringify(mediaDist));
 } catch (e) {
   check('rig-settings exception', false, e && e.stack ? e.stack : String(e));
 }
