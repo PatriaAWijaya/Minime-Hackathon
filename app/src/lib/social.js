@@ -387,7 +387,7 @@ export function renderNativePlanner() {
   el.innerHTML = '<div class="soc-wrap soc-layout">' + renderSideBar()
     + '<div class="soc-main"><div class="soc-cal">' + renderCalendar() + '</div>'
     + socComposerHTML()
-    + '<p class="se-note">' + tr('soc.desc') + '</p></div></div>' + socPopHTML();
+    + '</div></div>' + socPopHTML();
   // Bind sidebar: pilih kanal -> kartu koneksinya muncul di sidebar.
   el.querySelectorAll('[data-soc-side]').forEach(function (b) {
     b.addEventListener('click', function () { socSideSel = b.getAttribute('data-soc-side'); renderNativePlanner(); });

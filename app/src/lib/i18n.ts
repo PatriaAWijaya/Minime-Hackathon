@@ -324,7 +324,6 @@ const ID: Dict = {
   'soc.side.title': 'Kanal',
   'soc.side.hint': 'Pilih kanal untuk melihat koneksinya dan menghubungkannya dengan Planner.',
 
-  'soc.desc': 'Penjadwalan + autopost native. Hubungkan kanal, tulis postingan, jadwalkan — app menerbitkan saat waktunya tiba selama app terbuka.',
   'soc.connected': 'Terhubung',
   'soc.not_connected': 'Belum terhubung',
   'soc.disconnect': 'Putuskan',
@@ -978,7 +977,6 @@ const EN: Dict = {
   'soc.side.title': 'Channels',
   'soc.side.hint': 'Select a channel to view its connection and connect it to the Planner.',
 
-  'soc.desc': 'Native scheduling + autopost. Connect a channel, write a post, schedule it — the app publishes when the time comes while the app is open.',
   'soc.connected': 'Connected',
   'soc.not_connected': 'Not connected',
   'soc.disconnect': 'Disconnect',
@@ -1632,7 +1630,6 @@ const ZH: Dict = {
   'soc.side.title': '频道',
   'soc.side.hint': '选择频道以查看其连接并将其连接到 Planner。',
 
-  'soc.desc': '原生排程 + 自动发布。连接渠道、撰写帖子、安排时间 — 应用在打开状态下到时自动发布。',
   'soc.connected': '已连接',
   'soc.not_connected': '未连接',
   'soc.disconnect': '断开',
