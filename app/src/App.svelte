@@ -549,11 +549,9 @@
     <div class="view" id="view-planner">
       <div class="colhead"><h2>{t('view.planner.title', lang)}</h2></div>
       <div class="scroll">
-        <table><thead><tr><th>{t('word.item', lang)}</th><th>{t('word.channel', lang)}</th><th>{t('planner.header.date', lang)}</th><th>{t('word.status', lang)}</th><th>{t('planner.header.postiz', lang)}</th></tr></thead><tbody id="plannerBody"></tbody></table>
         <div class="postiz-embed">
           <div class="postiz-bar"><b>Postiz</b> <span id="postizStatus"></span> <button id="postizReloadBtn" class="btn btn-sm" onclick={() => postizReload()}>{t('planner.postiz.reload', lang)}</button> <button class="btn btn-sm" onclick={() => postizOpenBrowser()}>{t('planner.postiz.open', lang)}</button></div>
           <iframe id="postizFrame" src="http://localhost:4007" title="Postiz"></iframe>
-          <p class="se-note" id="postizNote"></p>
         </div>
       </div>
     </div>

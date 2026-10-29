@@ -1,4 +1,4 @@
-// B4 — Kanban/Planner data DERIVED from real pipeline artifacts
+// B4 — Kanban data DERIVED from real pipeline artifacts
 // (snapshot per 27 Okt 2026), not hand-written dummy. Sources:
 //   docs/fase-1-output.json (research + strategy stages)
 //   docs/fase-2-output.json (7-day calendar + 7 briefs)
@@ -18,20 +18,12 @@ import fase3 from '../../../docs/fase-3-output.json';
 import postizRecord from '../../../docs/fase-3-postiz-drafts.json';
 import fase4 from '../../../docs/fase-4-output.json';
 import { GATES } from './gates.js';
-import { MONTHS, getLang, tr } from './i18n.js';
+import { tr } from './i18n.js';
 
 export interface KanbanCard {
   t: string;
   a: string;
   c: number;
-}
-
-export interface PlannerRow {
-  item: string;
-  ch: string;
-  when: string;
-  st: string;
-  postId: string;
 }
 
 // Column indices mirror v5logic KCOLS order:
@@ -80,27 +72,8 @@ export function kopiKanban(): KanbanCard[] {
   ];
 }
 
-function fmtUtc(iso: string): string {
-  const d = new Date(iso);
-  const hh = String(d.getUTCHours()).padStart(2, '0');
-  const mm = String(d.getUTCMinutes()).padStart(2, '0');
-  return `${d.getUTCDate()} ${MONTHS[getLang()][d.getUTCMonth()]} ${d.getUTCFullYear()} ${hh}:${mm} UTC`;
-}
-
-const themeByItem = new Map(f3.carousels.map((c) => [c.itemId, c.theme]));
-
-export function plannerReal(): PlannerRow[] {
-  return rec.drafts.map((dr) => ({
-    item: tr('planner.item.day', { day: dr.day, theme: themeByItem.get(dr.itemId) ?? dr.itemId }),
-    ch: `Instagram · ${rec.channel.name}`,
-    when: fmtUtc(dr.date),
-    st: tr('planner.status.draft'),
-    postId: dr.postId,
-  }));
-}
-
 // Campaign tab data, DERIVED from the real Fase 4 artifact (same
-// build-time snapshot honesty as Kanban/Planner above). No live
+// build-time snapshot honesty as Kanban above). No live
 // campaigns, no sending: Leads Generator holds draft campaign types
 // only; CRM shows the Fase 4 pipeline; Outreach shows its draft
 // batch; Follow Up has no sequences yet (later phase).

@@ -10,7 +10,7 @@ import { readThumb } from './image-api.js';
 
 // B4: Kanban (TEST Kopi) + Planner now come from real artifacts via
 // backend-data.js; the dummy literals below were replaced, not kept.
-import { campaignCounts, campaignDrafts, campaignLeads, campaignPipeline, kopiKanban, plannerReal } from './backend-data.js';
+import { campaignCounts, campaignDrafts, campaignLeads, campaignPipeline, kopiKanban } from './backend-data.js';
 import { tr, getLang, MONTHS } from './i18n.js';
 
 /* ---------- Agen ---------- */
@@ -701,30 +701,8 @@ export function mediaBadge(s) { return s === "Siap untuk Post" ? "b-ok" : (s ===
    curl/Chrome (localhost, same-origin) lolos. localhost = same-origin,
    CORS hilang total. */
 var POSTIZ_UI = "http://localhost:4007";
-/* Akar masalah panel kosong 29 Okt: CSP app (tauri.conf.json) tidak punya
-   frame-src, sehingga frame jatuh ke default-src 'self' dan iframe
-   localhost:4007 diblokir app sendiri — padahal Postiz tidak memasang
-   X-Frame-Options/CSP (terbukti via curl: root 307 -> /auth 200, tanpa
-   header framing) dan probe connect-src lolos ("Online"). Perbaikan:
-   frame-src 'self' http://localhost:4007 di tauri.conf.json.
-   Pengawas di bawah mengubah panel kosong yang diam menjadi pesan
-   eksplisit bila pemblokiran frame terjadi lagi. */
-var postizCSPWatched = false;
-function postizWatchCSP() {
-  if (postizCSPWatched) return;
-  postizCSPWatched = true;
-  document.addEventListener("securitypolicyviolation", function (ev) {
-    var d = ev && ev.violatedDirective ? ev.violatedDirective : "";
-    if (d.indexOf("frame-src") !== -1) {
-      var note = document.getElementById("postizNote");
-      if (note) note.textContent = tr('planner.postiz.blocked');
-    }
-  });
-}
 export function postizCheck() {
-  postizWatchCSP();
   var st = document.getElementById("postizStatus");
-  var note = document.getElementById("postizNote");
   var btn = document.getElementById("postizReloadBtn");
   if (!st) return;
   st.style.display = "";
@@ -735,23 +713,21 @@ export function postizCheck() {
     // tombol sendiri yang menjadi indikator: "Terhubung" hijau.
     st.style.display = "none";
     if (btn) { btn.textContent = tr('planner.postiz.connected'); btn.classList.add("btn-connected"); }
-    if (note) note.textContent = tr('planner.postiz.note.online');
   }).catch(function () {
     st.style.display = "";
     st.textContent = tr('planner.postiz.offline');
     if (btn) { btn.textContent = tr('planner.postiz.reload'); btn.classList.remove("btn-connected"); }
-    if (note) note.textContent = tr('planner.postiz.note.offline');
   });
 }
 export async function postizOpenBrowser() {
   // Login Google tidak bisa di dalam panel (Google memblokir frame +
   // webview tidak membuka popup OAuth) -> buka Postiz di browser sistem,
-  // tempat login Google berjalan normal. Gagal -> catatan eksplisit.
+  // tempat login Google berjalan normal.
   try {
     await invoke('open_browser', { url: POSTIZ_UI });
   } catch (_) {
-    var note = document.getElementById("postizNote");
-    if (note) note.textContent = tr('planner.postiz.open.failed');
+    // Catatan panel dihapus v48: kegagalan membuka browser tidak lagi
+    // punya permukaan pesan; hanya tercatat sebagai rejection.
   }
 }
 export function postizReload() {
@@ -762,17 +738,11 @@ export function postizReload() {
 
 
 export function renderPlanner() {
-    document.getElementById("plannerBody").innerHTML = PLANNER.map(function (p) {
-      return "<tr><td>" + p.item + "</td><td>" + p.ch + "</td><td>" + p.when + "</td><td><span class='badge b-wait'>" + p.st + "</span></td><td><small>" + p.postId + "</small></td></tr>";
-    }).join("");
     postizCheck();
   }
 
-/** B5: append one planner row (used by the Postiz composer). Session-only. */
-
 /** B7: re-derive backend data in the current language (after a language switch). */
 export function refreshBackendData() {
-  PLANNER = plannerReal();
   PROJECTS.kopi.kanban = kopiKanban();
 }
 
@@ -1049,8 +1019,6 @@ var LIB = [
 
 /* ---------- Media Studio ---------- */
 
-var PLANNER = plannerReal();
-
 var playTimer2 = null;
 
 var _ra2 = renderAgents;
@@ -1109,5 +1077,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PLANNER, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizOpenBrowser, postizReload, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizOpenBrowser, postizReload, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }
