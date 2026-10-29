@@ -1,18 +1,19 @@
-// Rig Settings Kunci API (jsdom, test-only): membuktikan tombol per-kunci v52 —
+// Rig Settings Kunci API (jsdom, test-only): membuktikan tombol per-kunci —
 // BUKAN mock logika bisnis:
-//  1. Tombol per-kunci tampil (Gemini/Meta/Postiz); tombol simpan bersama
-//     + baris status bersama HILANG (tidak ada #keyStatus, tidak ada
-//     tombol "Simpan Kunci", sumber chat.ts/App.svelte/i18n.ts tidak
-//     lagi menyebut saveKeys/keyStatus/kunci mati).
+//  1. Tombol per-kunci tampil (Gemini/Meta saja, v63: Postiz dihapus);
+//     tombol simpan bersama + baris status bersama HILANG (tidak ada
+//     #keyStatus, tidak ada tombol "Simpan Kunci", sumber
+//     chat.ts/App.svelte/i18n.ts tidak lagi menyebut
+//     saveKeys/keyStatus/kunci mati).
 //  2. Awal: semua tombol "Hubungkan API" (belum ada kunci).
 //  3. Gemini: ketik kunci -> klik -> fetch Gemini sukses -> tombol
 //     TERHUBUNG + kelas hijau + kunci tersimpan + flag validasi; kunci
-//     Meta/Postiz yang sudah tersimpan TIDAK ikut berubah (bukti tidak
-//     ada fungsi tumpang tindih: simpan per-kunci, bukan simpan semua).
+//     Meta yang sudah tersimpan TIDAK ikut berubah (bukti tidak ada
+//     fungsi tumpang tindih: simpan per-kunci, bukan simpan semua).
 //  4. Meta kunci salah -> fetch 401 -> tombol tetap "Hubungkan API" +
 //     catatan ditolak + flag validasi TIDAK terpasang.
-//  5. Postiz: ping 200 -> TERHUBUNG; ping 401 sesudahnya -> tanda
-//     TERHUBUNG dicabut + catatan ditolak (uji gagal mencabut hijau).
+//  5. Kartu Postiz/FB/provider HILANG (v63); 3 kartu kunci tersisa
+//     (Gemini, Meta, Ollama).
 //  6. Klik dengan input kosong + tanpa kunci tersimpan -> no-op
 //     (tidak ada fetch/invoke baru).
 // Jalankan: npm run rig:settings (butuh dist ter-build + jsdom devDependency).
@@ -34,7 +35,6 @@ const log = [];
 const store = new Map();
 let geminiBad = false;
 let metaBad = false;
-let pingMode = 'ok';
 
 function makeResp({ ok = true, status = 200, jsonData = null } = {}) {
   return {
@@ -49,10 +49,6 @@ function makeResp({ ok = true, status = 200, jsonData = null } = {}) {
 async function invokeStub(cmd, args) {
   log.push('invoke:' + cmd);
   const req = (args && args.req) || {};
-  if (cmd === 'postiz_request' && req.op === 'ping') {
-    if (pingMode === 'badkey') return { status: 401, body: JSON.stringify({ msg: 'Invalid API key' }) };
-    return { status: 200, body: JSON.stringify([{ id: 'ig1' }]) };
-  }
   throw new Error('unexpected invoke ' + cmd);
 }
 
@@ -106,16 +102,16 @@ function check(name, ok, extra = '') {
   console.log((ok ? 'PASS ' : 'FAIL ') + name + (ok || !extra ? '' : ' :: ' + String(extra).slice(0, 300)));
   if (!ok) failed++;
 }
-const btn = (kind) => document.getElementById(kind === 'gemini' ? 'keyBtnGemini' : kind === 'meta' ? 'keyBtnMeta' : 'keyBtnPostiz');
-const note = (kind) => document.getElementById(kind === 'gemini' ? 'keyNoteGemini' : kind === 'meta' ? 'keyNoteMeta' : 'keyNotePostiz');
+const btn = (kind) => document.getElementById(kind === 'gemini' ? 'keyBtnGemini' : 'keyBtnMeta');
+const note = (kind) => document.getElementById(kind === 'gemini' ? 'keyNoteGemini' : 'keyNoteMeta');
 const validated = () => { try { return JSON.parse(store.get('minime.keyValidated') || '{}'); } catch { return {}; } };
 const fetchCount = (part) => log.filter((l) => l.startsWith('fetch:') && l.includes(part)).length;
 
 try {
   await tick(500);
 
-  // 1. Tombol per-kunci tampil; tombol bersama + status bersama hilang.
-  check('tombol per-kunci tampil', !!btn('gemini') && !!btn('meta') && !!btn('postiz'));
+  // 1. Tombol per-kunci tampil (Gemini/Meta); kartu Postiz hilang.
+  check('tombol per-kunci tampil', !!btn('gemini') && !!btn('meta') && !document.getElementById('keyBtnPostiz') && !document.getElementById('apiKeyPostiz'));
   check('baris status bersama hilang', !document.getElementById('keyStatus'));
   const sharedBtn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Simpan Kunci');
   check('tombol Simpan bersama hilang', !sharedBtn);
@@ -123,19 +119,18 @@ try {
   const appSrc = fs.readFileSync(path.join(dir, '..', 'src', 'App.svelte'), 'utf-8');
   const i18nSrc = fs.readFileSync(path.join(dir, '..', 'src', 'lib', 'i18n.ts'), 'utf-8');
   check('sumber bebas saveKeys/keyStatus', !chatSrc.includes('saveKeys') && !chatSrc.includes('keyStatus') && !appSrc.includes('saveKeys') && !appSrc.includes('keyStatus'));
-  check('kunci i18n mati dihapus', !i18nSrc.includes("'key.save'") && !i18nSrc.includes("'key.saved'") && !i18nSrc.includes("'key.empty'") && !i18nSrc.includes("'key.ollama.short'"));
+  check('kunci i18n mati dihapus', !i18nSrc.includes("'key.save'") && !i18nSrc.includes("'key.saved'") && !i18nSrc.includes("'key.empty'") && !i18nSrc.includes("'key.ollama.short'") && !i18nSrc.includes("'key.postiz'") && !i18nSrc.includes("'key.ph.postiz'") && !i18nSrc.includes("'fb.card.title'") && !i18nSrc.includes("'prov.card.title'") && !i18nSrc.includes("'planner.postiz."));
 
   // 2. Awal: semua "Hubungkan API".
-  check('awal semua Hubungkan API', btn('gemini').textContent === 'Hubungkan API' && btn('meta').textContent === 'Hubungkan API' && btn('postiz').textContent === 'Hubungkan API');
+  check('awal semua Hubungkan API', btn('gemini').textContent === 'Hubungkan API' && btn('meta').textContent === 'Hubungkan API');
 
   // 3. Gemini lolos uji -> TERHUBUNG hijau; kunci lain tidak tersentuh.
   store.set('minime.metaKey', 'meta-saved');
-  store.set('minime.postizKey', 'postiz-saved');
   document.getElementById('apiKeyGemini').value = 'gemini-ok';
   btn('gemini').click();
   await waitFor(() => btn('gemini').textContent === 'TERHUBUNG', 'gemini TERHUBUNG', 200);
   check('gemini TERHUBUNG + hijau + tersimpan + tervalidasi', btn('gemini').textContent === 'TERHUBUNG' && btn('gemini').className.includes('btn-connected') && store.get('minime.geminiKey') === 'gemini-ok' && validated().gemini === true);
-  check('simpan per-kunci tidak menyentuh kunci lain', store.get('minime.metaKey') === 'meta-saved' && store.get('minime.postizKey') === 'postiz-saved');
+  check('simpan per-kunci tidak menyentuh kunci lain', store.get('minime.metaKey') === 'meta-saved');
 
   // 4. Meta kunci salah -> tetap Hubungkan + catatan ditolak + tak tervalidasi.
   metaBad = true;
@@ -145,18 +140,9 @@ try {
   check('meta salah -> tetap Hubungkan + catatan + tak tervalidasi', btn('meta').textContent === 'Hubungkan API' && !validated().meta && store.get('minime.metaKey') === 'bad-meta');
   metaBad = false;
 
-  // 5. Postiz ping 200 -> TERHUBUNG; ping 401 sesudahnya -> hijau dicabut.
-  pingMode = 'ok';
-  document.getElementById('apiKeyPostiz').value = 'postiz-ok';
-  btn('postiz').click();
-  await waitFor(() => btn('postiz').textContent === 'TERHUBUNG', 'postiz TERHUBUNG', 200);
-  check('postiz TERHUBUNG', btn('postiz').textContent === 'TERHUBUNG' && validated().postiz === true);
-  pingMode = 'badkey';
-  document.getElementById('apiKeyPostiz').value = 'postiz-bad';
-  btn('postiz').click();
-  await waitFor(() => btn('postiz').textContent === 'Hubungkan API', 'postiz hijau dicabut', 200);
-  check('postiz gagal -> hijau dicabut + catatan', btn('postiz').textContent === 'Hubungkan API' && validated().postiz === false && note('postiz').textContent.includes('ditolak'));
-  pingMode = 'ok';
+  // 5. Kartu Postiz/FB/provider hilang (v63); 3 kartu kunci tersisa.
+  check('kartu Postiz/FB/provider hilang', !document.getElementById('fbStatusNote') && !document.getElementById('provNote') && document.querySelectorAll('.prov-card').length === 0);
+  check('3 kartu kunci tersisa (Gemini, Meta, Ollama)', document.querySelectorAll('.key-card').length === 3);
 
   // 6. Klik kosong tanpa kunci tersimpan -> no-op (tanpa fetch baru).
   // (Teks tombol tidak diasersi di sini: di app nyata, state tombol
@@ -172,31 +158,10 @@ try {
   check('klik kosong -> no-op (tanpa fetch baru)', fetchCount('generativelanguage') === gemFetchBefore);
 
   // 7. Kartu v53: tombol sejajar kanan input + ketikan baru membatalkan
-  // hijau basi (tanpa mengubah kunci/flag tersimpan).
-  // v59: kartu ke-5 = status app Facebook (tanpa input — hanya 2 tombol
-  // + catatan status), jadi hitungan kartu jadi 5 dan cek baris hanya
-  // berlaku untuk kartu kunci yang punya input.
-  check('kartu per-kunci tampil', document.querySelectorAll('.key-card').length === 5);
+  // hijau basi (tanpa mengubah kunci/flag tersimpan). v63: kartu kunci
+  // ber-input tinggal 2 (Gemini, Meta); Ollama tanpa input.
   const keyRows = [...document.querySelectorAll('.key-card .key-row')].filter((row) => row.querySelector('input'));
-  check('tiap kartu kunci: input + tombol sebaris', keyRows.length === 3 && keyRows.every((row) => row.querySelector('button')));
-  check('kartu Facebook tampil + 2 tombol', !!document.getElementById('fbStatusNote') && !!document.querySelectorAll('.key-card .key-row')[3].querySelector('button'));
-  // v60: kartu kredensial provider (kelas sendiri, bukan key-card).
-  check('kartu provider tampil + 4 input + 2 tombol', !!document.getElementById('provNote') && document.querySelectorAll('.prov-card input').length === 4 && document.querySelectorAll('.prov-card button').length === 2);
-  store.set('minime.geminiKey', 'gemini-ok');
-  store.set('minime.keyValidated', JSON.stringify({ gemini: true }));
-  document.getElementById('apiKeyGemini').value = '';
-  // Picu handler oninput Svelte lewat event input (gelembung): tombol
-  // harus mengikuti isi input, bukan flag lama.
-  document.getElementById('apiKeyGemini').value = 'gemini-baru';
-  document.getElementById('apiKeyGemini').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
-  await tick(100);
-  check('ketikan baru -> tombol kembali Hubungkan (bukan hijau basi)', btn('gemini').textContent === 'Hubungkan API');
-  check('ketikan tidak mengubah kunci/flag tersimpan', store.get('minime.geminiKey') === 'gemini-ok' && JSON.parse(store.get('minime.keyValidated')).gemini === true);
-  document.getElementById('apiKeyGemini').value = '';
-  document.getElementById('apiKeyGemini').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
-  await tick(100);
-  check('input dikosongkan -> hijau kunci tersimpan kembali', btn('gemini').textContent === 'TERHUBUNG');
-
+  check('tiap kartu kunci: input + tombol sebaris', keyRows.length === 2 && keyRows.every((row) => row.querySelector('button')));
   // 8. Ikon nav v54: wiring + isi file baru (bukti dist menyalin ikon
   // kiriman Patria, bukan ikon lama). IHDR PNG: lebar di byte 16-19,
   // tinggi di byte 20-23 (big-endian).

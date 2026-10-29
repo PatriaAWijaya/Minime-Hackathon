@@ -18,8 +18,9 @@
 // "Perbaiki" = generate ulang dengan prompt revisi (jalur terverifikasi);
 // endpoint edits khusus BELUM dipakai karena encoding input-nya belum
 // terverifikasi — tidak ada tombol yang memanggil API dengan format tebakan.
-// Lampiran ke draf Postiz BELUM dibangun (butuh verifikasi API Postiz);
-// yang dibangun: Library + galeri + biaya. Draf-only tetap berlaku.
+// Lampiran ke postingan terjadwal: lewat antrean native (imageFile
+// diteruskan ke perintah publish) — bukan draf Postiz. Yang dibangun:
+// Library + galeri + biaya + antrean native.
 
 import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';

@@ -7,8 +7,8 @@
 //     images Meta) -> kartu ready + spend tercatat 6 gambar.
 //  4. Pilih visual -> status terpilih; revisi Canva (file input)
 //     -> pilihan ke-4 otomatis terpilih.
-//  5. Jadwal Postiz (double-confirm, invoke stub postiz_request) ->
-//     kedua kartu scheduled + postizId tercatat.
+//  5. Jadwal native (double-confirm, antrean penjadwal native) ->
+//     kedua kartu scheduled + nativeIds + 2 item antrean LinkedIn.
 //  6. Batch carousel 1 hari -> pilihan berisi 3 file (loop slide).
 // Jalankan: npm run rig:batch (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
@@ -44,12 +44,6 @@ function makeResp({ ok = true, status = 200, jsonData = null } = {}) {
 async function invokeStub(cmd, args) {
   log.push('invoke:' + cmd);
   const req = (args && args.req) || {};
-  if (cmd === 'postiz_install') {
-    if (installMode === 'need_docker') return { status: 'need_docker', detail: '' };
-    postizUp = true;
-    return { status: 'ok', detail: '' };
-  }
-  if (cmd === 'open_docker_desktop') return { ok: true };
   if (cmd === 'image_save') {
     imgFiles.set(req.name, req.b64);
     return { file: req.name, bytes: req.b64 ? req.b64.length : 0 };
@@ -62,29 +56,13 @@ async function invokeStub(cmd, args) {
     imgFiles.delete(req.name);
     return { file: req.name, deleted: true };
   }
-  if (cmd === 'postiz_request') {
-    if (req.op === 'upload') return { status: 201, body: JSON.stringify({ id: 'up1', path: 'https://uploads.postiz.com/x.webp' }) };
-    if (req.op === 'post') return { status: 201, body: JSON.stringify({ id: 'post1' }) };
-    if (req.op === 'ping') {
-      if (req.key === 'bad-key') return { status: 401, body: JSON.stringify({ msg: 'Invalid API key' }) };
-      if (req.key === 'empty-key') return { status: 200, body: '[]' };
-      return { status: 200, body: JSON.stringify([{ id: 'ig1' }]) };
-    }
-    throw new Error('unexpected postiz op ' + req.op);
-  }
   throw new Error('unexpected invoke ' + cmd);
 }
 
-let postizUp = false;
-let installMode = 'ok';
 
 async function fetchStub(url) {
   const u = String(url);
   log.push('fetch:' + u);
-  if (u.includes('4007')) {
-    if (!postizUp) throw new Error('postiz down');
-    return makeResp({});
-  }
   if (u.includes('images/generations')) {
     return makeResp({ jsonData: { created: 1793000000, data: [{ b64_json: PNG_1X1 }], output_format: 'webp', usage: {} } });
   }
@@ -177,15 +155,19 @@ try {
   await waitFor(() => batch().cards[0].choices.length === 4, 'revisi Canva masuk', 200);
   check('revisi Canva jadi pilihan ke-4 + terpilih', batch().cards[0].choices.length === 4 && batch().cards[0].selected === 3, JSON.stringify(batch().cards[0].choices.length) + '/' + batch().cards[0].selected);
 
-  // 5. Jadwal Postiz: double-confirm -> kedua kartu scheduled.
-  store.set('minime.postizKey', 'rig-postiz-key');
+  // 5. Jadwal native: double-confirm -> kedua kartu masuk antrean
+  // penjadwal native (1 kanal terhubung = LinkedIn) + nativeIds.
+  store.set('minime.social', JSON.stringify({ linkedin: { accessToken: 'rig-token', expiresAt: Date.now() + 3600000 } }));
   document.getElementById('batch-schedule').click();
   await tick(100);
   check('klik pertama = arm (konfirmasi)', (document.getElementById('batch-schedule')?.textContent || '').includes('Konfirmasi'));
+  check('saat armed: picker kanal native tampil', !!document.querySelector('.batch-tgt[value="linkedin"]'));
   document.getElementById('batch-schedule').click();
   await waitFor(() => batch().cards.every((c) => c.status === 'scheduled'), 'kartu scheduled', 200);
-  check('kedua kartu scheduled + postizId', batch().cards.every((c) => c.status === 'scheduled' && c.postizId === 'post1'), JSON.stringify(batch().cards.map((c) => c.postizId)));
-  check('upload + posts dipanggil via Rust', invokeCount('postiz_request') === 4, 'postiz_request=' + invokeCount('postiz_request'));
+  const q = JSON.parse(store.get('minime.socialQueue') || '[]');
+  check('kedua kartu scheduled + nativeIds', batch().cards.every((c) => c.status === 'scheduled' && c.nativeIds.length === 1), JSON.stringify(batch().cards.map((c) => c.nativeIds)));
+  check('2 item antrean native (LinkedIn, file gambar pertama)', q.length === 2 && q.every((it) => it.platform === 'linkedin' && it.imageFile && it.status === 'queued'), JSON.stringify(q.map((it) => it.platform + ':' + it.imageFile)));
+  check('tanpa panggilan Postiz', invokeCount('postiz_request') === 0, 'postiz_request=' + invokeCount('postiz_request'));
 
   // 6. Batch carousel 1 hari -> pilihan berisi 3 file.
   document.getElementById('batch-new').click();
@@ -203,52 +185,35 @@ try {
   await waitFor(() => batch().cards.length === 1 && batch().cards[0].status === 'ready', 'kartu carousel ready', 200);
   check('pilihan carousel berisi 3 file', batch().cards[0].choices.every((ch) => ch.files.length === 3), JSON.stringify(batch().cards[0].choices.map((ch) => ch.files.length)));
 
-  // 7. Wizard Setup Postiz: instalasi satu klik + uji koneksi via ping (Rust).
+  // 7. Planner native v63: 8 kartu kanal + composer + kalender +
+  // picker sumber Library/custom + dialog tanggal (hapus hanya via
+  // kalender, bukan dari daftar antrean).
   dom.window.showView('planner');
   dom.window.renderPlanner();
   await tick(200);
-  const setupText = () => document.getElementById('postizSetup')?.textContent || '';
-  check('wizard Setup tampil', !!document.getElementById('postizSetup') && setupText().includes('Setup Postiz'), setupText());
-  check('tombol Pasang tampil saat Postiz offline', !!document.getElementById('postizSetupInstallBtn'), setupText());
-  document.getElementById('postizSetupInstallBtn').click();
-  await waitFor(() => !!document.querySelector('#postizSetup .setup-step .badge.b-ok'), 'langkah 1 centang sesudah instalasi', 200);
-  check('instalasi satu klik -> langkah 1 centang', invokeCount('postiz_install') === 1, 'postiz_install=' + invokeCount('postiz_install'));
-  const pingBefore = invokeCount('postiz_request');
-  store.set('minime.postizKey', 'rig-postiz-key');
-  document.getElementById('postizSetupTestBtn').click();
-  await waitFor(() => setupText().includes('Postiz siap'), 'wizard siap sesudah uji ok', 200);
-  check('uji ok (1 channel) -> wizard siap', setupText().includes('Postiz siap') && setupText().includes('Setup ulang'), setupText());
-  document.getElementById('postizSetupResetBtn').click();
-  await tick(100);
-  store.set('minime.postizKey', 'bad-key');
-  document.getElementById('postizSetupTestBtn').click();
-  await waitFor(() => setupText().includes('ditolak'), 'uji badkey', 200);
-  check('uji badkey ditolak + wizard belum siap', setupText().includes('ditolak') && !setupText().includes('Postiz siap'), setupText());
-  store.set('minime.postizKey', 'empty-key');
-  document.getElementById('postizSetupTestBtn').click();
-  await waitFor(() => setupText().includes('belum ada channel'), 'uji nochannel', 200);
-  check('uji nochannel + tombol konfirmasi tampil', setupText().includes('belum ada channel') && !!document.getElementById('postizSetupConfirmBtn'), setupText());
-  document.getElementById('postizSetupConfirmBtn').click();
-  await tick(100);
-  check('konfirmasi manual channel -> wizard siap', setupText().includes('Postiz siap'), setupText());
-  check('ping dipanggil 3x via Rust', invokeCount('postiz_request') === pingBefore + 3, 'postiz_request=' + invokeCount('postiz_request'));
-
-  // 8. Instalasi need_docker: pesan + tombol Docker.
-  postizUp = false;
-  installMode = 'need_docker';
-  document.getElementById('postizSetupResetBtn').click();
-  await tick(200);
-  check('tombol Pasang tampil lagi sesudah reset', !!document.getElementById('postizSetupInstallBtn'), setupText());
-  document.getElementById('postizSetupInstallBtn').click();
-  await waitFor(() => setupText().includes('belum berjalan'), 'pesan need_docker', 200);
-  check('need_docker -> pesan + tombol Docker', setupText().includes('belum berjalan') && !!document.getElementById('postizSetupDockerBtn'), setupText());
-  check('instalasi dipanggil 2x total', invokeCount('postiz_install') === 2, 'postiz_install=' + invokeCount('postiz_install'));
-
-  // 8. Planner native v61 (di atas embed Postiz): 8 kartu kanal +
-  // composer + kalender + antrean.
   check('planner native tampil', !!document.getElementById('nativePlanner') && document.querySelectorAll('.soc-card').length === 8, document.getElementById('nativePlanner')?.textContent.slice(0, 120));
-  check('composer + kalender tampil', !!document.getElementById('socText') && !!document.querySelector('.soc-cal-grid'), '');
-  check('3 kanal bisa dihubungkan (linkedin, fb page, threads)', document.querySelectorAll('[id^="socConn-"]').length === 3, document.querySelectorAll('[id^="socConn-"]').length);
+  check('composer + kalender + picker sumber tampil', !!document.getElementById('socText') && !!document.querySelector('.soc-cal-grid') && !!document.getElementById('socSrc-main'), '');
+  check('3 kanal tersisa bisa dihubungkan + LinkedIn sudah terhubung (tombol Putuskan)', document.querySelectorAll('[id^="socConn-"]').length === 3 && !!document.getElementById('socDisc-linkedin'), document.querySelectorAll('[id^="socConn-"]').length);
+  check('daftar antrean tanpa tombol hapus', document.querySelectorAll('[data-soc-del]').length === 0, '');
+  // Klik hari kalender (bukan hari ini, supaya tidak bercampur item
+  // Batch hari ini) -> dialog tanggal terbuka.
+  const today = new Date();
+  const todayKey = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+  const dayCell = [...document.querySelectorAll('.soc-cal-day[data-day]')].find((c) => c.getAttribute('data-day') !== todayKey);
+  dayCell.click();
+  await tick(100);
+  check('klik hari -> dialog tanggal terbuka', !!document.getElementById('socDayText') && !!document.getElementById('socDayScheduleBtn'), '');
+  document.getElementById('socDayText').value = 'jadwal hari uji';
+  document.getElementById('socDayScheduleBtn').click();
+  await tick(100);
+  const q2 = JSON.parse(store.get('minime.socialQueue') || '[]');
+  check('jadwal via dialog tanggal masuk antrean', q2.some((it) => it.text === 'jadwal hari uji'), JSON.stringify(q2.map((it) => it.text)));
+  check('item hari itu tampil di dialog + bisa dihapus', !!document.querySelector('[data-soc-daydel]'), '');
+  document.querySelector('[data-soc-daydel]').click();
+  await tick(100);
+  const q3 = JSON.parse(store.get('minime.socialQueue') || '[]');
+  check('hapus via dialog kalender menghilangkan item', !q3.some((it) => it.text === 'jadwal hari uji'), JSON.stringify(q3.map((it) => it.text)));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-batch exception :: ' + (e && e.stack ? e.stack : e));

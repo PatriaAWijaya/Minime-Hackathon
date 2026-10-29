@@ -21,7 +21,7 @@ var OAUTH_REDIRECT = 'http://127.0.0.1:4317/callback';
 var PLATFORMS = [
   { id: 'facebook', name: 'Facebook', note: 'soc.note.fb_profile', can: false },
   { id: 'facebook_page', name: 'Facebook Page', note: '', can: true },
-  { id: 'instagram', name: 'Instagram', note: '', can: false },
+  { id: 'instagram', name: 'Instagram', note: 'soc.note.ig_url', can: true },
   { id: 'threads', name: 'Threads', note: 'soc.note.threads_text', can: true },
   { id: 'linkedin', name: 'LinkedIn', note: '', can: true },
   { id: 'youtube', name: 'YouTube', note: '', can: false },
@@ -135,13 +135,144 @@ function renderQueue() {
       : tr('soc.status.queued');
     var acts = '';
     if (it.status === 'queued' || it.status === 'failed') {
-      acts = ' <button class="btn btn-sm" data-soc-now="' + it.id + '">' + tr('soc.publish_now') + '</button>'
-        + ' <button class="btn btn-sm" data-soc-del="' + it.id + '">' + tr('soc.delete') + '</button>';
+      // Hapus HANYA dari kalender (dialog tanggal) — bukan dari daftar ini.
+      acts = ' <button class="btn btn-sm" data-soc-now="' + it.id + '">' + tr('soc.publish_now') + '</button>';
     }
     return '<div class="soc-q"><b>' + esc(platName(it.platform)) + '</b> · ' + esc(fmtTime(it.scheduledAt)) + ' · ' + st
-      + '<div>' + esc((it.text || '').slice(0, 120)) + (it.imageB64 ? ' 📷' : '') + '</div>' + acts + '</div>';
+      + '<div>' + esc((it.text || '').slice(0, 120)) + ((it.imageB64 || it.imageFile) ? ' 📷' : '') + (it.imageUrl ? ' 🔗' : '') + '</div>' + acts + '</div>';
   }).join('');
 }
+
+export function socConnectedChannels() {
+  var s = socStore();
+  return PLATFORMS.filter(function (p) { return tokenValid(s[p.id]); })
+    .map(function (p) { return { id: p.id, name: p.name }; });
+}
+
+export function socQueueAdd(items) {
+  var q = queueLoad();
+  var ids = [];
+  items.forEach(function (it) {
+    if (!it || !it.platform || !it.text || !it.scheduledAt) return;
+    var row = {
+      id: Date.now() + '' + Math.floor(Math.random() * 10000),
+      platform: it.platform, text: it.text,
+      imageB64: '', imageMime: it.imageMime || '',
+      imageFile: it.imageFile || '', imageUrl: it.imageUrl || '',
+      scheduledAt: it.scheduledAt, status: 'queued', error: '',
+    };
+    q.push(row);
+    ids.push(row.id);
+  });
+  queueSave(q);
+  return ids;
+}
+
+// ---- Sumber konten penjadwalan (v63) ----
+// Default = Library (perintah Patria 29 Okt 17:46); opsi "File sendiri"
+// membuka input file + URL. Satu builder dipakai composer + dialog
+// tanggal — tidak ada duplikasi UI.
+function socLibItems() {
+  try {
+    if (typeof window.libAll !== 'function') return [];
+    return window.libAll();
+  } catch (_) { return []; }
+}
+export function socMimeFromExt(f) {
+  var m = String(f || '').toLowerCase();
+  if (m.endsWith('.webp')) return 'image/webp';
+  if (m.endsWith('.png')) return 'image/png';
+  if (m.endsWith('.jpg') || m.endsWith('.jpeg')) return 'image/jpeg';
+  return '';
+}
+function socSourceHTML(prefix) {
+  var items = socLibItems();
+  var opts = [];
+  items.forEach(function (it, i) {
+    if (it.kind === 'image' && it.imageFile) {
+      opts.push('<option value="img:' + esc(it.imageFile) + '">🖼 ' + esc(it.o || 'Gambar') + '</option>');
+    } else if ((it.kind === 'script' || it.kind === 'doc') && it.content) {
+      opts.push('<option value="txt:' + i + '">📝 ' + esc(it.o || 'Naskah') + '</option>');
+    }
+  });
+  var libSel = opts.length
+    ? '<select id="socLibSel-' + prefix + '">' + opts.join('') + '</select>'
+    : '<span>' + tr('soc.lib.empty') + '</span>';
+  return '<div class="soc-row"><label>' + tr('soc.source') + ' <select id="socSrc-' + prefix + '">'
+    + '<option value="library">' + tr('soc.source.lib') + '</option>'
+    + '<option value="custom">' + tr('soc.source.custom') + '</option></select></label></div>'
+    + '<div id="socLib-' + prefix + '" class="soc-row">' + libSel + '</div>'
+    + '<div id="socCustom-' + prefix + '" class="soc-row" style="display:none"><input type="file" id="socFile-' + prefix + '" accept="image/*"> '
+    + '<input type="text" id="socUrl-' + prefix + '" placeholder="' + tr('soc.ph.imgurl') + '" style="width:260px"></div>';
+}
+function socBindSource(prefix, textElId) {
+  var src = document.getElementById('socSrc-' + prefix);
+  var lib = document.getElementById('socLib-' + prefix);
+  var cus = document.getElementById('socCustom-' + prefix);
+  var libSel = document.getElementById('socLibSel-' + prefix);
+  if (!src) return;
+  var sync = function () {
+    var isLib = src.value === 'library';
+    if (lib) lib.style.display = isLib ? '' : 'none';
+    if (cus) cus.style.display = isLib ? 'none' : '';
+    if (!libSel) src.value = 'custom';
+    if (libSel && !libSel.options.length) src.value = 'custom';
+  };
+  src.addEventListener('change', function () {
+    sync();
+    // Pilih naskah Library -> isi caption (masih bisa diedit user).
+    if (libSel && libSel.value.indexOf('txt:') === 0) {
+      var items = socLibItems();
+      var it = items[parseInt(libSel.value.slice(4), 10)];
+      var ta = textElId ? document.getElementById(textElId) : null;
+      if (it && it.content && ta) ta.value = it.content;
+    }
+  });
+  if (libSel) libSel.addEventListener('change', function () {
+    if (libSel.value.indexOf('txt:') === 0) {
+      var items = socLibItems();
+      var it = items[parseInt(libSel.value.slice(4), 10)];
+      var ta = textElId ? document.getElementById(textElId) : null;
+      if (it && it.content && ta) ta.value = it.content;
+    }
+  });
+  sync();
+  // Isi awal: bila opsi Library pertama adalah naskah, caption terisi
+  // tanpa menunggu user mengubah dropdown.
+  if (libSel && libSel.value.indexOf('txt:') === 0) {
+    var items0 = socLibItems();
+    var it0 = items0[parseInt(libSel.value.slice(4), 10)];
+    var ta0 = textElId ? document.getElementById(textElId) : null;
+    if (it0 && it0.content && ta0 && !ta0.value) ta0.value = it0.content;
+  }
+}
+async function socReadSource(prefix) {
+  var src = document.getElementById('socSrc-' + prefix);
+  var out = { imageFile: '', imageB64: '', imageMime: '', imageUrl: '' };
+  if (!src || src.value === 'library') {
+    var libSel = document.getElementById('socLibSel-' + prefix);
+    if (libSel && libSel.value.indexOf('img:') === 0) {
+      out.imageFile = libSel.value.slice(4);
+      out.imageMime = socMimeFromExt(out.imageFile);
+    }
+    return out;
+  }
+  var fileEl = document.getElementById('socFile-' + prefix);
+  if (fileEl && fileEl.files && fileEl.files[0]) {
+    try {
+      var r = await readFileB64(fileEl.files[0]);
+      out.imageB64 = r.b64;
+      out.imageMime = r.mime;
+      out.imageFile = '';
+    } catch (_) {}
+    return out;
+  }
+  var urlEl = document.getElementById('socUrl-' + prefix);
+  if (urlEl) out.imageUrl = urlEl.value.trim();
+  return out;
+}
+
+var socDayOpen = null; // 'YYYY-M-D' atau null
 
 var socCalCursor = null;
 
@@ -158,11 +289,13 @@ export function renderNativePlanner() {
     + '<div class="soc-composer"><h4>' + tr('soc.composer') + '</h4>'
     + '<textarea id="socText" rows="3" placeholder="' + tr('soc.text_ph') + '" style="width:100%"></textarea>'
     + '<div class="soc-row">' + checks + '</div>'
-    + '<div class="soc-row"><input type="datetime-local" id="socWhen"> <input type="file" id="socImg" accept="image/*"></div>'
+    + socSourceHTML('main')
+    + '<div class="soc-row"><input type="datetime-local" id="socWhen"></div>'
     + '<div class="soc-row"><button id="socScheduleBtn" class="btn btn-primary">' + tr('soc.schedule') + '</button> '
     + '<button id="socNowBtn" class="btn">' + tr('soc.publish_now') + '</button></div>'
     + '<div id="socNote"></div></div>'
     + '<div class="soc-cal">' + renderCalendar() + '</div>'
+    + socDayDialogHTML()
     + '<div class="soc-queue"><h4>' + tr('soc.queue') + '</h4>' + renderQueue() + '</div></div>';
   // Bind kanal.
   PLATFORMS.forEach(function (p) {
@@ -183,30 +316,51 @@ export function renderNativePlanner() {
   });
   el.querySelectorAll('.soc-cal-day[data-day]').forEach(function (cell) {
     cell.addEventListener('click', function () {
-      var parts = cell.getAttribute('data-day').split('-');
-      var inp = document.getElementById('socWhen');
-      if (inp) {
-        var mm = String(parts[1]).padStart(2, '0'), dd = String(parts[2]).padStart(2, '0');
-        inp.value = parts[0] + '-' + mm + '-' + dd + 'T09:00';
-      }
+      socDayOpen = cell.getAttribute('data-day');
+      renderNativePlanner();
     });
   });
+  socBindSource('main', 'socText');
   socBind('socScheduleBtn', function () { socSubmit(false); });
   socBind('socNowBtn', function () { socSubmit(true); });
   el.querySelectorAll('[data-soc-now]').forEach(function (b) {
     b.addEventListener('click', function () { socPublishItem(b.getAttribute('data-soc-now')); });
   });
-  el.querySelectorAll('[data-soc-del]').forEach(function (b) {
+  socBind('socDayCloseBtn', function () { socDayOpen = null; renderNativePlanner(); });
+  socBind('socDayScheduleBtn', function () { socScheduleDay(); });
+  socBindSource('day', 'socDayText');
+  el.querySelectorAll('[data-soc-daydel]').forEach(function (b) {
     b.addEventListener('click', function () {
-      queueSave(queueLoad().filter(function (it) { return String(it.id) !== b.getAttribute('data-soc-del'); }));
+      queueSave(queueLoad().filter(function (it) { return String(it.id) !== b.getAttribute('data-soc-daydel'); }));
       renderNativePlanner();
     });
   });
   el.querySelectorAll('[data-soc-pick]').forEach(function (b) {
-    b.addEventListener('click', function () {
+    b.addEventListener('click', async function () {
       if (!socMetaPending) return;
       var pg = socMetaPending.pages.find(function (x) { return String(x.id) === b.getAttribute('data-soc-pick'); });
       if (!pg) return;
+      if (socMetaPending.platform === 'instagram') {
+        // IG: Page -> ID akun IG Business/Creator tertaut.
+        var igBody;
+        try { igBody = await invoke('social_meta_ig_id', { pageId: pg.id, token: pg.access_token }); }
+        catch (e) { socNote(String(e || '')); return; }
+        var igJ;
+        try { igJ = JSON.parse(igBody); } catch (_) { socNote(tr('soc.err.ig_account')); return; }
+        var igId = igJ.instagram_business_account && igJ.instagram_business_account.id;
+        if (!igId) { socNote(tr('soc.err.ig_account')); return; }
+        var s2 = socStore();
+        s2.instagram = {
+          clientId: socMetaPending.clientId, clientSecret: socMetaPending.clientSecret,
+          userToken: socMetaPending.userToken,
+          pageId: pg.id, pageName: pg.name, pageToken: pg.access_token,
+          igUserId: igId, label: pg.name,
+        };
+        socSave(s2);
+        socMetaPending = null;
+        renderNativePlanner();
+        return;
+      }
       var s = socStore();
       s.facebook_page = {
         clientId: socMetaPending.clientId, clientSecret: socMetaPending.clientSecret,
@@ -231,7 +385,7 @@ function readFileB64(file) {
     var r = new FileReader();
     r.onload = function () {
       var s = String(r.result || '');
-      resolve({ b64: s.split(',')[1] || '', mime: file.type || 'image/jpeg' });
+      resolve({ b64: s.split(',')[1] || '', mime: file.type || 'image/jpeg', name: file.name || 'image' });
     };
     r.onerror = reject;
     r.readAsDataURL(file);
@@ -244,14 +398,12 @@ async function socSubmit(now) {
   if (!text) { socNote(tr('soc.err.empty')); return; }
   var plats = Array.prototype.slice.call(document.querySelectorAll('.soc-chk:checked')).map(function (c) { return c.value; });
   if (!plats.length) { socNote(tr('soc.err.no_channel')); return; }
-  var img = null;
-  var fileEl = document.getElementById('socImg');
-  if (fileEl && fileEl.files && fileEl.files[0]) {
-    try { img = await readFileB64(fileEl.files[0]); } catch (_) { socNote(tr('soc.err.image')); return; }
-  }
+  var media = await socReadSource('main');
+  var img = media.imageB64 ? { b64: media.imageB64, mime: media.imageMime || '' } : null;
+  var imgUrl = media.imageUrl || '';
   if (now) {
     for (var i = 0; i < plats.length; i++) {
-      await socPublishDirect(plats[i], text, img);
+      await socPublishDirect(plats[i], text, img, imgUrl, media.imageFile || '');
     }
     renderNativePlanner();
     return;
@@ -259,21 +411,108 @@ async function socSubmit(now) {
   var whenEl = document.getElementById('socWhen');
   var when = whenEl && whenEl.value ? new Date(whenEl.value).getTime() : NaN;
   if (!when || isNaN(when)) { socNote(tr('soc.err.when')); return; }
-  var q = queueLoad();
-  plats.forEach(function (pl) {
-    q.push({ id: Date.now() + '' + Math.floor(Math.random() * 10000), platform: pl, text: text, imageB64: img ? img.b64 : '', imageMime: img ? img.mime : '', scheduledAt: when, status: 'queued', error: '' });
-  });
-  queueSave(q);
+  // Antrean menyimpan REFERENSI file (bukan base64) — base64 per item
+  // bisa menembus kuota localStorage dan antrean hilang diam-diam.
+  var imageFile = media.imageFile || '';
+  if (img) {
+    try {
+      var saved = await invoke('image_save', { req: { name: 'soc-' + Date.now() + '-main', b64: img.b64 } });
+      imageFile = saved.file || '';
+    } catch (e) { socNote(String(e || '')); return; }
+    if (!imageFile) { socNote(tr('soc.err.image')); return; }
+  }
+  socQueueAdd(plats.map(function (pl) {
+    return { platform: pl, text: text, imageFile: imageFile, imageMime: media.imageMime || '', imageUrl: imgUrl, scheduledAt: when };
+  }));
   var t = document.getElementById('socText'); if (t) t.value = '';
   renderNativePlanner();
 }
 
-async function socPublishDirect(platform, text, img) {
+// Satu-satunya tempat yang merakit argumen publish — mencegah
+// divergensi antar jalur (langsung / antrean / timer). Aturan IG:
+// pageId yang dikirim adalah ID akun IG, bukan ID Page.
+function socPublishArgs(platform, ch, text, img, imgUrl, imageFile) {
+  return {
+    platform: platform, text: text,
+    imageB64: img ? img.b64 : '', imageMime: img ? img.mime : '',
+    accessToken: ch.accessToken || '',
+    pageId: platform === 'instagram' ? (ch.igUserId || '') : (ch.pageId || ''),
+    pageToken: ch.pageToken || '',
+    imageUrl: imgUrl || '',
+    imageFile: imageFile || '',
+  };
+}
+
+function socDayDialogHTML() {
+  if (!socDayOpen) return '';
+  var parts = socDayOpen.split('-');
+  var label = '';
+  try { label = new Date(+parts[0], +parts[1] - 1, +parts[2]).toLocaleDateString(); } catch (_) { label = socDayOpen; }
+  var items = queueLoad().filter(function (it) { return dayKey(it.scheduledAt) === socDayOpen; })
+    .sort(function (a, b) { return a.scheduledAt - b.scheduledAt; });
+  var list = items.length ? items.map(function (it) {
+    var st = it.status === 'sent' ? tr('soc.status.sent')
+      : it.status === 'failed' ? tr('soc.status.failed') + (it.error ? ' — ' + esc(it.error) : '')
+      : it.status === 'sending' ? tr('soc.status.sending')
+      : tr('soc.status.queued');
+    var del = (it.status === 'queued' || it.status === 'failed')
+      ? ' <button class="btn btn-sm" data-soc-daydel="' + it.id + '">' + tr('soc.delete') + '</button>'
+      : '';
+    return '<div class="soc-q"><b>' + esc(platName(it.platform)) + '</b> · ' + esc(fmtTime(it.scheduledAt)) + ' · ' + st
+      + '<div>' + esc((it.text || '').slice(0, 120)) + ((it.imageB64 || it.imageFile) ? ' 📷' : '') + (it.imageUrl ? ' 🔗' : '') + '</div>' + del + '</div>';
+  }).join('') : '<div>' + tr('soc.day.empty') + '</div>';
+  var s = socStore();
+  var checks = PLATFORMS.filter(function (p) { return tokenValid(s[p.id]); }).map(function (p) {
+    return '<label><input type="checkbox" class="soc-day-chk" value="' + p.id + '" checked> ' + esc(p.name) + '</label>';
+  }).join(' ') || tr('soc.no_channel');
+  return '<div class="soc-daydlg"><h4>' + tr('soc.day.title', { date: label }) + '</h4>'
+    + '<div>' + list + '</div>'
+    + '<div class="soc-composer"><h4>' + tr('soc.day.add') + '</h4>'
+    + '<textarea id="socDayText" rows="3" placeholder="' + tr('soc.text_ph') + '" style="width:100%"></textarea>'
+    + '<div class="soc-row">' + checks + '</div>'
+    + socSourceHTML('day')
+    + '<div class="soc-row"><input type="time" id="socDayTime" value="09:00"></div>'
+    + '<div class="soc-row"><button id="socDayScheduleBtn" class="btn btn-primary">' + tr('soc.schedule') + '</button> '
+    + '<button id="socDayCloseBtn" class="btn">' + tr('soc.close') + '</button></div>'
+    + '<div id="socDayNote"></div></div></div>';
+}
+
+async function socScheduleDay() {
+  if (!socDayOpen) return;
+  var parts = socDayOpen.split('-');
+  var timeEl = document.getElementById('socDayTime');
+  var hm = (timeEl ? timeEl.value : '09:00') || '09:00';
+  var hhmm = hm.split(':');
+  var when = new Date(+parts[0], +parts[1] - 1, +parts[2], +(hhmm[0] || 9), +(hhmm[1] || 0)).getTime();
+  var text = (document.getElementById('socDayText') || {}).value || '';
+  text = text.trim();
+  var noteEl = document.getElementById('socDayNote');
+  var note = function (m) { if (noteEl) noteEl.textContent = m; };
+  if (!text) { note(tr('soc.err.empty')); return; }
+  var plats = Array.prototype.slice.call(document.querySelectorAll('.soc-day-chk:checked')).map(function (c) { return c.value; });
+  if (!plats.length) { note(tr('soc.err.no_channel')); return; }
+  var media = await socReadSource('day');
+  var imageFile = media.imageFile || '';
+  if (media.imageB64) {
+    try {
+      var saved = await invoke('image_save', { req: { name: 'soc-' + Date.now() + '-day', b64: media.imageB64 } });
+      imageFile = saved.file || '';
+    } catch (e) { note(String(e || '')); return; }
+    if (!imageFile) { note(tr('soc.err.image')); return; }
+  }
+  var ids = socQueueAdd(plats.map(function (pl) {
+    return { platform: pl, text: text, imageFile: imageFile, imageMime: media.imageMime || '', imageUrl: media.imageUrl || '', scheduledAt: when };
+  }));
+  if (!ids.length) { note(tr('soc.err.no_channel')); return; }
+  renderNativePlanner();
+}
+
+async function socPublishDirect(platform, text, img, imgUrl, imageFile) {
   var s = socStore();
   var ch = s[platform];
   if (!tokenValid(ch)) { socNote(platName(platform) + ': ' + tr('soc.err.token')); return; }
   try {
-    await invoke('social_publish', { req: { platform: platform, text: text, imageB64: img ? img.b64 : '', imageMime: img ? img.mime : '', accessToken: ch.accessToken || '', pageId: ch.pageId || '', pageToken: ch.pageToken || '' } });
+    await invoke('social_publish', { req: socPublishArgs(platform, ch, text, img, imgUrl, imageFile) });
     socNote(platName(platform) + ': ' + tr('soc.status.sent'));
   } catch (e) {
     socNote(platName(platform) + ': ' + String(e || ''));
@@ -291,7 +530,7 @@ async function socPublishItem(id) {
   }
   it.status = 'sending'; queueSave(q); renderNativePlanner();
   try {
-    await invoke('social_publish', { req: { platform: it.platform, text: it.text, imageB64: it.imageB64 || '', imageMime: it.imageMime || '', accessToken: ch.accessToken || '', pageId: ch.pageId || '', pageToken: ch.pageToken || '' } });
+    await invoke('social_publish', { req: socPublishArgs(it.platform, ch, it.text, null, it.imageUrl || '', it.imageFile || '') });
     it.status = 'sent'; it.error = '';
   } catch (e) {
     it.status = 'failed'; it.error = String(e || '');
@@ -302,6 +541,8 @@ async function socPublishItem(id) {
 async function socConnectMeta(platform, clientId, clientSecret) {
   var scope = platform === 'facebook_page'
     ? 'pages_show_list,pages_manage_posts,pages_read_engagement,business_management'
+    : platform === 'instagram'
+    ? 'instagram_basic,pages_show_list,business_management,instagram_content_publish,instagram_manage_insights'
     : 'threads_basic,threads_content_publish';
   var state = Math.random().toString(36).slice(2) + Date.now().toString(36);
   var authUrl = 'https://www.facebook.com/v25.0/dialog/oauth?client_id=' + encodeURIComponent(clientId)
@@ -337,7 +578,7 @@ async function socConnectMeta(platform, clientId, clientSecret) {
     renderNativePlanner();
     return;
   }
-  // facebook_page: ambil daftar Page, tampilkan picker.
+  // facebook_page + instagram: ambil daftar Page, tampilkan picker.
   var pagesBody;
   try { pagesBody = await invoke('social_meta_pages', { token: tj.access_token }); }
   catch (e) { socNote(String(e || '')); return; }
@@ -346,7 +587,7 @@ async function socConnectMeta(platform, clientId, clientSecret) {
   var pages = (pj.data || []).filter(function (pg) { return pg.id && pg.access_token; });
   if (!pages.length) { socNote(tr('soc.err.pages')); return; }
   socMetaPending = {
-    platform: 'facebook_page', clientId: clientId, clientSecret: clientSecret,
+    platform: platform, clientId: clientId, clientSecret: clientSecret,
     userToken: tj.access_token,
     expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
     pages: pages,
@@ -360,7 +601,7 @@ async function socConnect(platform) {
   var clientId = idEl ? idEl.value.trim() : '';
   var clientSecret = secEl ? secEl.value.trim() : '';
   if (!clientId || !clientSecret) { socNote(tr('soc.err.cred')); return; }
-  if (platform === 'facebook_page' || platform === 'threads') {
+  if (platform === 'facebook_page' || platform === 'threads' || platform === 'instagram') {
     await socConnectMeta(platform, clientId, clientSecret);
     return;
   }
@@ -420,7 +661,7 @@ export function initSocialScheduler() {
       var ch = s[it.platform];
       if (!tokenValid(ch)) { it.status = 'failed'; it.error = tr('soc.err.token'); continue; }
       try {
-        await invoke('social_publish', { req: { platform: it.platform, text: it.text, imageB64: it.imageB64 || '', imageMime: it.imageMime || '', accessToken: ch.accessToken || '', pageId: ch.pageId || '', pageToken: ch.pageToken || '' } });
+        await invoke('social_publish', { req: socPublishArgs(it.platform, ch, it.text, null, it.imageUrl || '', it.imageFile || '') });
         it.status = 'sent'; it.error = '';
       } catch (e) {
         it.status = 'failed'; it.error = String(e || '');

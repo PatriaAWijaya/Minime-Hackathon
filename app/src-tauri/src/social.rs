@@ -12,7 +12,6 @@
 //! selama app terbuka (timer 30 detik di frontend); penjadwalan
 //! level OS (launchd) adalah fase berikutnya, bukan v61.
 
-use base64::Engine;
 use serde::Deserialize;
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -21,7 +20,6 @@ use std::time::{Duration, Instant};
 /// Port loopback OAuth — TETAP, karena redirect URI yang didaftarkan
 /// di tiap aplikasi provider harus cocok persis dengan ini.
 pub const OAUTH_PORT: u16 = 4317;
-pub const OAUTH_REDIRECT: &str = "http://127.0.0.1:4317/callback";
 
 fn pct_decode(s: &str) -> String {
     let bytes = s.as_bytes();
@@ -310,6 +308,39 @@ pub struct PublishReq {
     pub page_id: String,
     #[serde(default)]
     pub page_token: String,
+    #[serde(default)]
+    pub image_url: String,
+    #[serde(default)]
+    pub image_file: String,
+}
+
+/// Gambar untuk publish: utamakan referensi file (antrean — hemat
+/// localStorage, tanpa risiko kuota), fallback base64 (terbit langsung).
+/// File dibaca dari ~/minime-images/ lewat safe_name (tanpa traversal).
+fn resolve_image(req: &PublishReq) -> Result<Option<(Vec<u8>, String)>, String> {
+    if !req.image_file.is_empty() {
+        let name = crate::image::safe_name(&req.image_file).ok_or("nama file tidak valid")?;
+        let dir = crate::image::images_dir()?;
+        let bytes = std::fs::read(dir.join(name)).map_err(|e| e.to_string())?;
+        let mime = if req.image_mime.is_empty() {
+            "image/jpeg"
+        } else {
+            req.image_mime.as_str()
+        };
+        return Ok(Some((bytes, mime.to_string())));
+    }
+    if !req.image_b64.is_empty() {
+        let bytes =
+            base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &req.image_b64)
+                .map_err(|e| e.to_string())?;
+        let mime = if req.image_mime.is_empty() {
+            "image/jpeg"
+        } else {
+            req.image_mime.as_str()
+        };
+        return Ok(Some((bytes, mime.to_string())));
+    }
+    Ok(None)
 }
 
 /// POST multipart (satu file) lewat curl config sementara — dipakai
@@ -439,7 +470,8 @@ fn fb_page_publish(req: &PublishReq) -> Result<String, String> {
     if req.page_id.is_empty() || req.page_token.is_empty() {
         return Err("Page belum dipilih".into());
     }
-    if req.image_b64.is_empty() {
+    let img = resolve_image(req)?;
+    if img.is_none() {
         let body = serde_json::json!({ "message": req.text }).to_string();
         let url = format!("https://graph.facebook.com/v25.0/{}/feed", req.page_id);
         let r = curl_api(
@@ -455,19 +487,13 @@ fn fb_page_publish(req: &PublishReq) -> Result<String, String> {
         }
         return Ok("ok".into());
     }
-    let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &req.image_b64)
-        .map_err(|e| e.to_string())?;
+    let (bytes, mime) = img.unwrap();
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     let tmp = std::env::temp_dir().join(format!("minime-fb-{stamp}.bin"));
     std::fs::write(&tmp, &bytes).map_err(|e| e.to_string())?;
-    let mime = if req.image_mime.is_empty() {
-        "image/jpeg"
-    } else {
-        req.image_mime.as_str()
-    };
     let url = format!("https://graph.facebook.com/v25.0/{}/photos", req.page_id);
     let r = curl_multipart(
         &url,
@@ -475,7 +501,7 @@ fn fb_page_publish(req: &PublishReq) -> Result<String, String> {
         &[("caption", &req.text)],
         "source",
         &tmp,
-        mime,
+        &mime,
     );
     let _ = std::fs::remove_file(&tmp);
     let r = r?;
@@ -486,11 +512,17 @@ fn fb_page_publish(req: &PublishReq) -> Result<String, String> {
 }
 
 fn threads_publish(req: &PublishReq) -> Result<String, String> {
-    // v62a: teks saja. Gambar butuh image_url publik (menyusul v62b).
-    if !req.image_b64.is_empty() {
-        return Err("Threads v62a hanya teks; gambar menyusul".into());
+    // Teks saja, atau gambar via URL publik. File lokal ditolak tegas
+    // (bukan di-drop diam-diam menjadi teks).
+    if !req.image_b64.is_empty() || !req.image_file.is_empty() {
+        return Err("Threads butuh URL gambar publik untuk gambar (bukan file lokal)".into());
     }
-    let body = serde_json::json!({ "media_type": "TEXT", "text": req.text }).to_string();
+    let body = if req.image_url.is_empty() {
+        serde_json::json!({ "media_type": "TEXT", "text": req.text }).to_string()
+    } else {
+        serde_json::json!({ "media_type": "IMAGE", "image_url": req.image_url, "text": req.text })
+            .to_string()
+    };
     let c = curl_api(
         "POST",
         "https://graph.threads.net/v1.0/me/threads",
@@ -521,8 +553,64 @@ fn threads_publish(req: &PublishReq) -> Result<String, String> {
     Ok("ok".into())
 }
 
+fn ig_publish(req: &PublishReq) -> Result<String, String> {
+    // IG API hanya menerima URL gambar publik — file lokal tidak bisa.
+    if req.image_url.is_empty() {
+        return Err("IG butuh URL gambar publik (bukan file lokal)".into());
+    }
+    if req.page_id.is_empty() || req.page_token.is_empty() {
+        return Err("Akun IG belum dipilih".into());
+    }
+    let body = serde_json::json!({ "image_url": req.image_url, "caption": req.text }).to_string();
+    let url = format!("https://graph.facebook.com/v25.0/{}/media", req.page_id);
+    let c = curl_api(
+        "POST",
+        &url,
+        Some(&req.page_token),
+        Some(&body),
+        None,
+        Some("application/json"),
+    )?;
+    if c.status != 200 {
+        return Err(format!("Container IG gagal (HTTP {})", c.status));
+    }
+    let cid = serde_json::from_str::<serde_json::Value>(&c.body)
+        .ok()
+        .and_then(|v| v.get("id").and_then(|i| i.as_str()).map(|i| i.to_string()))
+        .ok_or("Container IG tanpa id")?;
+    let body2 = serde_json::json!({ "creation_id": cid }).to_string();
+    let url2 = format!(
+        "https://graph.facebook.com/v25.0/{}/media_publish",
+        req.page_id
+    );
+    let p = curl_api(
+        "POST",
+        &url2,
+        Some(&req.page_token),
+        Some(&body2),
+        None,
+        Some("application/json"),
+    )?;
+    if p.status != 200 {
+        return Err(format!("Publish IG gagal (HTTP {})", p.status));
+    }
+    Ok("ok".into())
+}
+
+/// Ambil ID akun IG Business/Creator yang tertaut ke satu Page.
+#[tauri::command]
+pub fn social_meta_ig_id(page_id: String, token: String) -> Result<String, String> {
+    let url =
+        format!("https://graph.facebook.com/v25.0/{page_id}?fields=instagram_business_account");
+    let r = curl_api("GET", &url, Some(&token), None, None, None)?;
+    if r.status != 200 {
+        return Err(format!("Akun IG Page gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
 /// Terbitkan SATU postingan ke SATU platform (v61: LinkedIn;
-/// v62a: + FB Page + Threads teks).
+/// v62a: + FB Page + Threads teks; v62b: + IG via URL gambar).
 /// Platform lain mengembalikan error jelas — tidak ada sukses palsu.
 #[tauri::command]
 pub fn social_publish(req: PublishReq) -> Result<String, String> {
@@ -530,6 +618,7 @@ pub fn social_publish(req: PublishReq) -> Result<String, String> {
         "linkedin" => linkedin_publish(&req),
         "facebook_page" => fb_page_publish(&req),
         "threads" => threads_publish(&req),
+        "instagram" => ig_publish(&req),
         other => Err(format!("Publish {other} belum dibangun")),
     }
 }
@@ -552,7 +641,8 @@ fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
         .ok_or("Profil LinkedIn tanpa sub")?;
     let author = format!("urn:li:person:{sub}");
     let text_json = serde_json::Value::String(req.text.clone()).to_string();
-    if req.image_b64.is_empty() {
+    let img = resolve_image(req)?;
+    if img.is_none() {
         let body = format!(
             "{{\"author\":\"{author}\",\"lifecycleState\":\"PUBLISHED\",\"specificContent\":{{\"com.linkedin.ugc.ShareContent\":{{\"shareCommentary\":{{\"text\":{text_json}}},\"shareMediaCategory\":\"NONE\"}}}},\"visibility\":{{\"com.linkedin.ugc.MemberNetworkVisibility\":\"PUBLIC\"}}}}"
         );
@@ -570,9 +660,7 @@ fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
         return Ok("ok".into());
     }
     // Dengan gambar: registerUpload -> PUT biner -> ugcPost IMAGE.
-    let bytes = base64::engine::general_purpose::STANDARD
-        .decode(&req.image_b64)
-        .map_err(|e| e.to_string())?;
+    let (bytes, mime) = img.unwrap();
     let reg_body = format!(
         "{{\"registerUploadRequest\":{{\"recipes\":[\"urn:li:digitalmediaRecipe:feedshare-image\"],\"owner\":\"{author}\",\"serviceRelationships\":[{{\"relationshipType\":\"OWNER\",\"identifier\":\"urn:li:userGeneratedContent\"}}]}}}}"
     );
@@ -612,18 +700,13 @@ fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
         .unwrap_or(0);
     let tmp = std::env::temp_dir().join(format!("minime-li-{stamp}.bin"));
     std::fs::write(&tmp, &bytes).map_err(|e| e.to_string())?;
-    let mime = if req.image_mime.is_empty() {
-        "image/jpeg"
-    } else {
-        req.image_mime.as_str()
-    };
     let up = curl_api(
         "PUT",
         &upload_url,
         Some(&req.access_token),
         None,
         Some(&tmp),
-        Some(mime),
+        Some(&mime),
     );
     let _ = std::fs::remove_file(&tmp);
     let up = up?;

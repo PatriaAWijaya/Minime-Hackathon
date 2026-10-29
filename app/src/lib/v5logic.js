@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { readPostizKey } from './postiz.js';
 import { renderNativePlanner, initSocialScheduler } from './social.js';
 import { esc, jsEsc } from './esc.js';
 import { readThumb } from './image-api.js';
@@ -688,233 +687,8 @@ export function libRevise(i) {
 
 export function mediaBadge(s) { return s === "Siap untuk Post" ? "b-ok" : (s === "Menunggu GKonten" || s === "Menunggu provider" ? "b-wait" : "b-idle"); }
 
-/* Embed Postiz di Planner: iframe UI Postiz (port yang sama dengan API
-   batch: localhost:4007). Cek reachable memakai fetch no-cors — respons
-   opaque = port menjawab (bukan bukti login; login dilakukan di dalam
-   panel, sesinya milik webview app). Bila Postiz memblokir framing
-   (X-Frame-Options) panel akan kosong: catatan di bawah menjelaskan
-   fallback-nya (penjadwalan native Batch tetap jalan). */
-/* v46 (29 Okt): UI Postiz WAJIB localhost:4007, bukan 127.0.0.1:4007.
-   Alasan: API Postiz di NEXT_PUBLIC_BACKEND_URL = localhost:4007; bila
-   iframe dari 127.0.0.1, origin panel != origin API -> preflight CORS
-   204 TANPA Access-Control-Allow-Origin (terbukti 29 Okt: header itu
-   hanya dikembalikan untuk origin localhost:4007) -> browser memblokir
-   POST login/forgot dari panel dan tombol muter selamanya, sementara
-   curl/Chrome (localhost, same-origin) lolos. localhost = same-origin,
-   CORS hilang total. */
-var POSTIZ_UI = "http://localhost:4007";
-export function postizCheck() {
-  var st = document.getElementById("postizStatus");
-  var btn = document.getElementById("postizReloadBtn");
-  if (!st) return;
-  st.style.display = "";
-  st.textContent = tr('planner.postiz.checking');
-  if (btn) { btn.textContent = tr('planner.postiz.reload'); btn.classList.remove("btn-connected"); }
-  fetch(POSTIZ_UI, { mode: "no-cors" }).then(function () {
-    // Terkoneksi: teks status TIDAK ditampilkan (perintah Patria) —
-    // tombol sendiri yang menjadi indikator: "Terhubung" hijau.
-    st.style.display = "none";
-    if (btn) { btn.textContent = tr('planner.postiz.connected'); btn.classList.add("btn-connected"); }
-    postizOnline = true;
-    renderPostizSetup();
-  }).catch(function () {
-    st.style.display = "";
-    st.textContent = tr('planner.postiz.offline');
-    if (btn) { btn.textContent = tr('planner.postiz.reload'); btn.classList.remove("btn-connected"); }
-    postizOnline = false;
-    renderPostizSetup();
-  });
-}
-export async function postizOpenBrowser() {
-  // Login Google tidak bisa di dalam panel (Google memblokir frame +
-  // webview tidak membuka popup OAuth) -> buka Postiz di browser sistem,
-  // tempat login Google berjalan normal.
-  try {
-    await invoke('open_browser', { url: POSTIZ_UI });
-  } catch (_) {
-    // Catatan panel dihapus v48: kegagalan membuka browser tidak lagi
-    // punya permukaan pesan; hanya tercatat sebagai rejection.
-  }
-}
-export function postizReload() {
-  var f = document.getElementById("postizFrame");
-  if (f) f.src = POSTIZ_UI;
-  postizCheck();
-}
-
-/* v50: wizard Setup Postiz — alur user baru (perintah Patria 29 Okt):
-   1) Postiz jalan (probe postizCheck, otomatis),
-   2) akun + API key (uji via Rust ping -> GET /api/public/v1/integrations),
-   3) channel terhubung (otomatis dari daftar integrations, atau konfirmasi
-   manual bila jumlah tak terbaca). Login + hubungkan channel dilakukan
-   di browser sistem (tombol Buka Postiz), bukan panel — login browser
-   tidak kena masalah cookie Secure webview (temuan v47). Satu-satunya
-   state manual adalah flag channel di localStorage minime.postizSetup;
-   sisanya derivasi dari probe + hasil uji terakhir, bukan klaim. */
-var postizOnline = false;
-var postizLastTest = null;
-var postizTesting = false;
-var postizInstallState = null;
-export async function postizInstall() {
-  if (postizInstallState === 'installing') return;
-  postizInstallState = 'installing';
-  renderPostizSetup();
-  try {
-    var r = await invoke('postiz_install');
-    postizInstallState = { status: r.status, detail: r.detail || '' };
-    if (r.status === 'ok') postizCheck();
-  } catch (e) {
-    postizInstallState = { status: 'failed', detail: String(e && e.message ? e.message : e).slice(0, 300) };
-  }
-  renderPostizSetup();
-}
-export async function postizOpenDocker() {
-  try { await invoke('open_docker_desktop'); } catch (_) {}
-}
-export async function postizOpenDockerDownload() {
-  try { await invoke('open_browser', { url: 'https://www.docker.com/products/docker-desktop/' }); } catch (_) {}
-}
-function postizSetupManual() {
-  try {
-    var raw = window.localStorage.getItem('minime.postizSetup');
-    return raw ? JSON.parse(raw) : {};
-  } catch (_) { return {}; }
-}
-function postizSetupSaveManual(obj) {
-  try { window.localStorage.setItem('minime.postizSetup', JSON.stringify(obj)); } catch (_) {}
-}
-function postizSetupBind(id, fn) {
-  var b = document.getElementById(id);
-  if (b) b.addEventListener('click', fn);
-}
-function parseIntegrationsCount(body) {
-  try {
-    var v = JSON.parse(body);
-    if (Array.isArray(v)) return v.length;
-    if (v && Array.isArray(v.data)) return v.data.length;
-    if (v && Array.isArray(v.integrations)) return v.integrations.length;
-    if (v && Array.isArray(v.items)) return v.items.length;
-  } catch (_) {}
-  return null;
-}
-export async function postizTestKey() {
-  var key = readPostizKey();
-  if (!key) {
-    postizLastTest = { state: 'nokey', count: 0, status: 0 };
-    renderPostizSetup();
-    return postizLastTest;
-  }
-  postizTesting = true;
-  renderPostizSetup();
-  try {
-    var r = await invoke('postiz_request', { req: { op: 'ping', key: key } });
-    if (r.status === 401) {
-      postizLastTest = { state: 'badkey', count: 0, status: 401 };
-    } else if (r.status === 200) {
-      var n = parseIntegrationsCount(r.body);
-      postizLastTest = n === null ? { state: 'ok', count: null, status: 200 }
-        : (n > 0 ? { state: 'ok', count: n, status: 200 } : { state: 'nochannel', count: 0, status: 200 });
-    } else {
-      postizLastTest = { state: 'error', count: 0, status: r.status };
-    }
-  } catch (_) {
-    postizLastTest = { state: 'offline', count: 0, status: 0 };
-  }
-  postizTesting = false;
-  renderPostizSetup();
-  return postizLastTest;
-}
-export function postizSetupConfirm() {
-  var m = postizSetupManual();
-  m.channel = true;
-  postizSetupSaveManual(m);
-  renderPostizSetup();
-}
-export function postizSetupReset() {
-  try { window.localStorage.removeItem('minime.postizSetup'); } catch (_) {}
-  postizLastTest = null;
-  postizInstallState = null;
-  renderPostizSetup();
-  postizCheck();
-}
-export function renderPostizSetup() {
-  var el = document.getElementById("postizSetup");
-  if (!el) return;
-  var manual = postizSetupManual();
-  var t = postizLastTest;
-  var step1 = postizOnline;
-  // Langkah 2 terpenuhi bila kunci Postiz SUDAH tersimpan di Pengaturan
-  // (keputusan Patria 29 Okt 16:05: yang sudah ada di menu Setting
-  // tidak perlu lagi muncul di wizard). Uji koneksi tetap tersedia di
-  // Pengaturan (kartu kunci) untuk validasi; wizard tidak lagi menagih
-  // langkah ini tiap restart hanya karena postizLastTest sesi habis.
-  var keySaved = !!readPostizKey();
-  var step2 = keySaved || (!!t && (t.state === 'ok' || t.state === 'nochannel'));
-  var step3auto = !!t && t.state === 'ok' && typeof t.count === 'number' && t.count > 0;
-  var step3 = step3auto || !!manual.channel;
-  if (step1 && step2 && step3) {
-    el.innerHTML = '<div class="postiz-setup"><b>' + tr('setup.ready') + '</b> <button id="postizSetupResetBtn" class="btn btn-sm">' + tr('setup.reset') + '</button></div>';
-    postizSetupBind('postizSetupResetBtn', postizSetupReset);
-    return;
-  }
-  var mk = function (done) { return done ? '<span class="badge b-ok">✓</span>' : '<span>○</span>'; };
-  var testMsg = '';
-  if (postizTesting) testMsg = tr('setup.test.testing');
-  else if (t && t.state === 'nokey') testMsg = tr('setup.test.nokey');
-  else if (t && t.state === 'badkey') testMsg = tr('setup.test.badkey');
-  else if (t && t.state === 'offline') testMsg = tr('setup.test.offline');
-  else if (t && t.state === 'error') testMsg = tr('setup.test.error', { s: t.status });
-  else if (t && t.state === 'ok' && typeof t.count === 'number') testMsg = tr('setup.test.ok', { n: t.count });
-  else if (t && t.state === 'ok') testMsg = tr('setup.test.ok.nocount');
-  else if (t && t.state === 'nochannel') testMsg = tr('setup.test.nochannel');
-  var s1 = '<div class="setup-step"><span class="setup-mk">' + mk(step1) + '</span><div><b>' + tr('setup.step1') + '</b>';
-  if (!step1) {
-    var ist = postizInstallState;
-    var showInstall = !ist || (ist.status && ['failed', 'need_docker', 'no_docker', 'incomplete'].indexOf(ist.status) !== -1);
-    s1 += '<div>' + tr('setup.step1.off') + '</div><div class="setup-btns">';
-    if (showInstall) s1 += '<button id="postizSetupInstallBtn" class="btn btn-sm">' + tr('install.btn') + '</button>';
-    s1 += '<button id="postizSetupReloadBtn" class="btn btn-sm">' + tr('planner.postiz.reload') + '</button></div>';
-    s1 += '<div>' + tr('install.note') + '</div>';
-    if (ist === 'installing') {
-      s1 += '<div>' + tr('install.installing') + '</div>';
-    } else if (ist && ist.status === 'need_docker') {
-      s1 += '<div>' + tr('install.need_docker') + '</div><div class="setup-btns"><button id="postizSetupDockerBtn" class="btn btn-sm">' + tr('install.docker.btn') + '</button></div>';
-    } else if (ist && ist.status === 'no_docker') {
-      s1 += '<div>' + tr('install.no_docker') + '</div><div class="setup-btns"><button id="postizSetupDownloadBtn" class="btn btn-sm">' + tr('install.download.btn') + '</button></div>';
-    } else if (ist && ist.status === 'failed') {
-      s1 += '<div>' + tr('install.failed', { detail: ist.detail }) + '</div>';
-    } else if (ist && ist.status === 'incomplete') {
-      s1 += '<div>' + ist.detail + '</div>';
-    } else if (ist && ist.status === 'starting') {
-      s1 += '<div>' + tr('install.starting') + '</div>';
-    }
-    s1 += '<div>' + tr('install.manual') + '</div><pre>git clone https://github.com/gitroomhq/postiz-app.git\ncd postiz-app\ncp .env.example .env\ndocker compose up -d</pre><div>' + tr('setup.step1.port') + '</div>';
-  }
-  s1 += '</div></div>';
-  // Bila kunci sudah tersimpan, langkah 2 tampil sebagai baris centang
-  // ringkas (tanpa lagi menagih Buka Pengaturan) — tombol Uji tetap ada
-  // karena ping inilah yang membuktikan langkah 3 otomatis (jumlah
-  // channel); tanpanya, wizard tidak bisa ciut sendiri.
-  var s2 = keySaved
-    ? '<div class="setup-step"><span class="setup-mk">' + mk(true) + '</span><div><b>' + tr('setup.step2') + '</b><div class="setup-btns"><button id="postizSetupTestBtn" class="btn btn-sm">' + tr('setup.btn.test') + '</button></div>' + (testMsg ? '<div>' + testMsg + '</div>' : '') + '</div></div>'
-    : '<div class="setup-step"><span class="setup-mk">' + mk(step2) + '</span><div><b>' + tr('setup.step2') + '</b><div>' + tr('setup.step2.hint') + '</div><div class="setup-btns"><button id="postizSetupSettingsBtn" class="btn btn-sm">' + tr('setup.btn.settings') + '</button><button id="postizSetupTestBtn" class="btn btn-sm">' + tr('setup.btn.test') + '</button></div>' + (testMsg ? '<div>' + testMsg + '</div>' : '') + '</div></div>';
-  var s3 = '<div class="setup-step"><span class="setup-mk">' + mk(step3) + '</span><div><b>' + tr('setup.step3') + '</b><div>' + tr('setup.step3.hint') + '</div><div class="setup-btns"><button id="postizSetupOpenBtn" class="btn btn-sm">' + tr('planner.postiz.open') + '</button>';
-  if (!step3auto) s3 += '<button id="postizSetupConfirmBtn" class="btn btn-sm">' + tr('setup.btn.confirm') + '</button>';
-  s3 += '</div></div></div>';
-  el.innerHTML = '<div class="postiz-setup"><h3>' + tr('setup.title') + '</h3><div>' + tr('setup.browser.note') + '</div>' + s1 + s2 + s3 + '</div>';
-  postizSetupBind('postizSetupReloadBtn', postizReload);
-  postizSetupBind('postizSetupInstallBtn', postizInstall);
-  postizSetupBind('postizSetupDockerBtn', postizOpenDocker);
-  postizSetupBind('postizSetupDownloadBtn', postizOpenDockerDownload);
-  postizSetupBind('postizSetupSettingsBtn', function () { showView('settings'); });
-  postizSetupBind('postizSetupTestBtn', postizTestKey);
-  postizSetupBind('postizSetupOpenBtn', postizOpenBrowser);
-  postizSetupBind('postizSetupConfirmBtn', postizSetupConfirm);
-}
 
 export function renderPlanner() {
-    postizCheck();
-    renderPostizSetup();
     renderNativePlanner();
   }
 
@@ -1095,7 +869,7 @@ export var AGENTS = {
     strategi: { name: "Strategi", color: "#404040", role: "Positioning & STP", goal: "Mengubah riset menjadi positioning, pilar, dan STP yang spesifik dan bisa diuji.", skills: ["positioning-stp", "pak-bi-branding", "segmentasi-spending"], model: "Gemini (fallback dari Meta)", always: false },
     kreatif: { name: "Kreatif", color: "#5b5b5b", role: "Naskah & Brief", goal: "Kalender, hook, CTA, dan CreativeBrief text-free yang siap diproduksi Media.", skills: ["copywriting-hook-cta", "brief-text-free", "overlay-template"], model: "Gemini (fallback dari Meta)", always: false },
     media: { name: "Media", color: "#333333", role: "Produksi media", goal: "Gambar, carousel, reels, dan talking head yang lolos QC dan siap untuk post (setelah GKonten).", skills: ["image-text-free", "carousel-slide", "reels-pendek", "talking-head-avatar"], model: "Meta Image (menunggu aktif) → Gemini → Canva fallback", always: false },
-    distribusi: { name: "Distribusi", color: "#4a4a4a", role: "Draf distribusi", goal: "Draf Postiz per channel tanpa pernah terbit live di slice ini.", skills: ["postiz-draft-only", "status-channel"], model: "Postiz (DRAF saja)", always: false },
+    distribusi: { name: "Distribusi", color: "#4a4a4a", role: "Draf distribusi", goal: "Draf penjadwalan native per channel tanpa pernah terbit live di slice ini.", skills: ["jadwal-native", "status-channel"], model: "Penjadwal native (DRAF saja)", always: false },
     produk: { name: "Produk Digital", color: "#666666", role: "Brief produk digital", goal: "Brief, struktur fitur MVP, dan riset pengguna dari arahan produk.", skills: ["brief-produk", "riset-pengguna", "fitur-mvp"], model: "Gemini (fallback dari Meta)", always: false }
   };
 
@@ -1109,7 +883,7 @@ var PROJECTS = {
       { key: "distribusi", status: "Idle", task: "—" }
     ], chat: [
       { who: "user", name: "Patria", color: "#374151", text: "Riset pasar es kopi Surabaya untuk mahasiswa, lalu buatkan konten 7 hari beserta gambarnya." },
-      { who: "prime", name: "Prime Agent", color: "#EB87B4", text: "Siap. Saya pecah jadi: Riset → Strategi (STP, menunggu GSTP darimu) → Kreatif (kalender + brief) → Media (gambar) → Distribusi (draf Postiz). Saya tugaskan Riset sekarang." },
+      { who: "prime", name: "Prime Agent", color: "#EB87B4", text: "Siap. Saya pecah jadi: Riset → Strategi (STP, menunggu GSTP darimu) → Kreatif (kalender + brief) → Media (gambar) → Distribusi (draf penjadwalan). Saya tugaskan Riset sekarang." },
       { who: "riset", name: "Riset", color: "#525252", text: "Riset selesai: audiens mahasiswa/pekerja muda Surabaya, behaviour digital tinggi (on-screen panjang, video pendek), spending sensitif harga, transaksi dominan via WhatsApp + QRIS." },
       { who: "strategi", name: "Strategi", color: "#404040", text: "STP draf: segmen mahasiswa/pekerja muda 18–28, targeting Urban Hustlers via WhatsApp Business + Reels/TikTok, positioning es kopi susu harian paling praktis via WA + QRIS. Menunggu GSTP." },
       { who: "prime", name: "Prime Agent", color: "#EB87B4", text: "Kurasi Prime: STP di atas sudah saya periksa — segmen dan targetingnya konsisten dengan riset behaviour dan spending. Saya rekomendasikan untuk disetujui di gerbang GSTP, tetapi keputusan tetap di tanganmu.", curation: true },
@@ -1156,12 +930,12 @@ var GNODES = {
     trigger: { name: "Arahan Pengguna", sub: "Trigger • chat pengguna", icon: "⚡", x: 3, y: 32, w: 175, kind: "trigger", desc: "Titik awal alur: arahan pengguna masuk dari chat dan memicu Prime Agent." },
     prime: { name: "Prime Agent", sub: "Orkestrasi & kurasi", icon: "🤖", x: 30, y: 32, w: 195, kind: "prime", desc: "Agen utama: memecah arahan, memanggil agen, dan mengkurasi semua hasil sebelum final." },
     gate: { name: "GSTP lolos?", sub: "Gerbang manusia", icon: "◈", x: 57, y: 32, w: 150, kind: "decision", desc: "Decision seperti 'Is manager?' di lampiran: true → distribusi, false → revisi. Keputusan selalu oleh pengguna, bukan model." },
-    dist: { name: "Distribusi", sub: "draf Postiz", icon: "▸", x: 82, y: 10, w: 155, kind: "output", desc: "Cabang true: hasil yang lolos GKonten disiapkan sebagai DRAF Postiz (bukan terbit live)." },
+    dist: { name: "Distribusi", sub: "draf penjadwalan", icon: "▸", x: 82, y: 10, w: 155, kind: "output", desc: "Cabang true: hasil yang lolos GKonten disiapkan sebagai DRAF penjadwalan native (bukan terbit live)." },
     revisi: { name: "Revisi", sub: "kembali ke Kreatif", icon: "↩", x: 82, y: 56, w: 155, kind: "output", desc: "Cabang false: tugas kembali ke agen pemiliknya dengan catatan revisi pengguna." },
     model: { name: "Chat Model", sub: "Meta → Gemini → Ollama", icon: "AI", x: 27, y: 70, kind: "circle", desc: "Sub-node model Prime Agent (garis putus-putus): rantai Meta → Gemini → Ollama lokal." },
     memory: { name: "Memory", sub: "PostgreSQL • riwayat", icon: "DB", x: 41, y: 70, kind: "circle", desc: "Sub-node memori Prime Agent (garis putus-putus): riwayat chat dan konteks proyek." },
     toolmedia: { name: "Tool: Media", sub: "image • carousel • reels", icon: "▷", x: 55, y: 70, kind: "circle", desc: "Sub-node tool Prime Agent (garis putus-putus): produksi media via agen Media." },
-    toolpostiz: { name: "Tool: Postiz", sub: "draf saja", icon: "P", x: 69, y: 70, kind: "circle", desc: "Sub-node tool Prime Agent (garis putus-putus): draf distribusi, tanpa terbit live di slice ini." }
+    tooljadwal: { name: "Tool: Penjadwal", sub: "draf saja", icon: "P", x: 69, y: 70, kind: "circle", desc: "Sub-node tool Prime Agent (garis putus-putus): draf penjadwalan native, tanpa terbit live di slice ini." }
   };
 
 var GEDGES = [
@@ -1172,7 +946,7 @@ var GEDGES = [
     { f: "prime", t: "model", l: "", dashed: true },
     { f: "prime", t: "memory", l: "", dashed: true },
     { f: "prime", t: "toolmedia", l: "", dashed: true },
-    { f: "prime", t: "toolpostiz", l: "", dashed: true }
+    { f: "prime", t: "tooljadwal", l: "", dashed: true }
   ];
 
 var dragNode = null, dragMoved = false, dragStart = null, grabDX = 0, grabDY = 0, graphRunning = false;
@@ -1206,150 +980,10 @@ var _sv2 = showView;
 
 var _sa2 = selectAgent;
 
-/* v59: pelacak login browser (perintah Patria 29 Okt 16:17 — user cukup
-   klik di MiniMe; sesudah login browser selesai, panel otomatis
-   mencatat channel baru tanpa muat ulang manual).
-   - Polling: bila API key Postiz tersimpan, tiap 5 detik (maks 5 menit)
-     hitung integrations via Rust ping; begitu jumlah bertambah, panel
-     dimuat ulang + wizard ikut siap.
-   - Kembali fokus: tanpa API key pun, saat jendela app kembali fokus
-     dalam 10 menit sesudah login browser dibuka, panel dimuat ulang
-     sekali. Hanya berjalan bila ada login yang baru dibuka. */
-var oauthPendingAt = 0;
-var oauthPollTimer = null;
-var oauthBaseline = null;
-function oauthStop() {
-  oauthPendingAt = 0;
-  oauthBaseline = null;
-  if (oauthPollTimer) { clearInterval(oauthPollTimer); oauthPollTimer = null; }
-}
-function oauthDetected(count) {
-  postizLastTest = { state: 'ok', count: count, status: 200 };
-  oauthStop();
-  postizReload();
-  renderPostizSetup();
-}
-function oauthStart() {
-  oauthStop();
-  oauthPendingAt = Date.now();
-  var key = readPostizKey();
-  if (!key) return;
-  var selfKey = key;
-  invoke('postiz_request', { req: { op: 'ping', key: selfKey } }).then(function (r) {
-    if (r.status !== 200) return;
-    var n = parseIntegrationsCount(r.body);
-    oauthBaseline = (n === null ? 0 : n);
-    var tries = 0;
-    oauthPollTimer = setInterval(function () {
-      tries++;
-      if (tries > 60) { oauthStop(); return; }
-      invoke('postiz_request', { req: { op: 'ping', key: selfKey } }).then(function (r2) {
-        if (r2.status !== 200) return;
-        var n2 = parseIntegrationsCount(r2.body);
-        if (n2 !== null && oauthBaseline !== null && n2 > oauthBaseline) oauthDetected(n2);
-      }).catch(function () {});
-    }, 5000);
-  }).catch(function () {});
-}
-function oauthFocusReload() {
-  if (!oauthPendingAt) return;
-  if (Date.now() - oauthPendingAt > 10 * 60 * 1000) { oauthStop(); return; }
-  oauthStop();
-  postizReload();
-  renderPostizSetup();
-}
-
-/* v59: kartu status app Facebook di Pengaturan. App ID ditangkap dari
-   URL OAuth saat tile Facebook diklik (ID aplikasi bersifat publik,
-   sudah tampil di URL browser) — bukan dari .env, bukan rahasia. */
-function fbStoredAppId() {
-  try { return window.localStorage.getItem('minime.fbAppId') || ''; } catch (_) { return ''; }
-}
-function fbSetNote(msg) {
-  var el = document.getElementById("fbStatusNote");
-  if (el) el.textContent = msg;
-}
-export async function fbCheckStatus() {
-  var id = fbStoredAppId();
-  if (!id) { fbSetNote(tr('fb.status.noid')); return; }
-  fbSetNote(tr('fb.status.checking'));
-  try {
-    var st = await invoke('fb_app_status', { appId: id });
-    if (st === 'active') fbSetNote(tr('fb.status.active'));
-    else if (st === 'not_active') fbSetNote(tr('fb.status.not_active'));
-    else fbSetNote(tr('fb.status.unknown'));
-  } catch (_) {
-    fbSetNote(tr('fb.status.error'));
-  }
-}
-export async function fbOpenDashboard() {
-  var id = fbStoredAppId();
-  var url = id ? ('https://developers.facebook.com/apps/' + id) : 'https://developers.facebook.com/apps';
-  try { await invoke('open_browser', { url: url }); } catch (_) {}
-}
-
-/* v60: form kredensial provider Postiz di Pengaturan. Nilai dikirim
-   langsung ke perintah Rust (tulis .env + restart Postiz) — TIDAK
-   PERNAH disimpan di localStorage MiniMe, dan kolom dibersihkan
-   sesudah berhasil agar rahasia tidak tertinggal di DOM. */
-export async function provApply() {
-  var note = document.getElementById("provNote");
-  var set = function (m) { if (note) note.textContent = m; };
-  var v = function (id) {
-    var el = document.getElementById(id);
-    return el ? el.value.trim() : '';
-  };
-  var liId = v('provLiId'), liSec = v('provLiSecret'), igId = v('provIgId'), igSec = v('provIgSecret');
-  if (!liId && !liSec && !igId && !igSec) { set(tr('prov.note.empty')); return; }
-  if (/[\r\n]/.test(liId + liSec + igId + igSec)) { set(tr('prov.note.bad')); return; }
-  set(tr('prov.note.applying'));
-  try {
-    await invoke('postiz_provider_env', { req: { linkedinId: liId, linkedinSecret: liSec, instagramId: igId, instagramSecret: igSec } });
-    ['provLiId', 'provLiSecret', 'provIgId', 'provIgSecret'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    set(tr('prov.note.ok'));
-    setTimeout(function () { postizCheck(); }, 5000);
-  } catch (e) {
-    set(tr('prov.note.error') + ' ' + String(e || ''));
-  }
-}
-export async function provOpenLinkedIn() {
-  try { await invoke('open_browser', { url: 'https://www.linkedin.com/developers/apps' }); } catch (_) {}
-}
 
 export function initV5() {
   // Penjadwal native (v61): timer antrean mulai sekali saat app hidup.
   initSocialScheduler();
-  // Jembatan OAuth panel (v57): pesan dari frame Postiz (init script
-  // di main.rs) yang membawa URL OAuth hasil klik tile channel.
-  // Asal wajib panel Postiz; URL divalidasi ulang di Rust
-  // (open_external_url hanya menerima https non-lokal).
-  if (!window.__minimeOauthListener) {
-    window.__minimeOauthListener = true;
-    window.addEventListener("message", function (ev) {
-      if (ev.origin !== "http://localhost:4007" && ev.origin !== "http://127.0.0.1:4007") return;
-      var d = ev.data;
-      if (d && d.type === "minime-oauth-url" && typeof d.url === "string" && d.url) {
-        invoke("open_external_url", { url: d.url }).then(function () {
-          try {
-            if (d.url.indexOf("facebook.com") !== -1) {
-              var m = /[?&]client_id=([^&]+)/.exec(d.url);
-              if (m && /^\d+$/.test(m[1])) {
-                try { window.localStorage.setItem('minime.fbAppId', m[1]); } catch (_) {}
-              }
-            }
-          } catch (_) {}
-          oauthStart();
-        }).catch(function () {});
-      }
-    });
-  }
-  if (!window.__minimeOauthFocus) {
-    window.__minimeOauthFocus = true;
-    window.addEventListener("focus", oauthFocusReload);
-  }
   document.addEventListener("mousemove", function (e) {
       if (!dragNode) return;
       var box = document.getElementById("graphBox").getBoundingClientRect();
@@ -1397,5 +1031,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, postizCheck, postizInstall, postizOpenBrowser, postizOpenDocker, postizOpenDockerDownload, postizReload, postizSetupConfirm, postizSetupReset, postizTestKey, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

@@ -106,7 +106,7 @@ export function vsRenderStatus(): void {
   el.className = 'badge ' + (vsState.status === 'online' ? 'b-ok' : vsState.status === 'offline' ? 'b-warn' : '');
 }
 
-// Panel VoiceStudio di Voice Editor (pola sama dengan embed Postiz di
+// Panel VoiceStudio di Voice Editor (pola embed panel di
 // Planner, disesuaikan dengan kenyataan VoiceStudio):
 // - Backend :3900 HANYA API; UI web :3901 hanya ada bila server Vite-nya
 //   berjalan. Karena itu iframe HANYA dipasang bila probe :3901 menjawab;

@@ -13,7 +13,6 @@
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { AGENTS, activateAgent, mediaTab, postChat, showView } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
-import { POSTIZ_KEY_LS, readPostizKey } from './postiz.js';
 import { esc } from './esc.js';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -32,16 +31,15 @@ export function readKeys(): { gemini: string | null; meta: string | null } {
   }
 }
 
-export type KeyKind = 'gemini' | 'meta' | 'postiz';
+export type KeyKind = 'gemini' | 'meta';
 
 function savedKey(kind: KeyKind): string | null {
-  if (kind === 'postiz') return readPostizKey();
   return readKeys()[kind];
 }
 
 function saveKey(kind: KeyKind, value: string): void {
   try {
-    const ls = kind === 'gemini' ? GEMINI_KEY_LS : kind === 'meta' ? META_KEY_LS : POSTIZ_KEY_LS;
+    const ls = kind === 'gemini' ? GEMINI_KEY_LS : META_KEY_LS;
     window.localStorage.setItem(ls, value);
   } catch {
     // storage unavailable: key simply stays unset for this session
@@ -78,7 +76,7 @@ function keyNoteId(kind: KeyKind): string {
 }
 
 function keyInputId(kind: KeyKind): string {
-  return kind === 'gemini' ? 'apiKeyGemini' : kind === 'meta' ? 'apiKeyMeta' : 'apiKeyPostiz';
+  return kind === 'gemini' ? 'apiKeyGemini' : 'apiKeyMeta';
 }
 
 function setKeyNote(kind: KeyKind, text: string): void {
@@ -95,7 +93,7 @@ function setKeyNote(kind: KeyKind, text: string): void {
  * dengan tombol per-kunci ini.
  */
 export function renderKeyButtons(): void {
-  (['gemini', 'meta', 'postiz'] as KeyKind[]).forEach((kind) => {
+  (['gemini', 'meta'] as KeyKind[]).forEach((kind) => {
     const btn = document.getElementById(keyBtnId(kind)) as HTMLButtonElement | null;
     if (!btn) return;
     // Bila input sedang berisi ketikan baru, kunci yang berlaku adalah
@@ -147,27 +145,19 @@ export async function connectKey(kind: KeyKind): Promise<void> {
   let ok = false;
   let note = '';
   try {
-    if (kind === 'postiz') {
-      // Pakai ulang op ping Rust (sama seperti wizard): GET read-only
-      // /api/public/v1/integrations. 200 = kunci valid.
-      const r = (await invoke('postiz_request', { req: { op: 'ping', key } })) as { status: number };
-      ok = r.status === 200;
-      if (!ok) note = r.status === 401 ? tr('key.fail.badkey') : tr('key.fail.error');
-    } else {
-      // Uji langsung ke provider itu saja (callMeta/callGemini tanpa
-      // callWithFallback): satu panggilan minimal, biaya nyaris nol
-      // (Meta: puluhan token; Gemini: free tier).
-      const cfg = defaultRouterConfig();
-      cfg.geminiApiKey = kind === 'gemini' ? key : null;
-      cfg.metaApiKey = kind === 'meta' ? key : null;
-      const router = new ModelRouter(cfg);
-      if (kind === 'gemini') await router.callGemini('Jawab satu kata: OK');
-      else await router.callMeta('Jawab satu kata: OK', 'key-test');
-      ok = true;
-    }
+    // Uji langsung ke provider itu saja (callMeta/callGemini tanpa
+    // callWithFallback): satu panggilan minimal, biaya nyaris nol
+    // (Meta: puluhan token; Gemini: free tier).
+    const cfg = defaultRouterConfig();
+    cfg.geminiApiKey = kind === 'gemini' ? key : null;
+    cfg.metaApiKey = kind === 'meta' ? key : null;
+    const router = new ModelRouter(cfg);
+    if (kind === 'gemini') await router.callGemini('Jawab satu kata: OK');
+    else await router.callMeta('Jawab satu kata: OK', 'key-test');
+    ok = true;
   } catch (e) {
     ok = false;
-    note = kind === 'postiz' ? tr('key.fail.offline') : failNote(e);
+    note = failNote(e);
   }
   setKeyValidated(kind, ok);
   if (!ok) setKeyNote(kind, note);

@@ -1,20 +1,16 @@
-//! Buka URL di browser sistem (bukan webview app).
-//! Hanya dua URL yang diizinkan: UI Postiz lokal dan halaman unduh
-//! Docker Desktop. Alasan Postiz: login Google TIDAK bisa di dalam
-//! panel/frame (accounts.google.com memasang X-Frame-Options: DENY
-//! dan webview tidak membuka popup OAuth), sehingga pengguna Google
-//! harus login lewat browser asli. Dipakai tombol "Buka di browser"
-//! di panel Planner. Alasan Docker: instalasi Docker Desktop adalah
-//! satu-satunya langkah instalasi Postiz yang tidak bisa diotomasi
-//! dari app (aplikasi macOS) — wizard mengarahkan pengguna ke halaman
-//! resminya, selebihnya satu klik.
+//! Buka URL di browser sistem (bukan webview app). Hanya halaman
+//! developer provider yang diizinkan (Meta + LinkedIn) — dipakai
+//! tombol "Buka dashboard" dari kartu kanal native: pengguna membuat
+//! aplikasi provider di sana (termasuk menambah redirect URI
+//! loopback 127.0.0.1:4317), karena login OAuth provider TIDAK bisa
+//! di dalam webview (X-Frame-Options: DENY dan webview tidak membuka
+//! popup OAuth).
 use std::process::Command;
 
 #[tauri::command]
 pub fn open_browser(url: String) -> Result<(), String> {
     if url != "http://localhost:4007"
         && !url.starts_with("http://localhost:4007/")
-        && url != "https://www.docker.com/products/docker-desktop/"
         && url != "https://developers.facebook.com/apps"
         && !url.starts_with("https://developers.facebook.com/apps/")
         && url != "https://www.linkedin.com/developers/apps"
@@ -31,14 +27,12 @@ pub fn open_browser(url: String) -> Result<(), String> {
 
 /// Keputusan untuk satu navigasi webview (klik link / location.href)
 /// maupun permintaan jendela baru (window.open / target=_blank).
-/// Dipakai handler navigasi v56 supaya menu Postiz di panel bisa
-/// jalan dari dalam app: alur OAuth Add Channel (location.href ke
-/// provider) maupun tautan/popup menu lain yang keluar dari Postiz
-/// tidak boleh mentok di webview — provider menolak login di
-/// webview, dan webview tidak membuka popup OAuth.
+/// Dipakai handler navigasi supaya tautan keluar dari app tidak
+/// mentok di webview — provider menolak login di webview, dan
+/// webview tidak membuka popup OAuth.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NavDecision {
-    /// Izinkan di dalam webview: app sendiri + UI Postiz lokal.
+    /// Izinkan di dalam webview: app sendiri + layanan lokal port 4007.
     Allow,
     /// Tolak di webview; buka di browser sistem (hanya https eksternal).
     OpenExternal,
@@ -50,7 +44,7 @@ pub enum NavDecision {
 /// Klasifikasi murni (tanpa efek samping) supaya bisa diuji unit.
 /// Catatan wry 0.57: decidePolicyForNavigationAction dipanggil untuk
 /// SEMUA navigasi termasuk iframe, jadi handler ini melihat navigasi
-/// OAuth di dalam frame panel Postiz; fetch/XHR tidak memicunya.
+/// OAuth di dalam frame panel; fetch/XHR tidak memicunya.
 pub fn classify_navigation(url: &str) -> NavDecision {
     if url == "about:blank" {
         return NavDecision::Allow;
@@ -90,7 +84,8 @@ pub fn classify_navigation(url: &str) -> NavDecision {
         return NavDecision::Allow;
     }
     if host == "localhost" || host == "127.0.0.1" || host == "::1" {
-        // UI Postiz lokal hanya di port 4007.
+        // Layanan lokal hanya di port 4007 (aturan kompatibilitas;
+        // tidak ada layanan lokal aktif di v63 — Postiz dihapus).
         return if port == Some("4007") {
             NavDecision::Allow
         } else {
@@ -107,51 +102,11 @@ pub fn classify_navigation(url: &str) -> NavDecision {
 
 /// Probe status aplikasi Facebook (v59, perintah Patria: user cukup klik
 /// di MiniMe). Mengambil halaman dialog OAuth dengan App ID yang
-/// diberikan frontend (hanya digit, jadi tidak bisa disusupi URL lain),
-/// lalu mengklasifikasi isinya — isi halaman TIDAK PERNAH dikembalikan
-/// atau di-log, hanya statusnya: "active" (form login tampil),
-/// "not_active" (teks "App not active" dari Meta), atau "unknown".
-/// App ID bersifat publik (sudah tampil di URL browser saat klik tile),
-/// bukan rahasia. Memakai curl bawaan macOS (tidak menambah dependensi).
-#[tauri::command]
-pub fn fb_app_status(app_id: String) -> Result<String, String> {
-    if app_id.is_empty() || !app_id.bytes().all(|b| b.is_ascii_digit()) {
-        return Err("App ID tidak valid".into());
-    }
-    let url = format!(
-        "https://www.facebook.com/v25.0/dialog/oauth?client_id={app_id}&redirect_uri=http://localhost:4007/integrations/social/facebook&state=minime_probe&scope=pages_show_list,business_management,pages_manage_posts,pages_manage_engagement,pages_read_engagement,read_insights"
-    );
-    let out = Command::new("curl")
-        .args([
-            "-s",
-            "-L",
-            "--max-time",
-            "20",
-            "-A",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-            &url,
-        ])
-        .output()
-        .map_err(|e| e.to_string())?;
-    let body = String::from_utf8_lossy(&out.stdout);
-    if body.contains("App not active") {
-        Ok("not_active".into())
-    } else if body.contains("Log Into Facebook")
-        || body.contains("Masuk ke Facebook")
-        || body.contains("login_form")
-        || body.contains("name=\"email\"")
-    {
-        Ok("active".into())
-    } else {
-        Ok("unknown".into())
-    }
-}
 /// lolos klasifikasi OpenExternal; sisanya ditolak (jalur ini tidak
 /// pernah membuka URL lokal/app). Perintah Tauri `open_external_url`
-/// (dipakai pendengar jembatan OAuth di frontend) maupun handler
-/// navigasi memanggil fungsi yang sama.
+/// maupun handler navigasi memanggil fungsi yang sama.
 /// Anti-ganda: URL yang sama persis dalam 10 detik terakhir hanya
-/// dibuka sekali — jembatan fetch dan handler navigasi bisa sama-sama
+/// dibuka sekali — handler navigasi dan jendela baru bisa sama-sama
 /// memicu URL yang sama untuk satu klik, dan tab ganda tidak berguna
 /// (state OAuth sekali pakai).
 #[tauri::command]
@@ -177,28 +132,6 @@ pub fn open_external_url(url: &str) -> Result<(), String> {
         .spawn()
         .map_err(|e| e.to_string())?;
     Ok(())
-}
-
-/// Log debug sementara v56.1: setiap keputusan navigasi/jendela-baru
-/// dicatat ke /tmp/minime-nav-debug.log (best-effort, tidak pernah
-/// menggagalkan navigasi). Hanya skema+host+path yang dicatat, TANPA
-/// query string (state OAuth tidak ikut tercatat). Dipakai untuk
-/// membuktikan apakah klik tile channel di panel benar-benar sampai
-/// ke handler atau mentok di frontend Postiz.
-pub fn log_nav(url: &str, decision: NavDecision, note: &str) {
-    use std::io::Write;
-    let bare = url.split('?').next().unwrap_or(url);
-    let secs = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("/tmp/minime-nav-debug.log")
-    {
-        let _ = writeln!(f, "{secs} | {bare} | {decision:?} | {note}");
-    }
 }
 
 #[cfg(test)]

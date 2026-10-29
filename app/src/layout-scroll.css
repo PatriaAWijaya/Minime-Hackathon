@@ -142,34 +142,19 @@ h3 { font-size: 18px; }
 .lib-dialog-card { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 92vw); max-height: 86vh; overflow: auto; background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 12px; padding: 18px; z-index: 51; }
 .lib-detail-img { width: 100%; border-radius: 8px; margin: 10px 0; display: block; }
 .lib-detail-pre { white-space: pre-wrap; word-break: break-word; background: #262626; border-radius: 8px; padding: 12px; margin: 10px 0; font-size: 13px; }
-/* Panel VoiceStudio di Voice Editor: cermin gaya embed Postiz. */
+/* Panel VoiceStudio di Voice Editor: cermin gaya embed panel. */
 .vs-embed { margin-top: 16px; }
 .vs-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
 .vs-bar #vsEmbedStatus { font-size: 13px; color: #a1a1a1; }
 #vsEmbedFrame { width: 100%; height: 62vh; border: 1px solid #2a2a2a; border-radius: 12px; background: #fff; }
-/* Embed Postiz di Planner: panel UI Postiz + status port. */
-.postiz-embed { margin-top: 0; }
-.postiz-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
-.postiz-bar #postizStatus { font-size: 13px; color: #a1a1a1; }
+/* Planner: konten view ditumpuk vertikal. */
 #view-planner .scroll { display: flex; flex-direction: column; }
-#view-planner .postiz-embed { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-#postizFrame { width: 100%; flex: 1; height: auto; min-height: 480px; border: 1px solid #2a2a2a; border-radius: 12px; background: #fff; }
-.postiz-setup { border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
-.postiz-setup h3 { margin: 0 0 4px; font-size: 15px; }
-.postiz-setup .setup-step { display: flex; gap: 10px; margin: 10px 0; align-items: flex-start; }
-.postiz-setup .setup-mk { flex-shrink: 0; }
-.postiz-setup pre { background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 8px 10px; font-size: 12px; overflow-x: auto; margin: 6px 0; }
-.postiz-setup .setup-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 .btn-connected { background: #A6EBB1; color: #262626; border-color: #A6EBB1; }
 
 /* Kartu kunci API di Settings (v53): satu kartu per kunci, tombol
    sejajar di sebelah kanan input supaya tidak membingungkan. */
 .key-card { border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
 .key-card .key-row { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
-.prov-card { border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
-.prov-card .prov-row { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
-.prov-card .prov-row span { min-width: 80px; }
-.prov-card .prov-row button { flex-shrink: 0; }
 .soc-wrap { border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
 .soc-channels { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0; }
 .soc-card { border: 1px solid #2a2a2a; border-radius: 10px; padding: 10px 12px; min-width: 220px; flex: 1; }

@@ -1,6 +1,7 @@
 // Batch konten: perintah -> skrip konsep batch (1-30 hari) -> approve
 // -> kartu draf (maks 3 visual per kartu) -> pilih / sistem pilihkan
-// -> revisi via Canva (round-trip manual) -> jadwalkan ke Postiz.
+// -> revisi via Canva (round-trip manual) -> jadwalkan ke antrean
+// penjadwal native (v63: Postiz dihapus dari app).
 //
 // KEJUJURAN YANG DIJAGA DI SINI:
 // - Auto-pick "terbaik" v1 = aturan transparan: kartu yang tidak
@@ -8,54 +9,41 @@
 //   kecocokan palsu; juri visi adalah v2 (butuh probe model multimodal).
 // - Canva = round-trip manual: unduh + salin prompt, edit di Canva
 //   (browser), unggah balik sebagai revisi. Bukan API sekali klik.
-// - Jadwal Postiz dibangun dari DOKUMEN RESMI Postiz (docs.postiz.com):
-//   POST /api/public/v1/upload (multipart, field 'file') -> {id, path},
-//   lalu POST /api/public/v1/posts {type: 'schedule', date, posts:
-//   [{integration: {id}, value: [{content, image: [{id, path}]}],
-//   settings: {__type, post_type: 'post'}}]}. Base lokal
-//   http://localhost:4007 (sama dengan klien draf Fase 3 yang teruji).
-//   Panggilan dilakukan perintah Rust postiz_request (BUKAN fetch
-//   webview): fetch dari origin app (tauri://localhost) ke localhost:4007
-//   diblokir CORS Postiz (preflight 204 tanpa Allow-Origin, terbukti
-//   29 Okt) — jalur fetch tidak pernah bisa jalan di app.
-//   BUKTI LIVE DI APP MASIH MENUNGGU: Postiz berjalan di MacBook
-//   (saat ini tidur) — jadi status schedule = docs-verified, bukan
-//   live-proven. Setiap kartu melaporkan sukses/gagal sendiri-sendiri
-//   dan yang gagal bisa diulang tanpa mengulang yang berhasil.
+// - Jadwal native (v63): tiap kartu menjadi 1 item antrean penjadwal
+//   native per kanal tujuan (socQueueAdd) — tanpa server luar.
+//   Kanal tujuan dipilih saat penjadwalan dari kanal native yang
+//   terhubung dan mendukung gambar (LinkedIn, Facebook Page).
+//   1 gambar per kartu (gambar pertama dari pilihan); carousel
+//   multi-gambar belum didukung native — tertulis jelas di catatan
+//   Batch, bukan di-drop diam-diam. Setiap kartu melaporkan
+//   sukses/gagal sendiri-sendiri dan yang gagal bisa diulang tanpa
+//   mengulang yang berhasil.
 // - Langkah jadwal ini adalah "batch step" yang diotorisasi Patria
-//   28 Okt 2026 (perintah "jadwalkan otomatis ke postiz dengan
-//   persetujuan user" + tap "Buatkan flow ini"), dengan konfirmasi
-//   ganda di tombol (arm -> eksekusi). Ini menggantikan constraint
-//   draft-only di app/AGENTS.md HANYA untuk langkah batch ini.
+//   28 Okt 2026 (perintah "jadwalkan otomatis dengan persetujuan
+//   user" + tap "Buatkan flow ini"), dengan konfirmasi ganda di
+//   tombol (arm -> eksekusi). Ini menggantikan constraint draft-only
+//   di app/AGENTS.md HANYA untuk langkah batch ini.
 
 import { invoke } from '@tauri-apps/api/core';
 import { tr, getLang, MODEL_LANG_INSTRUCTION } from './i18n.js';
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { readKeys } from './chat.js';
 import { readBrand, brandSuffix } from './brand.js';
-import { readPostizKey } from './postiz.js';
+import { socConnectedChannels, socQueueAdd, socMimeFromExt } from './social.js';
 import { metaGenerateImage, addImgSpend, RATIO_SIZE, readThumb } from './image-api.js';
 import { esc } from './esc.js';
 
 export const BATCH_LS = 'minime.batch';
-// ID channel dari draf Fase 3 (27 Okt 2026, terverifikasi saat itu).
-// Bila channel berubah di dashboard Postiz, jadwal akan gagal jujur
-// dengan HTTP error — perbarui ID di sini.
-const CHANNELS: Record<string, { id: string; settings: Record<string, string> }> = {
-  instagram: { id: 'cmvc8dsxd0001jv6wa8786o2h', settings: { __type: 'instagram', post_type: 'post' } },
-  facebook: { id: 'cmvcffnhy0001jv6o6cw6wpac', settings: { __type: 'facebook', post_type: 'post' } },
-};
-
 export type BatchChoice = { files: string[]; label: string };
 export type BatchScript = { day: number; title: string; concept: string; visual: string };
 export type BatchCard = {
   day: number; title: string; concept: string; visual: string;
   choices: BatchChoice[]; selected: number | null;
   status: 'draft' | 'generating' | 'ready' | 'failed' | 'scheduled';
-  postizId: string | null; error: string;
+  nativeIds: string[]; error: string;
 };
 export type BatchState = {
-  kind: 'image' | 'carousel'; topic: string; days: number; start: string; channel: string;
+  kind: 'image' | 'carousel'; topic: string; days: number; start: string;
   phase: 'form' | 'scripts' | 'cards';
   scripts: BatchScript[]; cards: BatchCard[];
   generating: boolean; genDone: number; genTotal: number;
@@ -70,7 +58,7 @@ function todayLocal(): string {
 
 function emptyBatch(): BatchState {
   return {
-    kind: 'image', topic: '', days: 7, start: todayLocal(), channel: 'instagram',
+    kind: 'image', topic: '', days: 7, start: todayLocal(),
     phase: 'form', scripts: [], cards: [], generating: false, genDone: 0, genTotal: 0,
     scheduleArmed: false,
   };
@@ -86,7 +74,6 @@ export function readBatch(): BatchState {
       if (typeof o.topic === 'string') b.topic = o.topic;
       if (typeof o.days === 'number') b.days = Math.max(1, Math.min(30, Math.floor(o.days)));
       if (typeof o.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.start)) b.start = o.start;
-      if (o.channel === 'facebook') b.channel = 'facebook';
       if (o.phase === 'scripts' || o.phase === 'cards') b.phase = o.phase;
       if (Array.isArray(o.scripts)) {
         b.scripts = o.scripts.filter((x: { day?: number }) => typeof x?.day === 'number')
@@ -110,7 +97,7 @@ export function readBatch(): BatchState {
             })) : [],
             selected: typeof x.selected === 'number' ? x.selected : null,
             status: x.status === 'ready' || x.status === 'failed' || x.status === 'scheduled' ? x.status : 'draft',
-            postizId: typeof x.postizId === 'string' ? x.postizId : null,
+            nativeIds: Array.isArray(x.nativeIds) ? x.nativeIds.filter((v) => typeof v === 'string') : [],
             error: typeof x.error === 'string' ? x.error : '',
           }));
       }
@@ -169,11 +156,7 @@ function renderBatch(): void {
       '<input class="se-field" type="number" id="batch-days" min="1" max="30" value="' + b.days + '"></div>' +
       '<div class="se-group"><label>' + tr('batch.start') + '</label>' +
       '<input class="se-field" type="date" id="batch-start" value="' + esc(b.start) + '"></div>' +
-      '<div class="se-group"><label>' + tr('batch.channel') + '</label>' +
-      '<select class="se-field" id="batch-channel">' +
-      '<option value="instagram" ' + (b.channel === 'instagram' ? 'selected' : '') + '>Instagram</option>' +
-      '<option value="facebook" ' + (b.channel === 'facebook' ? 'selected' : '') + '>Facebook</option>' +
-      '</select></div>' +
+      '<div class="se-note">' + tr('batch.channel.native') + '</div>' +
       '<div class="se-note">' + esc(brandLine) + '</div>' +
       '<button class="se-btn" id="batch-make">' + tr('batch.scripts.make') + '</button>' +
       '<div class="se-note" id="batch-note"></div>';
@@ -212,7 +195,7 @@ function renderBatch(): void {
         '</div>';
     }).join('');
     const statusLine = c.status === 'scheduled'
-      ? tr('batch.card.scheduled', { id: c.postizId || '?' })
+      ? tr('batch.card.scheduled', { id: c.nativeIds.length ? String(c.nativeIds.length) : '?' })
       : c.status === 'failed'
         ? tr('batch.card.failed') + ' ' + esc(c.error)
         : c.status === 'ready' && c.selected === null
@@ -249,7 +232,8 @@ function renderBatch(): void {
     (failed ? ' <button class="se-btn2" id="batch-retry">' + tr('batch.schedule.retry') + '</button>' : '') +
     '</div>' +
     '<div class="se-note">' + tr('batch.schedule.summary', { ready, scheduled, failed }) + '</div>' +
-    '<div class="se-note">' + tr('batch.note.postiz') + '</div>' +
+    (b.scheduleArmed ? '<div class="se-group">' + batchTargetChecks() + '</div>' : '') +
+    '<div class="se-note">' + tr('batch.note.native') + '</div>' +
     '<div class="se-note" id="batch-note"></div>';
   bindCards();
 
@@ -292,8 +276,6 @@ function bindForm(): void {
   }));
   const start = document.getElementById('batch-start') as HTMLInputElement | null;
   start?.addEventListener('input', () => save((cur) => { if (/^\d{4}-\d{2}-\d{2}$/.test(start.value)) cur.start = start.value; }));
-  const channel = document.getElementById('batch-channel') as HTMLSelectElement | null;
-  channel?.addEventListener('change', () => save((cur) => { cur.channel = channel.value === 'facebook' ? 'facebook' : 'instagram'; }));
   document.getElementById('batch-make')?.addEventListener('click', () => void makeScripts());
 }
 
@@ -385,7 +367,7 @@ async function approveAndGenerate(): Promise<void> {
     choices: [
       { files: [], label: '' }, { files: [], label: '' }, { files: [], label: '' },
     ],
-    selected: null, status: 'draft' as const, postizId: null, error: '',
+    selected: null, status: 'draft' as const, nativeIds: [], error: '',
   }));
   cur.phase = 'cards';
   saveBatch(cur);
@@ -579,11 +561,35 @@ function cardDateISO(start: string, day: number): string {
   return new Date(t).toISOString();
 }
 
+// Kanal native yang mendukung file untuk Batch (gambar disimpan di
+// minime-images dan dikirim lewat perintah Rust publish — bukan URL).
+function batchFileChannels(): { id: string; name: string }[] {
+  return socConnectedChannels().filter((c) => c.id === 'linkedin' || c.id === 'facebook_page');
+}
+
+function batchTargetChecks(): string {
+  const chans = batchFileChannels();
+  if (!chans.length) return '<div class="se-note">' + tr('batch.schedule.nochannel') + '</div>';
+  return '<div>' + tr('batch.channel.pick') + '</div>' + chans.map((c) =>
+    '<label><input type="checkbox" class="batch-tgt" value="' + c.id + '" checked> ' + esc(c.name) + '</label>').join(' ');
+}
+
 async function scheduleBatch(onlyFailed: boolean): Promise<void> {
-  const key = readPostizKey();
-  if (!key) { note(tr('batch.schedule.nokey')); return; }
   const b = readBatch();
-  const channel = CHANNELS[b.channel] || CHANNELS.instagram;
+  const connected = batchFileChannels();
+  if (!connected.length) { note(tr('batch.schedule.nochannel')); return; }
+  // Target: checkbox saat armed; retry (onlyFailed) pakai semua yang
+  // terhubung karena tombol retry tidak melewati fase armed.
+  const picked = Array.from(document.querySelectorAll('.batch-tgt:checked')).map((el) => (el as HTMLInputElement).value);
+  const targets = picked.length ? connected.filter((c) => picked.includes(c.id)) : connected;
+  if (!targets.length) {
+    note(tr('batch.schedule.nochannel'));
+    const cur = readBatch();
+    cur.scheduleArmed = true;
+    saveBatch(cur);
+    renderBatch();
+    return;
+  }
   let ok = 0;
   let fail = 0;
   let skipped = 0;
@@ -602,34 +608,18 @@ async function scheduleBatch(onlyFailed: boolean): Promise<void> {
       continue;
     }
     try {
-      const uploads: { id: string; path: string }[] = [];
-      for (const f of files) {
-        // Upload lewat perintah Rust (bukan fetch webview): file dibaca
-        // Rust dari minime-images dan dikirim sebagai multipart — jalur
-        // ini tidak kena CORS Postiz.
-        const up = await invoke<{ status: number; body: string }>('postiz_request', { req: { op: 'upload', key, file: f } });
-        if (up.status < 200 || up.status >= 300) throw new Error('Postiz upload HTTP ' + up.status + ' ' + up.body.slice(0, 200));
-        const uj = JSON.parse(up.body) as Record<string, unknown>;
-        const nested = (uj.data ?? {}) as Record<string, unknown>;
-        const id = typeof uj.id === 'string' ? uj.id : typeof nested.id === 'string' ? nested.id : '';
-        const path = typeof uj.path === 'string' ? uj.path : typeof nested.path === 'string' ? nested.path : '';
-        if (!path) throw new Error('Postiz upload tanpa path');
-        uploads.push({ id, path });
-      }
+      // Native v63: 1 gambar per kartu (gambar pertama). Carousel
+      // multi-gambar belum didukung — catatan Batch menyatakannya.
       const caption = (card.title ? card.title + '\n\n' : '') + card.concept;
-      const pr = await invoke<{ status: number; body: string }>('postiz_request', { req: { op: 'post', key, json: JSON.stringify({
-        type: 'schedule',
-        date: cardDateISO(b.start, card.day),
-        posts: [{
-          integration: { id: channel.id },
-          value: [{ content: caption, image: uploads }],
-          settings: channel.settings,
-        }],
-      }) } });
-      if (pr.status < 200 || pr.status >= 300) throw new Error('Postiz posts HTTP ' + pr.status + ' ' + pr.body.slice(0, 200));
-      const pj = JSON.parse(pr.body) as Record<string, unknown>;
-      const pnested = (pj.data ?? {}) as Record<string, unknown>;
-      card.postizId = typeof pj.id === 'string' ? pj.id : typeof pnested.id === 'string' ? pnested.id : null;
+      const ids = socQueueAdd(targets.map((t) => ({
+        platform: t.id,
+        text: caption,
+        imageFile: files[0],
+        imageMime: socMimeFromExt(files[0]),
+        imageUrl: '',
+        scheduledAt: Date.parse(cardDateISO(b.start, card.day)),
+      })));
+      card.nativeIds = ids;
       card.status = 'scheduled';
       card.error = '';
       ok++;

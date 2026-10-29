@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, postizOpenBrowser, postizReload, fbCheckStatus, fbOpenDashboard, provApply, provOpenLinkedIn, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
@@ -549,11 +549,6 @@
     <div class="view" id="view-planner">
       <div class="scroll">
         <div id="nativePlanner"></div>
-        <div id="postizSetup"></div>
-        <div class="postiz-embed">
-          <div class="postiz-bar"><b>Postiz</b> <span id="postizStatus"></span> <button id="postizReloadBtn" class="btn btn-sm" onclick={() => postizReload()}>{t('planner.postiz.reload', lang)}</button> <button class="btn btn-sm" onclick={() => postizOpenBrowser()}>{t('planner.postiz.open', lang)}</button></div>
-          <iframe id="postizFrame" src="http://localhost:4007" title="Postiz"></iframe>
-        </div>
       </div>
     </div>
     <div class="view" id="view-campaign">
@@ -627,10 +622,7 @@
         <h3>{t('settings.keys', lang)}</h3>
         <div class="key-card"><b>{t('key.gemini', lang)}</b><div class="key-row"><input type="password" id="apiKeyGemini" placeholder={t('key.ph.empty', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnGemini" onclick={() => { connectKey('gemini') }}>{t('key.connect', lang)}</button></div><span id="keyNoteGemini"></span></div>
         <div class="key-card"><b>{t('key.meta', lang)}</b><div class="key-row"><input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnMeta" onclick={() => { connectKey('meta') }}>{t('key.connect', lang)}</button></div><span id="keyNoteMeta"></span></div>
-        <div class="key-card"><b>{t('key.postiz', lang)}</b><div class="key-row"><input type="password" id="apiKeyPostiz" placeholder={t('key.ph.postiz', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnPostiz" onclick={() => { connectKey('postiz') }}>{t('key.connect', lang)}</button></div><span id="keyNotePostiz"></span></div>
         <div class="key-card"><span>{t('key.ollama', lang)}</span></div>
-        <div class="key-card"><b>{t('fb.card.title', lang)}</b><div>{t('fb.card.desc', lang)}</div><div class="key-row"><button class="btn btn-primary" onclick={() => { fbCheckStatus() }}>{t('fb.btn.check', lang)}</button> <button class="btn" onclick={() => { fbOpenDashboard() }}>{t('fb.btn.dashboard', lang)}</button></div><span id="fbStatusNote"></span></div>
-        <div class="prov-card"><b>{t('prov.card.title', lang)}</b><div>{t('prov.card.desc', lang)}</div><div class="prov-row"><span>LinkedIn</span><input type="password" id="provLiId" placeholder={t('prov.ph.id', lang)} style="width:200px"> <input type="password" id="provLiSecret" placeholder={t('prov.ph.secret', lang)} style="width:200px"></div><div class="prov-row"><span>Instagram</span><input type="password" id="provIgId" placeholder={t('prov.ph.id', lang)} style="width:200px"> <input type="password" id="provIgSecret" placeholder={t('prov.ph.secret', lang)} style="width:200px"></div><div class="prov-row"><button class="btn btn-primary" onclick={() => { provApply() }}>{t('prov.btn.apply', lang)}</button> <button class="btn" onclick={() => { provOpenLinkedIn() }}>{t('prov.btn.li', lang)}</button></div><span id="provNote"></span></div>
         <h3 id="gateHead">{t('settings.gates', lang)}</h3>
         <p><label><input type="checkbox" checked> {t('settings.dist.default', lang)}</label><label><input type="checkbox"> {t('settings.dist.batch', lang)}</label></p>
         <h3>{t('settings.cost', lang)}</h3>
