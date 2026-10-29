@@ -788,7 +788,8 @@
           <h4>{t('ved.transcript', lang)}</h4>
           <div id="vedTranscript"></div>
         </div>
-        <div id="ms-tab-video">
+        <div id="ms-tab-video" class="ms-video">
+          <div class="ms-card">
           <div class="ve-toolbar">
           <button id="ve2BtnCut" class="btn btn-sm" onclick={() => { ve2Cut() }}>{t('ve.cut', lang)}</button>
           <button id="ve2BtnText" class="btn btn-sm" onclick={() => { ve2AddText() }}>{t('ve.addtext', lang)}</button>
@@ -803,6 +804,8 @@
           <label style="margin-left:8px">{t('t1.output', lang)} <input id="ve2Out" type="text" bind:value={ve2Out} style="width:280px"></label>
           </div>
           {#if ve2Frame}<div><img id="ve2Frame" src={ve2Frame} alt="" style="max-width:100%"></div>{/if}
+          </div>
+          <div class="ms-card">
           <div class="ve2-top">
           <div class="ve2-assets">
           <h4 style="margin:0 0 8px">{t('word.aset', lang)}</h4>
@@ -829,6 +832,8 @@
           {/if}
           </div>
           </div>
+          </div>
+          <div class="ms-card">
           <div class="timeline" id="ve2Timeline" style="overflow-x:auto">
           <div style="position:relative;width:{ve2Zoom * 100}%">
           <div class="playhead" id="playhead2" style="left:{ve2PlayheadPct}%"></div>
@@ -855,15 +860,18 @@
           </div>
           </div>
           </div>
-          <div class="t1-panel">
+          </div>
+          <div class="ms-card">
             <h3>{t('t1.title', lang)}</h3>
             <p>{t('t1.note', lang)}</p>
-            <div class="t1-row">
+            <div class="t1-row ms-fields">
               <label>{t('t1.width', lang)} <input type="number" bind:value={t1W}></label>
               <label>{t('t1.height', lang)} <input type="number" bind:value={t1H}></label>
               <label>{t('t1.fps', lang)} <input type="number" bind:value={t1Fps}></label>
             </div>
             <label>{t('t1.output', lang)} <input type="text" bind:value={t1Out} placeholder="/Users/mac/Movies/minime-t1.mp4" style="width:100%;box-sizing:border-box"></label>
+            </div>
+          <div class="ms-card">
             <h4>{t('t1.clips', lang)}</h4>
             {#each t1Clips as c (c.id)}
               <div class="t1-clip">
@@ -876,6 +884,8 @@
               </div>
             {/each}
             <button onclick={t1AddClip}>{t('t1.add', lang)}</button>
+          </div>
+          <div class="ms-card">
             <h4>{t('t2.cap.title', lang)}</h4>
             <p>{t('t2.cap.note', lang)}</p>
             {#each t1Caps as cap (cap.id)}
@@ -896,7 +906,7 @@
             {#if t1Frame}<div><h4>{t('t1.frame', lang)}</h4><img id="t1Frame" src={t1Frame} alt=""></div>{/if}
             {#if t1Json}<div><h4>{t('t1.json', lang)}</h4><textarea id="t1Json" readonly rows="8" style="width:100%;box-sizing:border-box" value={t1Json}></textarea></div>{/if}
           </div>
-          <div class="t2-panel">
+          <div class="ms-card">
             <h3>{t('t2.assets.title', lang)}</h3>
             <p>{t('t2.assets.note', lang)}</p>
             <label>{t('t2.assets.src', lang)} <input id="t2NewSrc" type="text" bind:value={t2NewSrc} placeholder="/Users/mac/Movies/minime-t1-clip1.mp4" style="width:100%;box-sizing:border-box"></label>

@@ -356,3 +356,18 @@ h3 { font-size: 18px; }
 .ve2-inspector { width:240px; flex-shrink:0; }
 .ve2-inspector label { display:block; margin-top:8px; font-weight:600; }
 .ve2-inspector input, .ve2-inspector select { width:100%; box-sizing:border-box; }
+
+/* Video tab model kartu ringkas (v81) */
+.ms-video { max-width: 880px; }
+.ms-card { background:#1e1e1e; border:1px solid #2a2a2a; border-radius:12px; padding:16px; margin-bottom:12px; }
+.ms-card > h3:first-child, .ms-card > h4:first-child { margin:0 0 8px; }
+.ms-card h4 { margin:16px 0 8px; }
+.ms-fields { display:flex; flex-wrap:wrap; gap:10px; }
+.ms-fields label { flex:1 1 140px; }
+.ms-fields input { width:100%; box-sizing:border-box; }
+.t1-clip { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:6px; }
+.t1-clip input[type="text"] { flex:2 1 200px; min-width:0; }
+.t1-clip input[type="number"] { width:90px; }
+.t2-asset { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:6px; }
+.t2-asset img { width:64px; height:36px; object-fit:cover; border-radius:6px; }
+.ve2-top { flex-wrap:wrap; }
