@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, kbTeamOpen, saveSettings, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -259,6 +259,7 @@
         <div class="wa-pill main-pill">
           <button class="pill-plus" onclick={() => { waToggleAttach() }} title={t('title.attach', lang)}>＋</button>
           <input type="text" id="chatInput" placeholder={t('composer.ph', lang)} oninput={() => { waInputChanged() }} autocomplete="off">
+          <span id="chatCount" class="chat-count"></span>
           <button class="pill-mic" onclick={() => { waMic() }} title={t('title.voice', lang)}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a1a1a1" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
           <button class="pill-send" onclick={() => { sendChat() }} title={t('title.send', lang)}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
         </div>
@@ -282,12 +283,8 @@
           <div class="av" style="background:#EB87B4">P</div>
           <h2 id="kanbanTitle" style="margin:0">TEST Kopi Surabaya</h2><span style="color:#EB87B4;font-size:18px">☆</span>
           <div style="margin-left:auto;display:flex;align-items:center">
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#EB87B4">P</div>
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#EB87B4;margin-left:-8px">R</div>
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#404040;margin-left:-8px">S</div>
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#5b5b5b;margin-left:-8px">K</div>
-            <div class="av" style="width:28px;height:28px;font-size:12px;background:#5b5b5b;margin-left:-8px">M</div>
-            <button class="btn btn-sm" style="margin-left:10px" onclick={() => { const n = document.getElementById('kbTeamNote'); if (n) n.textContent = t('kanban.team.sim', lang); }}>＋</button><span id="kbTeamNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
+            <div id="kbTeamAvs" style="display:flex"></div>
+            <button class="btn btn-sm" style="margin-left:10px" onclick={() => { kbTeamOpen() }}>＋</button><span id="kbTeamNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
           </div>
         </div>
         <div class="kb-tabs">
@@ -302,7 +299,7 @@
           </label>
         </div>
       </div>
-      <div class="scroll"><div id="kanbanBox"></div></div>
+      <div class="scroll"><div id="kanbanBox"></div><div id="kbDlg" style="display:none"></div></div>
     </div>
     <div class="view" id="view-graph">
       <div class="colhead"><h2>{t('view.graph.title', lang)}</h2>
@@ -321,6 +318,7 @@
           <span id="graphZoomLabel">100%</span>
           <button class="btn" onclick={() => { graphZoomIn() }}>+</button>
           <button class="btn" onclick={() => { graphFullscreen() }}>{t('graph.fullscreen', lang)}</button>
+          <button class="btn" onclick={() => { graphStopSim() }}>{t('graph.stop', lang)}</button>
           <button class="btn btn-primary" onclick={() => { graphAddNode() }}>{t('graph.add_node', lang)}</button>
         </div>
         <div class="notice" id="graphNotice" style="display:none"></div>
@@ -651,8 +649,8 @@
         <h3>{t('settings.keys', lang)}</h3>
         <div class="key-card"><b>{t('key.gemini', lang)}</b><div class="key-row"><input type="password" id="apiKeyGemini" placeholder={t('key.ph.empty', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnGemini" onclick={() => { connectKey('gemini') }}>{t('key.connect', lang)}</button></div><span id="keyNoteGemini"></span></div>
         <div class="key-card"><b>{t('key.meta', lang)}</b><div class="key-row"><input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnMeta" onclick={() => { connectKey('meta') }}>{t('key.connect', lang)}</button></div><span id="keyNoteMeta"></span></div>
-        <div class="key-card"><span>{t('key.ollama', lang)}</span></div>
-        <button class="btn btn-primary" onclick={() => { showSetNotice() }}>{t('settings.save', lang)}</button>
+        <div class="key-card"><b>{t('set.ollama.url', lang)}</b><div class="key-row"><input id="ollamaUrl" placeholder="http://127.0.0.1:11434" style="width:320px"> <button class="btn btn-primary" onclick={() => { ollamaCheck() }}>{t('set.ollama.check', lang)}</button></div><span id="ollamaNote"></span></div>
+        <button class="btn btn-primary" onclick={() => { saveSettings() }}>{t('settings.save', lang)}</button>
         <div class="notice" id="setNotice" style="display:none"></div>
       </div>
     </div>

@@ -28,7 +28,7 @@ export function renderAgents() {
         rowNo++;
         var times = ["2:32 PM", "1:47 PM", "12:05 PM", "11:20 AM", "10:02 AM", "9:15 AM", "8:40 AM", "7:55 AM"];
         html += '<div class="agent ' + (selectedAgent === a.key && pid === currentProj ? 'sel' : '') + (off ? ' off' : '') + (pid === currentProj ? ' curproj' : '') + '" onclick="selectAgent(\'' + a.key + '\',\'' + pid + '\')">'
-          + '<div class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div>'
+          + (ag.avatar ? '<img class="av av-shape-' + (ag.shape || 'circle') + '" src="' + esc(ag.avatar) + '" style="background:' + ag.color + ';object-fit:cover;padding:0" alt="">' : '<div class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div>')
           + '<div class="meta"><b>' + esc(ag.name) + '</b> <span class="badge ' + (off ? 'b-no' : 'b-ok') + '">' + esc(a.status) + '</span><br><small>' + esc(a.task) + '</small></div>'
           + (ag.always ? '' : '<button class="toggle" onclick="event.stopPropagation();toggleAgent(' + i + ',\'' + pid + '\')">' + (off ? 'Aktifkan' : 'Nonaktifkan') + '</button>')
           + '</div>';
@@ -61,7 +61,7 @@ export function loadHomeState() {
     var agents = Object.assign({}, AGENTS, st.agents);
     Object.keys(agents).forEach(function (k) {
       var a = agents[k] || {};
-      agents[k] = { name: a.name || k, color: a.color || '#525252', role: a.role || '', goal: a.goal || '', instructions: a.instructions || '', skills: Array.isArray(a.skills) ? a.skills : [], model: a.model || '', shape: a.shape || 'circle', effort: a.effort || '', always: !!a.always };
+      agents[k] = { name: a.name || k, color: a.color || '#525252', role: a.role || '', goal: a.goal || '', instructions: a.instructions || '', skills: Array.isArray(a.skills) ? a.skills : [], skillsOff: Array.isArray(a.skillsOff) ? a.skillsOff : [], avatar: typeof a.avatar === 'string' ? a.avatar : '', backup: a.backup || '', model: a.model || '', shape: a.shape || 'circle', effort: a.effort || '', always: !!a.always };
     });
     var projects = Object.assign({}, PROJECTS, st.projects);
     Object.keys(projects).forEach(function (k) {
@@ -102,31 +102,35 @@ export function renderDetail() {
     // Toggle notifikasi tersimpan (default ON, seperti lampiran).
     var notiOn = true;
     try { notiOn = window.localStorage.getItem('minime.notify') !== '0'; } catch (_) {}
-    var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox" checked onchange="detailNote(\'' + jsEsc(tr('detail.note.skill', {s: s})) + '\')"> <span>' + s + '</span></div>'; }).join("");
+    var skillsOff = ag.skillsOff || [];
+    var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox"' + (skillsOff.indexOf(s) >= 0 ? '' : ' checked') + ' onchange="detailSkillToggle(\'' + jsEsc(s) + '\', this.checked)"> <span>' + s + '</span></div>'; }).join("");
+    var memCount = (memLoad()[selectedAgent] || []).length;
+    var fileCount = (fileLoad()[selectedAgent] || []).length;
     document.getElementById("detailBody").innerHTML =
-      '<div class="detail-avatar-wrap"><div class="detail-avatar av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div><button class="avatar-edit" onclick="detailNote(\'' + jsEsc(tr('detail.note.avatar', {name: ag.name})) + '\')" title="Ubah avatar">✎</button></div>'
+      '<div class="detail-avatar-wrap"><div class="detail-avatar av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + (ag.avatar ? '<img src="' + esc(ag.avatar) + '" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="">' : esc(ag.name.charAt(0))) + '</div><button class="avatar-edit" onclick="detailAvatarPick()" title="Ubah avatar">✎</button></div>'
       + '<div class="d-label">' + tr('detail.name') + '</div><input type="text" class="d-field" value="' + esc(ag.name) + '" onchange="renameAgent(this.value)">'
       + '<div class="d-label">' + tr('detail.title') + '</div><input type="text" class="d-field" placeholder="Describe what your agent does" value="' + esc(ag.role) + '" onchange="retitleAgent(this.value)">'
       + '<div class="d-label">' + tr('detail.instructions') + '</div><textarea class="d-field d-area" onchange="setInstructions(this.value)">' + esc(ins) + '</textarea>'
       + '<div class="d-label">' + tr('detail.brain') + '</div><div class="d-rows">'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.model')) + '\')"><span>' + tr('detail.model') + '</span><span class="d-val">' + ag.model + ' ›</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.reasoning')) + '\')"><span>' + tr('detail.reasoning') + '</span><span class="d-val">' + (ag.effort ? esc(ag.effort) + ' ↕' : tr('detail.val.low')) + '</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.backup')) + '\')"><span>' + tr('detail.backup') + '</span><span class="d-val">' + tr('detail.val.askfirst') + '</span></div></div>'
+      + (detailModelOpen ? '<div class="d-row"><span>' + tr('detail.model') + '</span><select class="d-val" onchange="detailModelSet(this.value)">' + detailModelOpts(ag) + '</select></div>' : '<div class="d-row" onclick="detailModelToggle()"><span>' + tr('detail.model') + '</span><span class="d-val">' + esc(ag.model || tr('detail.model.default')) + ' ›</span></div>')
+      + (detailEffortOpen ? '<div class="d-row"><span>' + tr('detail.reasoning') + '</span><select class="d-val" onchange="detailEffortSet(this.value)">' + detailEffortOpts(ag) + '</select></div>' : '<div class="d-row" onclick="detailEffortToggle()"><span>' + tr('detail.reasoning') + '</span><span class="d-val">' + (ag.effort ? esc(ag.effort) + ' ↕' : tr('detail.val.low')) + '</span></div>')
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.backup_chain')) + '\')"><span>' + tr('detail.backup') + '</span><span class="d-val">Meta → Gemini → Ollama ›</span></div></div>'
       + '<div class="d-label">' + tr('detail.knows') + '</div><div class="d-rows">'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.memories', {name: ag.name})) + '\')"><span>' + tr('detail.memories') + '</span><span class="d-val">' + tr('detail.val.saved') + '</span></div>'
+      + '<div class="d-row" onclick="detailMemToggle()"><span>' + tr('detail.memories') + '</span><span class="d-val">' + tr('detail.mem.count', {n: memCount}) + ' ›</span></div>'
       + '<div class="d-row" onclick="toggleSkillList()"><span>' + tr('detail.skills') + '</span><span class="d-val">' + ag.skills.length + ' assigned ›</span></div>'
       + '<div id="skillList" style="display:none">' + skills + '</div>'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.files', {name: ag.name})) + '\')"><span>' + tr('detail.files') + '</span><span class="d-val">17 KB ›</span></div>'
+      + '<div class="d-row" onclick="detailFilesToggle()"><span>' + tr('detail.files') + '</span><span class="d-val">' + tr('detail.files.count', {n: fileCount}) + ' ›</span></div>'
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.tables', {name: ag.name})) + '\')"><span>' + tr('detail.tables') + '</span><span class="d-val">' + tr('detail.val.tables') + '</span></div></div>'
       + '<div class="d-label">' + tr('detail.does') + '</div><div class="d-rows">'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.routines', {name: ag.name})) + '\')"><span>' + tr('detail.routines') + '</span><span class="d-val">' + tr('detail.val.configured') + '</span></div>'
+      + '<div class="d-row" onclick="showView(\'graph\')"><span>' + tr('detail.routines') + '</span><span class="d-val">' + tr('detail.val.configured') + '</span></div>'
       + '<div class="d-row" onclick="showView(\'billing\')"><span>' + tr('detail.usage') + '</span><span class="d-val">' + usageVal + ' ›</span></div>'
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.publish')) + '\')"><span>' + tr('detail.publish') + '</span><span class="d-val">›</span></div></div>'
       + '<div class="d-label">' + tr('detail.rules') + '</div><div class="d-rows">'
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.permissions')) + '\')"><span>' + tr('detail.permissions') + '</span><span class="d-val">' + tr('detail.val.fullaccess') + '</span></div>'
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.folders')) + '\')"><span>' + tr('detail.folders') + '</span><span class="d-val">' + tr('detail.val.allfiles') + '</span></div>'
       + '<div class="d-row"><span>' + tr('detail.notifications') + '</span><label class="d-switch"><input type="checkbox" id="homeNotify"' + (notiOn ? ' checked' : '') + ' onchange="homeNotifyToggle(this.checked)"><span class="d-slider"></span></label></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.advanced')) + '\')"><span>' + tr('detail.advanced') + '</span><span class="d-val">›</span></div></div>'
+      + '<div class="d-row" onclick="showView(\'settings\')"><span>' + tr('detail.advanced') + '</span><span class="d-val">›</span></div></div>'
+      + (detailMemOpen ? detailMemSection() : '') + (detailFilesOpen ? detailFilesSection() : '')
       + '<div class="notice" id="detailNotice" style="display:none"></div>';
   }
 
@@ -154,8 +158,9 @@ export function switchProject(pid) {
 export function renderChat() {
     var box = document.getElementById("chatBox");
     box.innerHTML = "";
-    PROJECTS[currentProj].chat.forEach(function (m) {
+    PROJECTS[currentProj].chat.forEach(function (m, i) {
       var div = document.createElement("div");
+      div.setAttribute("data-idx", String(i));
       div.className = "msg " + (m.who === "user" ? "user" : (m.curation ? "curation" : (m.who === "prime" ? "prime" : "")));
       var who = esc(String(m.name || ""));
       div.innerHTML = m.curation
@@ -221,9 +226,9 @@ export function doSearch() {
     var q = document.getElementById("searchInput").value.trim().toLowerCase();
     var results = document.getElementById("searchResults");
     if (!q) { results.innerHTML = ""; document.getElementById("searchCount").textContent = ""; return; }
-    var hits = PROJECTS[currentProj].chat.filter(function (m) { return m.text.toLowerCase().indexOf(q) !== -1 || m.name.toLowerCase().indexOf(q) !== -1; });
+    var hits = PROJECTS[currentProj].chat.map(function (m, i) { return { m: m, i: i }; }).filter(function (h) { return h.m.text.toLowerCase().indexOf(q) !== -1 || h.m.name.toLowerCase().indexOf(q) !== -1; });
     document.getElementById("searchCount").textContent = tr('search.count', {n: hits.length, q: q, proj: PROJECTS[currentProj].name});
-    results.innerHTML = hits.map(function (m) { return '<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:8px"><b>' + esc(m.name) + ':</b> ' + m.text + '</div>'; }).join("") || "<p>" + tr('search.empty') + "</p>";
+    results.innerHTML = hits.map(function (h) { return '<div class="search-hit" onclick="searchJump(' + h.i + ')" style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer"><b>' + esc(h.m.name) + ':</b> ' + h.m.text + '</div>'; }).join("") || "<p>" + tr('search.empty') + "</p>";
   }
 
 export function agentKeyByName(n) {
@@ -232,7 +237,7 @@ export function agentKeyByName(n) {
     return "prime";
   }
 
-export function cardComments(card) { return 0; } // B4: no comment backend yet — never fabricate a count
+export function cardComments(card) { return (card.comments || []).length; }
 
 export function colName(ci) { var kc = kcols(); return ci < kc.length ? kc[ci] : extraCols[ci - kc.length]; }
 
@@ -242,22 +247,26 @@ export function renderKanban() {
     // Audit v66 L-B1: Kanban PERSISTEN — simpan di awal render, karena
     // semua mutasi (drag, advance, tambah, hapus Library) memanggil
     // renderKanban sesudah mengubah state.
+    kbTeam();
     saveKanban();
+    var teamAvs = document.getElementById("kbTeamAvs"), teamNote = document.getElementById("kbTeamNote");
+    if (teamAvs) teamAvs.innerHTML = kbTeam().map(function (k, idx) { var a2 = AGENTS[k]; return a2 ? "<div class='av' style='width:28px;height:28px;font-size:12px;background:" + a2.color + (idx > 0 ? ";margin-left:-8px" : "") + "'>" + esc(a2.name.charAt(0)) + "</div>" : ""; }).join("");
+    if (teamNote) teamNote.textContent = kbTeam().map(function (k) { return AGENTS[k] ? AGENTS[k].name : ""; }).filter(Boolean).join(", ");
     document.getElementById("kanbanTitle").textContent = PROJECTS[currentProj].name;
     var wrap = document.getElementById("kanbanBox");
     var cards = PROJECTS[currentProj].kanban || [];
     var filter = document.getElementById("kbFilter") ? document.getElementById("kbFilter").value : "";
     function vis(card) { return !filter || card.a === filter; }
     if (kanbanTab === "table") {
-      var rows = cards.filter(vis).map(function (card) {
-        return "<tr><td><b>" + esc(card.t) + "</b></td><td>" + esc(card.a) + "</td><td>" + colName(card.c) + "</td><td>💬 " + cardComments(card) + "</td></tr>";
+      var rows = cards.map(function (card, i) { return { card: card, i: i }; }).filter(function (x) { return vis(x.card); }).map(function (x) {
+        return "<tr onclick='kbOpen(" + x.i + ")' style='cursor:pointer'><td><b>" + esc(x.card.t) + "</b></td><td>" + esc(x.card.a) + "</td><td>" + colName(x.card.c) + "</td><td>💬 " + cardComments(x.card) + "</td></tr>";
       }).join("");
       wrap.innerHTML = "<table><tr><th>Tugas</th><th>Agen</th><th>Status</th><th>Komentar</th></tr>" + rows + "</table>";
       return;
     }
     if (kanbanTab === "list") {
-      wrap.innerHTML = cards.filter(vis).map(function (card) {
-        return "<div class='todayitem'><b>" + esc(card.t) + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + esc(card.a) + " • " + colName(card.c) + " • 💬 " + cardComments(card) + "</small></div>";
+      wrap.innerHTML = cards.map(function (card, i) { return { card: card, i: i }; }).filter(function (x) { return vis(x.card); }).map(function (x) {
+        return "<div class='todayitem' onclick='kbOpen(" + x.i + ")' style='cursor:pointer'><b>" + esc(x.card.t) + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + esc(x.card.a) + " • " + colName(x.card.c) + " • 💬 " + cardComments(x.card) + "</small></div>";
       }).join("") || "<p>Tidak ada tugas untuk filter ini.</p>";
       return;
     }
@@ -281,9 +290,11 @@ export function renderKanban() {
           k.innerHTML = "<div class='accent' style='background:" + colColor(ci) + "'></div><b>" + esc(card.t) + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + esc(card.a) + "</small>"
             + "<div class='kb-cardfoot'><span>💬 " + cardComments(card) + "</span><span class='av' style='width:26px;height:26px;font-size:12px;background:" + ag.color + "'>" + esc(ag.name.charAt(0)) + "</span></div>";
           k.addEventListener("dragstart", function () { dragCard = i; });
+          k.addEventListener("mousedown", function (e) { kbDownPos = { x: e.clientX, y: e.clientY }; });
+          k.addEventListener("click", function (e) { if (kbDownPos && Math.abs(e.clientX - kbDownPos.x) + Math.abs(e.clientY - kbDownPos.y) > 5) return; kbOpen(i); });
           if (ci < totalCols - 1) {
             var b = document.createElement("button"); b.className = "btn btn-sm"; b.textContent = tr('kanban.advance');
-            b.addEventListener("click", function () { card.c = ci + 1; renderKanban(); });
+            b.addEventListener("click", function (e) { e.stopPropagation(); card.c = ci + 1; renderKanban(); });
             k.appendChild(b);
           }
           div.appendChild(k);
@@ -398,6 +409,9 @@ export function renderGraph() {
       path.setAttribute("d", curvePath(x1, y1, x2, y2));
       path.setAttribute("fill", "none"); path.setAttribute("stroke", "#9ca3af"); path.setAttribute("stroke-width", "0.35");
       path.setAttribute("marker-end", "url(#arr)");
+      if (graphSelEdge && graphSelEdge.f === e.f && graphSelEdge.t === e.t) { path.setAttribute("stroke", "#EB87B4"); path.setAttribute("stroke-width", "0.55"); }
+      path.style.cursor = "pointer";
+      (function (ef, et) { path.addEventListener("click", function (ev) { ev.stopPropagation(); graphSelectEdge(ef, et); }); })(e.f, e.t);
       if (e.dashed) path.setAttribute("stroke-dasharray", "1.2 1.2");
       svg.appendChild(path);
       [ [x1, y1], [x2, y2] ].forEach(function (pt) {
@@ -448,6 +462,7 @@ export function runGraphSim(kind) {
       document.querySelectorAll(".n8n-node").forEach(function (el) { el.classList.remove("exec"); });
       if (i >= seq.length) {
         graphRunning = false;
+        graphSimTimer = null;
         n.textContent = "Simulasi selesai: alur berjalan Trigger → Prime Agent → GSTP (true) → Distribusi (draf). Gerbang sungguhan tetap menunggu keputusanmu — simulasi ini tidak menyetujui apa pun.";
         graphRunsAdd(kind);
         return;
@@ -455,7 +470,7 @@ export function runGraphSim(kind) {
       var el = document.querySelector('[data-nkey="' + seq[i] + '"]');
       if (el) el.classList.add("exec");
       i++;
-      setTimeout(step, 700);
+      graphSimTimer = setTimeout(step, 700);
     }
     step();
   }
@@ -802,9 +817,9 @@ export function renderPlanner() {
 var KANBAN_LS = "minime.kanban";
 function saveKanban() {
   try {
-    var store = {};
-    Object.keys(PROJECTS).forEach(function (k) { store[k] = PROJECTS[k].kanban; });
-    window.localStorage.setItem(KANBAN_LS, JSON.stringify(store));
+    var cards = {}, team = {};
+    Object.keys(PROJECTS).forEach(function (k) { cards[k] = PROJECTS[k].kanban; if (PROJECTS[k].team) team[k] = PROJECTS[k].team; });
+    window.localStorage.setItem(KANBAN_LS, JSON.stringify({ v: 2, cards: cards, team: team, extraCols: extraCols }));
   } catch (_) {
     // Kuota penuh: perubahan sesi tetap tampil, hilang saat reload —
     // sama seperti sebelum v66, tapi tidak pernah diklaim tersimpan.
@@ -815,9 +830,17 @@ function loadKanban() {
     var raw = window.localStorage.getItem(KANBAN_LS);
     var store = raw ? JSON.parse(raw) : null;
     if (store && typeof store === "object") {
-      Object.keys(PROJECTS).forEach(function (k) {
-        if (Array.isArray(store[k])) PROJECTS[k].kanban = store[k].filter(function (c) { return c && typeof c.t === "string"; });
-      });
+      if (store.v === 2) {
+        Object.keys(PROJECTS).forEach(function (k) {
+          if (store.cards && Array.isArray(store.cards[k])) PROJECTS[k].kanban = store.cards[k].filter(function (c) { return c && typeof c.t === "string"; });
+          if (store.team && Array.isArray(store.team[k])) PROJECTS[k].team = store.team[k];
+        });
+        if (Array.isArray(store.extraCols)) extraCols = store.extraCols;
+      } else {
+        Object.keys(PROJECTS).forEach(function (k) {
+          if (Array.isArray(store[k])) PROJECTS[k].kanban = store[k].filter(function (c) { return c && typeof c.t === "string"; });
+        });
+      }
     }
   } catch (_) {
     // Korup: pakai snapshot.
@@ -932,11 +955,6 @@ export function showView(id) {
     if (id === "billing" && typeof window.refreshLiveCost === "function") { try { window.refreshLiveCost(); } catch (_) {} }
   }
 
-export function showSetNotice() {
-    var n = document.getElementById("setNotice");
-    n.style.display = "block"; n.textContent = tr('settings.saved.note');
-  }
-
 export function makeResizer(handleId, colId, minW, maxW) {
     var handle = document.getElementById(handleId), col = document.getElementById(colId);
     var startX = 0, startW = 0, dragging = false;
@@ -951,7 +969,7 @@ export function makeResizer(handleId, colId, minW, maxW) {
       w = Math.max(minW, Math.min(maxW, w));
       col.style.width = w + "px";
     });
-    document.addEventListener("mouseup", function () { dragging = false; });
+    document.addEventListener("mouseup", function () { if (dragging && (colId === "agentCol" || colId === "detailCol")) { try { localStorage.setItem("minime.colW." + colId, col.style.width); } catch (_) {} } dragging = false; });
   }
 
 export function filterAgents(q) {
@@ -970,7 +988,10 @@ export function filterAgents(q) {
   });
 }
 
-export function waInputChanged() { /* lampiran: mic + kirim selalu tampil, tidak ada toggle */ }
+export function waInputChanged() {
+    var inp = document.getElementById("chatInput"), c = document.getElementById("chatCount");
+    if (c) c.textContent = inp && inp.value ? String(inp.value.length) : "";
+  }
 
 export function waToggleAttach() {
     document.getElementById('attachMenu').classList.toggle('open');
@@ -978,9 +999,28 @@ export function waToggleAttach() {
 
 export function waAttach(kind) {
     document.getElementById('attachMenu').classList.remove('open');
-    var n = document.getElementById('waNote');
-    n.style.display = 'block';
-    n.textContent = 'Simulasi: lampirkan ' + kind + ' — di aplikasi sungguhan, file ini masuk sebagai lampiran pesan untuk Prime Agent.';
+    if (kind === 'Gambar') { waPickFile('image/*', function (f) { waAddMeta(f.name, f.size, 'image'); }); return; }
+    if (kind === 'Dokumen') { waPickFile('', function (f) { waAddMeta(f.name, f.size, 'doc'); }); return; }
+    if (kind === 'Kamera') {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true }).then(function (stream) {
+          waCamStream = stream;
+          var n = waNoteEl(); n.style.display = 'block';
+          n.innerHTML = "<div id='waChips'></div><div id='waCamBox'><video id='waCamVideo' autoplay playsinline style='width:100%;max-height:220px;background:#000'></video> <button class='btn btn-primary' onclick='waCamShot()'>" + tr('att.take') + "</button></div><div id='waRecBox'></div>";
+          waRenderChips();
+          document.getElementById('waCamVideo').srcObject = stream;
+        }).catch(function () { var n2 = waNoteEl(); n2.style.display = 'block'; n2.textContent = tr('att.cam_unavail'); waPickFile('image/*', function (f) { waAddMeta(f.name, f.size, 'image'); }); });
+      } else { var n3 = waNoteEl(); n3.style.display = 'block'; n3.textContent = tr('att.cam_unavail'); waPickFile('image/*', function (f) { waAddMeta(f.name, f.size, 'image'); }); }
+      return;
+    }
+    if (kind === 'Audio') {
+      if (window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        var n4 = waNoteEl(); n4.style.display = 'block';
+        n4.innerHTML = "<div id='waChips'></div><div id='waCamBox'></div><div id='waRecBox'><button class='btn btn-primary' onclick='waRecToggle()'>" + tr('att.rec_start') + "</button></div>";
+        waRenderChips();
+      } else { var n5 = waNoteEl(); n5.style.display = 'block'; n5.textContent = tr('att.mic_unavail'); waPickFile('audio/*', function (f) { waAddMeta(f.name, f.size, 'audio'); }); }
+      return;
+    }
   }
 
 export function waMic() {
@@ -1372,18 +1412,24 @@ export function loadGraphState() {
   }
 }
 
-export function graphSelect(key) {
-  graphSel = GNODES[key] ? key : null;
-  graphDelAsk = false;
-  renderGraph();
-  renderGraphPanel();
-}
-export function graphClosePanel() { graphSel = null; graphDelAsk = false; renderGraph(); renderGraphPanel(); }
+export function graphSelect(key) { graphSel = GNODES[key] ? key : null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
+export function graphClosePanel() { graphSel = null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
 function graphSelNode() { return graphSel && GNODES[graphSel] ? GNODES[graphSel] : null; }
 
 export function renderGraphPanel() {
   var p = document.getElementById("graphPanel");
   if (!p) return;
+  if (graphSelEdge) {
+    p.style.display = "block";
+    var ef = GNODES[graphSelEdge.f], et = GNODES[graphSelEdge.t];
+    var eh = "<div class='g-head'><span>" + tr("graph.edge.title") + "</span><button class='g-x' onclick='graphClosePanel()'>×</button></div>";
+    eh += "<div class='g-row'><label>" + tr("graph.edge.from") + "</label><div>" + esc(ef ? ef.name : graphSelEdge.f) + "</div></div>";
+    eh += "<div class='g-row'><label>" + tr("graph.edge.to") + "</label><div>" + esc(et ? et.name : graphSelEdge.t) + "</div></div>";
+    eh += "<div class='g-actions'><button class='btn' onclick='graphAskEdgeDel()'>" + tr("graph.edge.delete") + "</button></div>";
+    if (graphEdgeDelAsk) eh += "<div class='g-delask'>" + tr("kb.dlg.del_ask") + " <button class='btn' onclick='graphConfirmEdgeDel()'>" + tr("graph.edge.delete") + "</button> <button class='btn' onclick='graphCancelEdgeDel()'>" + tr("kb.dlg.close") + "</button></div>";
+    p.innerHTML = eh;
+    return;
+  }
   var nd = graphSelNode();
   if (!nd) { p.style.display = "none"; p.innerHTML = ""; return; }
   p.style.display = "block";
@@ -1548,6 +1594,277 @@ export function graphZoomIn() { graphZoomSet(graphZoom + 0.25); }
 export function graphZoomOut() { graphZoomSet(graphZoom - 0.25); }
 export function graphFullscreen() { var el = document.getElementById("graphBox"); if (el && el.requestFullscreen) { try { el.requestFullscreen(); } catch (_) {} } }
 
+/* ---------- Audit menu v78: chat, detail, search, kanban, graph, settings ---------- */
+var waAttachments = [], waCamStream = null, waRec = null, waRecChunks = [], waAttErr = "";
+var detailModelOpen = false, detailEffortOpen = false, detailMemOpen = false, detailFilesOpen = false;
+var kbDlgIdx = null, kbDlgMode = null, kbDelAsk = false, kbDownPos = null;
+var graphSelEdge = null, graphEdgeDelAsk = false, graphSimTimer = null;
+
+function waNoteEl() { return document.getElementById("waNote"); }
+function waRenderChips() {
+  var n = waNoteEl(); if (!n) return;
+  var chips = waAttachments.map(function (a, i) { return "<span class='wa-chip'>" + esc(a.name) + " <button onclick='waRemoveAtt(" + i + ")'>×</button></span>"; }).join(" ");
+  var err = waAttErr ? "<div class='wa-err'>" + esc(waAttErr) + "</div>" : "";
+  var cam = document.getElementById("waCamBox") ? document.getElementById("waCamBox").outerHTML : "";
+  var rec = document.getElementById("waRecBox") ? document.getElementById("waRecBox").outerHTML : "";
+  if (!waAttachments.length && !err && !cam && !rec && !waCamStream && !waRec) { n.style.display = "none"; n.innerHTML = ""; return; }
+  n.style.display = "block";
+  n.innerHTML = "<div id='waChips'>" + chips + "</div>" + err + "<div id='waCamBox'>" + (document.getElementById("waCamBox") ? document.getElementById("waCamBox").innerHTML : "") + "</div><div id='waRecBox'>" + (document.getElementById("waRecBox") ? document.getElementById("waRecBox").innerHTML : "") + "</div>";
+}
+export function waRemoveAtt(i) { waAttachments.splice(i, 1); waRenderChips(); }
+function waAddMeta(name, size, kind) {
+  waAttErr = "";
+  if (size > 5 * 1024 * 1024) { waAttErr = tr("att.too_big"); waRenderChips(); return; }
+  waAttachments.push({ name: name, size: size, kind: kind });
+  waRenderChips();
+}
+function waPickFile(accept, fn) {
+  var inp = document.createElement("input");
+  inp.type = "file"; inp.style.display = "none"; inp.accept = accept || "";
+  inp.addEventListener("change", function () { var f = inp.files && inp.files[0]; if (f) fn(f); if (inp.parentNode) inp.parentNode.removeChild(inp); });
+  document.body.appendChild(inp);
+  inp.click();
+}
+function waStopCam() { try { if (waCamStream) waCamStream.getTracks().forEach(function (t) { t.stop(); }); } catch (_) {} waCamStream = null; }
+export function waApplyAttachments() {
+  var inp = document.getElementById("chatInput");
+  if (!inp || !waAttachments.length) return;
+  var names = waAttachments.map(function (a) { return a.name; }).join(", ");
+  inp.value = (inp.value ? inp.value + " " : "") + "[" + tr("att.prefix") + ": " + names + "]";
+}
+export function waClearAttachments() { waAttachments = []; waStopCam(); waRenderChips(); }
+export function waCamShot() {
+  var v = document.getElementById("waCamVideo");
+  if (!v) return;
+  try {
+    var c = document.createElement("canvas");
+    c.width = v.videoWidth || 640; c.height = v.videoHeight || 480;
+    c.getContext("2d").drawImage(v, 0, 0);
+    c.toDataURL("image/jpeg", 0.85);
+    waAddMeta("Kamera-" + Date.now() + ".jpg", 200000, "camera");
+  } catch (_) {}
+  waStopCam();
+  var box = document.getElementById("waCamBox"); if (box) box.innerHTML = "";
+  waRenderChips();
+}
+export function waRecToggle() {
+  var box = document.getElementById("waRecBox"); if (!box) return;
+  if (waRec) {
+    try { waRec.stop(); } catch (_) {}
+    return;
+  }
+  try {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      waRecChunks = [];
+      waRec = new MediaRecorder(stream);
+      waRec.ondataavailable = function (e) { if (e.data && e.data.size) waRecChunks.push(e.data); };
+      waRec.onstop = function () {
+        try { stream.getTracks().forEach(function (t) { t.stop(); }); } catch (_) {}
+        var blob = new Blob(waRecChunks, { type: "audio/webm" });
+        waRec = null;
+        waAddMeta("Audio-" + Date.now() + ".webm", blob.size, "audio");
+        var b2 = document.getElementById("waRecBox"); if (b2) b2.innerHTML = "";
+        waRenderChips();
+      };
+      waRec.start();
+      box.innerHTML = "<span>" + tr("att.recording") + "</span> <button onclick='waRecToggle()'>" + tr("att.rec_stop") + "</button>";
+    }).catch(function () { box.innerHTML = esc(tr("att.mic_unavail")); waPickFile("audio/*", function (f) { waAddMeta(f.name, f.size, "audio"); }); });
+  } catch (_) { box.innerHTML = esc(tr("att.mic_unavail")); }
+}
+
+function memLoad() { try { return JSON.parse(localStorage.getItem("minime.agentMemories") || "{}"); } catch (_) { return {}; } }
+function memSave(o) { try { localStorage.setItem("minime.agentMemories", JSON.stringify(o)); } catch (_) {} }
+function fileLoad() { try { return JSON.parse(localStorage.getItem("minime.agentFiles") || "{}"); } catch (_) { return {}; } }
+function fileSave(o) { try { localStorage.setItem("minime.agentFiles", JSON.stringify(o)); } catch (_) {} }
+export function detailModelToggle() { detailModelOpen = !detailModelOpen; renderDetail(); }
+export function detailModelSet(v) { var ag = AGENTS[selectedAgent]; if (!ag) return; ag.model = v; detailModelOpen = false; saveHomeState(); renderDetail(); }
+export function detailEffortToggle() { detailEffortOpen = !detailEffortOpen; renderDetail(); }
+export function detailEffortSet(v) { var ag = AGENTS[selectedAgent]; if (!ag) return; ag.effort = v; detailEffortOpen = false; saveHomeState(); renderDetail(); }
+export function detailSkillToggle(s, on) {
+  var ag = AGENTS[selectedAgent]; if (!ag) return;
+  var off = ag.skillsOff || (ag.skillsOff = []);
+  var i = off.indexOf(s);
+  if (on && i >= 0) off.splice(i, 1);
+  if (!on && i < 0) off.push(s);
+  saveHomeState();
+}
+export function detailMemToggle() { detailMemOpen = !detailMemOpen; renderDetail(); }
+export function detailMemAdd() {
+  var ta = document.getElementById("memNew"); if (!ta) return;
+  var v = ta.value.trim(); if (!v) return;
+  var o = memLoad(); var list = o[selectedAgent] || (o[selectedAgent] = []);
+  list.push(v); memSave(o); renderDetail();
+}
+export function detailMemDel(i) { var o = memLoad(); var list = o[selectedAgent] || []; list.splice(i, 1); o[selectedAgent] = list; memSave(o); renderDetail(); }
+export function detailFilesToggle() { detailFilesOpen = !detailFilesOpen; renderDetail(); }
+export function detailFilesPick() { waPickFile("", function (f) { detailFilesAddFiles([f]); }); }
+export function detailFilesAddFiles(list) {
+  var o = fileLoad(); var arr = o[selectedAgent] || (o[selectedAgent] = []);
+  for (var i = 0; i < list.length; i++) arr.push({ name: list[i].name, size: list[i].size || 0 });
+  fileSave(o); renderDetail();
+}
+export function detailFilesDel(i) { var o = fileLoad(); var arr = o[selectedAgent] || []; arr.splice(i, 1); o[selectedAgent] = arr; fileSave(o); renderDetail(); }
+export function detailAvatarPick() {
+  waPickFile("image/*", function (f) {
+    if (f.size > 1024 * 1024) { detailNote(tr("detail.avatar.big")); return; }
+    var r = new FileReader();
+    r.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var url = String(r.result || "");
+        try {
+          var c = document.createElement("canvas");
+          var s = Math.min(img.width, img.height) || 96, sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+          c.width = 96; c.height = 96;
+          c.getContext("2d").drawImage(img, sx, sy, s, s, 0, 0, 96, 96);
+          url = c.toDataURL("image/jpeg", 0.85);
+        } catch (_) {}
+        AGENTS[selectedAgent].avatar = url; saveHomeState(); renderAgents(); renderDetail();
+      };
+      img.src = String(r.result || "");
+    };
+    r.readAsDataURL(f);
+  });
+}
+
+export function searchJump(i) {
+  var chat = PROJECTS[currentProj] ? PROJECTS[currentProj].chat : [];
+  if (!chat[i]) return;
+  showView("home");
+  renderChat();
+  var el = document.querySelector('#chatBox .msg[data-idx="' + i + '"]');
+  if (el) { el.classList.add("hl"); try { el.scrollIntoView({ block: "center" }); } catch (_) {} }
+}
+
+function kbCards() { return PROJECTS[currentProj] ? (PROJECTS[currentProj].kanban || []) : []; }
+function kbTeam() { var p = PROJECTS[currentProj]; if (!p) return []; if (!p.team) p.team = p.agents.map(function (a) { return a.key; }); return p.team; }
+export function kbOpen(i) { kbDlgIdx = i; kbDlgMode = "card"; kbDelAsk = false; kbRenderDlg(); }
+export function kbClose() { kbDlgIdx = null; kbDlgMode = null; kbDelAsk = false; kbRenderDlg(); }
+export function kbRenderDlg() {
+  var box = document.getElementById("kbDlg"); if (!box) return;
+  if (!kbDlgMode) { box.style.display = "none"; box.innerHTML = ""; return; }
+  box.style.display = "block";
+  if (kbDlgMode === "team") {
+    var team = kbTeam();
+    var rows = Object.keys(AGENTS).map(function (k) {
+      return "<label class='kb-teamrow'><input type='checkbox' data-teamkey='" + esc(k) + "'" + (team.indexOf(k) >= 0 ? " checked" : "") + "> " + esc(AGENTS[k].name) + "</label>";
+    }).join("");
+    box.innerHTML = "<div class='kb-dlg'><h4>" + tr("kb.team.title") + "</h4><p>" + tr("kb.team.note") + "</p>" + rows
+      + "<div class='kb-dlg-btns'><button class='btn btn-primary' onclick='kbTeamSave()'>" + tr("kb.team.save") + "</button> <button class='btn' onclick='kbClose()'>" + tr("kb.dlg.close") + "</button></div></div>";
+    return;
+  }
+  var cards = kbCards(), card = cards[kbDlgIdx];
+  if (!card) { kbClose(); return; }
+  var agOpts = "";
+  var seen = {};
+  (PROJECTS[currentProj].agents || []).forEach(function (a) { if (AGENTS[a.key]) { seen[a.key] = true; agOpts += "<option" + (card.a === AGENTS[a.key].name ? " selected" : "") + ">" + esc(AGENTS[a.key].name) + "</option>"; } });
+  if (!seen[agentKeyByName(card.a)]) agOpts += "<option selected>" + esc(card.a) + "</option>";
+  var colOpts = "";
+  var total = kcols().length + extraCols.length;
+  for (var ci = 0; ci < total; ci++) colOpts += "<option value='" + ci + "'" + (card.c === ci ? " selected" : "") + ">" + esc(colName(ci)) + "</option>";
+  var comments = (card.comments || []).map(function (c) { return "<div class='kb-comment'>" + esc(c.text) + "</div>"; }).join("") || "<p>" + tr("detail.mem.empty") + "</p>";
+  var html = "<div class='kb-dlg'><h4>" + tr("kb.dlg.title") + "</h4>"
+    + "<label>" + tr("kb.dlg.title_label") + "</label><input id='kbDlgTitle' class='g-input' value=\"" + esc(card.t) + "\">"
+    + "<label>" + tr("kb.dlg.agent") + "</label><select id='kbDlgAgent' class='g-input'>" + agOpts + "</select>"
+    + "<label>" + tr("kb.dlg.col") + "</label><select id='kbDlgCol' class='g-input'>" + colOpts + "</select>"
+    + "<div class='kb-dlg-btns'><button class='btn btn-primary' onclick='kbSave()'>" + tr("kb.dlg.save") + "</button> "
+    + (card.c === 2 ? "<button class='btn' onclick='kbApprove()'>" + tr("kb.dlg.approve") + "</button> " : "")
+    + "<button class='btn' onclick='kbAskDel()'>" + tr("kb.dlg.delete") + "</button> <button class='btn' onclick='kbClose()'>" + tr("kb.dlg.close") + "</button></div>";
+  if (kbDelAsk) html += "<div class='g-delask'>" + tr("kb.dlg.del_ask") + " <button class='btn' onclick='kbDel()'>" + tr("kb.dlg.delete") + "</button> <button class='btn' onclick='kbClose()'>" + tr("kb.dlg.close") + "</button></div>";
+  html += "<h4>" + tr("kb.dlg.comments") + " (" + (card.comments || []).length + ")</h4>" + comments
+    + "<div class='g-flex'><input id='kbDlgComment' class='g-input' placeholder=\"" + esc(tr("kb.dlg.comment_ph")) + "\"> <button class='btn btn-primary' onclick='kbAddComment()'>" + tr("kb.dlg.comment_add") + "</button></div></div>";
+  box.innerHTML = html;
+}
+export function kbSave() {
+  var cards = kbCards(), card = cards[kbDlgIdx]; if (!card) return;
+  var t = document.getElementById("kbDlgTitle"), a = document.getElementById("kbDlgAgent"), c = document.getElementById("kbDlgCol");
+  if (t && t.value.trim()) card.t = t.value.trim();
+  if (a) card.a = a.value;
+  if (c) card.c = parseInt(c.value, 10) || 0;
+  renderKanban(); kbClose();
+}
+export function kbAskDel() { kbDelAsk = true; kbRenderDlg(); }
+export function kbDel() { var cards = kbCards(); if (kbDlgIdx !== null) cards.splice(kbDlgIdx, 1); renderKanban(); kbClose(); }
+export function kbApprove() { var card = kbCards()[kbDlgIdx]; if (!card) return; card.c = 4; renderKanban(); kbClose(); }
+export function kbAddComment() {
+  var inp = document.getElementById("kbDlgComment"); if (!inp) return;
+  var v = inp.value.trim(); if (!v) return;
+  var card = kbCards()[kbDlgIdx]; if (!card) return;
+  (card.comments || (card.comments = [])).push({ text: v, at: Date.now() });
+  renderKanban(); kbRenderDlg();
+}
+export function kbTeamOpen() { kbDlgMode = "team"; kbDelAsk = false; kbRenderDlg(); }
+export function kbTeamSave() {
+  var keys = [];
+  document.querySelectorAll("[data-teamkey]").forEach(function (el) { if (el.checked) keys.push(el.getAttribute("data-teamkey")); });
+  PROJECTS[currentProj].team = keys;
+  renderKanban(); kbClose();
+}
+
+export function graphStopSim() {
+  if (!graphRunning) return;
+  if (graphSimTimer) { clearTimeout(graphSimTimer); graphSimTimer = null; }
+  graphRunning = false;
+  document.querySelectorAll(".n8n-node").forEach(function (el) { el.classList.remove("exec"); });
+  var n = document.getElementById("graphNotice");
+  if (n) { n.style.display = "block"; n.textContent = tr("graph.stopped"); }
+}
+export function graphSelectEdge(f, t) { graphSelEdge = { f: f, t: t }; graphSel = null; graphDelAsk = false; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
+export function graphConfirmEdgeDel() {
+  if (!graphSelEdge) return;
+  var f = graphSelEdge.f, t = graphSelEdge.t;
+  for (var i = GEDGES.length - 1; i >= 0; i--) { if (GEDGES[i].f === f && GEDGES[i].t === t) GEDGES.splice(i, 1); }
+  graphSelEdge = null; graphEdgeDelAsk = false;
+  saveGraphState(); renderGraph(); renderGraphPanel();
+  var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.edge.deleted"); }
+}
+
+export function saveSettings() {
+  var fields = [];
+  var g = document.getElementById("apiKeyGemini"), m = document.getElementById("apiKeyMeta"), o = document.getElementById("ollamaUrl");
+  try {
+    if (g && g.value) { localStorage.setItem("minime.geminiKey", g.value); fields.push("Gemini"); }
+    if (m && m.value) { localStorage.setItem("minime.metaKey", m.value); fields.push("Meta"); }
+    if (o && o.value) { localStorage.setItem("minime.ollamaUrl", o.value); fields.push("Ollama"); }
+  } catch (_) {}
+  var n = document.getElementById("setNotice");
+  if (n) { n.style.display = "block"; n.textContent = fields.length ? tr("set.save.done", { fields: fields.join(", ") }) : tr("set.save.none"); }
+}
+function detailModelOpts(ag) {
+  var labels = ["meta", "gemini", "deepseek", "qwen"].map(function (m) { return naModelLabel(m); });
+  var opts = "<option value=''>" + esc(tr("detail.model.default")) + "</option>";
+  labels.forEach(function (l) { opts += "<option value=\"" + esc(l) + "\"" + (ag.model === l ? " selected" : "") + ">" + esc(l) + "</option>"; });
+  if (ag.model && labels.indexOf(ag.model) < 0) opts += "<option value=\"" + esc(ag.model) + "\" selected>" + esc(ag.model) + "</option>";
+  return opts;
+}
+function detailEffortOpts(ag) {
+  var vals = [["Low", "na.effort_low"], ["Medium", "na.effort_medium"], ["High", "na.effort_high"], ["Extra high", "na.effort_extra"], ["Max", "na.effort_max"]];
+  return vals.map(function (v) { return "<option value='" + v[0] + "'" + ((ag.effort || "Low") === v[0] ? " selected" : "") + ">" + tr(v[1]) + "</option>"; }).join("");
+}
+function detailMemSection() {
+  var list = (memLoad()[selectedAgent] || []);
+  var rows = list.map(function (t, i) { return "<div class='d-memrow'><span>" + esc(t) + "</span> <button class='btn btn-sm' onclick='detailMemDel(" + i + ")'>" + tr("detail.mem.del") + "</button></div>"; }).join("") || "<p>" + tr("detail.mem.empty") + "</p>";
+  return "<div class='d-label'>" + tr("detail.memories") + "</div><div class='d-rows'>" + rows + "<textarea id='memNew' class='d-field d-area' placeholder=\"" + esc(tr("detail.mem.ph")) + "\"></textarea><button class='btn btn-primary' onclick='detailMemAdd()'>" + tr("detail.mem.add") + "</button></div>";
+}
+function detailFilesSection() {
+  var list = (fileLoad()[selectedAgent] || []);
+  var rows = list.map(function (f, i) { return "<div class='d-memrow'><span>" + esc(f.name) + " (" + f.size + " B)</span> <button class='btn btn-sm' onclick='detailFilesDel(" + i + ")'>" + tr("detail.mem.del") + "</button></div>"; }).join("") || "<p>" + tr("detail.files.empty") + "</p>";
+  return "<div class='d-label'>" + tr("detail.files") + "</div><div class='d-rows'>" + rows + "<button class='btn btn-primary' onclick='detailFilesPick()'>" + tr("detail.files.add") + "</button></div>";
+}
+export function graphAskEdgeDel() { graphEdgeDelAsk = true; renderGraphPanel(); }
+export function graphCancelEdgeDel() { graphEdgeDelAsk = false; renderGraphPanel(); }
+
+export function ollamaCheck() {
+  var inp = document.getElementById("ollamaUrl"), note = document.getElementById("ollamaNote");
+  var url = (inp && inp.value ? inp.value : "http://127.0.0.1:11434").replace(/\/$/, "");
+  if (inp) inp.value = url;
+  fetch(url + "/api/tags").then(function (r) { return r.json(); }).then(function (j) {
+    var n = (j && j.models) ? j.models.length : 0;
+    try { localStorage.setItem("minime.ollamaUrl", url); } catch (_) {}
+    if (note) { note.textContent = tr("set.ollama.ok", { n: n }); }
+  }).catch(function () { if (note) note.textContent = tr("set.ollama.fail"); });
+}
+
 /* ---------- Library ---------- */
 var LIB_ADDED = loadLibAdded();
 var LIB = [
@@ -1605,6 +1922,7 @@ export function initV5() {
     });
   makeResizer("resizeAgent", "agentCol", 180, 420);
   makeResizer("resizeDetail", "detailCol", 220, 420);
+  ["agentCol", "detailCol"].forEach(function (id) { try { var w = localStorage.getItem("minime.colW." + id); var el = document.getElementById(id); if (w && el && /^\d+px$/.test(w)) el.style.width = w; } catch (_) {} });
   renderAgents();
   renderDetail();
   renderChat();
@@ -1627,7 +1945,7 @@ export function initV5() {
     });
   (function () {
       var _sc = sendChat;
-      sendChat = function () { _sc(); waInputChanged(); };
+      sendChat = function () { waApplyAttachments(); _sc(); waClearAttachments(); waInputChanged(); };
     })();
   renderAgents = function () { _ra2(); renderAddMenu(); };
   showView = function (id) {
@@ -1637,5 +1955,7 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, grabDY, graphRunning, graphSelect, graphClosePanel, renderGraphPanel, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  var ou = document.getElementById("ollamaUrl");
+  if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, grabDY, graphRunning, graphSelect, graphClosePanel, renderGraphPanel, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, saveSettings, ollamaCheck });
 }

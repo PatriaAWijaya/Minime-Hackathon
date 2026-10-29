@@ -323,3 +323,20 @@ h3 { font-size: 18px; }
 .n8n-node.sel { border-color: #EB87B4; box-shadow: 0 0 0 2px #EB87B4; }
 .n8n-nodebar { position: absolute; top: -34px; left: 0; display: flex; gap: 4px; z-index: 5; }
 .n8n-nodebar button { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #3a3a3a; background: #262626; color: #ececec; cursor: pointer; font-size: 13px; }
+
+/* ---------- Audit v78: chat, kanban dialog, detail, search ---------- */
+.chat-count { font-size: 12px; color: #a1a1a1; min-width: 22px; text-align: right; }
+.wa-chip { display: inline-block; background: #262626; border: 1px solid #3a3a3a; border-radius: 12px; padding: 3px 8px; margin: 2px 4px 2px 0; font-size: 12px; color: #ececec; }
+.wa-chip button { background: none; border: none; color: #EB87B4; cursor: pointer; font-size: 13px; }
+.wa-err { font-size: 12px; color: #f87171; margin: 4px 0; }
+#kbDlg { margin-top: 12px; }
+.kb-dlg { background: #1f1f1f; border: 1px solid #262626; border-radius: 12px; padding: 14px; color: #ececec; }
+.kb-dlg h4 { margin: 12px 0 6px; }
+.kb-dlg h4:first-child { margin-top: 0; }
+.kb-dlg label { display: block; font-size: 12px; color: #a1a1a1; margin: 8px 0 4px; }
+.kb-dlg-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.kb-teamrow { display: block; font-size: 13px; padding: 3px 0; }
+.kb-comment { font-size: 13px; color: #d4d4d4; padding: 4px 0; border-bottom: 1px solid #262626; }
+.d-memrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #262626; }
+.msg.hl .bubble { outline: 2px solid #EB87B4; outline-offset: 1px; }
+.search-hit:hover { border-color: #EB87B4 !important; }

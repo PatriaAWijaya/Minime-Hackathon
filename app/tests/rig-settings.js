@@ -158,10 +158,11 @@ try {
   check('klik kosong -> no-op (tanpa fetch baru)', fetchCount('generativelanguage') === gemFetchBefore);
 
   // 7. Kartu v53: tombol sejajar kanan input + ketikan baru membatalkan
-  // hijau basi (tanpa mengubah kunci/flag tersimpan). v63: kartu kunci
-  // ber-input tinggal 2 (Gemini, Meta); Ollama tanpa input.
+  // hijau basi (tanpa mengubah kunci/flag tersimpan). v78: kartu kunci
+  // ber-input menjadi 3 (Gemini, Meta, Ollama) — kartu Ollama yang dulu
+  // MATI (hanya label) kini punya input URL + tombol Periksa.
   const keyRows = [...document.querySelectorAll('.key-card .key-row')].filter((row) => row.querySelector('input'));
-  check('tiap kartu kunci: input + tombol sebaris', keyRows.length === 2 && keyRows.every((row) => row.querySelector('button')));
+  check('tiap kartu kunci: input + tombol sebaris', keyRows.length === 3 && keyRows.every((row) => row.querySelector('button')));
   // 8. Ikon nav v54: wiring + isi file baru (bukti dist menyalin ikon
   // kiriman Patria, bukan ikon lama). IHDR PNG: lebar di byte 16-19,
   // tinggi di byte 20-23 (big-endian).
