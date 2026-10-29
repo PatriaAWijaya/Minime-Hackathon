@@ -1954,3 +1954,8 @@ dokumen lama yang dipakai.
 - Gerbang penuh v73: app tsc 0, svelte-check 0 error / 39 warning, vite 377,44 KB JS, 9 rig ALL PASSED, root tsc 0, gate-test 14/14, scan PASSED, ledger md5 tetap (d542428fe9901fbd417e098e9249d4b6), cargo fmt --check 0 + cargo check --tests 0 warning, Cargo.lock tidak termutasi. 4 file diubah, tanpa file Rust.
 - Push: kode 0e8472e <-> 2994b7f (tree identik).
 - BATAS JUJUR: pembuatan aplikasi provider tetap terjadi di situs Meta/provider — tidak bisa diotomasi dari app (butuh akun developer user sendiri + persetujuan mereka di situs itu); wizard hanya memandu klik demi klik sehingga user awam tidak butuh bantuan manusia. Satu-klik-penuh (tanpa App ID/Secret sama sekali) hanya mungkin bila MiniMe punya aplikasi Meta lolos App Review + verifikasi bisnis — itu pekerjaan terpisah dan bertentangan dengan aturan publik (tiap user membawa kredensial sendiri); tidak dibangun di v73.
+
+## v74 hapus teks deskripsi Planner (perintah Patria 30 Okt 01:07)
+- Paragraf "Penjadwalan + autopost native. Hubungkan kanal, tulis postingan, jadwalkan — app menerbitkan saat waktunya tiba selama app terbuka." dihapus dari window utama Planner (renderNativePlanner) beserta kunci i18n soc.desc di ketiga bahasa — tidak dipakai di tempat lain (grep bersih). i18n turun ke 649 kunci/bahasa, tanpa duplikat.
+- Gerbang penuh v74: app tsc 0, svelte-check 0 error / 39 warning, vite 376,96 KB JS, 9 rig ALL PASSED, root tsc 0, gate-test 14/14, scan PASSED, ledger md5 tetap, cargo fmt --check 0 + cargo check --tests 0 warning. 2 file diubah.
+- Push: kode 4eb873c <-> f948026 (tree identik).
