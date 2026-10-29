@@ -2104,3 +2104,14 @@ dokumen lama yang dipakai.
 - Perbaikan: runCleanGraphV88() di initV5 (pola runCleanV84) — backup graphState/graphRuns ke *.pre-v88, tulis graphState kosong + runs '[]', flag minime.cleaned-graph-v88 hanya bila baca-balik kosong; hanya bila storage berisi (rig tak tersentuh). Seed kode GNODES/GEDGES DIPERTAHANKAN untuk instalasi baru + rig; yang bersih = storage app Patria. Bila Patria mau seed kode juga dihapus, itu langkah susulan (rig-graph perlu setup ulang).
 - Rig-graph S16 baru (mount storage dummy -> 0 node + backup + flag + runs kosong).
 - Gerbang: tsc 0, svelte-check 0 error/26 warning, vite, 13 rig ALL PASSED, gate-test 14/14, scan bersih, cargo fmt+check 0 warning, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
+
+## v89 — perbaikan audit performa (30 Okt 2026 ~05:45 WIB)
+- Sumber: audit performa read-only (0 BLOCKING, 3 MAJOR, 4 MINOR; bundle 149 kB gzip — compact terpenuhi; diverifikasi ulang di tree v88 karena audit jalan di tree era v84).
+- M1 drag Graph: mousemove kini hanya geser elemen + perbarui garis yang menyentuhnya (updateDragEdges: matematika dari rect terakhir + posisi baru, tanpa DOM read); renderGraph penuh hanya sekali saat mouseup. Path garis ditandai data-f/data-t; rect terakhir di-cache; ukuran node di-cache saat mousedown.
+- M2 preview ve2: cache base64 per path (maks 3 entri FIFO, dibersihkan saat stop) — video_read tak lagi diulang per klip.
+- M3/m4 gerbang: semua tick(500) buta pra-mount diganti polling waitFor showView (brand/batch/settings/home/graph/audit; audit juga buang tick redundan dom3/dom0). rig-graph S17 baru: drag mousemove mempertahankan identitas elemen DOM.
+- m1 rename Graph: tanpa renderGraph penuh per keystroke — label .nname di-update in-place + judul popup (fokus aman; rig S14 tetap lolos).
+- m2: cap chat 500 pesan/proyek. Cap item Library DIPARKIR: penghapusan otomatis konten user perlu keputusan Patria (bukan diputuskan diam-diam).
+- m3: probe embed VoiceStudio timeout 8 dtk (pola vsFetch).
+- Gerbang: tsc 0, svelte-check 0 error/26 warning, vite, 13 rig ALL PASSED (percobaan pertama), gate-test 14/14, scan bersih, cargo fmt+check 0 warning, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
+- Push kode: lokal 5544c35 <-> remote d569b91 (tree identik; percobaan push pertama gagal transient IndexError, percobaan kedua lolos).
