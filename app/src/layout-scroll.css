@@ -344,3 +344,15 @@ h3 { font-size: 18px; }
 .d-memrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #262626; }
 .msg.hl .bubble { outline: 2px solid #EB87B4; outline-offset: 1px; }
 .search-hit:hover { border-color: #EB87B4 !important; }
+
+/* ve2 editor (v80) */
+.ve2-toolbar { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
+.ve2-top { display:flex; gap:16px; align-items:flex-start; margin:12px 0; }
+.ve2-assets { width:260px; flex-shrink:0; }
+.ve2-asset { display:flex; justify-content:space-between; align-items:center; padding:4px 6px; border:1px solid #ddd; border-radius:6px; margin-bottom:4px; }
+.ve2-preview { flex:1; min-width:0; }
+.ve2-canvas { background:#111; color:#eee; text-align:center; padding:48px 12px; border-radius:8px; }
+.ve2-transport { display:flex; gap:8px; align-items:center; margin-top:8px; }
+.ve2-inspector { width:240px; flex-shrink:0; }
+.ve2-inspector label { display:block; margin-top:8px; font-weight:600; }
+.ve2-inspector input, .ve2-inspector select { width:100%; box-sizing:border-box; }

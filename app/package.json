@@ -29,7 +29,8 @@
     "rig:settings": "node tests/rig-settings.js",
     "rig:home": "node tests/rig-home.js",
     "rig:graph": "node tests/rig-graph.js",
-    "rig:audit": "node tests/rig-audit.js"
+    "rig:audit": "node tests/rig-audit.js",
+    "rig:ve2": "node tests/rig-ve2.js"
   },
   "type": "module",
   "version": "0.1.0"

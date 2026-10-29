@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, kbTeamOpen, saveSettings, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, kbTeamOpen, saveSettings, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -200,6 +200,333 @@
       t2Status = `${t('t2.assets.fail', lang)} ${String(e)}`;
     } finally {
       t2Busy = false;
+    }
+  }
+
+  // ---- Engine Video Editor ve2 NYATA (v80, gantikan simulasi) ----
+  // State timeline + aset tersimpan di localStorage minime.ve2 (pola
+  // yang sama dengan Kanban: tiap mutasi lalu simpan). Pratinjau
+  // memakai elemen <video>/<audio> + file dibaca lewat video_read
+  // (cap 20 MB, sama dengan image_read/audio_read). Ekspor memakai
+  // compiler Tier 1 yang sudah terbukti (compileTimeline) + QC +
+  // frame tengah; efek Fade diterapkan sebagai fade in/out pada
+  // hasil akhir (pass kedua), efek Zoom hanya zoom tampilan
+  // pratinjau (bukan filter render). B-Roll ikut dirangkai sebagai
+  // klip gambar berurutan bersama track Video.
+  interface Ve2Clip { id: string; name: string; track: 'Video' | 'B-Roll' | 'Audio' | 'Teks'; start: number; dur: number; src: string; effect: 'none' | 'fade' | 'zoom'; }
+  interface Ve2Asset { id: string; name: string; icon: string; kind: 'Video' | 'B-Roll' | 'Audio' | 'Teks'; src: string; duration: number; }
+  function ve2SeedClips(): Ve2Clip[] {
+    return [
+      { id: 've2c1', name: 'Hook (0–8 dtk)', track: 'Video', start: 0, dur: 8, src: '', effect: 'none' },
+      { id: 've2c2', name: 'Isi (8–22 dtk)', track: 'Video', start: 8, dur: 14, src: '', effect: 'none' },
+      { id: 've2c3', name: 'CTA (22–30 dtk)', track: 'Video', start: 22, dur: 8, src: '', effect: 'none' },
+      { id: 've2c4', name: 'B-Roll: seduh kopi', track: 'B-Roll', start: 8, dur: 14, src: '', effect: 'none' },
+      { id: 've2c5', name: 'Voice-over promo bundling', track: 'Audio', start: 0, dur: 30, src: '', effect: 'none' },
+      { id: 've2c6', name: 'Musik: akustik ringan', track: 'Audio', start: 0, dur: 30, src: '', effect: 'none' },
+      { id: 've2c7', name: 'Overlay: TEST Kopi — Rp15.000', track: 'Teks', start: 0, dur: 9, src: '', effect: 'none' },
+      { id: 've2c8', name: 'Overlay: Pesan via WA', track: 'Teks', start: 12, dur: 9, src: '', effect: 'none' },
+    ];
+  }
+  function ve2SeedAssets(): Ve2Asset[] {
+    return [
+      { id: 've2a1', name: 'Footage: Kedai kopi pagi', icon: '🎬', kind: 'Video', src: '', duration: 0 },
+      { id: 've2a2', name: 'B-Roll: Seduh & sajikan', icon: '🎬', kind: 'B-Roll', src: '', duration: 0 },
+      { id: 've2a3', name: 'Voice-over: Promo bundling', icon: '🎙', kind: 'Audio', src: '', duration: 0 },
+      { id: 've2a4', name: 'Musik: Akustik ringan', icon: '🎵', kind: 'Audio', src: '', duration: 0 },
+      { id: 've2a5', name: 'Teks: Overlay harga', icon: '🔤', kind: 'Teks', src: '', duration: 0 },
+    ];
+  }
+  function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number } | null {
+    try {
+      const raw = localStorage.getItem('minime.ve2');
+      if (!raw) return null;
+      const v = JSON.parse(raw);
+      if (!Array.isArray(v.clips) || !Array.isArray(v.assets)) return null;
+      const tracks = ['Video', 'B-Roll', 'Audio', 'Teks'];
+      const clips: Ve2Clip[] = v.clips.filter((c: any) => c && typeof c.id === 'string' && typeof c.name === 'string' && Number.isFinite(c.start) && Number.isFinite(c.dur)).map((c: any) => ({ id: c.id, name: c.name, track: (tracks.includes(c.track) ? c.track : 'Video') as Ve2Clip['track'], start: Number(c.start), dur: Number(c.dur), src: typeof c.src === 'string' ? c.src : '', effect: (['fade', 'zoom'].includes(c.effect) ? c.effect : 'none') as Ve2Clip['effect'] }));
+      const assets: Ve2Asset[] = v.assets.filter((a: any) => a && typeof a.id === 'string' && typeof a.name === 'string').map((a: any) => ({ id: a.id, name: a.name, icon: typeof a.icon === 'string' ? a.icon : '🎬', kind: (tracks.includes(a.kind) ? a.kind : 'Video') as Ve2Asset['kind'], src: typeof a.src === 'string' ? a.src : '', duration: Number.isFinite(a.duration) ? Number(a.duration) : 0 }));
+      if (clips.length === 0) return null;
+      return { clips, assets, out: typeof v.out === 'string' ? v.out : '', zoom: [0.5, 1, 2].includes(Number(v.zoom)) ? Number(v.zoom) : 1 };
+    } catch { return null; }
+  }
+  const ve2Loaded = ve2Load();
+  let ve2Clips = $state<Ve2Clip[]>(ve2Loaded?.clips ?? ve2SeedClips());
+  let ve2Assets = $state<Ve2Asset[]>(ve2Loaded?.assets ?? ve2SeedAssets());
+  let ve2Out = $state(ve2Loaded?.out || '/Users/mac/Movies/minime-ve2.mp4');
+  let ve2Zoom = $state(ve2Loaded?.zoom ?? 1);
+  let ve2SelId = $state(ve2Clips[0]?.id ?? '');
+  let ve2Status = $state('');
+  let ve2Frame = $state('');
+  let ve2Busy = $state(false);
+  let ve2Playing = $state(false);
+  let ve2Playhead = $state(0);
+  let ve2VideoOn = $state(false);
+  let ve2VideoEl = $state<HTMLVideoElement>();
+  let ve2NewSrc = $state('');
+  let ve2NewKind = $state('Video');
+  let ve2Timer: ReturnType<typeof setInterval> | null = null;
+  let ve2AudioTimers: ReturnType<typeof setTimeout>[] = [];
+  let ve2AudioEls: HTMLAudioElement[] = [];
+  let ve2VidTimer: ReturnType<typeof setTimeout> | null = null;
+  let ve2VidList: Ve2Clip[] = [];
+  let ve2Total = $derived(Math.max(30, ...ve2Clips.map((c) => c.start + c.dur)));
+  let ve2PlayheadPct = $derived((ve2Playhead / ve2Total) * 100);
+  let ve2RulerTicks = $derived(Array.from({ length: Math.floor(ve2Total / 10) + 1 }, (_, i) => i * 10));
+  let ve2PreviewLabel = $derived(`Preview: ${ve2SelClip()?.name ?? '—'}`);
+  let ve2TimeText = $derived(`${ve2Fmt(ve2Playhead)} / ${ve2Fmt(ve2Total)}`);
+  function ve2Fmt(sec: number): string {
+    const s = Math.max(0, Math.floor(sec));
+    return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  }
+  function ve2SelClip(): Ve2Clip | undefined {
+    return ve2Clips.find((c) => c.id === ve2SelId);
+  }
+  function ve2SaveState() {
+    try { localStorage.setItem('minime.ve2', JSON.stringify({ clips: ve2Clips, assets: ve2Assets, out: ve2Out, zoom: ve2Zoom })); } catch { /* kuota penuh: abaikan */ }
+  }
+  function ve2SelectClip(id: string) {
+    ve2SelId = id;
+  }
+  function ve2Bars(trackId: string): { clip: Ve2Clip; margin: number }[] {
+    const list = ve2Clips.filter((c) => c.track === trackId).sort((a, b) => a.start - b.start);
+    let prevEnd = 0;
+    return list.map((c) => {
+      const margin = Math.max(0, ((c.start - prevEnd) / ve2Total) * 100);
+      prevEnd = Math.max(prevEnd, c.start + c.dur);
+      return { clip: c, margin };
+    });
+  }
+  function ve2BarWidth(c: Ve2Clip): number {
+    return (c.dur / ve2Total) * 100;
+  }
+  function ve2SetField(field: string, value: string) {
+    const c = ve2SelClip();
+    if (!c) return;
+    if (field === 'name') { c.name = value; ve2SaveState(); return; }
+    if (field === 'start') { c.start = Number(value); ve2InspectorCommit(); return; }
+    if (field === 'dur') { c.dur = Number(value); ve2InspectorCommit(); return; }
+    if (field === 'track') { c.track = value as Ve2Clip['track']; ve2SaveState(); return; }
+    if (field === 'effect') { c.effect = value as Ve2Clip['effect']; ve2SaveState(); ve2EffectNote(); return; }
+  }
+  function ve2InspectorCommit() {
+    const c = ve2SelClip();
+    if (!c) return;
+    if (!(c.start >= 0)) c.start = 0;
+    if (!(c.dur >= 0.5)) c.dur = 0.5;
+    ve2SaveState();
+  }
+  function ve2EffectNote() {
+    const c = ve2SelClip();
+    if (!c) return;
+    ve2Status = c.effect === 'fade' ? t('ve2.fx_fade_note', lang) : c.effect === 'zoom' ? t('ve2.fx_zoom_note', lang) : '';
+  }
+  function ve2SaveProject() {
+    ve2SaveState();
+    ve2Status = t('ve2.saved', lang);
+  }
+  function ve2Cut() {
+    const c = ve2SelClip();
+    if (!c) { ve2Status = t('ve2.no_clip', lang); return; }
+    const ph = ve2Playhead;
+    if (!(ph > c.start && ph < c.start + c.dur)) { ve2Status = t('ve2.split_out', lang); return; }
+    const second: Ve2Clip = { id: 've2c' + Date.now(), name: c.name + ' (2)', track: c.track, start: ph, dur: c.start + c.dur - ph, src: c.src, effect: c.effect };
+    c.dur = ph - c.start;
+    ve2Clips = [...ve2Clips, second];
+    ve2SelId = second.id;
+    ve2SaveState();
+    ve2Status = t('ve2.split_ok', lang);
+  }
+  function ve2AddText() {
+    const n = ve2Clips.filter((c) => c.track === 'Teks').length + 1;
+    const clip: Ve2Clip = { id: 've2c' + Date.now(), name: `${t('ve2.text_new', lang)} ${n}`, track: 'Teks', start: ve2Playhead, dur: 5, src: '', effect: 'none' };
+    ve2Clips = [...ve2Clips, clip];
+    ve2SelId = clip.id;
+    ve2SaveState();
+    ve2Status = t('ve2.text_added', lang);
+  }
+  async function ve2Subtitle() {
+    const caps = ve2Clips.filter((c) => c.track === 'Teks').sort((a, b) => a.start - b.start).map((c) => ({ text: c.name, start: c.start, end: c.start + c.dur }));
+    if (caps.length === 0) { ve2Status = t('ve2.no_text', lang); return; }
+    try {
+      const ass = assFromCaptions(caps, 1280, 720);
+      const r = await invoke<{ path: string }>('video_write_ass', { req: { content: ass } });
+      ve2Status = `${t('ve2.ass_saved', lang)} ${r.path}`;
+    } catch (e) {
+      ve2Status = `${t('ve2.fail', lang)} ${String(e)}`;
+    }
+  }
+  function ve2Transition() {
+    const c = ve2SelClip();
+    if (!c) { ve2Status = t('ve2.no_clip', lang); return; }
+    c.effect = 'fade';
+    ve2SaveState();
+    ve2Status = t('ve2.fx_fade_note', lang);
+  }
+  async function ve2AddAsset() {
+    const path = ve2NewSrc.trim();
+    if (!path) { ve2Status = t('ve2.asset_empty', lang); return; }
+    try {
+      const probe = await invoke<{ duration: number }>('video_probe', { req: { path } });
+      const name = path.split('/').pop() || path;
+      const icon = ve2NewKind === 'Teks' ? '🔤' : ve2NewKind === 'Audio' ? '🎵' : '🎬';
+      ve2Assets = [...ve2Assets, { id: 've2a' + Date.now(), name, icon, kind: ve2NewKind as Ve2Asset['kind'], src: path, duration: probe.duration }];
+      ve2NewSrc = '';
+      ve2SaveState();
+      ve2Status = t('ve2.asset_added', lang);
+    } catch (e) {
+      ve2Status = `${t('ve2.asset_bad', lang)} ${String(e)}`;
+    }
+  }
+  function ve2AddAssetClip(assetId: string) {
+    const a = ve2Assets.find((x) => x.id === assetId);
+    if (!a) return;
+    const onTrack = ve2Clips.filter((c) => c.track === a.kind);
+    const start = onTrack.length ? Math.max(...onTrack.map((c) => c.start + c.dur)) : 0;
+    const dur = a.duration > 0 ? Math.round(a.duration * 10) / 10 : (a.kind === 'Teks' ? 5 : 8);
+    const clip: Ve2Clip = { id: 've2c' + Date.now(), name: a.name, track: a.kind, start, dur, src: a.src, effect: 'none' };
+    ve2Clips = [...ve2Clips, clip];
+    ve2SelId = clip.id;
+    ve2SaveState();
+  }
+  function ve2MimeFor(path: string): string {
+    const lower = path.toLowerCase();
+    if (lower.endsWith('.mov')) return 'video/quicktime';
+    if (lower.endsWith('.webm')) return 'video/webm';
+    if (lower.endsWith('.mp3')) return 'audio/mpeg';
+    if (lower.endsWith('.wav')) return 'audio/wav';
+    if (lower.endsWith('.m4a')) return 'audio/mp4';
+    return 'video/mp4';
+  }
+  function ve2StopPlayback() {
+    if (ve2Timer) { clearInterval(ve2Timer); ve2Timer = null; }
+    ve2AudioTimers.forEach((id) => clearTimeout(id)); ve2AudioTimers = [];
+    if (ve2VidTimer) { clearTimeout(ve2VidTimer); ve2VidTimer = null; }
+    ve2AudioEls.forEach((a) => { try { a.pause(); } catch { /* noop */ } });
+    ve2AudioEls = [];
+    if (ve2VideoEl) { try { ve2VideoEl.pause(); } catch { /* noop */ } ve2VideoEl.removeAttribute('src'); ve2VideoEl.load(); }
+    ve2VideoOn = false;
+    ve2Playing = false;
+  }
+  async function ve2PlayVideoAt(idx: number) {
+    if (idx >= ve2VidList.length) return;
+    const clip = ve2VidList[idx];
+    try {
+      const r = await invoke<{ b64: string }>('video_read', { req: { path: clip.src } });
+      if (!ve2Playing) return;
+      const el = ve2VideoEl;
+      if (!el) return;
+      el.src = `data:${ve2MimeFor(clip.src)};base64,${r.b64}`;
+      ve2VideoOn = true;
+      el.style.transform = clip.effect === 'zoom' ? 'scale(1.25)' : '';
+      try { await el.play(); } catch { /* autoplay ditolak: playhead tetap jalan */ }
+      const offset = Math.max(0, ve2Playhead - clip.start);
+      if (offset > 0 && offset < clip.dur) { try { el.currentTime = offset; } catch { /* noop */ } }
+      const remain = Math.max(0.2, (clip.start + clip.dur - Math.max(ve2Playhead, clip.start)));
+      if (ve2VidTimer) clearTimeout(ve2VidTimer);
+      ve2VidTimer = setTimeout(() => { if (ve2Playing) void ve2PlayVideoAt(idx + 1); }, remain * 1000);
+      el.onended = () => { if (ve2Playing) { if (ve2VidTimer) clearTimeout(ve2VidTimer); void ve2PlayVideoAt(idx + 1); } };
+    } catch (e) {
+      ve2Status = `${t('ve2.preview_fail', lang)} ${String(e)}`;
+    }
+  }
+  function ve2ScheduleAudio() {
+    const startAt = ve2Playhead;
+    for (const c of ve2Clips.filter((x) => x.track === 'Audio' && x.src && x.start + x.dur > startAt)) {
+      const delay = Math.max(0, (c.start - startAt)) * 1000;
+      const id = setTimeout(async () => {
+        if (!ve2Playing) return;
+        try {
+          const r = await invoke<{ b64: string }>('video_read', { req: { path: c.src } });
+          if (!ve2Playing) return;
+          const a = new Audio(`data:${ve2MimeFor(c.src)};base64,${r.b64}`);
+          ve2AudioEls.push(a);
+          try { await a.play(); } catch { /* noop */ }
+          const stopId = setTimeout(() => { try { a.pause(); } catch { /* noop */ } }, Math.max(0, (c.start + c.dur - Math.max(startAt, c.start))) * 1000);
+          ve2AudioTimers.push(stopId);
+        } catch { /* klip audio gagal: playhead tetap jalan */ }
+      }, delay);
+      ve2AudioTimers.push(id);
+    }
+  }
+  function ve2PlayToggle() {
+    if (ve2Playing) { ve2StopPlayback(); return; }
+    const startAt = ve2Playhead;
+    ve2Playing = true;
+    const hasMedia = ve2Clips.some((c) => c.src && c.start + c.dur > startAt);
+    if (!hasMedia) ve2Status = t('ve2.preview_nosrc', lang);
+    ve2VidList = ve2Clips.filter((c) => (c.track === 'Video' || c.track === 'B-Roll') && c.src && c.start + c.dur > startAt).sort((a, b) => a.start - b.start);
+    if (ve2VidList.length > 0) void ve2PlayVideoAt(0);
+    ve2ScheduleAudio();
+    const t0 = performance.now() - startAt * 1000;
+    ve2Timer = setInterval(() => {
+      const el = (performance.now() - t0) / 1000;
+      if (el >= ve2Total) { ve2Playhead = ve2Total; ve2StopPlayback(); return; }
+      ve2Playhead = el;
+    }, 100);
+  }
+  function ve2Preview() {
+    ve2StopPlayback();
+    ve2Playhead = 0;
+    ve2PlayToggle();
+  }
+  function ve2ToStart() {
+    ve2StopPlayback();
+    ve2Playhead = 0;
+  }
+  function ve2ToEnd() {
+    ve2StopPlayback();
+    ve2Playhead = ve2Total;
+  }
+  function ve2RulerClick(e: MouseEvent) {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const frac = (e.clientX - rect.left) / rect.width;
+    ve2StopPlayback();
+    ve2Playhead = Math.min(ve2Total, Math.max(0, frac * ve2Total));
+  }
+  async function ve2Export() {
+    if (ve2Busy) return;
+    const out = ve2Out.trim();
+    if (!out) { ve2Status = t('ve2.need_out', lang); return; }
+    const vids = ve2Clips.filter((c) => (c.track === 'Video' || c.track === 'B-Roll') && c.src).sort((a, b) => a.start - b.start);
+    if (vids.length === 0) { ve2Status = t('ve2.need_video', lang); return; }
+    const auds = ve2Clips.filter((c) => c.track === 'Audio' && c.src);
+    const clips: T1Clip[] = [
+      ...vids.map((c) => ({ id: c.id, src: c.src, kind: 'video' as const, trimIn: 0, dur: c.dur, volume: 1 })),
+      ...auds.map((c) => ({ id: c.id, src: c.src, kind: 'audio' as const, trimIn: 0, dur: c.dur, volume: 1, track: (/musik|music/i.test(c.name) ? 'music' : 'voice') as 'voice' | 'music' })),
+    ];
+    const seq: T1Sequence = { name: 've2', width: 1280, height: 720, fps: 30, clips };
+    const errs = validateSequence(seq, out);
+    if (errs.length > 0) { ve2Status = errs.map((e) => t(e, lang)).join(' '); return; }
+    const hasFade = ve2Clips.some((c) => c.effect === 'fade');
+    const hasZoom = ve2Clips.some((c) => c.effect === 'zoom');
+    const baseOut = hasFade ? out.replace(/\.mp4$/i, '') + '-base.mp4' : out;
+    const compiled = compileTimeline(seq, baseOut);
+    ve2Busy = true;
+    ve2Status = t('ve2.rendering', lang);
+    ve2Frame = '';
+    try {
+      const r = await invoke<T1RenderResult>('video_render', { req: { args: compiled.args, output: compiled.output } });
+      if (!r.success) { ve2Status = `${t('ve2.fail', lang)} ${r.stderr_tail}`; return; }
+      let finalOut = compiled.output;
+      if (hasFade) {
+        const total = compiled.expectedDuration;
+        const fadeArgs = ['-nostdin', '-y', '-i', compiled.output, '-vf', `fade=t=in:st=0:d=0.5,fade=t=out:st=${Math.max(0, total - 0.5)}:d=0.5`, '-c:a', 'copy', out];
+        const fr = await invoke<T1RenderResult>('video_render', { req: { args: fadeArgs, output: out } });
+        if (!fr.success) { ve2Status = `${t('ve2.fail', lang)} ${String(fr.stderr_tail)}`; return; }
+        finalOut = out;
+      }
+      const qc = await invoke<T1QcResult>('video_qc', { req: { path: finalOut, expectedDuration: compiled.expectedDuration } });
+      const cap = await invoke<T1CaptureResult>('video_capture', { req: { path: finalOut, at: compiled.expectedDuration / 2 } });
+      ve2Frame = cap.data_url;
+      let msg = `${t('ve2.done', lang)} ${finalOut}\n${t1QcText(qc)}`;
+      if (hasFade) msg += `\n${t('ve2.base_note', lang)} ${compiled.output}`;
+      if (hasZoom) msg += `\n${t('ve2.zoom_preview_only', lang)}`;
+      ve2Status = msg;
+    } catch (e) {
+      ve2Status = `${t('ve2.fail', lang)} ${String(e)}`;
+    } finally {
+      ve2Busy = false;
     }
   }
 </script>
@@ -463,48 +790,70 @@
         </div>
         <div id="ms-tab-video">
           <div class="ve-toolbar">
-          <button class="btn btn-sm" onclick={() => { veTool('Potong') }}>{t('ve.cut', lang)}</button>
-          <button class="btn btn-sm" onclick={() => { veTool('Tambah Teks') }}>{t('ve.addtext', lang)}</button>
-          <button class="btn btn-sm" onclick={() => { veTool('Subtitle') }}>{t('ve.subtitle', lang)}</button>
-          <button class="btn btn-sm" onclick={() => { veTool('Transisi') }}>{t('ve.transition', lang)}</button>
-          <span class="veToolNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
+          <button id="ve2BtnCut" class="btn btn-sm" onclick={() => { ve2Cut() }}>{t('ve.cut', lang)}</button>
+          <button id="ve2BtnText" class="btn btn-sm" onclick={() => { ve2AddText() }}>{t('ve.addtext', lang)}</button>
+          <button id="ve2BtnSub" class="btn btn-sm" onclick={() => { ve2Subtitle() }}>{t('ve.subtitle', lang)}</button>
+          <button id="ve2BtnTrans" class="btn btn-sm" onclick={() => { ve2Transition() }}>{t('ve.transition', lang)}</button>
           </div>
-          <p class="se-note">{t('ve.sim_banner', lang)}</p>
+          <p id="ve2Status" class="se-note" style="white-space:pre-line">{ve2Status ? ve2Status : t('ve2.ready', lang)}</p>
           <div class="ve2-toolbar">
-          <button class="btn btn-sm" onclick={() => { ve2Note('Simulasi: proyek tersimpan (tampilan saja).') }}>{t('settings.saveproj', lang)}</button>
-          <button class="btn btn-sm" onclick={() => { ve2Note('Belum bisa diekspor: engine render belum ada (lihat daftar engine di bawah).') }}>{t('ve.export', lang)}</button>
-          <button class="btn btn-sm" onclick={() => { ve2Note('Simulasi: render preview belum tersedia — butuh preview engine.') }}>{t('ve.render', lang)}</button>
+          <button id="ve2BtnSave" class="btn btn-sm" onclick={() => { ve2SaveProject() }}>{t('settings.saveproj', lang)}</button>
+          <button id="ve2BtnExport" class="btn btn-sm" onclick={() => { ve2Export() }} disabled={ve2Busy}>{ve2Busy ? t('ve2.rendering', lang) : t('ve.export', lang)}</button>
+          <button id="ve2BtnPreview" class="btn btn-sm" onclick={() => { ve2Preview() }}>{t('ve.render', lang)}</button>
+          <label style="margin-left:8px">{t('t1.output', lang)} <input id="ve2Out" type="text" bind:value={ve2Out} style="width:280px"></label>
           </div>
+          {#if ve2Frame}<div><img id="ve2Frame" src={ve2Frame} alt="" style="max-width:100%"></div>{/if}
           <div class="ve2-top">
           <div class="ve2-assets">
           <h4 style="margin:0 0 8px">{t('word.aset', lang)}</h4>
-          <div class="ve2-asset" onclick={() => { ve2Add('Footage: Kedai kopi pagi') }}><span>🎬 Footage: Kedai kopi pagi</span><span>+</span></div>
-          <div class="ve2-asset" onclick={() => { ve2Add('B-Roll: Seduh & sajikan') }}><span>🎬 B-Roll: Seduh &amp; sajikan</span><span>+</span></div>
-          <div class="ve2-asset" onclick={() => { ve2Add('Voice-over: Promo bundling') }}><span>🎙 Voice-over: Promo bundling</span><span>+</span></div>
-          <div class="ve2-asset" onclick={() => { ve2Add('Musik: Akustik ringan') }}><span>🎵 Musik: Akustik ringan</span><span>+</span></div>
-          <div class="ve2-asset" onclick={() => { ve2Add('Teks: Overlay harga') }}><span>🔤 Teks: Overlay harga</span><span>+</span></div>
+          {#each ve2Assets as a (a.id)}
+          <div class="ve2-asset"><span>{a.icon} {a.name}</span><button data-ve2-asset={a.id} onclick={() => { ve2AddAssetClip(a.id) }}>+</button></div>
+          {/each}
+          <div style="display:flex;gap:6px;margin-top:8px"><input id="ve2NewSrc" type="text" bind:value={ve2NewSrc} placeholder="/Users/mac/Movies/klip.mp4" style="flex:1"><select id="ve2NewKind" bind:value={ve2NewKind}><option value="Video">Video</option><option value="B-Roll">B-Roll</option><option value="Audio">Audio</option><option value="Teks">Teks</option></select><button id="ve2AssetAdd" class="btn btn-sm" onclick={() => { ve2AddAsset() }}>{t('t1.add', lang)}</button></div>
           </div>
           <div class="ve2-preview">
-          <div class="ve2-canvas"><div style="font-size:42px">▶</div><div id="ve2PreviewLabel">Preview: Hook (0–8 dtk)</div><small>{t('ve.canvas', lang)}</small></div>
-          <div class="ve2-transport"><button onclick={() => { ve2Transport('start') }} title={t('title.first', lang)}>⏮</button><button onclick={() => { ve2Play() }} title={t('title.play', lang)}>{t('ve.play', lang)}</button><button onclick={() => { ve2Transport('end') }} title={t('title.last', lang)}>⏭</button><span id="ve2Time">00:00:00 / 00:00:30</span><span style="margin-left:auto">{t('ve.zoom', lang)} <select id="ve2Zoom" onchange={() => { ve2Note('Simulasi: zoom timeline belum mengubah skala (tampilan saja).') }}><option>100%</option><option>50%</option><option>200%</option></select></span></div>
+          <video id="ve2Video" bind:this={ve2VideoEl} style="width:100%;background:#000;display:{ve2VideoOn ? 'block' : 'none'}" controls></video>
+          {#if !ve2VideoOn}<div class="ve2-canvas"><div style="font-size:42px">▶</div><div id="ve2PreviewLabel">{ve2PreviewLabel}</div><small>{t('ve.canvas', lang)}</small></div>{/if}
+          <div class="ve2-transport"><button onclick={() => { ve2ToStart() }} title={t('title.first', lang)}>⏮</button><button onclick={() => { ve2PlayToggle() }} title={t('title.play', lang)}>{ve2Playing ? t('ve2.stop', lang) : t('ve.play', lang)}</button><button onclick={() => { ve2ToEnd() }} title={t('title.last', lang)}>⏭</button><span id="ve2Time">{ve2TimeText}</span><span style="margin-left:auto">{t('ve.zoom', lang)} <select id="ve2Zoom" value={ve2Zoom} onchange={(e) => { ve2Zoom = Number(e.currentTarget.value); ve2SaveState(); }}><option value={0.5}>50%</option><option value={1}>100%</option><option value={2}>200%</option></select></span></div>
           </div>
           <div class="ve2-inspector">
           <h4 style="margin:0 0 8px">{t('ve.inspector', lang)}</h4>
-          <label>{t('word.nama', lang)}</label><input id="ve2Name" value="Hook (0–8 dtk)" oninput={() => { ve2SyncName() }}>
-          <label>{t('ve.start.label', lang)}</label><input id="ve2Start" value="0" type="number" readonly>
-          <label>{t('ve.dur.label', lang)}</label><input id="ve2Dur" value="8" type="number" readonly>
-          <label>{t('ve.track', lang)}</label><div id="ve2Track" class="ve-field">{t('word.video', lang)}</div>
-          <label>{t('ve.effect', lang)}</label><select id="ve2Fx" onchange={() => { ve2Note('Simulasi: efek belum diterapkan — butuh engine render.') }}><option>{t('ve.fx.none', lang)}</option><option>{t('ve.fx.fade', lang)}</option><option>{t('ve.fx.zoom', lang)}</option></select>
-          <span id="ve2Note" class="ve2-note"></span>
+          {#if ve2SelClip()}
+          <label>{t('word.nama', lang)}</label><input id="ve2Name" type="text" value={ve2SelClip()?.name ?? ''} oninput={(e) => { ve2SetField('name', e.currentTarget.value) }}>
+          <label>{t('ve.start.label', lang)}</label><input id="ve2Start" type="number" step="0.1" value={ve2SelClip()?.start ?? 0} onchange={(e) => { ve2SetField('start', e.currentTarget.value) }}>
+          <label>{t('ve.dur.label', lang)}</label><input id="ve2Dur" type="number" step="0.1" value={ve2SelClip()?.dur ?? 0} onchange={(e) => { ve2SetField('dur', e.currentTarget.value) }}>
+          <label>{t('ve.track', lang)}</label><select id="ve2Track" value={ve2SelClip()?.track ?? 'Video'} onchange={(e) => { ve2SetField('track', e.currentTarget.value) }}><option value="Video">{t('word.video', lang)}</option><option value="B-Roll">B-Roll</option><option value="Audio">{t('word.audio', lang)}</option><option value="Teks">{t('word.teks', lang)}</option></select>
+          <label>{t('ve.effect', lang)}</label><select id="ve2Fx" value={ve2SelClip()?.effect ?? 'none'} onchange={(e) => { ve2SetField('effect', e.currentTarget.value) }}><option value="none">{t('ve.fx.none', lang)}</option><option value="fade">{t('ve.fx.fade', lang)}</option><option value="zoom">{t('ve.fx.zoom', lang)}</option></select>
+          {:else}
+          <p class="se-note">{t('ve2.no_clip', lang)}</p>
+          {/if}
           </div>
           </div>
-          <div class="timeline">
-          <div class="playhead" id="playhead2" style="left:0%"></div>
-          <div class="ve-ruler"><span>00:00</span><span>00:10</span><span>00:20</span><span>00:30</span></div>
-          <div class="track"><span class="tlabel">{t('word.video', lang)}</span><div class="bar ve-clip" style="background:#EB87B4;width:27%" onclick={(e) => { ve2Select(e.currentTarget,'Hook (0–8 dtk)',0,8,'Video') }}>Hook (0–8 dtk)</div><div class="bar ve-clip" style="background:#5b5b5b;width:47%" onclick={(e) => { ve2Select(e.currentTarget,'Isi (8–22 dtk)',8,14,'Video') }}>Isi (8–22 dtk)</div><div class="bar ve-clip" style="background:#404040;width:26%" onclick={(e) => { ve2Select(e.currentTarget,'CTA (22–30 dtk)',22,8,'Video') }}>CTA</div></div>
-          <div class="track"><span class="tlabel">B-Roll</span><div class="bar ve-clip" style="background:#5b5b5b;margin-left:27%;width:47%" onclick={(e) => { ve2Select(e.currentTarget,'B-Roll: seduh kopi',8,14,'B-Roll') }}>B-Roll: seduh kopi</div></div>
-          <div class="track"><span class="tlabel">{t('word.audio', lang)}</span><div class="bar ve-clip" style="background:#5b5b5b;width:80%" onclick={(e) => { ve2Select(e.currentTarget,'Voice-over promo bundling',0,30,'Audio') }}>Voice-over promo bundling</div><div class="bar ve-clip" style="background:#4a4a4a;width:20%" onclick={(e) => { ve2Select(e.currentTarget,'Musik: akustik ringan',0,30,'Audio') }}>Musik</div></div>
-          <div class="track"><span class="tlabel">{t('word.teks', lang)}</span><div class="bar ve-clip" style="background:#5b5b5b;width:30%" onclick={(e) => { ve2Select(e.currentTarget,'Overlay: TEST Kopi — Rp15.000',0,9,'Teks') }}>Overlay: TEST Kopi — Rp15.000</div><div class="bar ve-clip" style="background:#4a4a4a;margin-left:10%;width:30%" onclick={(e) => { ve2Select(e.currentTarget,'Overlay: Pesan via WA',12,9,'Teks') }}>Overlay: Pesan via WA</div></div>
+          <div class="timeline" id="ve2Timeline" style="overflow-x:auto">
+          <div style="position:relative;width:{ve2Zoom * 100}%">
+          <div class="playhead" id="playhead2" style="left:{ve2PlayheadPct}%"></div>
+          <div class="ve-ruler" id="ve2Ruler" onclick={(e) => { ve2RulerClick(e) }}>{#each ve2RulerTicks as tick}<span>{ve2Fmt(tick)}</span>{/each}</div>
+          <div class="track"><span class="tlabel">{t('word.video', lang)}</span>
+          {#each ve2Bars('Video') as b (b.clip.id)}
+          <div class="bar ve-clip" class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          {/each}
+          </div>
+          <div class="track"><span class="tlabel">B-Roll</span>
+          {#each ve2Bars('B-Roll') as b (b.clip.id)}
+          <div class="bar ve-clip" class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          {/each}
+          </div>
+          <div class="track"><span class="tlabel">{t('word.audio', lang)}</span>
+          {#each ve2Bars('Audio') as b (b.clip.id)}
+          <div class="bar ve-clip" class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          {/each}
+          </div>
+          <div class="track"><span class="tlabel">{t('word.teks', lang)}</span>
+          {#each ve2Bars('Teks') as b (b.clip.id)}
+          <div class="bar ve-clip" class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          {/each}
+          </div>
+          </div>
           </div>
           <div class="t1-panel">
             <h3>{t('t1.title', lang)}</h3>

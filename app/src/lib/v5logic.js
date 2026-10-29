@@ -1074,50 +1074,6 @@ export function renderCampaign() {
   });
 }
 
-export function veTool(tool) {
-  document.querySelectorAll(".veToolNote").forEach(function (n) { n.textContent = "Simulasi: '" + tool + "' belum terhubung ke Diffusion (tampilan saja)."; });
-}
-
-export function ve2Select(el, name, start, dur, track) {
-    document.querySelectorAll("#ms-tab-video .ve-clip").forEach(function (c) { c.classList.remove("selected"); });
-    el.classList.add("selected");
-    document.getElementById("ve2Name").value = name;
-    document.getElementById("ve2Start").value = start;
-    document.getElementById("ve2Dur").value = dur;
-    document.getElementById("ve2Track").textContent = track;
-    document.getElementById("ve2PreviewLabel").textContent = "Preview: " + name;
-  }
-
-export function ve2SyncName() {
-    var v = document.getElementById("ve2Name").value;
-    var sel = document.querySelector("#ms-tab-video .ve-clip.selected");
-    if (sel) sel.textContent = v;
-    document.getElementById("ve2PreviewLabel").textContent = "Preview: " + v;
-  }
-
-export function ve2Note(t) { document.getElementById("ve2Note").textContent = t; }
-
-export function ve2Add(a) { ve2Note("Simulasi: '" + a + "' belum ditambahkan — butuh engine aset/timeline."); }
-
-export function ve2Play() {
-    if (playTimer2) clearInterval(playTimer2);
-    var p = 0, el = document.getElementById("playhead2");
-    playTimer2 = setInterval(function () {
-      p += 2;
-      if (p >= 100) { clearInterval(playTimer2); playTimer2 = null; }
-      el.style.left = p + "%";
-      var s = Math.round(p * 30 / 100);
-      document.getElementById("ve2Time").textContent = "00:00:" + (s < 10 ? "0" + s : s) + " / 00:00:30";
-    }, 120);
-  }
-
-export function ve2Transport(dir) {
-    if (playTimer2) { clearInterval(playTimer2); playTimer2 = null; }
-    var el = document.getElementById("playhead2");
-    if (dir === "start") { el.style.left = "0%"; document.getElementById("ve2Time").textContent = "00:00:00 / 00:00:30"; }
-    else { el.style.left = "100%"; document.getElementById("ve2Time").textContent = "00:00:30 / 00:00:30"; }
-  }
-
 /* ---------- Sidebar, resizer, init ---------- */
 export function showView(id) {
     document.querySelectorAll(".sidebar button").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-view") === id); });
@@ -2056,7 +2012,6 @@ var LIB = [
 
 /* ---------- Media Studio ---------- */
 
-var playTimer2 = null;
 
 var _ra2 = renderAgents;
 
@@ -2131,5 +2086,5 @@ export function initV5() {
   waInputChanged();
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, grabDY, graphRunning, graphSelect, graphClosePanel, renderGraphPanel, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, saveSettings, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, grabDY, graphRunning, graphSelect, graphClosePanel, renderGraphPanel, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, saveSettings, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel });
 }

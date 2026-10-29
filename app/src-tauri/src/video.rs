@@ -686,6 +686,33 @@ pub fn video_asset_hash(req: HashRequest) -> Result<HashResult, String> {
     Ok(HashResult { sha256, size })
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoReadRequest {
+    pub path: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoReadRes {
+    pub b64: String,
+}
+
+/// Baca file media untuk pratinjau ve2 (pola sama dengan audio_read /
+/// image_read: cap 20 MB agar file yang dibesarkan manual tidak meledak
+/// ke memori). Path absolut dari user (seperti video_probe).
+#[tauri::command]
+pub fn video_read(req: VideoReadRequest) -> Result<VideoReadRes, String> {
+    let meta = std::fs::metadata(&req.path).map_err(|e| e.to_string())?;
+    if meta.len() > 20_000_000 {
+        return Err("media melebihi 20 MB".to_string());
+    }
+    let bytes = std::fs::read(&req.path).map_err(|e| e.to_string())?;
+    Ok(VideoReadRes {
+        b64: base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes),
+    })
+}
+
 #[tauri::command]
 pub fn video_write_ass(req: WriteAssRequest) -> Result<WriteAssResult, String> {
     if req.content.trim().is_empty() {
