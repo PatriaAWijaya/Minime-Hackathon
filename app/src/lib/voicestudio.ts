@@ -389,6 +389,11 @@ export async function vsGenerateClone(): Promise<void> {
 }
 
 // Setup satu paket: unduh + pasang + buka + verifikasi backend.
+// UI-nya DIHAPUS v67 atas perintah Patria (tombol Periksa status +
+// seksi Setup di tab Voice Editor) — fungsi ini DIPERTAHANKAN agar
+// jalur upgrade VoiceStudio (mis. v0.5.6 -> v0.5.7, masih tertunda)
+// tidak musnah; pasang kembali tombolnya bila jalur itu dibuka lagi.
+// vsCheck tetap dipakai onMount App.svelte (memuat model + suara).
 export async function vsSetupInstall(): Promise<void> {
   setNote('vsSetupNote', tr('vs.setup.working'));
   try {

@@ -3,7 +3,7 @@
   import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showSetNotice, showView, switchProject, toggleAddMenu, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
-  import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetupInstall, vsSetupLaunch } from "./lib/voicestudio.js";
+  import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
   import { sherpaSetup, sherpaTtsFromTab, sherpaRenderStatus, sherpaRefreshUI } from "./lib/sherpa.js";
   import { vedPlay, vedTrimSel, vedCutSel, vedClearSel, vedRefresh } from "./lib/voice-editor.js";
   import { initScriptEditor, setSeMenu, seRefreshUI } from "./lib/script-editor.js";
@@ -401,10 +401,6 @@
         </div>
         <div id="ms-tab-voice" style="display:none">
           <h3>{t('ms.tab.voice', lang)}</h3>
-          <p><button class="btn btn-sm" onclick={() => { vsCheck() }}>{t('vs.status.check', lang)}</button></p>
-          <h4>{t('vs.setup.title', lang)}</h4>
-          <p><button class="btn btn-primary" onclick={() => { vsSetupInstall() }}>{t('vs.setup.install', lang)}</button> <button class="btn btn-sm" onclick={() => { vsSetupLaunch() }}>{t('vs.setup.launch', lang)}</button> <span id="vsSetupNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span></p>
-          <p style="color:#a1a1a1;font-size:13px">{t('vs.setup.note', lang)}</p>
           <h4>{t('vs.embed.title', lang)}</h4>
           <div class="vs-embed">
             <div class="vs-bar"><b>VoiceStudio</b> <span id="vsEmbedStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { vsEmbedReload() }}>{t('vs.embed.reload', lang)}</button></div>

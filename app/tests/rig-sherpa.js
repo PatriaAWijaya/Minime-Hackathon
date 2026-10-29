@@ -96,8 +96,11 @@ try {
   check('panel voice tampil', panel && panel.style.display !== 'none');
 
   const btns = [...panel.querySelectorAll('button')].map((b) => b.textContent.trim());
-  check('tombol Setup ada', btns.includes('Pasang VoiceStudio') && btns.includes('Buka & Periksa Backend'), btns.join('|'));
-  check('catatan Setup ada', !!document.getElementById('vsSetupNote'));
+  // v67: UI Setup VoiceStudio dihapus atas perintah Patria — rig
+  // diperbarui ke ekspektasi baru (bukan kode yang dilemahkan).
+  check('tombol Setup VoiceStudio hilang', !btns.includes('Pasang VoiceStudio') && !btns.includes('Buka & Periksa Backend'), btns.join('|'));
+  check('catatan Setup hilang', !document.getElementById('vsSetupNote'));
+  check('Periksa status tinggal satu (Sherpa saja)', btns.filter((b) => b === 'Periksa status').length === 1, btns.join('|'));
 
   const sbtns = [...panel.querySelectorAll('button')].map((b) => b.textContent.trim());
   check('tombol Sherpa ada', sbtns.includes('Setup Sherpa') && sbtns.includes('Generate via Sherpa'), sbtns.join('|'));

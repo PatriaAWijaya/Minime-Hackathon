@@ -1,6 +1,9 @@
 // Rig VoiceStudio (jsdom, test-only): membuktikan wiring tab Voice di
 // bundle yang sudah di-build — BUKAN mock logika bisnis:
-//  1. Tombol Setup (Pasang + Buka) ada dan memanggil invoke vs_install.
+//  1. (v67, perintah Patria: tombol Periksa status + seksi Setup
+//     DIHAPUS dari tab) Tombol Setup (Pasang + Buka) TIDAK ada dan
+//     #vsSetupNote TIDAK ada — fungsi vsSetup* dipertahankan di
+//     voicestudio.ts untuk jalur upgrade, bukan dari UI.
 //  2. Generate TTS saat backend mati MEMANGGIL vs_launch DULU sebelum
 //     fetch /v1/audio/speech (urutan auto-launch agen).
 //  3. Bila backend sudah hidup, Generate TIDAK memanggil vs_launch lagi.
@@ -143,14 +146,15 @@ try {
   check('panel voice tampil', panel && panel.style.display !== 'none');
 
   const btns = [...panel.querySelectorAll('button')].map((b) => b.textContent.trim());
-  check('tombol Setup ada', btns.includes('Pasang VoiceStudio') && btns.includes('Buka & Periksa Backend'), btns.join('|'));
-  check('catatan Setup ada', !!document.getElementById('vsSetupNote'));
-
-  log.length = 0;
-  [...panel.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Pasang VoiceStudio').click();
-  await tick(200);
-  check('Setup memanggil vs_install', log.includes('invoke:vs_install'), log.join(','));
-  check('Setup selesai (note siap)', (document.getElementById('vsSetupNote')?.textContent || '').includes('siap'), document.getElementById('vsSetupNote')?.textContent || '');
+  // v67: UI Setup dihapus atas perintah Patria — yang dicek kini
+  // adalah KETIADAANNYA, bukan keberadaannya (ekspektasi rig lama
+  // diperbarui, bukan kode yang dilemahkan).
+  check('tombol Setup VoiceStudio hilang', !btns.includes('Pasang VoiceStudio') && !btns.includes('Buka & Periksa Backend'), btns.join('|'));
+  check('catatan Setup hilang', !document.getElementById('vsSetupNote'));
+  // Label 'Periksa status' dipakai bersama Sherpa — yang membuktikan
+  // baris VoiceStudio hilang adalah JUMLAHNYA: tinggal 1 (Sherpa
+  // saja), dulu 2 (VoiceStudio + Sherpa).
+  check('Periksa status tinggal satu (Sherpa saja)', btns.filter((b) => b === 'Periksa status').length === 1, btns.join('|'));
 
   // Uji urutan agen: backend mati -> Generate harus launch dulu.
   log.length = 0;
