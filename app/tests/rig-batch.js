@@ -193,7 +193,8 @@ try {
   await tick(200);
   check('planner native tampil', !!document.getElementById('nativePlanner') && document.querySelectorAll('.soc-card').length === 8, document.getElementById('nativePlanner')?.textContent.slice(0, 120));
   check('composer + kalender + picker sumber tampil', !!document.getElementById('socText') && !!document.querySelector('.soc-cal-grid') && !!document.getElementById('socSrc-main'), '');
-  check('3 kanal tersisa bisa dihubungkan + LinkedIn sudah terhubung (tombol Putuskan)', document.querySelectorAll('[id^="socConn-"]').length === 3 && !!document.getElementById('socDisc-linkedin'), document.querySelectorAll('[id^="socConn-"]').length);
+  check('5 kanal tersisa bisa dihubungkan + LinkedIn sudah terhubung (tombol Putuskan)', document.querySelectorAll('[id^="socConn-"]').length === 5 && !!document.getElementById('socDisc-linkedin'), document.querySelectorAll('[id^="socConn-"]').length);
+  check('X + TikTok bisa dihubungkan, YouTube tanpa tombol hubung', !!document.getElementById('socConn-x') && !!document.getElementById('socConn-tiktok') && !document.getElementById('socConn-youtube'), '');
   check('daftar antrean tanpa tombol hapus', document.querySelectorAll('[data-soc-del]').length === 0, '');
   // Klik hari kalender (bukan hari ini, supaya tidak bercampur item
   // Batch hari ini) -> dialog tanggal terbuka.

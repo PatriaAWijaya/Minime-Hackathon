@@ -563,8 +563,9 @@ function cardDateISO(start: string, day: number): string {
 
 // Kanal native yang mendukung file untuk Batch (gambar disimpan di
 // minime-images dan dikirim lewat perintah Rust publish — bukan URL).
+// X ikut (upload media v2 dari file); TikTok tidak (foto hanya URL).
 function batchFileChannels(): { id: string; name: string }[] {
-  return socConnectedChannels().filter((c) => c.id === 'linkedin' || c.id === 'facebook_page');
+  return socConnectedChannels().filter((c) => c.id === 'linkedin' || c.id === 'facebook_page' || c.id === 'x');
 }
 
 function batchTargetChecks(): string {

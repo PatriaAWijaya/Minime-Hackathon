@@ -6,11 +6,14 @@
 //! bertoken memakai file konfigurasi curl sementara (0600) yang
 //! dihapus sesudah dipakai, bukan argv (argv terlihat di `ps`).
 //!
-//! Batas jujur v61: hanya LinkedIn yang dibangun end-to-end
-//! (connect + terbit teks/gambar). Platform lain mengembalikan
-//! error "belum dibangun" — BUKAN sukses palsu. Penjadwal berjalan
-//! selama app terbuka (timer 30 detik di frontend); penjadwalan
-//! level OS (launchd) adalah fase berikutnya, bukan v61.
+//! Batas jujur: LinkedIn, FB Page, Threads, IG, X, dan TikTok
+//! dibangun end-to-end (connect + terbit). YouTube TIDAK dibangun:
+//! API-nya tidak punya endpoint Community post, hanya upload video
+//! (videos.insert) — butuh input video yang belum ada di composer.
+//! Platform yang belum dibangun mengembalikan error "belum dibangun"
+//! — BUKAN sukses palsu. Penjadwal berjalan selama app terbuka
+//! (timer 30 detik di frontend); penjadwalan level OS (launchd)
+//! adalah fase berikutnya.
 
 use serde::Deserialize;
 use std::io::{Read, Write};
@@ -239,13 +242,50 @@ pub struct TokenExchangeReq {
     pub redirect_uri: String,
     pub client_id: String,
     pub client_secret: String,
+    #[serde(default)]
+    pub code_verifier: String,
 }
 
-/// Tukar authorization code menjadi token (v61: LinkedIn saja).
+/// Tukar authorization code menjadi token (LinkedIn, X via PKCE +
+/// Basic auth, TikTok via client_key di body form).
 /// Mengembalikan body JSON mentah dari provider untuk disimpan
 /// frontend (access_token, expires_in, refresh_token bila ada).
 #[tauri::command]
 pub fn social_token_exchange(req: TokenExchangeReq) -> Result<String, String> {
+    if req.platform == "x" {
+        // X: OAuth 2.0 + PKCE; klien rahasia wajib Basic auth.
+        let form = form_encode(&[
+            ("grant_type", "authorization_code"),
+            ("code", &req.code),
+            ("redirect_uri", &req.redirect_uri),
+            ("code_verifier", &req.code_verifier),
+            ("client_id", &req.client_id),
+        ]);
+        let r = curl_form_basic(
+            "https://api.twitter.com/2/oauth2/token",
+            &form,
+            &req.client_id,
+            &req.client_secret,
+        )?;
+        if r.status != 200 {
+            return Err(format!("Token exchange X gagal (HTTP {})", r.status));
+        }
+        return Ok(r.body);
+    }
+    if req.platform == "tiktok" {
+        let form = form_encode(&[
+            ("client_key", &req.client_id),
+            ("client_secret", &req.client_secret),
+            ("code", &req.code),
+            ("grant_type", "authorization_code"),
+            ("redirect_uri", &req.redirect_uri),
+        ]);
+        let r = curl_form_urlencoded("https://open.tiktokapis.com/v2/oauth/token/", &form)?;
+        if r.status != 200 {
+            return Err(format!("Token exchange TikTok gagal (HTTP {})", r.status));
+        }
+        return Ok(r.body);
+    }
     if req.platform != "linkedin" {
         return Err(format!("Token exchange {} belum dibangun", req.platform));
     }
@@ -256,27 +296,95 @@ pub fn social_token_exchange(req: TokenExchangeReq) -> Result<String, String> {
         ("client_id", &req.client_id),
         ("client_secret", &req.client_secret),
     ]);
-    // Form dikirim lewat file data (bukan argv/JSON) agar encoding tepat.
+    let r = curl_form_urlencoded("https://www.linkedin.com/oauth/v2/accessToken", &form)?;
+    if r.status != 200 {
+        return Err(format!("Token exchange gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
+/// POST form-urlencoded lewat file data sementara (0600, dihapus
+/// sesudah dipakai) — dipakai token exchange LinkedIn + TikTok.
+fn curl_form_urlencoded(url: &str, form: &str) -> Result<CurlRes, String> {
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     let dp = std::env::temp_dir().join(format!("minime-form-{stamp}.txt"));
-    std::fs::write(&dp, &form).map_err(|e| e.to_string())?;
+    std::fs::write(&dp, form).map_err(|e| e.to_string())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&dp, std::fs::Permissions::from_mode(0o600));
+    }
     let r = curl_api(
         "POST",
-        "https://www.linkedin.com/oauth/v2/accessToken",
+        url,
         None,
         None,
         Some(&dp),
         Some("application/x-www-form-urlencoded"),
     );
     let _ = std::fs::remove_file(dp);
-    let r = r?;
-    if r.status != 200 {
-        return Err(format!("Token exchange gagal (HTTP {})", r.status));
+    r
+}
+
+/// POST form-urlencoded dengan Basic auth (client_id:client_secret
+/// base64) — dipakai token exchange + refresh X. Secret TIDAK PERNAH
+/// di argv/log; hanya di file config sementara 0600.
+fn curl_form_basic(
+    url: &str,
+    form: &str,
+    basic_user: &str,
+    basic_pass: &str,
+) -> Result<CurlRes, String> {
+    use base64::Engine as _;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let dir = std::env::temp_dir();
+    let cfg = dir.join(format!("minime-xform-{stamp}.cfg"));
+    let body_path = dir.join(format!("minime-xform-{stamp}.body"));
+    let dp = dir.join(format!("minime-xform-{stamp}.txt"));
+    std::fs::write(&dp, form).map_err(|e| e.to_string())?;
+    let cred =
+        base64::engine::general_purpose::STANDARD.encode(format!("{basic_user}:{basic_pass}"));
+    let cfg_text = format!(
+        "silent = true\nurl = \"{url}\"\nrequest = \"POST\"\noutput = \"{}\"\nwrite-out = \"%{{http_code}}\"\nheader = \"Authorization: Basic {cred}\"\nheader = \"Content-Type: application/x-www-form-urlencoded\"\ndata-binary = \"@{}\"\n",
+        body_path.to_string_lossy(),
+        dp.to_string_lossy()
+    );
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::write(&cfg, &cfg_text).map_err(|e| e.to_string())?;
+        let _ = std::fs::set_permissions(&cfg, std::fs::Permissions::from_mode(0o600));
+        let _ = std::fs::set_permissions(&dp, std::fs::Permissions::from_mode(0o600));
     }
-    Ok(r.body)
+    #[cfg(not(unix))]
+    {
+        std::fs::write(&cfg, &cfg_text).map_err(|e| e.to_string())?;
+    }
+    let out = std::process::Command::new("curl")
+        .args(["-K", &cfg.to_string_lossy()])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let status: u16 = String::from_utf8_lossy(&out.stdout)
+        .trim()
+        .parse()
+        .unwrap_or(0);
+    let body = std::fs::read_to_string(&body_path).unwrap_or_default();
+    let _ = std::fs::remove_file(&cfg);
+    let _ = std::fs::remove_file(&body_path);
+    let _ = std::fs::remove_file(&dp);
+    if status == 0 {
+        return Err(format!(
+            "curl gagal: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    Ok(CurlRes { status, body })
 }
 
 /// Profil LinkedIn (userinfo) — dipakai untuk label channel + URN author.
@@ -610,7 +718,8 @@ pub fn social_meta_ig_id(page_id: String, token: String) -> Result<String, Strin
 }
 
 /// Terbitkan SATU postingan ke SATU platform (v61: LinkedIn;
-/// v62a: + FB Page + Threads teks; v62b: + IG via URL gambar).
+/// v62a: + FB Page + Threads teks; v62b: + IG via URL gambar;
+/// v64: + X teks/gambar, + TikTok foto via URL publik).
 /// Platform lain mengembalikan error jelas — tidak ada sukses palsu.
 #[tauri::command]
 pub fn social_publish(req: PublishReq) -> Result<String, String> {
@@ -619,6 +728,8 @@ pub fn social_publish(req: PublishReq) -> Result<String, String> {
         "facebook_page" => fb_page_publish(&req),
         "threads" => threads_publish(&req),
         "instagram" => ig_publish(&req),
+        "x" => x_publish(&req),
+        "tiktok" => tiktok_publish(&req),
         other => Err(format!("Publish {other} belum dibangun")),
     }
 }
@@ -730,6 +841,228 @@ fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
     Ok("ok".into())
 }
 
+/// Profil X (users/me) — dipakai untuk label channel.
+#[tauri::command]
+pub fn social_x_me(token: String) -> Result<String, String> {
+    let r = curl_api(
+        "GET",
+        "https://api.twitter.com/2/users/me",
+        Some(&token),
+        None,
+        None,
+        None,
+    )?;
+    if r.status != 200 {
+        return Err(format!("Gagal membaca profil X (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct XRefreshReq {
+    pub refresh_token: String,
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+/// Refresh token X (2 jam) — refresh_token BEROTASI: respons membawa
+/// refresh_token BARU yang harus disimpan frontend (yang lama langsung
+/// tidak valid). Dipakai scheduler sebelum publish bila token kedaluwarsa.
+#[tauri::command]
+pub fn social_x_refresh(req: XRefreshReq) -> Result<String, String> {
+    let form = form_encode(&[
+        ("grant_type", "refresh_token"),
+        ("refresh_token", &req.refresh_token),
+        ("client_id", &req.client_id),
+    ]);
+    let r = curl_form_basic(
+        "https://api.twitter.com/2/oauth2/token",
+        &form,
+        &req.client_id,
+        &req.client_secret,
+    )?;
+    if r.status != 200 {
+        return Err(format!("Refresh token X gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
+/// Ambil media_id dari respons upload media X v2 — id bisa string
+/// maupun angka (Snowflake 64-bit; angka JANGAN diparse ke float).
+fn x_media_id(body: &str) -> Option<String> {
+    let v: serde_json::Value = serde_json::from_str(body).ok()?;
+    let id = v.get("id")?;
+    if let Some(s) = id.as_str() {
+        return Some(s.to_string());
+    }
+    if let Some(n) = id.as_u64() {
+        return Some(n.to_string());
+    }
+    None
+}
+
+/// Terbitkan ke X: teks saja, atau teks + 1 gambar (upload media v2
+/// multipart, lalu POST /2/tweets dengan media_ids). Batas X: 280
+/// karakter — dicek di sini supaya pesannya jelas, bukan 400 mentah.
+fn x_publish(req: &PublishReq) -> Result<String, String> {
+    if req.text.chars().count() > 280 {
+        return Err("Teks X maksimal 280 karakter".into());
+    }
+    let mut media_ids: Vec<String> = Vec::new();
+    let img = resolve_image(req)?;
+    if let Some((bytes, mime)) = img {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let tmp = std::env::temp_dir().join(format!("minime-x-{stamp}.bin"));
+        std::fs::write(&tmp, &bytes).map_err(|e| e.to_string())?;
+        let r = curl_multipart(
+            "https://api.x.com/2/media/upload",
+            &req.access_token,
+            &[("media_category", "tweet_image"), ("media_type", &mime)],
+            "media",
+            &tmp,
+            &mime,
+        );
+        let _ = std::fs::remove_file(&tmp);
+        let r = r?;
+        if r.status != 200 && r.status != 201 {
+            return Err(format!("Upload media X gagal (HTTP {})", r.status));
+        }
+        let mid = x_media_id(&r.body).ok_or("Upload media X tanpa id")?;
+        media_ids.push(mid);
+    }
+    let mut body = serde_json::json!({ "text": req.text });
+    if !media_ids.is_empty() {
+        body["media"] = serde_json::json!({ "media_ids": media_ids });
+    }
+    let r = curl_api(
+        "POST",
+        "https://api.twitter.com/2/tweets",
+        Some(&req.access_token),
+        Some(&body.to_string()),
+        None,
+        Some("application/json"),
+    )?;
+    if r.status != 200 && r.status != 201 {
+        return Err(format!("Publish X gagal (HTTP {})", r.status));
+    }
+    Ok("ok".into())
+}
+
+/// Judul TikTok: maksimal 90 karakter — deskripsi membawa teks penuh
+/// sehingga tidak ada isi yang hilang karena pemotongan judul.
+fn tiktok_title(text: &str) -> String {
+    text.chars().take(90).collect()
+}
+
+/// Terbitkan foto ke TikTok (Content Posting API, DIRECT_POST):
+/// HANYA via URL gambar publik (PULL_FROM_URL) — file lokal ditolak
+/// tegas seperti pola IG/Threads. TikTok hanya menerima JPEG/WEBP
+/// untuk foto (PNG ditolak). Judul = 90 karakter pertama teks,
+/// deskripsi = teks penuh, privasi PUBLIC_TO_EVERYONE. Status
+/// di-poll sampai PUBLISH_COMPLETE (maks ~30 detik); bila masih
+/// diproses, kembalikan error jelas supaya antrean bisa retry.
+/// CATATAN JUJUR: klien yang belum lolos audit TikTok hanya tampil
+/// privat sampai audit selesai — itu batas dari TikTok, bukan bug.
+fn tiktok_publish(req: &PublishReq) -> Result<String, String> {
+    if !req.image_b64.is_empty() || !req.image_file.is_empty() {
+        return Err("TikTok foto butuh URL gambar publik (bukan file lokal)".into());
+    }
+    if req.image_url.is_empty() {
+        return Err("TikTok butuh minimal 1 URL gambar publik".into());
+    }
+    let low = req.image_url.to_lowercase();
+    let clean = low.split(['?', '#']).next().unwrap_or("");
+    if clean.ends_with(".png") {
+        return Err("TikTok foto hanya menerima JPEG/WEBP (bukan PNG)".into());
+    }
+    let body = serde_json::json!({
+        "post_info": {
+            "title": tiktok_title(&req.text),
+            "description": req.text,
+            "privacy_level": "PUBLIC_TO_EVERYONE",
+            "disable_comment": false,
+        },
+        "source_info": {
+            "source": "PULL_FROM_URL",
+            "photo_images": [req.image_url],
+            "photo_cover_index": 0,
+        },
+        "post_mode": "DIRECT_POST",
+        "media_type": "PHOTO",
+    });
+    let r = curl_api(
+        "POST",
+        "https://open.tiktokapis.com/v2/post/publish/content/init/",
+        Some(&req.access_token),
+        Some(&body.to_string()),
+        None,
+        Some("application/json"),
+    )?;
+    if r.status != 200 {
+        return Err(format!("Init foto TikTok gagal (HTTP {})", r.status));
+    }
+    let v: serde_json::Value =
+        serde_json::from_str(&r.body).map_err(|_| "Respons init TikTok tidak terbaca")?;
+    let code_ok = v
+        .get("error")
+        .and_then(|e| e.get("code"))
+        .and_then(|c| c.as_str())
+        == Some("ok");
+    let publish_id = v
+        .get("data")
+        .and_then(|d| d.get("publish_id"))
+        .and_then(|p| p.as_str())
+        .map(|p| p.to_string());
+    let (code_ok, publish_id) = match (code_ok, publish_id) {
+        (true, Some(p)) => (true, p),
+        _ => (false, String::new()),
+    };
+    if !code_ok {
+        return Err(format!(
+            "Init foto TikTok ditolak: {}",
+            r.body.chars().take(200).collect::<String>()
+        ));
+    }
+    let mut last_status = String::new();
+    for _ in 0..10 {
+        let sb = serde_json::json!({ "publish_id": publish_id }).to_string();
+        let sr = curl_api(
+            "POST",
+            "https://open.tiktokapis.com/v2/post/publish/status/fetch/",
+            Some(&req.access_token),
+            Some(&sb),
+            None,
+            Some("application/json"),
+        )?;
+        if sr.status != 200 {
+            return Err(format!("Status TikTok gagal (HTTP {})", sr.status));
+        }
+        let sv: serde_json::Value =
+            serde_json::from_str(&sr.body).map_err(|_| "Respons status TikTok tidak terbaca")?;
+        let st = sv
+            .get("data")
+            .and_then(|d| d.get("status"))
+            .and_then(|s| s.as_str())
+            .unwrap_or("")
+            .to_string();
+        last_status = st.clone();
+        if st == "PUBLISH_COMPLETE" {
+            return Ok("ok".into());
+        }
+        if st.to_uppercase().contains("FAIL") {
+            return Err(format!("Publish TikTok gagal (status {st})"));
+        }
+        std::thread::sleep(std::time::Duration::from_secs(3));
+    }
+    Err(format!(
+        "TikTok masih memproses (status terakhir: {last_status}) — coba Terbitkan sekarang lagi"
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -753,6 +1086,26 @@ mod tests {
             Some("xyz".to_string())
         );
         assert_eq!(query_value("error=access_denied", "code"), None);
+    }
+
+    #[test]
+    fn x_media_id_string_and_number() {
+        assert_eq!(
+            x_media_id("{\"id\": \"1234567890123456789\"}"),
+            Some("1234567890123456789".to_string())
+        );
+        assert_eq!(
+            x_media_id("{\"id\": 1234567890123456789}"),
+            Some("1234567890123456789".to_string())
+        );
+        assert_eq!(x_media_id("{\"nope\": 1}"), None);
+    }
+
+    #[test]
+    fn tiktok_title_caps_at_90_chars() {
+        let long = "a".repeat(200);
+        assert_eq!(tiktok_title(&long).chars().count(), 90);
+        assert_eq!(tiktok_title("pendek"), "pendek");
     }
 
     #[test]

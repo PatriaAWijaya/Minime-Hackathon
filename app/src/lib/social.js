@@ -17,16 +17,17 @@ var OAUTH_REDIRECT = 'http://127.0.0.1:4317/callback';
 // Urutan sesuai perintah Patria. facebook (profil) TIDAK BISA autopost
 // via API (Meta menghapusnya) — ditampilkan apa adanya, bukan tombol
 // palsu. v62a: facebook_page + threads ikut dibangun (can: true);
-// instagram/youtube/tiktok/x masih "menyusul".
+// v62b: instagram; v64: x + tiktok. youtube TIDAK dibangun (API-nya
+// tidak punya endpoint Community post — hanya upload video).
 var PLATFORMS = [
   { id: 'facebook', name: 'Facebook', note: 'soc.note.fb_profile', can: false },
   { id: 'facebook_page', name: 'Facebook Page', note: '', can: true },
   { id: 'instagram', name: 'Instagram', note: 'soc.note.ig_url', can: true },
   { id: 'threads', name: 'Threads', note: 'soc.note.threads_text', can: true },
   { id: 'linkedin', name: 'LinkedIn', note: '', can: true },
-  { id: 'youtube', name: 'YouTube', note: '', can: false },
-  { id: 'tiktok', name: 'TikTok', note: '', can: false },
-  { id: 'x', name: 'X', note: '', can: false },
+  { id: 'youtube', name: 'YouTube', note: 'soc.note.youtube_video', can: false },
+  { id: 'tiktok', name: 'TikTok', note: 'soc.note.tiktok_url', can: true },
+  { id: 'x', name: 'X', note: 'soc.note.x_cost', can: true },
 ];
 
 function socStore() {
@@ -88,7 +89,11 @@ function renderChannels() {
     } else if (connected) {
       body = '<div class="soc-row"><button id="socDisc-' + p.id + '" class="btn btn-sm">' + tr('soc.disconnect') + '</button></div>';
     } else {
-      body = '<div>' + (p.id === 'facebook_page' || p.id === 'threads' ? tr('soc.meta_hint') : tr('soc.cred_hint')) + '</div>'
+      var hint = p.id === 'facebook_page' || p.id === 'threads' ? tr('soc.meta_hint')
+        : p.id === 'x' ? tr('soc.x_hint')
+        : p.id === 'tiktok' ? tr('soc.tiktok_hint')
+        : tr('soc.cred_hint');
+      body = '<div>' + hint + '</div>'
         + '<div class="soc-row"><input type="text" id="socId-' + p.id + '" placeholder="' + tr('soc.ph.id') + '" style="width:180px" value="' + esc((ch && ch.clientId) || '') + '"> '
         + '<input type="password" id="socSec-' + p.id + '" placeholder="' + tr('soc.ph.secret') + '" style="width:180px"></div>'
         + '<div class="soc-row"><button id="socConn-' + p.id + '" class="btn btn-sm btn-primary">' + tr('soc.connect') + '</button></div>';
@@ -510,6 +515,7 @@ async function socScheduleDay() {
 async function socPublishDirect(platform, text, img, imgUrl, imageFile) {
   var s = socStore();
   var ch = s[platform];
+  if (platform === 'x') ch = await socEnsureXToken(ch);
   if (!tokenValid(ch)) { socNote(platName(platform) + ': ' + tr('soc.err.token')); return; }
   try {
     await invoke('social_publish', { req: socPublishArgs(platform, ch, text, img, imgUrl, imageFile) });
@@ -525,6 +531,7 @@ async function socPublishItem(id) {
   if (!it) return;
   var s = socStore();
   var ch = s[it.platform];
+  if (it.platform === 'x') ch = await socEnsureXToken(ch);
   if (!tokenValid(ch)) {
     it.status = 'failed'; it.error = tr('soc.err.token'); queueSave(q); renderNativePlanner(); return;
   }
@@ -536,6 +543,132 @@ async function socPublishItem(id) {
     it.status = 'failed'; it.error = String(e || '');
   }
   queueSave(q); renderNativePlanner();
+}
+
+function socRandStr(n) {
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  var out = '';
+  if (window.crypto && window.crypto.getRandomValues) {
+    var buf = new Uint32Array(n);
+    window.crypto.getRandomValues(buf);
+    for (var i = 0; i < n; i++) out += chars[buf[i] % chars.length];
+  } else {
+    for (var j = 0; j < n; j++) out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
+}
+
+function socB64Url(bytes) {
+  var bin = '';
+  for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// X: OAuth 2.0 + PKCE (S256). Token hanya 2 jam — refresh ditangani
+// socEnsureXToken sebelum publish (refresh_token berotasi).
+async function socConnectX(clientId, clientSecret) {
+  var verifier = socRandStr(64);
+  var challenge;
+  try {
+    if (!window.crypto || !window.crypto.subtle) throw new Error('no-subtle');
+    var hash = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+    challenge = socB64Url(new Uint8Array(hash));
+  } catch (_) { socNote(tr('soc.err.pkce')); return; }
+  var state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var authUrl = 'https://twitter.com/i/oauth2/authorize?response_type=code'
+    + '&client_id=' + encodeURIComponent(clientId)
+    + '&redirect_uri=' + encodeURIComponent(OAUTH_REDIRECT)
+    + '&scope=' + encodeURIComponent('tweet.read tweet.write users.read media.write offline.access')
+    + '&state=' + encodeURIComponent(state)
+    + '&code_challenge=' + encodeURIComponent(challenge)
+    + '&code_challenge_method=S256';
+  socNote(tr('soc.wait_login'));
+  var listenP = invoke('social_oauth_listen');
+  try { await invoke('open_external_url', { url: authUrl }); }
+  catch (e) { socNote(String(e || '')); return; }
+  var res;
+  try { res = await listenP; }
+  catch (e) { socNote(String(e || '')); return; }
+  var parsed;
+  try { parsed = JSON.parse(res); } catch (_) { socNote(tr('soc.err.callback')); return; }
+  if (parsed.state !== state) { socNote(tr('soc.err.state')); return; }
+  var tok;
+  try {
+    tok = await invoke('social_token_exchange', { req: { platform: 'x', code: parsed.code, redirectUri: OAUTH_REDIRECT, clientId: clientId, clientSecret: clientSecret, codeVerifier: verifier } });
+  } catch (e) { socNote(String(e || '')); return; }
+  var tj;
+  try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return; }
+  if (!tj.access_token) { socNote(tr('soc.err.token_body')); return; }
+  var label = '';
+  try {
+    var me = await invoke('social_x_me', { token: tj.access_token });
+    var mj = JSON.parse(me);
+    label = mj.data && mj.data.username ? '@' + mj.data.username : '';
+  } catch (_) {}
+  var s = socStore();
+  s.x = {
+    clientId: clientId, clientSecret: clientSecret,
+    accessToken: tj.access_token, refreshToken: tj.refresh_token || '',
+    expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
+    label: label,
+  };
+  socSave(s);
+  renderNativePlanner();
+}
+
+// TikTok: Login Kit (client_key di kolom ID) + scope video.publish.
+// DIRECT_POST foto butuh URL publik — ditangani di sisi Rust.
+async function socConnectTiktok(clientId, clientSecret) {
+  var state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var authUrl = 'https://www.tiktok.com/v2/auth/authorize/?client_key=' + encodeURIComponent(clientId)
+    + '&scope=' + encodeURIComponent('user.info.basic,video.publish')
+    + '&response_type=code'
+    + '&redirect_uri=' + encodeURIComponent(OAUTH_REDIRECT)
+    + '&state=' + encodeURIComponent(state);
+  socNote(tr('soc.wait_login'));
+  var listenP = invoke('social_oauth_listen');
+  try { await invoke('open_external_url', { url: authUrl }); }
+  catch (e) { socNote(String(e || '')); return; }
+  var res;
+  try { res = await listenP; }
+  catch (e) { socNote(String(e || '')); return; }
+  var parsed;
+  try { parsed = JSON.parse(res); } catch (_) { socNote(tr('soc.err.callback')); return; }
+  if (parsed.state !== state) { socNote(tr('soc.err.state')); return; }
+  var tok;
+  try {
+    tok = await invoke('social_token_exchange', { req: { platform: 'tiktok', code: parsed.code, redirectUri: OAUTH_REDIRECT, clientId: clientId, clientSecret: clientSecret } });
+  } catch (e) { socNote(String(e || '')); return; }
+  var tj;
+  try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return; }
+  if (!tj.access_token) { socNote(tr('soc.err.token_body')); return; }
+  var s = socStore();
+  s.tiktok = {
+    clientId: clientId, clientSecret: clientSecret,
+    accessToken: tj.access_token, refreshToken: tj.refresh_token || '',
+    expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
+    label: tj.open_id || 'TikTok',
+  };
+  socSave(s);
+  renderNativePlanner();
+}
+
+// X: token hanya 2 jam — refresh otomatis (refresh_token berotasi)
+// sebelum publish bila kedaluwarsa. Gagal refresh = token lama dipakai,
+// publish gagal jujur dengan error token (bukan sukses palsu).
+async function socEnsureXToken(ch) {
+  if (!ch || !ch.refreshToken) return ch;
+  if (ch.expiresAt && ch.expiresAt > Date.now() + 60000) return ch;
+  try {
+    var body = await invoke('social_x_refresh', { req: { refreshToken: ch.refreshToken, clientId: ch.clientId || '', clientSecret: ch.clientSecret || '' } });
+    var j = JSON.parse(body);
+    if (!j.access_token) return ch;
+    ch.accessToken = j.access_token;
+    if (j.refresh_token) ch.refreshToken = j.refresh_token;
+    if (j.expires_in) ch.expiresAt = Date.now() + j.expires_in * 1000;
+    var s = socStore(); s.x = ch; socSave(s);
+  } catch (_) {}
+  return ch;
 }
 
 async function socConnectMeta(platform, clientId, clientSecret) {
@@ -605,6 +738,8 @@ async function socConnect(platform) {
     await socConnectMeta(platform, clientId, clientSecret);
     return;
   }
+  if (platform === 'x') { await socConnectX(clientId, clientSecret); return; }
+  if (platform === 'tiktok') { await socConnectTiktok(clientId, clientSecret); return; }
   if (platform !== 'linkedin') { socNote(tr('soc.coming')); return; }
   var state = Math.random().toString(36).slice(2) + Date.now().toString(36);
   var authUrl = 'https://www.linkedin.com/oauth/v2/authorization?response_type=code'
@@ -659,6 +794,7 @@ export function initSocialScheduler() {
       queueSave(q);
       var s = socStore();
       var ch = s[it.platform];
+      if (it.platform === 'x') ch = await socEnsureXToken(ch);
       if (!tokenValid(ch)) { it.status = 'failed'; it.error = tr('soc.err.token'); continue; }
       try {
         await invoke('social_publish', { req: socPublishArgs(it.platform, ch, it.text, null, it.imageUrl || '', it.imageFile || '') });

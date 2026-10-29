@@ -64,6 +64,8 @@ fn main() {
             social::social_oauth_listen,
             social::social_token_exchange,
             social::social_linkedin_me,
+            social::social_x_me,
+            social::social_x_refresh,
             social::social_meta_exchange,
             social::social_meta_pages,
             social::social_meta_ig_id,
