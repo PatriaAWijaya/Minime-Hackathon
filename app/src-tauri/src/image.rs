@@ -11,12 +11,12 @@ use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-fn images_dir() -> Result<PathBuf, String> {
+pub(crate) fn images_dir() -> Result<PathBuf, String> {
     let home = std::env::var("HOME").map_err(|_| "direktori HOME tidak ditemukan.".to_string())?;
     Ok(PathBuf::from(home).join("minime-images"))
 }
 
-fn safe_name(name: &str) -> Option<String> {
+pub(crate) fn safe_name(name: &str) -> Option<String> {
     if name.is_empty()
         || name.contains('/')
         || name.contains('\\')

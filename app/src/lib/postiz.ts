@@ -7,9 +7,11 @@
 // draft-creation function was removed with it (audit 28 Okt 2026).
 // What remains is key storage only: the key lives in localStorage,
 // entered by the user in Settings (from the MacBook Keychain), and
-// is read here for the Settings key status. The frontend never
-// sends the key anywhere. Draft creation lives in the Node client
-// (src/postiz.ts, PostizDraftClient) used by the fase runners.
+// is read here for the Settings key status and for the Batch
+// scheduler — which sends it via the Rust postiz_request command
+// (v47, no webview fetch: the app origin is CORS-blocked by Postiz).
+// Draft creation lives in the Node client (src/postiz.ts,
+// PostizDraftClient) used by the fase runners.
 
 export const POSTIZ_KEY_LS = 'minime.postizKey';
 

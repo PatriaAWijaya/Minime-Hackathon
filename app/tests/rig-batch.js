@@ -7,7 +7,7 @@
 //     images Meta) -> kartu ready + spend tercatat 6 gambar.
 //  4. Pilih visual -> status terpilih; revisi Canva (file input)
 //     -> pilihan ke-4 otomatis terpilih.
-//  5. Jadwal Postiz (double-confirm, fetch stub upload + posts) ->
+//  5. Jadwal Postiz (double-confirm, invoke stub postiz_request) ->
 //     kedua kartu scheduled + postizId tercatat.
 //  6. Batch carousel 1 hari -> pilihan berisi 3 file (loop slide).
 // Jalankan: npm run rig:batch (butuh dist ter-build + jsdom devDependency).
@@ -56,6 +56,11 @@ async function invokeStub(cmd, args) {
     imgFiles.delete(req.name);
     return { file: req.name, deleted: true };
   }
+  if (cmd === 'postiz_request') {
+    if (req.op === 'upload') return { status: 201, body: JSON.stringify({ id: 'up1', path: 'https://uploads.postiz.com/x.webp' }) };
+    if (req.op === 'post') return { status: 201, body: JSON.stringify({ id: 'post1' }) };
+    throw new Error('unexpected postiz op ' + req.op);
+  }
   throw new Error('unexpected invoke ' + cmd);
 }
 
@@ -64,11 +69,6 @@ async function fetchStub(url) {
   log.push('fetch:' + u);
   if (u.includes('images/generations')) {
     return makeResp({ jsonData: { created: 1793000000, data: [{ b64_json: PNG_1X1 }], output_format: 'webp', usage: {} } });
-  }
-  if (u.includes('localhost:4007')) {
-    if (u.endsWith('/upload')) return makeResp({ jsonData: { id: 'up1', path: 'https://uploads.postiz.com/x.webp' } });
-    if (u.endsWith('/posts')) return makeResp({ jsonData: { id: 'post1' } });
-    return makeResp({ jsonData: {} });
   }
   // Chat completions (router): bentuk Meta yang sudah terbukti rig-chat.
   return makeResp({ jsonData: { choices: [{ message: { content: SCRIPT_TEXT } }], usage: { prompt_tokens: 10, completion_tokens: 20 } } });
@@ -112,6 +112,7 @@ function check(name, ok, extra = '') {
 }
 const batch = () => JSON.parse(store.get('minime.batch') || '{}');
 const fetchCount = (part) => log.filter((l) => l.startsWith('fetch:') && l.includes(part)).length;
+const invokeCount = (part) => log.filter((l) => l.startsWith('invoke:') && l.includes(part)).length;
 
 try {
   await tick(500);
@@ -166,7 +167,7 @@ try {
   document.getElementById('batch-schedule').click();
   await waitFor(() => batch().cards.every((c) => c.status === 'scheduled'), 'kartu scheduled', 200);
   check('kedua kartu scheduled + postizId', batch().cards.every((c) => c.status === 'scheduled' && c.postizId === 'post1'), JSON.stringify(batch().cards.map((c) => c.postizId)));
-  check('upload + posts dipanggil', fetchCount('/upload') === 2 && fetchCount('/posts') === 2, 'upload=' + fetchCount('/upload') + ' posts=' + fetchCount('/posts'));
+  check('upload + posts dipanggil via Rust', invokeCount('postiz_request') === 4, 'postiz_request=' + invokeCount('postiz_request'));
 
   // 6. Batch carousel 1 hari -> pilihan berisi 3 file.
   document.getElementById('batch-new').click();

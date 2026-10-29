@@ -14,6 +14,10 @@
 //   [{integration: {id}, value: [{content, image: [{id, path}]}],
 //   settings: {__type, post_type: 'post'}}]}. Base lokal
 //   http://localhost:4007 (sama dengan klien draf Fase 3 yang teruji).
+//   Panggilan dilakukan perintah Rust postiz_request (BUKAN fetch
+//   webview): fetch dari origin app (tauri://localhost) ke localhost:4007
+//   diblokir CORS Postiz (preflight 204 tanpa Allow-Origin, terbukti
+//   29 Okt) — jalur fetch tidak pernah bisa jalan di app.
 //   BUKTI LIVE DI APP MASIH MENUNGGU: Postiz berjalan di MacBook
 //   (saat ini tidur) — jadi status schedule = docs-verified, bukan
 //   live-proven. Setiap kartu melaporkan sukses/gagal sendiri-sendiri
@@ -34,7 +38,6 @@ import { metaGenerateImage, addImgSpend, RATIO_SIZE, readThumb } from './image-a
 import { esc } from './esc.js';
 
 export const BATCH_LS = 'minime.batch';
-const POSTIZ_BASE = 'http://localhost:4007/api/public/v1';
 // ID channel dari draf Fase 3 (27 Okt 2026, terverifikasi saat itu).
 // Bila channel berubah di dashboard Postiz, jadwal akan gagal jujur
 // dengan HTTP error — perbarui ID di sini.
@@ -601,19 +604,12 @@ async function scheduleBatch(onlyFailed: boolean): Promise<void> {
     try {
       const uploads: { id: string; path: string }[] = [];
       for (const f of files) {
-        const res = await invoke<{ b64: string }>('image_read', { req: { name: f } });
-        const bin = atob(res.b64);
-        const bytes = new Uint8Array(bin.length);
-        for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
-        const fd = new FormData();
-        fd.append('file', new Blob([bytes], { type: 'image/webp' }), f);
-        const up = await fetch(POSTIZ_BASE + '/upload', {
-          method: 'POST',
-          headers: { 'Authorization': key },
-          body: fd,
-        });
-        if (!up.ok) throw new Error('Postiz upload HTTP ' + up.status + ' ' + (await up.text()).slice(0, 200));
-        const uj = await up.json() as Record<string, unknown>;
+        // Upload lewat perintah Rust (bukan fetch webview): file dibaca
+        // Rust dari minime-images dan dikirim sebagai multipart — jalur
+        // ini tidak kena CORS Postiz.
+        const up = await invoke<{ status: number; body: string }>('postiz_request', { req: { op: 'upload', key, file: f } });
+        if (up.status < 200 || up.status >= 300) throw new Error('Postiz upload HTTP ' + up.status + ' ' + up.body.slice(0, 200));
+        const uj = JSON.parse(up.body) as Record<string, unknown>;
         const nested = (uj.data ?? {}) as Record<string, unknown>;
         const id = typeof uj.id === 'string' ? uj.id : typeof nested.id === 'string' ? nested.id : '';
         const path = typeof uj.path === 'string' ? uj.path : typeof nested.path === 'string' ? nested.path : '';
@@ -621,21 +617,17 @@ async function scheduleBatch(onlyFailed: boolean): Promise<void> {
         uploads.push({ id, path });
       }
       const caption = (card.title ? card.title + '\n\n' : '') + card.concept;
-      const pr = await fetch(POSTIZ_BASE + '/posts', {
-        method: 'POST',
-        headers: { 'Authorization': key, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'schedule',
-          date: cardDateISO(b.start, card.day),
-          posts: [{
-            integration: { id: channel.id },
-            value: [{ content: caption, image: uploads }],
-            settings: channel.settings,
-          }],
-        }),
-      });
-      if (!pr.ok) throw new Error('Postiz posts HTTP ' + pr.status + ' ' + (await pr.text()).slice(0, 200));
-      const pj = await pr.json() as Record<string, unknown>;
+      const pr = await invoke<{ status: number; body: string }>('postiz_request', { req: { op: 'post', key, json: JSON.stringify({
+        type: 'schedule',
+        date: cardDateISO(b.start, card.day),
+        posts: [{
+          integration: { id: channel.id },
+          value: [{ content: caption, image: uploads }],
+          settings: channel.settings,
+        }],
+      }) } });
+      if (pr.status < 200 || pr.status >= 300) throw new Error('Postiz posts HTTP ' + pr.status + ' ' + pr.body.slice(0, 200));
+      const pj = JSON.parse(pr.body) as Record<string, unknown>;
       const pnested = (pj.data ?? {}) as Record<string, unknown>;
       card.postizId = typeof pj.id === 'string' ? pj.id : typeof pnested.id === 'string' ? pnested.id : null;
       card.status = 'scheduled';
