@@ -2046,8 +2046,32 @@ function runCleanV84() {
     if (_ok) { try { window.localStorage.setItem('minime.cleaned-v84', '1'); } catch (_) {} }
   } catch (_) {}
 }
+/* v88 (perintah Patria 30 Okt 05:07: bersihkan dummy di menu Graph):
+   migrasi sekali-jalan ala runCleanV84 — kanvas + riwayat simulasi
+   dikosongkan dengan backup *.pre-v88. Hanya berjalan bila storage
+   berisi (rig/storage kosong tak tersentuh: seed kode tetap berlaku
+   untuk instalasi baru). Flag hanya bila baca-balik sudah kosong. */
+function runCleanGraphV88() {
+  try {
+    if (window.localStorage.getItem('minime.cleaned-graph-v88')) return;
+    var raw = null; try { raw = window.localStorage.getItem('minime.graphState'); } catch (_) {}
+    var runs = null; try { runs = window.localStorage.getItem('minime.graphRuns'); } catch (_) {}
+    if (raw) {
+      try { if (!window.localStorage.getItem('minime.graphState.pre-v88')) window.localStorage.setItem('minime.graphState.pre-v88', raw); } catch (_) {}
+      try { window.localStorage.setItem('minime.graphState', JSON.stringify({ nodes: {}, edges: [], counter: 0 })); } catch (_) {}
+    }
+    if (runs) {
+      try { if (!window.localStorage.getItem('minime.graphRuns.pre-v88')) window.localStorage.setItem('minime.graphRuns.pre-v88', runs); } catch (_) {}
+      try { window.localStorage.setItem('minime.graphRuns', '[]'); } catch (_) {}
+    }
+    var ok = true;
+    try { var vb = JSON.parse(window.localStorage.getItem('minime.graphState') || 'null'); ok = !vb || !vb.nodes || Object.keys(vb.nodes).length === 0; } catch (_) { ok = true; }
+    if (ok) { try { window.localStorage.setItem('minime.cleaned-graph-v88', '1'); } catch (_) {} }
+  } catch (_) {}
+}
 export function initV5() {
   runCleanV84();
+  runCleanGraphV88();
   // Penjadwal native (v61): timer antrean mulai sekali saat app hidup.
   initSocialScheduler();
   // v77: penjadwal trigger Graph (hanya selama app terbuka).

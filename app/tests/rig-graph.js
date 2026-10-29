@@ -368,6 +368,19 @@ try {
   check('tambah node tanpa seleksi -> node baru +1 + punya edge masuk', keys15.length === before15 + 1 && dom.window.GEDGES.some((e) => e.t === last15), keys15.length + '|' + last15);
   check('node baru berkelas ok', document.querySelector('[data-nkey="' + last15 + '"]')?.classList.contains('ok') === true, document.querySelector('[data-nkey="' + last15 + '"]')?.className);
 
+  // 16. v88: migrasi bersih Graph — storage berisi dummy -> kanvas kosong + backup.
+  const store16 = new Map();
+  store16.set('minime.graphState', JSON.stringify({ nodes: { trigger: { name: 'Dummy', sub: '', icon: 'x', x: 1, y: 1, w: 100, kind: 'trigger', desc: '' } }, edges: [], counter: 1 }));
+  store16.set('minime.graphRuns', JSON.stringify([{ at: '2026-10-29T21:01:29', kind: 'manual' }]));
+  const dom16 = makeDom(store16);
+  await tick(500);
+  dom16.window.showView('graph');
+  dom16.window.renderGraph();
+  await tick(100);
+  const gs16 = JSON.parse(store16.get('minime.graphState') || '{}');
+  check('migrasi v88 -> kanvas kosong', dom16.window.document.querySelectorAll('#graphNodes .n8n-node').length === 0 && Object.keys(gs16.nodes || {}).length === 0, dom16.window.document.querySelectorAll('#graphNodes .n8n-node').length + '|' + JSON.stringify(gs16.nodes));
+  check('migrasi v88 -> backup + flag + riwayat kosong', !!store16.get('minime.graphState.pre-v88') && !!store16.get('minime.graphRuns.pre-v88') && store16.get('minime.graphRuns') === '[]' && store16.get('minime.cleaned-graph-v88') === '1', store16.get('minime.graphRuns'));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-graph exception :: ' + (e && e.stack ? e.stack : e));
