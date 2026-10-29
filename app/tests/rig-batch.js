@@ -185,17 +185,28 @@ try {
   await waitFor(() => batch().cards.length === 1 && batch().cards[0].status === 'ready', 'kartu carousel ready', 200);
   check('pilihan carousel berisi 3 file', batch().cards[0].choices.every((ch) => ch.files.length === 3), JSON.stringify(batch().cards[0].choices.map((ch) => ch.files.length)));
 
-  // 7. Planner native v63: 8 kartu kanal + composer + kalender +
-  // picker sumber Library/custom + dialog tanggal (hapus hanya via
-  // kalender, bukan dari daftar antrean).
+  // 7. Planner native v68: dua panel — sidebar 8 kanal (ikon +
+  // status, klik = kartu koneksi) + window utama HANYA kalender
+  // kartu (tombol + = jadwal via dialog, chip = judul + ikon kanal,
+  // tombol − = hapus item). Composer + daftar antrean lama dihapus.
   dom.window.showView('planner');
   dom.window.renderPlanner();
   await tick(200);
-  check('planner native tampil', !!document.getElementById('nativePlanner') && document.querySelectorAll('.soc-card').length === 8, document.getElementById('nativePlanner')?.textContent.slice(0, 120));
-  check('composer + kalender + picker sumber tampil', !!document.getElementById('socText') && !!document.querySelector('.soc-cal-grid') && !!document.getElementById('socSrc-main'), '');
-  check('5 kanal tersisa bisa dihubungkan + LinkedIn sudah terhubung (tombol Putuskan)', document.querySelectorAll('[id^="socConn-"]').length === 5 && !!document.getElementById('socDisc-linkedin'), document.querySelectorAll('[id^="socConn-"]').length);
-  check('X + TikTok bisa dihubungkan, YouTube tanpa tombol hubung', !!document.getElementById('socConn-x') && !!document.getElementById('socConn-tiktok') && !document.getElementById('socConn-youtube'), '');
-  check('daftar antrean tanpa tombol hapus', document.querySelectorAll('[data-soc-del]').length === 0, '');
+  check('planner dua panel tampil: sidebar 8 kanal + kalender kartu', !!document.getElementById('nativePlanner') && document.querySelectorAll('[data-soc-side]').length === 8 && !!document.querySelector('.soc-cal-grid'), '');
+  check('tanpa pilih kanal: kartu koneksi belum muncul + composer/queue lama hilang', !document.querySelector('.soc-side-detail .soc-card') && !document.getElementById('socText') && !document.querySelector('.soc-queue'), '');
+  check('setiap kartu tanggal punya tombol +', document.querySelectorAll('[data-soc-add]').length > 0, document.querySelectorAll('[data-soc-add]').length);
+  // Pilih kanal X (belum terhubung) -> tombol Hubungkan muncul;
+  // pilih LinkedIn (terhubung, dari seksi 5) -> tombol Putuskan.
+  document.querySelector('[data-soc-side="x"]').click();
+  await tick(100);
+  check('klik kanal X -> kartu koneksi X muncul', !!document.getElementById('socConn-x'), '');
+  document.querySelector('[data-soc-side="linkedin"]').click();
+  await tick(100);
+  check('klik kanal LinkedIn -> tombol Putuskan muncul', !!document.getElementById('socDisc-linkedin'), '');
+  // YouTube tanpa tombol hubung (can: false).
+  document.querySelector('[data-soc-side="youtube"]').click();
+  await tick(100);
+  check('kanal YouTube tanpa tombol hubung', !document.getElementById('socConn-youtube'), '');
   // Klik hari kalender (bukan hari ini, supaya tidak bercampur item
   // Batch hari ini) -> dialog tanggal terbuka.
   const today = new Date();
@@ -209,11 +220,14 @@ try {
   await tick(100);
   const q2 = JSON.parse(store.get('minime.socialQueue') || '[]');
   check('jadwal via dialog tanggal masuk antrean', q2.some((it) => it.text === 'jadwal hari uji'), JSON.stringify(q2.map((it) => it.text)));
-  check('item hari itu tampil di dialog + bisa dihapus', !!document.querySelector('[data-soc-daydel]'), '');
-  document.querySelector('[data-soc-daydel]').click();
+  check('item tampil di kartu sebagai chip judul + tombol −', [...document.querySelectorAll('.soc-item-title')].some((el) => el.textContent.includes('jadwal hari uji')) && !!document.querySelector('[data-soc-del]'), '');
+  // Hapus via − di chip item itu (bukan via dialog, bukan item lain).
+  const chipDel = [...document.querySelectorAll('.soc-item')].find((el) => el.textContent.includes('jadwal hari uji'))?.querySelector('[data-soc-del]');
+  check('chip item punya tombol −', !!chipDel, '');
+  chipDel.click();
   await tick(100);
   const q3 = JSON.parse(store.get('minime.socialQueue') || '[]');
-  check('hapus via dialog kalender menghilangkan item', !q3.some((it) => it.text === 'jadwal hari uji'), JSON.stringify(q3.map((it) => it.text)));
+  check('hapus via − kartu menghilangkan item', !q3.some((it) => it.text === 'jadwal hari uji'), JSON.stringify(q3.map((it) => it.text)));
 
 } catch (e) {
   // eslint-disable-next-line no-console

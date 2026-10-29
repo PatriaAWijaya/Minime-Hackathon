@@ -1,7 +1,10 @@
 // Penjadwal + autopost native MiniMe (v61) — pengganti Postiz.
-// Pola UI meniru Postiz yang sudah familiar (kanal + kalender +
-// composer + antrean), dibangun ulang bersih — bukan salinan kode
-// Postiz. Token/kredensial disimpan di localStorage dengan postur
+// Pola UI meniru Postiz yang sudah familiar, dibangun ulang bersih
+// — bukan salinan kode Postiz. v68 (perintah Patria 29 Okt 21:13):
+// dua panel — sidebar kanal (ikon + status, klik = kartu koneksi)
+// + window utama HANYA kalender kartu (tombol + = jadwal via dialog
+// tanggal, chip item = judul + ikon kanal, tombol − = hapus item).
+// Token/kredensial disimpan di localStorage dengan postur
 // yang sama seperti kunci API lain di app ini (bukan Keychain);
 // antrean tersimpan di localStorage sehingga selamat dari restart.
 // Penjadwal berjalan selama app terbuka (timer 30 detik).
@@ -20,14 +23,14 @@ var OAUTH_REDIRECT = 'http://127.0.0.1:4317/callback';
 // v62b: instagram; v64: x + tiktok. youtube TIDAK dibangun (API-nya
 // tidak punya endpoint Community post — hanya upload video).
 var PLATFORMS = [
-  { id: 'facebook', name: 'Facebook', note: 'soc.note.fb_profile', can: false },
-  { id: 'facebook_page', name: 'Facebook Page', note: '', can: true },
-  { id: 'instagram', name: 'Instagram', note: 'soc.note.ig_url', can: true },
-  { id: 'threads', name: 'Threads', note: 'soc.note.threads_text', can: true },
-  { id: 'linkedin', name: 'LinkedIn', note: '', can: true },
-  { id: 'youtube', name: 'YouTube', note: 'soc.note.youtube_video', can: false },
-  { id: 'tiktok', name: 'TikTok', note: 'soc.note.tiktok_url', can: true },
-  { id: 'x', name: 'X', note: 'soc.note.x_cost', can: true },
+  { id: 'facebook', name: 'Facebook', mono: 'FB', note: 'soc.note.fb_profile', can: false },
+  { id: 'facebook_page', name: 'Facebook Page', mono: 'FP', note: '', can: true },
+  { id: 'instagram', name: 'Instagram', mono: 'IG', note: 'soc.note.ig_url', can: true },
+  { id: 'threads', name: 'Threads', mono: 'TH', note: 'soc.note.threads_text', can: true },
+  { id: 'linkedin', name: 'LinkedIn', mono: 'IN', note: '', can: true },
+  { id: 'youtube', name: 'YouTube', mono: 'YT', note: 'soc.note.youtube_video', can: false },
+  { id: 'tiktok', name: 'TikTok', mono: 'TT', note: 'soc.note.tiktok_url', can: true },
+  { id: 'x', name: 'X', mono: 'X', note: 'soc.note.x_cost', can: true },
 ];
 
 function socStore() {
@@ -56,6 +59,10 @@ function platName(id) {
   var p = PLATFORMS.find(function (x) { return x.id === id; });
   return p ? p.name : id;
 }
+function platMono(id) {
+  var p = PLATFORMS.find(function (x) { return x.id === id; });
+  return p ? p.mono : '?';
+}
 function fmtTime(ms) {
   try { return new Date(ms).toLocaleString(); } catch (_) { return String(ms); }
 }
@@ -71,9 +78,9 @@ function tokenValid(ch) {
 
 var socMetaPending = null; // {platform, clientId, clientSecret, userToken, expiresAt, pages}
 
-function renderChannels() {
+function renderChannels(list) {
   var s = socStore();
-  return PLATFORMS.map(function (p) {
+  return (list || PLATFORMS).map(function (p) {
     var ch = s[p.id];
     var connected = tokenValid(ch);
     var status = connected
@@ -105,6 +112,14 @@ function renderChannels() {
   }).join('');
 }
 
+// Judul chip kartu: baris pertama caption (untuk Batch = judul
+// kartu), dipotong agar kartu tetap ringkas; teks penuh ada di
+// atribut title chip + di dialog tanggal.
+function socItemTitle(text) {
+  var first = String(text || '').split('\n')[0].trim();
+  return first.length > 36 ? first.slice(0, 36) + '…' : first;
+}
+
 function renderCalendar() {
   var now = socCalCursor || new Date();
   var y = now.getFullYear(), m = now.getMonth();
@@ -112,42 +127,28 @@ function renderCalendar() {
   var startDay = (first.getDay() + 6) % 7; // Senin = 0
   var daysIn = new Date(y, m + 1, 0).getDate();
   var q = queueLoad();
-  var counts = {};
+  var byDay = {};
   q.forEach(function (it) {
-    if (it.status === 'queued' || it.status === 'sending') {
-      var k = dayKey(it.scheduledAt);
-      counts[k] = (counts[k] || 0) + 1;
-    }
+    var k = dayKey(it.scheduledAt);
+    (byDay[k] = byDay[k] || []).push(it);
+  });
+  Object.keys(byDay).forEach(function (k) {
+    byDay[k].sort(function (a, b) { return a.scheduledAt - b.scheduledAt; });
   });
   var cells = '';
   for (var i = 0; i < startDay; i++) cells += '<div class="soc-cal-day empty"></div>';
   for (var d = 1; d <= daysIn; d++) {
     var k = y + '-' + (m + 1) + '-' + d;
-    var n = counts[k] || 0;
-    cells += '<div class="soc-cal-day" data-day="' + k + '"><b>' + d + '</b>'
-      + (n ? '<span class="soc-dot">' + n + '</span>' : '') + '</div>';
+    var chips = (byDay[k] || []).map(function (it) {
+      var fail = it.status === 'failed' ? ' <span class="soc-item-fail">' + tr('soc.status.failed') + '</span>' : '';
+      var cls = it.status === 'sent' ? ' soc-item-sent' : '';
+      return '<div class="soc-item' + cls + '" title="' + esc(it.text || '') + '"><span class="soc-mono sm">' + platMono(it.platform) + '</span><span class="soc-item-title">' + esc(socItemTitle(it.text)) + '</span>' + fail + '<button class="soc-del" data-soc-del="' + it.id + '" title="' + tr('soc.delete') + '">−</button></div>';
+    }).join('');
+    cells += '<div class="soc-cal-day" data-day="' + k + '"><div class="soc-day-head"><b>' + d + '</b><button class="soc-add" data-soc-add="' + k + '" title="' + tr('soc.day.add') + '">+</button></div>' + chips + '</div>';
   }
   var monthName = now.toLocaleString(undefined, { month: 'long', year: 'numeric' });
   return '<div class="soc-cal-head"><button id="socCalPrev" class="btn btn-sm">‹</button><b>' + esc(monthName) + '</b><button id="socCalNext" class="btn btn-sm">›</button></div>'
     + '<div class="soc-cal-grid">' + cells + '</div>';
-}
-
-function renderQueue() {
-  var q = queueLoad().slice().sort(function (a, b) { return a.scheduledAt - b.scheduledAt; });
-  if (!q.length) return '<div>' + tr('soc.queue_empty') + '</div>';
-  return q.map(function (it) {
-    var st = it.status === 'sent' ? tr('soc.status.sent')
-      : it.status === 'failed' ? tr('soc.status.failed') + (it.error ? ' — ' + esc(it.error) : '')
-      : it.status === 'sending' ? tr('soc.status.sending')
-      : tr('soc.status.queued');
-    var acts = '';
-    if (it.status === 'queued' || it.status === 'failed') {
-      // Hapus HANYA dari kalender (dialog tanggal) — bukan dari daftar ini.
-      acts = ' <button class="btn btn-sm" data-soc-now="' + it.id + '">' + tr('soc.publish_now') + '</button>';
-    }
-    return '<div class="soc-q"><b>' + esc(platName(it.platform)) + '</b> · ' + esc(fmtTime(it.scheduledAt)) + ' · ' + st
-      + '<div>' + esc((it.text || '').slice(0, 120)) + ((it.imageB64 || it.imageFile) ? ' 📷' : '') + (it.imageUrl ? ' 🔗' : '') + '</div>' + acts + '</div>';
-  }).join('');
 }
 
 export function socConnectedChannels() {
@@ -179,7 +180,8 @@ export function socQueueAdd(items) {
 
 // ---- Sumber konten penjadwalan (v63) ----
 // Default = Library (perintah Patria 29 Okt 17:46); opsi "File sendiri"
-// membuka input file + URL. Satu builder dipakai composer + dialog
+// membuka input file + URL. Satu builder dipakai dialog tanggal
+// (v68: composer lama dihapus bersama layout lama).
 // tanggal — tidak ada duplikasi UI.
 function socLibItems() {
   try {
@@ -285,28 +287,43 @@ var socDayOpen = null; // 'YYYY-M-D' atau null
 
 var socCalCursor = null;
 
+// Sidebar Planner (v68, perintah Patria 29 Okt 21:01): daftar kanal
+// sebagai tombol ikon + status; klik kanal memunculkan kartu
+// koneksinya DI DALAM sidebar (form hubungkan/putuskan + picker
+// Page). Window utama HANYA kalender — composer + daftar antrean
+// lama dihapus; penjadwalan lewat + di kartu (dialog tanggal),
+// item tampil di kartu sebagai judul + ikon kanal, hapus via −.
+var socSideSel = null; // id kanal terpilih di sidebar, null = belum memilih
+
+function renderSideBar() {
+  var s = socStore();
+  var list = PLATFORMS.map(function (p) {
+    var connected = tokenValid(s[p.id]);
+    var sel = socSideSel === p.id ? ' sel' : '';
+    return '<button class="soc-side-btn' + sel + '" data-soc-side="' + p.id + '"><span class="soc-mono">' + platMono(p.id) + '</span><span class="soc-side-name">' + esc(p.name) + '</span><span class="badge ' + (connected ? 'b-ok' : '') + '">' + (connected ? tr('soc.connected') : tr('soc.not_connected')) + '</span></button>';
+  }).join('');
+  var detail = '';
+  if (!socSideSel) {
+    detail = '<p class="se-note">' + tr('soc.side.hint') + '</p>';
+  } else {
+    var p = PLATFORMS.find(function (x) { return x.id === socSideSel; });
+    detail = p ? renderChannels([p]) : '';
+  }
+  return '<div class="soc-side"><h3>' + tr('soc.side.title') + '</h3><div class="soc-side-list">' + list + '</div><div class="soc-side-detail">' + detail + '</div></div>';
+}
+
 export function renderNativePlanner() {
   var el = document.getElementById('nativePlanner');
   if (!el) return;
-  var s = socStore();
-  var connected = PLATFORMS.filter(function (p) { return tokenValid(s[p.id]); });
-  var checks = connected.map(function (p) {
-    return '<label><input type="checkbox" class="soc-chk" value="' + p.id + '" checked> ' + esc(p.name) + '</label>';
-  }).join(' ') || tr('soc.no_channel');
-  el.innerHTML = '<div class="soc-wrap"><h3>' + tr('soc.title') + '</h3><p>' + tr('soc.desc') + '</p>'
-    + '<div class="soc-channels">' + renderChannels() + '</div>'
-    + '<div class="soc-composer"><h4>' + tr('soc.composer') + '</h4>'
-    + '<textarea id="socText" rows="3" placeholder="' + tr('soc.text_ph') + '" style="width:100%"></textarea>'
-    + '<div class="soc-row">' + checks + '</div>'
-    + socSourceHTML('main')
-    + '<div class="soc-row"><input type="datetime-local" id="socWhen"></div>'
-    + '<div class="soc-row"><button id="socScheduleBtn" class="btn btn-primary">' + tr('soc.schedule') + '</button> '
-    + '<button id="socNowBtn" class="btn">' + tr('soc.publish_now') + '</button></div>'
-    + '<div id="socNote"></div></div>'
-    + '<div class="soc-cal">' + renderCalendar() + '</div>'
+  el.innerHTML = '<div class="soc-wrap soc-layout">' + renderSideBar()
+    + '<div class="soc-main"><div class="soc-cal">' + renderCalendar() + '</div>'
     + socDayDialogHTML()
-    + '<div class="soc-queue"><h4>' + tr('soc.queue') + '</h4>' + renderQueue() + '</div></div>';
-  // Bind kanal.
+    + '<p class="se-note">' + tr('soc.desc') + '</p></div></div>';
+  // Bind sidebar: pilih kanal -> kartu koneksinya muncul di sidebar.
+  el.querySelectorAll('[data-soc-side]').forEach(function (b) {
+    b.addEventListener('click', function () { socSideSel = b.getAttribute('data-soc-side'); renderNativePlanner(); });
+  });
+  // Bind kanal (kartu detail di sidebar): hubungkan/putuskan/pilih Page.
   PLATFORMS.forEach(function (p) {
     socBind('socConn-' + p.id, function () { socConnect(p.id); });
     socBind('socDisc-' + p.id, function () {
@@ -329,14 +346,27 @@ export function renderNativePlanner() {
       renderNativePlanner();
     });
   });
-  socBindSource('main', 'socText');
-  socBind('socScheduleBtn', function () { socSubmit(false); });
-  socBind('socNowBtn', function () { socSubmit(true); });
-  el.querySelectorAll('[data-soc-now]').forEach(function (b) {
-    b.addEventListener('click', function () { socPublishItem(b.getAttribute('data-soc-now')); });
+  // + di kartu = buka dialog tanggal (alurnya sama dengan klik kartu;
+  // stopPropagation agar tidak render ganda).
+  el.querySelectorAll('[data-soc-add]').forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      socDayOpen = b.getAttribute('data-soc-add');
+      renderNativePlanner();
+    });
+  });
+  // − di chip = hapus penjadwalan itu saja (stopPropagation agar
+  // dialog tanggal tidak ikut terbuka).
+  el.querySelectorAll('[data-soc-del]').forEach(function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      queueSave(queueLoad().filter(function (it) { return String(it.id) !== b.getAttribute('data-soc-del'); }));
+      renderNativePlanner();
+    });
   });
   socBind('socDayCloseBtn', function () { socDayOpen = null; renderNativePlanner(); });
   socBind('socDayScheduleBtn', function () { socScheduleDay(); });
+  socBind('socDayNowBtn', function () { socPublishDayNow(); });
   socBindSource('day', 'socDayText');
   el.querySelectorAll('[data-soc-daydel]').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -385,7 +415,9 @@ export function renderNativePlanner() {
 }
 
 function socNote(m) {
-  var el = document.getElementById('socNote');
+  // v68: composer (#socNote) dihapus bersama layout lama — catatan
+  // jatuh ke #socDayNote bila dialog tanggal sedang terbuka.
+  var el = document.getElementById('socNote') || document.getElementById('socDayNote');
   if (el) el.textContent = m;
 }
 
@@ -401,52 +433,26 @@ function readFileB64(file) {
   });
 }
 
-async function socSubmit(now) {
-  var text = (document.getElementById('socText') || {}).value || '';
+// Terbit sekarang dari dialog tanggal (v68): pengganti tombol
+// composer lama yang dihapus bersama layout lama. Membaca form yang
+// sama dengan socScheduleDay (teks + kanal tercentang + sumber),
+// menerbitkan langsung ke tiap kanal tercentang, TANPA menyentuh
+// antrean dan TANPA render ulang (dialog tetap terbuka agar catatan
+// hasil per kanal tidak terhapus render).
+async function socPublishDayNow() {
+  var text = (document.getElementById('socDayText') || {}).value || '';
   text = text.trim();
-  if (!text) { socNote(tr('soc.err.empty')); return; }
-  var plats = Array.prototype.slice.call(document.querySelectorAll('.soc-chk:checked')).map(function (c) { return c.value; });
-  if (!plats.length) { socNote(tr('soc.err.no_channel')); return; }
-  var media = await socReadSource('main');
+  var noteEl = document.getElementById('socDayNote');
+  var note = function (m) { if (noteEl) noteEl.textContent = m; };
+  if (!text) { note(tr('soc.err.empty')); return; }
+  var plats = Array.prototype.slice.call(document.querySelectorAll('.soc-day-chk:checked')).map(function (c) { return c.value; });
+  if (!plats.length) { note(tr('soc.err.no_channel')); return; }
+  var media = await socReadSource('day');
   var img = media.imageB64 ? { b64: media.imageB64, mime: media.imageMime || '' } : null;
-  var imgUrl = media.imageUrl || '';
-  if (now) {
-    for (var i = 0; i < plats.length; i++) {
-      await socPublishDirect(plats[i], text, img, imgUrl, media.imageFile || '');
-    }
-    renderNativePlanner();
-    return;
+  for (var i = 0; i < plats.length; i++) {
+    await socPublishDirect(plats[i], text, img, media.imageUrl || '', media.imageFile || '');
   }
-  var whenEl = document.getElementById('socWhen');
-  var when = whenEl && whenEl.value ? new Date(whenEl.value).getTime() : NaN;
-  if (!when || isNaN(when)) { socNote(tr('soc.err.when')); return; }
-  // Antrean menyimpan REFERENSI file (bukan base64) — base64 per item
-  // bisa menembus kuota localStorage dan antrean hilang diam-diam.
-  var imageFile = media.imageFile || '';
-  if (img) {
-    try {
-      var saved = await invoke('image_save', { req: { name: 'soc-' + Date.now() + '-main', b64: img.b64 } });
-      imageFile = saved.file || '';
-    } catch (e) { socNote(String(e || '')); return; }
-    if (!imageFile) { socNote(tr('soc.err.image')); return; }
-  }
-  // Audit v66 S-M3: Threads/IG/TikTok MENOLAK file lokal di Rust, tapi
-  // penolakan itu dulu baru muncul saat jam jatuh tempo. Blokir di
-  // sini (saat antre) dengan pesan yang sama jelasnya; teks saja
-  // tetap boleh diantrekan ke ketiga kanal itu.
-  if (imageFile) {
-    var blocked = plats.filter(function (pl) { return pl === 'threads' || pl === 'instagram' || pl === 'tiktok'; });
-    if (blocked.length) { socNote(tr('soc.err.file_url')); return; }
-  }
-  try {
-    socQueueAdd(plats.map(function (pl) {
-      return { platform: pl, text: text, imageFile: imageFile, imageMime: media.imageMime || '', imageUrl: imgUrl, scheduledAt: when };
-    }));
-  } catch (e) { socNote(String(e || '')); return; }
-  var t = document.getElementById('socText'); if (t) t.value = '';
-  renderNativePlanner();
 }
-
 // Satu-satunya tempat yang merakit argumen publish — mencegah
 // divergensi antar jalur (langsung / antrean / timer). Aturan IG:
 // pageId yang dikirim adalah ID akun IG, bukan ID Page.
@@ -495,6 +501,7 @@ function socDayDialogHTML() {
     + socSourceHTML('day')
     + '<div class="soc-row"><input type="time" id="socDayTime" value="09:00"></div>'
     + '<div class="soc-row"><button id="socDayScheduleBtn" class="btn btn-primary">' + tr('soc.schedule') + '</button> '
+    + '<button id="socDayNowBtn" class="btn">' + tr('soc.publish_now') + '</button> '
     + '<button id="socDayCloseBtn" class="btn">' + tr('soc.close') + '</button></div>'
     + '<div id="socDayNote"></div></div></div>';
 }
@@ -522,7 +529,7 @@ async function socScheduleDay() {
     } catch (e) { note(String(e || '')); return; }
     if (!imageFile) { note(tr('soc.err.image')); return; }
   }
-  // Audit v66 S-M3: sama seperti socSubmit — file lokal untuk
+  // Audit v66 S-M3: file lokal untuk
   // Threads/IG/TikTok ditolak di sini, bukan di jam jatuh tempo.
   if (imageFile) {
     var blockedDay = plats.filter(function (pl) { return pl === 'threads' || pl === 'instagram' || pl === 'tiktok'; });
@@ -549,26 +556,6 @@ async function socPublishDirect(platform, text, img, imgUrl, imageFile) {
   } catch (e) {
     socNote(platName(platform) + ': ' + String(e || ''));
   }
-}
-
-async function socPublishItem(id) {
-  var q = queueLoad();
-  var it = q.find(function (x) { return String(x.id) === String(id); });
-  if (!it) return;
-  var s = socStore();
-  var ch = s[it.platform];
-  if (it.platform === 'x') ch = await socEnsureXToken(ch);
-  if (!tokenValid(ch)) {
-    it.status = 'failed'; it.error = tr('soc.err.token'); queueSave(q); renderNativePlanner(); return;
-  }
-  it.status = 'sending'; queueSave(q); renderNativePlanner();
-  try {
-    await invoke('social_publish', { req: socPublishArgs(it.platform, ch, it.text, null, it.imageUrl || '', it.imageFile || '', it.imageMime || '') });
-    it.status = 'sent'; it.error = '';
-  } catch (e) {
-    it.status = 'failed'; it.error = String(e || '');
-  }
-  queueSave(q); renderNativePlanner();
 }
 
 function socRandStr(n) {
