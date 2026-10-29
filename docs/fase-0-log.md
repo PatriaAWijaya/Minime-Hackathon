@@ -1701,3 +1701,8 @@ dokumen lama yang dipakai.
 - Bersih tanpa sisa: PLANNER/plannerReal/PlannerRow/fmtUtc/themeByItem dihapus (backend-data + v5logic + window assign; rec/postizRecord tetap dipakai kopiKanban); 10 kunci i18n mati dihapus x3 (522 -> 512 kunci); refreshBackendData hanya kopiKanban. Nol referensi plannerBody/postizNote di src/tests/dist.
 - Gerbang: root/app tsc 0, svelte-check 0 error (39 warning a11y), vite OK, 8 rig PASS, gate-test 14/14, ledger md5 tak berubah, scan PASSED, i18n 512x3.
 - Push: kode 40be6c3 <-> 933c78b (tree identik). Rantai v48: MH_BUILD48_OK, PID baru 7734 (lama 4551 mati), HEAD 933c78b, proses tunggal, bundle dist: postizNote 0x, plannerBody 0x, postizFrame 2x, min-height 480px 1x. Verifikasi visual Patria masih menunggu (tabel + catatan hilang, panel mengisi view).
+
+## Hapus judul view "Planner by Postiz" + rantai v49 (29 Okt, perintah Patria)
+- Judul colhead view Planner dihapus total (App.svelte): view kini langsung panel Postiz tanpa header judul. Label rail nav.planner TIDAK berubah (bukan yang dikutip). Kunci view.planner.title yang kini mati dihapus x3 (512 -> 511 kunci).
+- Gerbang: root/app tsc 0, svelte-check 0 error (39 warning a11y), vite OK, 8 rig PASS, gate-test 14/14, ledger md5 tak berubah, scan PASSED, i18n 511x3.
+- Push: kode 9757bb0 <-> 53a7236 (tree identik). Rantai v49: MH_BUILD49_OK, PID baru 8087 (lama 7734 mati), HEAD 53a7236, proses tunggal, bundle dist: "Planner by Postiz" 0x, postizFrame 2x.
