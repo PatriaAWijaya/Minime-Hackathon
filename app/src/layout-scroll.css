@@ -371,3 +371,10 @@ h3 { font-size: 18px; }
 .t2-asset { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:6px; }
 .t2-asset img { width:64px; height:36px; object-fit:cover; border-radius:6px; }
 .ve2-top { flex-wrap:wrap; }
+
+/* Graph v82 ala OpenBot: handle +/hapus tiap node + kartu trigger */
+.n8n-del { position:absolute; left:-30px; top:50%; transform:translateY(-50%); width:22px; height:22px; border:1px solid #6b7280; background:#262626; color:#ececec; border-radius:4px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; z-index:3; }
+.ntrig-chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.ntrig-chips span { background:#2a2a2a; border-radius:999px; padding:2px 8px; font-size:11px; color:#d4d4d4; }
+.ntrig-next { font-size:12px; color:#a1a1a1; margin-top:6px; }
+.n8n-play { display:block; width:100%; margin-top:8px; background:#EB87B4; color:#262626; border:0; border-radius:6px; padding:6px 8px; font-weight:700; cursor:pointer; font-size:13px; }

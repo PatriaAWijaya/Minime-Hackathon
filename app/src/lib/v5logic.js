@@ -342,6 +342,7 @@ export function curvePath(x1, y1, x2, y2) {
 export function renderGraph() {
     var wrap = document.getElementById("graphNodes");
     wrap.innerHTML = "";
+    var firstKey = Object.keys(GNODES)[0];
     Object.keys(GNODES).forEach(function (k) {
       var nd = GNODES[k];
       var el = document.createElement("div");
@@ -353,9 +354,33 @@ export function renderGraph() {
       } else {
         el.style.left = nd.x + "%";
         el.style.top = nd.y + "%";
-        el.style.width = nd.w + "px";
+        el.style.width = (nd.kind === "trigger" ? Math.max(nd.w || 0, 240) : nd.w) + "px";
       }
       el.innerHTML = "<div class='nname'>" + nd.icon + " " + nd.name + (nd.locked ? " \uD83D\uDD12" : "") + "</div><div class='nsub'>" + nd.sub + "</div>";
+      if (k === firstKey) {
+        if (nd.kind === "trigger") {
+          var tt = graphTrigOf(nd);
+          var chips = document.createElement("div");
+          chips.className = "ntrig-chips";
+          graphTrigSummary(tt).split(" \u2022 ").forEach(function (c) {
+            var sp = document.createElement("span"); sp.textContent = c; chips.appendChild(sp);
+          });
+          el.appendChild(chips);
+          if (tt.type === "schedule") {
+            var nx = document.createElement("div");
+            nx.className = "ntrig-next";
+            nx.textContent = tr("graph.next") + ": " + graphNextText(tt);
+            el.appendChild(nx);
+          }
+        }
+        if (nd.kind !== "circle") {
+          var play = document.createElement("button");
+          play.className = "n8n-play"; play.textContent = "\u25B6 " + tr("graph.run_now");
+          play.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+          play.addEventListener("click", function (e) { e.stopPropagation(); runGraphSim("manual"); });
+          el.appendChild(play);
+        }
+      }
       if (k === graphSel) {
         var bar = document.createElement("div");
         bar.className = "n8n-nodebar";
@@ -368,13 +393,18 @@ export function renderGraph() {
         });
         el.appendChild(bar);
       }
-      if (nd.kind === "output") {
+      if (nd) { // v82: handle + di semua node, bukan hanya output
         var plus = document.createElement("div");
-        plus.className = "n8n-plus"; plus.textContent = "+"; plus.title = "Tambah node setelah ini";
+        plus.className = "n8n-plus"; plus.textContent = "+"; plus.title = tr("graph.add_node");
         plus.addEventListener("mousedown", function (e) { e.stopPropagation(); });
         plus.addEventListener("click", function (e) { e.stopPropagation(); addNodeAfter(k); });
         el.appendChild(plus);
       }
+      var del = document.createElement("div");
+      del.className = "n8n-del"; del.textContent = "\u00D7"; del.title = tr("graph.del");
+      del.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+      del.addEventListener("click", function (e) { e.stopPropagation(); graphSelect(k); graphAskDelete(); });
+      el.appendChild(del);
       el.addEventListener("mousedown", function (e) {
         if (nd.locked) return;
         dragNode = k; dragMoved = false;

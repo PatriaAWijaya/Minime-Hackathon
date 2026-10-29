@@ -181,6 +181,26 @@ try {
   await tick(100);
   check('Add node dari prime -> 10 node + terpilih', nodeCount() === 10 && !!document.querySelector('.n8n-node.sel'), nodeCount());
 
+  // 11. v82 ala OpenBot: handle +/hapus tiap node + kartu trigger + play node pertama.
+  check('setiap node punya handle +', document.querySelectorAll('.n8n-plus').length === nodeCount(), document.querySelectorAll('.n8n-plus').length + ' vs ' + nodeCount());
+  check('setiap node punya handle hapus', document.querySelectorAll('.n8n-del').length === nodeCount(), document.querySelectorAll('.n8n-del').length + ' vs ' + nodeCount());
+  const trigEl2 = document.querySelector('[data-nkey="trigger"]');
+  check('kartu trigger punya chips ringkasan', !!trigEl2.querySelector('.ntrig-chips') && trigEl2.querySelectorAll('.ntrig-chips span').length === 3, trigEl2.querySelector('.ntrig-chips')?.textContent);
+  check('kartu trigger punya baris next run', !!trigEl2.querySelector('.ntrig-next'), trigEl2.querySelector('.ntrig-next')?.textContent);
+  check('node pertama punya tombol play', !!trigEl2.querySelector('.n8n-play'), '');
+  document.querySelector('[data-nkey="gate"] .n8n-plus').click();
+  await tick(100);
+  check('+ di node decision menambah node (10 -> 11)', nodeCount() === 11, nodeCount());
+  document.querySelector('[data-nkey="trigger"] .n8n-play').click();
+  await tick(4200);
+  check('play node pertama -> badge riwayat = 2', document.getElementById('graphHistBadge')?.textContent === '2', document.getElementById('graphHistBadge')?.textContent);
+  document.querySelector('.n8n-node.sel .n8n-del').click();
+  await tick(100);
+  check('klik hapus node -> panel konfirmasi tampil', !!document.querySelector('.g-delask'), document.getElementById('graphPanel')?.textContent?.slice(0, 80));
+  document.querySelector('.g-delask button').click();
+  await tick(100);
+  check('konfirmasi hapus -> node 11 -> 10', nodeCount() === 10, nodeCount());
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-graph exception :: ' + (e && e.stack ? e.stack : e));
