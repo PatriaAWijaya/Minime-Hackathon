@@ -248,6 +248,7 @@ try {
   // composer + kalender + antrean.
   check('planner native tampil', !!document.getElementById('nativePlanner') && document.querySelectorAll('.soc-card').length === 8, document.getElementById('nativePlanner')?.textContent.slice(0, 120));
   check('composer + kalender tampil', !!document.getElementById('socText') && !!document.querySelector('.soc-cal-grid'), '');
+  check('3 kanal bisa dihubungkan (linkedin, fb page, threads)', document.querySelectorAll('[id^="socConn-"]').length === 3, document.querySelectorAll('[id^="socConn-"]').length);
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-batch exception :: ' + (e && e.stack ? e.stack : e));

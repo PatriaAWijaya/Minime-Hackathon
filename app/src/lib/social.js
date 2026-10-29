@@ -16,12 +16,13 @@ var OAUTH_REDIRECT = 'http://127.0.0.1:4317/callback';
 
 // Urutan sesuai perintah Patria. facebook (profil) TIDAK BISA autopost
 // via API (Meta menghapusnya) — ditampilkan apa adanya, bukan tombol
-// palsu. Platform lain di luar linkedin masih "menyusul" (v62+).
+// palsu. v62a: facebook_page + threads ikut dibangun (can: true);
+// instagram/youtube/tiktok/x masih "menyusul".
 var PLATFORMS = [
   { id: 'facebook', name: 'Facebook', note: 'soc.note.fb_profile', can: false },
-  { id: 'facebook_page', name: 'Facebook Page', note: '', can: false },
+  { id: 'facebook_page', name: 'Facebook Page', note: '', can: true },
   { id: 'instagram', name: 'Instagram', note: '', can: false },
-  { id: 'threads', name: 'Threads', note: '', can: false },
+  { id: 'threads', name: 'Threads', note: 'soc.note.threads_text', can: true },
   { id: 'linkedin', name: 'LinkedIn', note: '', can: true },
   { id: 'youtube', name: 'YouTube', note: '', can: false },
   { id: 'tiktok', name: 'TikTok', note: '', can: false },
@@ -60,8 +61,12 @@ function dayKey(ms) {
   return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
 }
 function tokenValid(ch) {
-  return !!(ch && ch.accessToken && (!ch.expiresAt || ch.expiresAt > Date.now()));
+  if (!ch) return false;
+  if (ch.pageToken) return true; // FB Page: token Page tidak kedaluwarsa praktis.
+  return !!(ch.accessToken && (!ch.expiresAt || ch.expiresAt > Date.now()));
 }
+
+var socMetaPending = null; // {platform, clientId, clientSecret, userToken, expiresAt, pages}
 
 function renderChannels() {
   var s = socStore();
@@ -73,17 +78,22 @@ function renderChannels() {
       : '<span class="badge">' + tr('soc.not_connected') + '</span>';
     var body = '';
     if (p.id === 'facebook') {
-      body = '<div>' + tr('soc.note.fb_profile') + '</div>';
+      body = '';
     } else if (!p.can) {
       body = '<div>' + tr('soc.coming') + '</div>';
+    } else if (socMetaPending && socMetaPending.platform === p.id) {
+      body = '<div>' + tr('soc.pick_page') + '</div>' + socMetaPending.pages.map(function (pg) {
+        return '<div class="soc-row"><button class="btn btn-sm" data-soc-pick="' + esc(pg.id) + '">' + esc(pg.name) + '</button></div>';
+      }).join('');
     } else if (connected) {
       body = '<div class="soc-row"><button id="socDisc-' + p.id + '" class="btn btn-sm">' + tr('soc.disconnect') + '</button></div>';
     } else {
-      body = '<div>' + tr('soc.cred_hint') + '</div>'
+      body = '<div>' + (p.id === 'facebook_page' || p.id === 'threads' ? tr('soc.meta_hint') : tr('soc.cred_hint')) + '</div>'
         + '<div class="soc-row"><input type="text" id="socId-' + p.id + '" placeholder="' + tr('soc.ph.id') + '" style="width:180px" value="' + esc((ch && ch.clientId) || '') + '"> '
         + '<input type="password" id="socSec-' + p.id + '" placeholder="' + tr('soc.ph.secret') + '" style="width:180px"></div>'
         + '<div class="soc-row"><button id="socConn-' + p.id + '" class="btn btn-sm btn-primary">' + tr('soc.connect') + '</button></div>';
     }
+    if (p.note) body += '<div>' + tr(p.note) + '</div>';
     return '<div class="soc-card"><b>' + esc(p.name) + '</b> ' + status + body + '</div>';
   }).join('');
 }
@@ -192,6 +202,23 @@ export function renderNativePlanner() {
       renderNativePlanner();
     });
   });
+  el.querySelectorAll('[data-soc-pick]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (!socMetaPending) return;
+      var pg = socMetaPending.pages.find(function (x) { return String(x.id) === b.getAttribute('data-soc-pick'); });
+      if (!pg) return;
+      var s = socStore();
+      s.facebook_page = {
+        clientId: socMetaPending.clientId, clientSecret: socMetaPending.clientSecret,
+        userToken: socMetaPending.userToken,
+        pageId: pg.id, pageName: pg.name, pageToken: pg.access_token,
+        expiresAt: 0, label: pg.name,
+      };
+      socSave(s);
+      socMetaPending = null;
+      renderNativePlanner();
+    });
+  });
 }
 
 function socNote(m) {
@@ -246,7 +273,7 @@ async function socPublishDirect(platform, text, img) {
   var ch = s[platform];
   if (!tokenValid(ch)) { socNote(platName(platform) + ': ' + tr('soc.err.token')); return; }
   try {
-    await invoke('social_publish', { req: { platform: platform, text: text, imageB64: img ? img.b64 : '', imageMime: img ? img.mime : '', accessToken: ch.accessToken } });
+    await invoke('social_publish', { req: { platform: platform, text: text, imageB64: img ? img.b64 : '', imageMime: img ? img.mime : '', accessToken: ch.accessToken || '', pageId: ch.pageId || '', pageToken: ch.pageToken || '' } });
     socNote(platName(platform) + ': ' + tr('soc.status.sent'));
   } catch (e) {
     socNote(platName(platform) + ': ' + String(e || ''));
@@ -264,7 +291,7 @@ async function socPublishItem(id) {
   }
   it.status = 'sending'; queueSave(q); renderNativePlanner();
   try {
-    await invoke('social_publish', { req: { platform: it.platform, text: it.text, imageB64: it.imageB64 || '', imageMime: it.imageMime || '', accessToken: ch.accessToken } });
+    await invoke('social_publish', { req: { platform: it.platform, text: it.text, imageB64: it.imageB64 || '', imageMime: it.imageMime || '', accessToken: ch.accessToken || '', pageId: ch.pageId || '', pageToken: ch.pageToken || '' } });
     it.status = 'sent'; it.error = '';
   } catch (e) {
     it.status = 'failed'; it.error = String(e || '');
@@ -272,13 +299,72 @@ async function socPublishItem(id) {
   queueSave(q); renderNativePlanner();
 }
 
+async function socConnectMeta(platform, clientId, clientSecret) {
+  var scope = platform === 'facebook_page'
+    ? 'pages_show_list,pages_manage_posts,pages_read_engagement,business_management'
+    : 'threads_basic,threads_content_publish';
+  var state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var authUrl = 'https://www.facebook.com/v25.0/dialog/oauth?client_id=' + encodeURIComponent(clientId)
+    + '&redirect_uri=' + encodeURIComponent(OAUTH_REDIRECT)
+    + '&scope=' + encodeURIComponent(scope)
+    + '&state=' + encodeURIComponent(state);
+  socNote(tr('soc.wait_login'));
+  var listenP = invoke('social_oauth_listen');
+  try { await invoke('open_external_url', { url: authUrl }); }
+  catch (e) { socNote(String(e || '')); return; }
+  var res;
+  try { res = await listenP; }
+  catch (e) { socNote(String(e || '')); return; }
+  var parsed;
+  try { parsed = JSON.parse(res); } catch (_) { socNote(tr('soc.err.callback')); return; }
+  if (parsed.state !== state) { socNote(tr('soc.err.state')); return; }
+  var tok;
+  try {
+    tok = await invoke('social_meta_exchange', { req: { code: parsed.code, redirectUri: OAUTH_REDIRECT, clientId: clientId, clientSecret: clientSecret } });
+  } catch (e) { socNote(String(e || '')); return; }
+  var tj;
+  try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return; }
+  if (!tj.access_token) { socNote(tr('soc.err.token_body')); return; }
+  if (platform === 'threads') {
+    var s = socStore();
+    s.threads = {
+      clientId: clientId, clientSecret: clientSecret,
+      accessToken: tj.access_token,
+      expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
+      label: 'Threads',
+    };
+    socSave(s);
+    renderNativePlanner();
+    return;
+  }
+  // facebook_page: ambil daftar Page, tampilkan picker.
+  var pagesBody;
+  try { pagesBody = await invoke('social_meta_pages', { token: tj.access_token }); }
+  catch (e) { socNote(String(e || '')); return; }
+  var pj;
+  try { pj = JSON.parse(pagesBody); } catch (_) { socNote(tr('soc.err.pages')); return; }
+  var pages = (pj.data || []).filter(function (pg) { return pg.id && pg.access_token; });
+  if (!pages.length) { socNote(tr('soc.err.pages')); return; }
+  socMetaPending = {
+    platform: 'facebook_page', clientId: clientId, clientSecret: clientSecret,
+    userToken: tj.access_token,
+    expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
+    pages: pages,
+  };
+  renderNativePlanner();
+}
+
 async function socConnect(platform) {
-  if (platform !== 'linkedin') { socNote(tr('soc.coming')); return; }
   var idEl = document.getElementById('socId-' + platform);
   var secEl = document.getElementById('socSec-' + platform);
   var clientId = idEl ? idEl.value.trim() : '';
   var clientSecret = secEl ? secEl.value.trim() : '';
   if (!clientId || !clientSecret) { socNote(tr('soc.err.cred')); return; }
+  if (platform === 'facebook_page' || platform === 'threads') {
+    await socConnectMeta(platform, clientId, clientSecret);
+    return;
+  }
+  if (platform !== 'linkedin') { socNote(tr('soc.coming')); return; }
   var state = Math.random().toString(36).slice(2) + Date.now().toString(36);
   var authUrl = 'https://www.linkedin.com/oauth/v2/authorization?response_type=code'
     + '&client_id=' + encodeURIComponent(clientId)
@@ -334,7 +420,7 @@ export function initSocialScheduler() {
       var ch = s[it.platform];
       if (!tokenValid(ch)) { it.status = 'failed'; it.error = tr('soc.err.token'); continue; }
       try {
-        await invoke('social_publish', { req: { platform: it.platform, text: it.text, imageB64: it.imageB64 || '', imageMime: it.imageMime || '', accessToken: ch.accessToken } });
+        await invoke('social_publish', { req: { platform: it.platform, text: it.text, imageB64: it.imageB64 || '', imageMime: it.imageMime || '', accessToken: ch.accessToken || '', pageId: ch.pageId || '', pageToken: ch.pageToken || '' } });
         it.status = 'sent'; it.error = '';
       } catch (e) {
         it.status = 'failed'; it.error = String(e || '');

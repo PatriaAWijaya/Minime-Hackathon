@@ -306,6 +306,232 @@ pub struct PublishReq {
     pub image_b64: String,
     pub image_mime: String,
     pub access_token: String,
+    #[serde(default)]
+    pub page_id: String,
+    #[serde(default)]
+    pub page_token: String,
+}
+
+/// POST multipart (satu file) lewat curl config sementara — dipakai
+/// upload foto Facebook Page. Field teks dikirim sebagai `form`
+/// biasa; file sebagai `form = "field=@path;type=mime"`.
+fn curl_multipart(
+    url: &str,
+    token: &str,
+    text_fields: &[(&str, &str)],
+    file_field: &str,
+    file_path: &std::path::Path,
+    file_mime: &str,
+) -> Result<CurlRes, String> {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let dir = std::env::temp_dir();
+    let cfg = dir.join(format!("minime-mp-{stamp}.cfg"));
+    let body_path = dir.join(format!("minime-mp-{stamp}.body"));
+    let mut cfg_text = String::new();
+    cfg_text.push_str("silent = true\n");
+    cfg_text.push_str(&format!("url = \"{url}\"\n"));
+    cfg_text.push_str("request = \"POST\"\n");
+    cfg_text.push_str(&format!("output = \"{}\"\n", body_path.to_string_lossy()));
+    cfg_text.push_str("write-out = \"%{http_code}\"\n");
+    cfg_text.push_str(&format!("header = \"Authorization: Bearer {token}\"\n"));
+    for (k, v) in text_fields {
+        let v_esc = v.replace('\\', "\\\\").replace('"', "\\\"");
+        cfg_text.push_str(&format!("form = \"{k}={v_esc}\"\n"));
+    }
+    cfg_text.push_str(&format!(
+        "form = \"{file_field}=@{};type={file_mime}\"\n",
+        file_path.to_string_lossy()
+    ));
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::write(&cfg, &cfg_text).map_err(|e| e.to_string())?;
+        let _ = std::fs::set_permissions(&cfg, std::fs::Permissions::from_mode(0o600));
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(&cfg, &cfg_text).map_err(|e| e.to_string())?;
+    }
+    let out = std::process::Command::new("curl")
+        .args(["-K", &cfg.to_string_lossy()])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let status: u16 = String::from_utf8_lossy(&out.stdout)
+        .trim()
+        .parse()
+        .unwrap_or(0);
+    let body = std::fs::read_to_string(&body_path).unwrap_or_default();
+    let _ = std::fs::remove_file(&cfg);
+    let _ = std::fs::remove_file(&body_path);
+    if status == 0 {
+        return Err(format!(
+            "curl gagal: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    Ok(CurlRes { status, body })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MetaExchangeReq {
+    pub code: String,
+    pub redirect_uri: String,
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+/// Tukar code Meta (FB/Threads) menjadi token jangka panjang (60 hari):
+/// short-lived -> fb_exchange_token. Mengembalikan body JSON long-lived.
+#[tauri::command]
+pub fn social_meta_exchange(req: MetaExchangeReq) -> Result<String, String> {
+    let short_url = format!(
+        "https://graph.facebook.com/v25.0/oauth/access_token?client_id={}&redirect_uri={}&client_secret={}&code={}",
+        req.client_id, req.redirect_uri, req.client_secret, req.code
+    );
+    let short = curl_api("GET", &short_url, None, None, None, None)?;
+    if short.status != 200 {
+        return Err(format!("Token Meta gagal (HTTP {})", short.status));
+    }
+    let short_tok = serde_json::from_str::<serde_json::Value>(&short.body)
+        .ok()
+        .and_then(|v| {
+            v.get("access_token")
+                .and_then(|t| t.as_str())
+                .map(|t| t.to_string())
+        })
+        .ok_or("Token Meta tanpa access_token")?;
+    let long_url = format!(
+        "https://graph.facebook.com/v25.0/oauth/access_token?grant_type=fb_exchange_token&client_id={}&client_secret={}&fb_exchange_token={}",
+        req.client_id, req.client_secret, short_tok
+    );
+    let long = curl_api("GET", &long_url, None, None, None, None)?;
+    if long.status != 200 {
+        return Err(format!(
+            "Token jangka panjang Meta gagal (HTTP {})",
+            long.status
+        ));
+    }
+    Ok(long.body)
+}
+
+/// Daftar Page yang dikelola token user Meta (untuk dipilih di kartu).
+#[tauri::command]
+pub fn social_meta_pages(token: String) -> Result<String, String> {
+    let r = curl_api(
+        "GET",
+        "https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token&limit=100",
+        Some(&token),
+        None,
+        None,
+        None,
+    )?;
+    if r.status != 200 {
+        return Err(format!("Daftar Page gagal (HTTP {})", r.status));
+    }
+    Ok(r.body)
+}
+
+fn fb_page_publish(req: &PublishReq) -> Result<String, String> {
+    if req.page_id.is_empty() || req.page_token.is_empty() {
+        return Err("Page belum dipilih".into());
+    }
+    if req.image_b64.is_empty() {
+        let body = serde_json::json!({ "message": req.text }).to_string();
+        let url = format!("https://graph.facebook.com/v25.0/{}/feed", req.page_id);
+        let r = curl_api(
+            "POST",
+            &url,
+            Some(&req.page_token),
+            Some(&body),
+            None,
+            Some("application/json"),
+        )?;
+        if r.status != 200 {
+            return Err(format!("Publish FB Page gagal (HTTP {})", r.status));
+        }
+        return Ok("ok".into());
+    }
+    let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &req.image_b64)
+        .map_err(|e| e.to_string())?;
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let tmp = std::env::temp_dir().join(format!("minime-fb-{stamp}.bin"));
+    std::fs::write(&tmp, &bytes).map_err(|e| e.to_string())?;
+    let mime = if req.image_mime.is_empty() {
+        "image/jpeg"
+    } else {
+        req.image_mime.as_str()
+    };
+    let url = format!("https://graph.facebook.com/v25.0/{}/photos", req.page_id);
+    let r = curl_multipart(
+        &url,
+        &req.page_token,
+        &[("caption", &req.text)],
+        "source",
+        &tmp,
+        mime,
+    );
+    let _ = std::fs::remove_file(&tmp);
+    let r = r?;
+    if r.status != 200 {
+        return Err(format!("Upload foto FB Page gagal (HTTP {})", r.status));
+    }
+    Ok("ok".into())
+}
+
+fn threads_publish(req: &PublishReq) -> Result<String, String> {
+    // v62a: teks saja. Gambar butuh image_url publik (menyusul v62b).
+    if !req.image_b64.is_empty() {
+        return Err("Threads v62a hanya teks; gambar menyusul".into());
+    }
+    let body = serde_json::json!({ "media_type": "TEXT", "text": req.text }).to_string();
+    let c = curl_api(
+        "POST",
+        "https://graph.threads.net/v1.0/me/threads",
+        Some(&req.access_token),
+        Some(&body),
+        None,
+        Some("application/json"),
+    )?;
+    if c.status != 200 {
+        return Err(format!("Container Threads gagal (HTTP {})", c.status));
+    }
+    let cid = serde_json::from_str::<serde_json::Value>(&c.body)
+        .ok()
+        .and_then(|v| v.get("id").and_then(|i| i.as_str()).map(|i| i.to_string()))
+        .ok_or("Container Threads tanpa id")?;
+    let body2 = serde_json::json!({ "creation_id": cid }).to_string();
+    let p = curl_api(
+        "POST",
+        "https://graph.threads.net/v1.0/me/threads_publish",
+        Some(&req.access_token),
+        Some(&body2),
+        None,
+        Some("application/json"),
+    )?;
+    if p.status != 200 {
+        return Err(format!("Publish Threads gagal (HTTP {})", p.status));
+    }
+    Ok("ok".into())
+}
+
+/// Terbitkan SATU postingan ke SATU platform (v61: LinkedIn;
+/// v62a: + FB Page + Threads teks).
+/// Platform lain mengembalikan error jelas — tidak ada sukses palsu.
+#[tauri::command]
+pub fn social_publish(req: PublishReq) -> Result<String, String> {
+    match req.platform.as_str() {
+        "linkedin" => linkedin_publish(&req),
+        "facebook_page" => fb_page_publish(&req),
+        "threads" => threads_publish(&req),
+        other => Err(format!("Publish {other} belum dibangun")),
+    }
 }
 
 fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
@@ -419,16 +645,6 @@ fn linkedin_publish(req: &PublishReq) -> Result<String, String> {
         return Err(format!("Publish LinkedIn gagal (HTTP {})", r.status));
     }
     Ok("ok".into())
-}
-
-/// Terbitkan SATU postingan ke SATU platform (v61: LinkedIn saja).
-/// Platform lain mengembalikan error jelas — tidak ada sukses palsu.
-#[tauri::command]
-pub fn social_publish(req: PublishReq) -> Result<String, String> {
-    match req.platform.as_str() {
-        "linkedin" => linkedin_publish(&req),
-        other => Err(format!("Publish {other} belum dibangun")),
-    }
 }
 
 #[cfg(test)]

@@ -138,6 +138,8 @@ fn main() {
             social::social_oauth_listen,
             social::social_token_exchange,
             social::social_linkedin_me,
+            social::social_meta_exchange,
+            social::social_meta_pages,
             social::social_publish,
         ])
         .run(tauri::generate_context!())
