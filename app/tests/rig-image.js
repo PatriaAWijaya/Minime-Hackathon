@@ -110,7 +110,7 @@ const bodyText = () => document.body.textContent || '';
 // lokal, bukan model call — dikecualikan agar asersi '1 model call' /
 // 'tanpa fetch' tetap bermakna.
 const fetchCount = () =>
-  log.filter((l) => l.startsWith('fetch:') && !l.includes('127.0.0.1:3900') && !l.includes('127.0.0.1:4007') && !l.includes('localhost:3901')).length;
+  log.filter((l) => l.startsWith('fetch:') && !l.includes('127.0.0.1:3900') && !l.includes('localhost:4007') && !l.includes('localhost:3901')).length;
 const libRows = () => document.getElementById('libGrid')?.querySelectorAll('.lib-card').length || 0;
 
 try {

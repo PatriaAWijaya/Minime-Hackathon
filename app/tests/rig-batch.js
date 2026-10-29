@@ -65,7 +65,7 @@ async function fetchStub(url) {
   if (u.includes('images/generations')) {
     return makeResp({ jsonData: { created: 1793000000, data: [{ b64_json: PNG_1X1 }], output_format: 'webp', usage: {} } });
   }
-  if (u.includes('127.0.0.1:4007')) {
+  if (u.includes('localhost:4007')) {
     if (u.endsWith('/upload')) return makeResp({ jsonData: { id: 'up1', path: 'https://uploads.postiz.com/x.webp' } });
     if (u.endsWith('/posts')) return makeResp({ jsonData: { id: 'post1' } });
     return makeResp({ jsonData: {} });

@@ -13,7 +13,7 @@
 //   lalu POST /api/public/v1/posts {type: 'schedule', date, posts:
 //   [{integration: {id}, value: [{content, image: [{id, path}]}],
 //   settings: {__type, post_type: 'post'}}]}. Base lokal
-//   http://127.0.0.1:4007 (sama dengan klien draf Fase 3 yang teruji).
+//   http://localhost:4007 (sama dengan klien draf Fase 3 yang teruji).
 //   BUKTI LIVE DI APP MASIH MENUNGGU: Postiz berjalan di MacBook
 //   (saat ini tidur) — jadi status schedule = docs-verified, bukan
 //   live-proven. Setiap kartu melaporkan sukses/gagal sendiri-sendiri
@@ -34,7 +34,7 @@ import { metaGenerateImage, addImgSpend, RATIO_SIZE, readThumb } from './image-a
 import { esc } from './esc.js';
 
 export const BATCH_LS = 'minime.batch';
-const POSTIZ_BASE = 'http://127.0.0.1:4007/api/public/v1';
+const POSTIZ_BASE = 'http://localhost:4007/api/public/v1';
 // ID channel dari draf Fase 3 (27 Okt 2026, terverifikasi saat itu).
 // Bila channel berubah di dashboard Postiz, jadwal akan gagal jujur
 // dengan HTTP error — perbarui ID di sini.

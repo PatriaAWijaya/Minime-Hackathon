@@ -687,18 +687,26 @@ export function libRevise(i) {
 export function mediaBadge(s) { return s === "Siap untuk Post" ? "b-ok" : (s === "Menunggu GKonten" || s === "Menunggu provider" ? "b-wait" : "b-idle"); }
 
 /* Embed Postiz di Planner: iframe UI Postiz (port yang sama dengan API
-   batch: 127.0.0.1:4007). Cek reachable memakai fetch no-cors — respons
+   batch: localhost:4007). Cek reachable memakai fetch no-cors — respons
    opaque = port menjawab (bukan bukti login; login dilakukan di dalam
    panel, sesinya milik webview app). Bila Postiz memblokir framing
    (X-Frame-Options) panel akan kosong: catatan di bawah menjelaskan
    fallback-nya (penjadwalan native Batch tetap jalan). */
-var POSTIZ_UI = "http://127.0.0.1:4007";
+/* v46 (29 Okt): UI Postiz WAJIB localhost:4007, bukan 127.0.0.1:4007.
+   Alasan: API Postiz di NEXT_PUBLIC_BACKEND_URL = localhost:4007; bila
+   iframe dari 127.0.0.1, origin panel != origin API -> preflight CORS
+   204 TANPA Access-Control-Allow-Origin (terbukti 29 Okt: header itu
+   hanya dikembalikan untuk origin localhost:4007) -> browser memblokir
+   POST login/forgot dari panel dan tombol muter selamanya, sementara
+   curl/Chrome (localhost, same-origin) lolos. localhost = same-origin,
+   CORS hilang total. */
+var POSTIZ_UI = "http://localhost:4007";
 /* Akar masalah panel kosong 29 Okt: CSP app (tauri.conf.json) tidak punya
    frame-src, sehingga frame jatuh ke default-src 'self' dan iframe
-   127.0.0.1:4007 diblokir app sendiri — padahal Postiz tidak memasang
+   localhost:4007 diblokir app sendiri — padahal Postiz tidak memasang
    X-Frame-Options/CSP (terbukti via curl: root 307 -> /auth 200, tanpa
    header framing) dan probe connect-src lolos ("Online"). Perbaikan:
-   frame-src 'self' http://127.0.0.1:4007 di tauri.conf.json.
+   frame-src 'self' http://localhost:4007 di tauri.conf.json.
    Pengawas di bawah mengubah panel kosong yang diam menjadi pesan
    eksplisit bila pemblokiran frame terjadi lagi. */
 var postizCSPWatched = false;

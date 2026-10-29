@@ -157,10 +157,10 @@ const ID: Dict = {
   'planner.postiz.reload': 'Muat ulang',
   'planner.postiz.connected': 'Terhubung',
   'planner.postiz.open': 'Buka di browser',
-  'planner.postiz.open.failed': 'Gagal membuka browser — buka manual http://127.0.0.1:4007 di browser.',
+  'planner.postiz.open.failed': 'Gagal membuka browser — buka manual http://localhost:4007 di browser.',
   'planner.postiz.note.online': 'Panel memuat UI Postiz. Login email + password bisa di dalam panel; login Google TIDAK bisa di dalam panel (Google memblokir login di frame) — klik Buka di browser untuk login Google. Bila panel tetap kosong, klik Muat ulang.',
   'planner.postiz.blocked': 'Panel diblokir kebijakan keamanan app (frame-src) — kabari Mimi agar diperbaiki.',
-  'planner.postiz.note.offline': 'Jalankan Postiz di MacBook ini (http://127.0.0.1:4007), lalu muat ulang panel. Penjadwalan native dari Batch tetap bisa dipakai.',
+  'planner.postiz.note.offline': 'Jalankan Postiz di MacBook ini (http://localhost:4007), lalu muat ulang panel. Penjadwalan native dari Batch tetap bisa dipakai.',
   'se.menu.social': 'Social Media',
   'se.menu.artikel': 'Artikel',
   'se.menu.movie': 'Movie Script',
@@ -565,7 +565,7 @@ const ID: Dict = {
   'batch.schedule.retry': 'Ulangi yang gagal',
   'batch.schedule.nokey': 'Kunci Postiz belum diisi — isi di Pengaturan.',
   'batch.new': 'Mulai batch baru',
-  'batch.note.postiz': 'Jadwal: tiap kartu dijadwalkan pada tanggal mulai + (hari−1) pukul 09:00 WIB, ke channel yang dipilih. Postiz harus berjalan di MacBook ini (http://127.0.0.1:4007).',
+  'batch.note.postiz': 'Jadwal: tiap kartu dijadwalkan pada tanggal mulai + (hari−1) pukul 09:00 WIB, ke channel yang dipilih. Postiz harus berjalan di MacBook ini (http://localhost:4007).',
 };
 
 const EN: Dict = {
@@ -682,10 +682,10 @@ const EN: Dict = {
   'planner.postiz.reload': 'Reload',
   'planner.postiz.connected': 'Connected',
   'planner.postiz.open': 'Open in browser',
-  'planner.postiz.open.failed': 'Could not open the browser — open http://127.0.0.1:4007 manually in your browser.',
+  'planner.postiz.open.failed': 'Could not open the browser — open http://localhost:4007 manually in your browser.',
   'planner.postiz.note.online': 'The panel loads the Postiz UI. Email + password login works inside the panel; Google login does NOT work inside the panel (Google blocks logins in frames) — click Open in browser for Google login. If the panel stays blank, click Reload.',
   'planner.postiz.blocked': 'The panel was blocked by the app security policy (frame-src) — let Mimi know so it can be fixed.',
-  'planner.postiz.note.offline': 'Start Postiz on this MacBook (http://127.0.0.1:4007), then reload the panel. Native scheduling from Batch still works.',
+  'planner.postiz.note.offline': 'Start Postiz on this MacBook (http://localhost:4007), then reload the panel. Native scheduling from Batch still works.',
   'se.menu.social': 'Social Media',
   'se.menu.artikel': 'Article',
   'se.menu.movie': 'Movie Script',
@@ -1090,7 +1090,7 @@ const EN: Dict = {
   'batch.schedule.retry': 'Retry failed',
   'batch.schedule.nokey': 'Postiz key not set yet — fill it in Settings.',
   'batch.new': 'Start new batch',
-  'batch.note.postiz': 'Schedule: each card is scheduled on start date + (day−1) at 09:00 WIB to the chosen channel. Postiz must be running on this MacBook (http://127.0.0.1:4007).',
+  'batch.note.postiz': 'Schedule: each card is scheduled on start date + (day−1) at 09:00 WIB to the chosen channel. Postiz must be running on this MacBook (http://localhost:4007).',
 };
 
 const ZH: Dict = {
@@ -1207,10 +1207,10 @@ const ZH: Dict = {
   'planner.postiz.reload': '重新加载',
   'planner.postiz.connected': '已连接',
   'planner.postiz.open': '在浏览器中打开',
-  'planner.postiz.open.failed': '无法打开浏览器——请在浏览器中手动打开 http://127.0.0.1:4007。',
+  'planner.postiz.open.failed': '无法打开浏览器——请在浏览器中手动打开 http://localhost:4007。',
   'planner.postiz.note.online': '面板正在加载 Postiz 界面。邮箱 + 密码登录可在面板内完成；Google 登录无法在面板内完成（Google 会阻止帧内登录）——请点击“在浏览器中打开”进行 Google 登录。如果面板仍为空，请点击重新加载。',
   'planner.postiz.blocked': '面板被应用安全策略（frame-src）阻止——请告诉 Mimi 以便修复。',
-  'planner.postiz.note.offline': '请在这台 MacBook 上启动 Postiz（http://127.0.0.1:4007），然后重新加载面板。Batch 的原生排期仍可使用。',
+  'planner.postiz.note.offline': '请在这台 MacBook 上启动 Postiz（http://localhost:4007），然后重新加载面板。Batch 的原生排期仍可使用。',
   'se.menu.social': '社交媒体',
   'se.menu.artikel': '文章',
   'se.menu.movie': '电影剧本',
@@ -1615,7 +1615,7 @@ const ZH: Dict = {
   'batch.schedule.retry': '重试失败项',
   'batch.schedule.nokey': 'Postiz 密钥尚未填写——请到设置中填写。',
   'batch.new': '开始新批次',
-  'batch.note.postiz': '排期：每张卡片按开始日期 +（天数−1）于 WIB 09:00 排期到所选渠道。Postiz 须在这台 MacBook 上运行（http://127.0.0.1:4007）。',
+  'batch.note.postiz': '排期：每张卡片按开始日期 +（天数−1）于 WIB 09:00 排期到所选渠道。Postiz 须在这台 MacBook 上运行（http://localhost:4007）。',
 };
 
 const DICTS: Record<Lang, Dict> = { id: ID, en: EN, zh: ZH };

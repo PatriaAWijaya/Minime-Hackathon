@@ -8,7 +8,7 @@ use std::process::Command;
 
 #[tauri::command]
 pub fn open_browser(url: String) -> Result<(), String> {
-    if url != "http://127.0.0.1:4007" && !url.starts_with("http://127.0.0.1:4007/") {
+    if url != "http://localhost:4007" && !url.starts_with("http://localhost:4007/") {
         return Err("URL tidak diizinkan".into());
     }
     Command::new("open")
