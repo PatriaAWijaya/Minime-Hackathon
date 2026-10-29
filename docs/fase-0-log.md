@@ -1898,3 +1898,9 @@ dokumen lama yang dipakai.
 - Rig-batch seksi 7 ditambah cek ikon: 6 kanal berlogo mengandung img "-icon.png" di tombol sidebar; Threads + X tetap span .soc-mono (TH/X).
 - Gerbang penuh v69: app tsc 0, svelte-check 0 error / 39 warning, vite 348,22 KB JS, 9 rig ALL PASSED, root tsc 0, gate-test 14/14, scan PASSED, ledger md5 tetap, cargo fmt --check 0 + cargo check 0 warning. Berkas dist memuat kelima PNG (public disalin Vite). 3 file diubah + 5 PNG baru.
 - Push: kode cb28cd7 <-> b0d728d (tree identik).
+
+## v70 ikon kanal X jadi logo asli (perintah Patria 30 Okt 00:05, berkas kiriman)
+- Kanal X kini memakai logo X asli (kotak hitam + glyph X putih, berkas kiriman Patria 268058_x-logo-icon.png, 512x512 RGBA, sudut transparan — terverifikasi bukan blank) disalin verbatim ke app/public/x-icon.png dan dirujuk lewat field icon di PLATFORMS (pola v69, tanpa invert). Komentar fallback di social.js diperbarui: hanya Threads yang masih monogram.
+- Rig-batch seksi 7 diperbarui: cek logo kini mencakup 7 kanal (FB, FB Page, IG, LinkedIn, TikTok, YouTube, X); cek monogram tinggal Threads (TH).
+- Gerbang penuh v70: app tsc 0, svelte-check 0 error / 39 warning, vite 348,24 KB JS, 9 rig ALL PASSED, root tsc 0, gate-test 14/14, scan PASSED, ledger md5 tetap, cargo fmt --check 0 + cargo check 0 warning. dist memuat x-icon.png. 2 file diubah + 1 PNG baru.
+- Push: kode MENYUSUL (di bawah log ini).
