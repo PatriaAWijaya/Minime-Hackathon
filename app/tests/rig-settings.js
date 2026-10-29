@@ -170,6 +170,26 @@ try {
   btn('gemini').click();
   await tick(200);
   check('klik kosong -> no-op (tanpa fetch baru)', fetchCount('generativelanguage') === gemFetchBefore);
+
+  // 7. Kartu v53: tombol sejajar kanan input + ketikan baru membatalkan
+  // hijau basi (tanpa mengubah kunci/flag tersimpan).
+  check('kartu per-kunci tampil', document.querySelectorAll('.key-card').length === 4);
+  const rowOk = [...document.querySelectorAll('.key-card .key-row')].every((row) => row.querySelector('input') && row.querySelector('button'));
+  check('tiap kartu: input + tombol sebaris', rowOk);
+  store.set('minime.geminiKey', 'gemini-ok');
+  store.set('minime.keyValidated', JSON.stringify({ gemini: true }));
+  document.getElementById('apiKeyGemini').value = '';
+  // Picu handler oninput Svelte lewat event input (gelembung): tombol
+  // harus mengikuti isi input, bukan flag lama.
+  document.getElementById('apiKeyGemini').value = 'gemini-baru';
+  document.getElementById('apiKeyGemini').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(100);
+  check('ketikan baru -> tombol kembali Hubungkan (bukan hijau basi)', btn('gemini').textContent === 'Hubungkan API');
+  check('ketikan tidak mengubah kunci/flag tersimpan', store.get('minime.geminiKey') === 'gemini-ok' && JSON.parse(store.get('minime.keyValidated')).gemini === true);
+  document.getElementById('apiKeyGemini').value = '';
+  document.getElementById('apiKeyGemini').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(100);
+  check('input dikosongkan -> hijau kunci tersimpan kembali', btn('gemini').textContent === 'TERHUBUNG');
 } catch (e) {
   check('rig-settings exception', false, e && e.stack ? e.stack : String(e));
 }

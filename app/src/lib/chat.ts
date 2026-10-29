@@ -98,7 +98,14 @@ export function renderKeyButtons(): void {
   (['gemini', 'meta', 'postiz'] as KeyKind[]).forEach((kind) => {
     const btn = document.getElementById(keyBtnId(kind)) as HTMLButtonElement | null;
     if (!btn) return;
-    const ok = isKeyValidated(kind) && !!savedKey(kind);
+    // Bila input sedang berisi ketikan baru, kunci yang berlaku adalah
+    // ketikan itu (BELUM teruji) — tombol harus "Hubungkan API", bukan
+    // hijau basi dari validasi kunci lama. Bila input kosong, yang
+    // berlaku adalah kunci tersimpan + flag validasinya. Turunan UI
+    // murni: tidak menulis storage apa pun.
+    const input = document.getElementById(keyInputId(kind)) as HTMLInputElement | null;
+    const pending = !!input && input.value.trim() !== '';
+    const ok = !pending && isKeyValidated(kind) && !!savedKey(kind);
     btn.textContent = ok ? tr('key.connected') : tr('key.connect');
     btn.className = ok ? 'btn btn-connected' : 'btn btn-primary';
     btn.disabled = false;

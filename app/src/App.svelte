@@ -624,10 +624,10 @@
         <h3>{t('settings.conn', lang)}</h3>
         <p><label><input type="checkbox" checked> {t('settings.meta.main', lang)}</label><label><input type="checkbox" checked> {t('settings.gemini.fb', lang)}</label><label><input type="checkbox" checked> {t('settings.ollama.fb', lang)}</label><label><input type="checkbox" checked> {t('ve.canva.title', lang)}</label><label><input type="checkbox"> {t('settings.voicestudio', lang)}</label></p>
         <h3>{t('settings.keys', lang)}</h3>
-        <p><label>{t('key.gemini', lang)} <input type="password" id="apiKeyGemini" placeholder={t('key.ph.empty', lang)} style="width:320px"></label> <button class="btn btn-primary" id="keyBtnGemini" onclick={() => { connectKey('gemini') }}>{t('key.connect', lang)}</button> <span id="keyNoteGemini"></span></p>
-        <p><label>{t('key.meta', lang)} <input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px"></label> <button class="btn btn-primary" id="keyBtnMeta" onclick={() => { connectKey('meta') }}>{t('key.connect', lang)}</button> <span id="keyNoteMeta"></span></p>
-        <p><label>{t('key.postiz', lang)} <input type="password" id="apiKeyPostiz" placeholder={t('key.ph.postiz', lang)} style="width:320px"></label> <button class="btn btn-primary" id="keyBtnPostiz" onclick={() => { connectKey('postiz') }}>{t('key.connect', lang)}</button> <span id="keyNotePostiz"></span></p>
-        <p><span>{t('key.ollama', lang)}</span></p>
+        <div class="key-card"><b>{t('key.gemini', lang)}</b><div class="key-row"><input type="password" id="apiKeyGemini" placeholder={t('key.ph.empty', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnGemini" onclick={() => { connectKey('gemini') }}>{t('key.connect', lang)}</button></div><span id="keyNoteGemini"></span></div>
+        <div class="key-card"><b>{t('key.meta', lang)}</b><div class="key-row"><input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnMeta" onclick={() => { connectKey('meta') }}>{t('key.connect', lang)}</button></div><span id="keyNoteMeta"></span></div>
+        <div class="key-card"><b>{t('key.postiz', lang)}</b><div class="key-row"><input type="password" id="apiKeyPostiz" placeholder={t('key.ph.postiz', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnPostiz" onclick={() => { connectKey('postiz') }}>{t('key.connect', lang)}</button></div><span id="keyNotePostiz"></span></div>
+        <div class="key-card"><span>{t('key.ollama', lang)}</span></div>
         <h3 id="gateHead">{t('settings.gates', lang)}</h3>
         <p><label><input type="checkbox" checked> {t('settings.dist.default', lang)}</label><label><input type="checkbox"> {t('settings.dist.batch', lang)}</label></p>
         <h3>{t('settings.cost', lang)}</h3>

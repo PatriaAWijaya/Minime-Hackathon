@@ -161,3 +161,9 @@ h3 { font-size: 18px; }
 .postiz-setup pre { background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 8px 10px; font-size: 12px; overflow-x: auto; margin: 6px 0; }
 .postiz-setup .setup-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 .btn-connected { background: #A6EBB1; color: #262626; border-color: #A6EBB1; }
+
+/* Kartu kunci API di Settings (v53): satu kartu per kunci, tombol
+   sejajar di sebelah kanan input supaya tidak membingungkan. */
+.key-card { border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.key-card .key-row { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
+.key-card .key-row button { flex-shrink: 0; }
