@@ -106,6 +106,28 @@ pub fn open_external_url(url: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Log debug sementara v56.1: setiap keputusan navigasi/jendela-baru
+/// dicatat ke /tmp/minime-nav-debug.log (best-effort, tidak pernah
+/// menggagalkan navigasi). Hanya skema+host+path yang dicatat, TANPA
+/// query string (state OAuth tidak ikut tercatat). Dipakai untuk
+/// membuktikan apakah klik tile channel di panel benar-benar sampai
+/// ke handler atau mentok di frontend Postiz.
+pub fn log_nav(url: &str, decision: NavDecision, note: &str) {
+    use std::io::Write;
+    let bare = url.split('?').next().unwrap_or(url);
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/tmp/minime-nav-debug.log")
+    {
+        let _ = writeln!(f, "{secs} | {bare} | {decision:?} | {note}");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

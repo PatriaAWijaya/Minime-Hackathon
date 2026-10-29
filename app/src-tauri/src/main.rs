@@ -26,10 +26,25 @@ fn main() {
                 .title("MiniMe")
                 .inner_size(1280.0, 800.0)
                 .on_navigation(|url| match browser::classify_navigation(url.as_str()) {
-                    browser::NavDecision::Allow => true,
-                    browser::NavDecision::Deny => false,
+                    browser::NavDecision::Allow => {
+                        browser::log_nav(url.as_str(), browser::NavDecision::Allow, "nav");
+                        true
+                    }
+                    browser::NavDecision::Deny => {
+                        browser::log_nav(url.as_str(), browser::NavDecision::Deny, "nav");
+                        false
+                    }
                     browser::NavDecision::OpenExternal => {
-                        let _ = browser::open_external_url(url.as_str());
+                        let r = browser::open_external_url(url.as_str());
+                        browser::log_nav(
+                            url.as_str(),
+                            browser::NavDecision::OpenExternal,
+                            if r.is_ok() {
+                                "nav open-ok"
+                            } else {
+                                "nav open-ERR"
+                            },
+                        );
                         false
                     }
                 })
@@ -38,7 +53,16 @@ fn main() {
                         browser::NavDecision::Allow => NewWindowResponse::Allow,
                         browser::NavDecision::Deny => NewWindowResponse::Deny,
                         browser::NavDecision::OpenExternal => {
-                            let _ = browser::open_external_url(url.as_str());
+                            let r = browser::open_external_url(url.as_str());
+                            browser::log_nav(
+                                url.as_str(),
+                                browser::NavDecision::OpenExternal,
+                                if r.is_ok() {
+                                    "win open-ok"
+                                } else {
+                                    "win open-ERR"
+                                },
+                            );
                             NewWindowResponse::Deny
                         }
                     },
