@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, refreshBackendData, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, saveSettings, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, saveSettings, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -24,7 +24,6 @@
     const next = value === 'en' || value === 'zh' ? value : 'id';
     lang = next;
     setLang(next);
-    refreshBackendData();
     renderAgents();
     renderKanban();
     renderPlanner();
@@ -606,7 +605,7 @@
       <div class="colhead">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div class="av" style="background:#EB87B4">P</div>
-          <h2 id="kanbanTitle" style="margin:0">TEST Kopi Surabaya</h2><span style="color:#EB87B4;font-size:18px">☆</span>
+          <h2 id="kanbanTitle" style="margin:0">—</h2><span style="color:#EB87B4;font-size:18px">☆</span>
           <div style="margin-left:auto;display:flex;align-items:center">
             <div id="kbTeamAvs" style="display:flex"></div>
             <button class="btn btn-sm" style="margin-left:10px" onclick={() => { kbTeamOpen() }}>＋</button><span id="kbTeamNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
@@ -619,7 +618,7 @@
           <span style="flex:1"></span>
           <label style="margin:0;font-weight:400;font-size:13px">{t('home.filter', lang)}
             <select id="kbFilter" onchange={() => { renderKanban() }} style="width:auto;margin-left:6px">
-              <option value="">{t('home.allagents', lang)}</option><option>Prime Agent</option><option>Riset</option><option>Strategi</option><option>Kreatif</option><option>Media</option><option>Distribusi</option><option>Produk Digital</option>
+              <option value="">{t('home.allagents', lang)}</option>
             </select>
           </label>
         </div>
@@ -629,7 +628,7 @@
     <div class="view" id="view-graph">
       <div class="colhead"><h2>{t('view.graph.title', lang)}</h2>
       <div class="graph-head-btns">
-        <select id="graphProjSel" onchange={(e) => { switchProject((e.target as HTMLSelectElement).value); renderGraphProjSel(); }}></select>
+        <select id="graphProjSel" onchange={(e) => { switchProject((e.target as HTMLSelectElement).value); }}></select>
         <button class="btn" onclick={() => { graphZoomOut() }}>−</button>
         <span id="graphZoomLabel">100%</span>
         <button class="btn" onclick={() => { graphZoomIn() }}>+</button>

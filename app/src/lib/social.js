@@ -1381,8 +1381,10 @@ export function initSocialScheduler() {
         if (pid && pid !== 'ok') it.postId = pid;
         if (it.repeat) {
           var nxt = socNextRepeat(it.scheduledAt, it.repeat);
+          var advGuard = 0;
+          while (nxt && nxt <= Date.now() && advGuard++ < 3650) { var adv = socNextRepeat(nxt, it.repeat); if (!adv) { nxt = 0; break; } nxt = adv; }
           if (nxt) {
-            q.push({ id: Date.now() + '' + Math.floor(Math.random() * 10000), platform: it.platform, text: it.text, imageB64: '', imageMime: it.imageMime || '', imageFile: it.imageFile || '', imageUrl: it.imageUrl || '', scheduledAt: nxt, status: 'queued', error: '', repeat: it.repeat });
+            q.push({ id: Date.now() + '' + Math.floor(Math.random() * 10000), platform: it.platform, text: it.text, imageB64: it.imageB64 || '', imageMime: it.imageMime || '', imageFile: it.imageFile || '', imageUrl: it.imageUrl || '', scheduledAt: nxt, status: 'queued', error: '', repeat: it.repeat });
           }
         }
       } catch (e) {

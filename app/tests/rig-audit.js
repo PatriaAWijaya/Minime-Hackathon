@@ -184,6 +184,21 @@ try {
   await tick(50);
   check('tim tersimpan + header menampilkan anggota', (document.getElementById('kbTeamNote')?.textContent || '').length > 0, document.getElementById('kbTeamNote')?.textContent);
 
+  // 3b. v85 (audit B1/M1): edit kartu + tim bertahan setelah muat ulang.
+  W.kbOpen(0);
+  await tick(50);
+  document.getElementById('kbDlgTitle').value = 'Kartu Lestari';
+  btn(document.getElementById('kbDlg'), 'Simpan').click();
+  await tick(50);
+  const dom3 = makeDom(store);
+  await tick(500);
+  for (let i = 0; i < 60 && typeof dom3.window.showView !== 'function'; i++) await tick(50);
+  dom3.window.showView('kanban');
+  dom3.window.renderKanban();
+  await tick(100);
+  check('edit kartu bertahan setelah muat ulang (B1)', (dom3.window.document.getElementById('kanbanBox')?.textContent || '').includes('Kartu Lestari'), dom3.window.document.getElementById('kanbanBox')?.textContent?.slice(0, 200));
+  check('tim bertahan setelah muat ulang (M1)', (dom3.window.document.getElementById('kbTeamNote')?.textContent || '').length > 0, dom3.window.document.getElementById('kbTeamNote')?.textContent);
+
   // 4. Detail: Model, skill, memori, file.
   W.selectAgent('riset');
   await tick(50);
@@ -316,6 +331,22 @@ try {
   var socDlg = document.getElementById('socItemDlg').innerHTML || '';
   check('klik chip terkirim -> detail berisi teks + postId', socDlg.includes('Postingan terkirim rig') && socDlg.includes('post-123'), socDlg.slice(0, 200));
   check('klik chip terkirim TIDAK membuka komposer', !document.getElementById('socCompText'), '');
+
+
+  // 9. v85 (audit B2): Simpan tim saat nol proyek tidak crash.
+  const store0 = new Map();
+  const dom0 = makeDom(store0);
+  await tick(500);
+  for (let i = 0; i < 60 && typeof dom0.window.showView !== 'function'; i++) await tick(50);
+  dom0.window.showView('kanban');
+  dom0.window.renderKanban();
+  await tick(100);
+  dom0.window.kbTeamOpen();
+  await tick(50);
+  let teamCrashed = false;
+  try { dom0.window.kbTeamSave(); } catch (e) { teamCrashed = true; }
+  await tick(50);
+  check('Simpan tim saat nol proyek tidak crash', !teamCrashed, '');
 
 } catch (e) {
   // eslint-disable-next-line no-console

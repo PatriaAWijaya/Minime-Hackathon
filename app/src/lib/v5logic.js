@@ -73,7 +73,7 @@ export function loadHomeState() {
     AGENTS = agents; PROJECTS = projects;
     if (PROJECTS[st.currentProj]) currentProj = st.currentProj;
     if (AGENTS[st.selectedAgent]) selectedAgent = st.selectedAgent;
-    var ps = document.getElementById('projectSel'); if (ps) ps.value = currentProj;
+    var ps = document.getElementById('projectSel'); if (ps) ps.value = currentProj || "";
     var cp = document.getElementById('chatProj'); if (cp && PROJECTS[currentProj]) cp.textContent = PROJECTS[currentProj].name;
   }
 
@@ -89,14 +89,14 @@ export function plusCloseMenu() { var m = document.getElementById('addMenu'); if
 export function selectAgent(key, pid) {
     selectedAgent = key;
     if (pid) currentProj = pid;
-    document.getElementById("projectSel").value = currentProj;
+    document.getElementById("projectSel").value = currentProj || "";
     renderAgents(); renderDetail(); renderChat(); renderKanban();
     document.getElementById("chatProj").textContent = PROJECTS[currentProj] ? PROJECTS[currentProj].name : "—";
     saveHomeState();
   }
 
 export function renderDetail() {
-    var ag = AGENTS[selectedAgent], proj = PROJECTS[currentProj];
+    var ag = AGENTS[selectedAgent];
     var ins = ag.instructions || (selectedAgent === "prime" ? "General-purpose assistant" : ag.goal);
     // Usage nyata (v75): konstanta historis + pemakaian live device-only.
     var live = readLiveCost();
@@ -153,7 +153,9 @@ export function setInstructions(v) { AGENTS[selectedAgent].instructions = v; sav
 /* ---------- Proyek & Chat ---------- */
 export function switchProject(pid) {
     if (!PROJECTS[pid]) return;
-    currentProj = pid; saveHomeState();
+    currentProj = pid;
+    var _pa = PROJECTS[pid].agents || [];
+    if (_pa.length && !_pa.some(function (a) { return a.key === selectedAgent; })) selectedAgent = _pa[0].key; saveHomeState();
     document.getElementById("chatProj").textContent = PROJECTS[pid].name;
     renderAgents(); renderChat(); renderKanban(); renderDetail();
   }
@@ -210,6 +212,7 @@ export function setSendChatImpl(fn) {
   sendChatImpl = fn;
 }
 
+export function hasProject() { return !!PROJECTS[currentProj]; }
 export function sendChat() {
     if (typeof sendChatImpl === "function") return sendChatImpl();
     var input = document.getElementById("chatInput");
@@ -266,6 +269,7 @@ export function renderKanban() {
     document.getElementById("kanbanTitle").textContent = PROJECTS[currentProj].name;
     var wrap = document.getElementById("kanbanBox");
     var cards = PROJECTS[currentProj].kanban || [];
+    (function () { var kf = document.getElementById("kbFilter"); if (!kf) return; var cur = kf.value; kf.innerHTML = "<option value=\"\">" + tr('home.allagents') + "</option>" + Object.keys(AGENTS).map(function (k) { return "<option>" + esc(AGENTS[k].name) + "</option>"; }).join(""); if (cur) kf.value = cur; })();
     var filter = document.getElementById("kbFilter") ? document.getElementById("kbFilter").value : "";
     function vis(card) { return !filter || card.a === filter; }
     if (kanbanTab === "table") {
@@ -896,10 +900,7 @@ function loadKanban() {
 }
 
 /** B7: re-derive backend data in the current language (after a language switch). */
-export function refreshBackendData() {
-  // v84: tanpa seed proyek — hanya Kanban tersimpan user yang dimuat.
-  loadKanban();
-}
+
 
 function tabSwitcher(panelPrefix, btnPrefix, keys, id) {
   keys.forEach(function (k) {
@@ -1299,6 +1300,7 @@ export function naCreate() {
     } else {
       saveHomeState();
       showView('home');
+      detailNote(tr('na.note.noproj'));
     }
   }
 
@@ -1923,7 +1925,7 @@ export function kbRenderDlg() {
   if (!card) { kbClose(); return; }
   var agOpts = "";
   var seen = {};
-  (PROJECTS[currentProj].agents || []).forEach(function (a) { if (AGENTS[a.key]) { seen[a.key] = true; agOpts += "<option" + (card.a === AGENTS[a.key].name ? " selected" : "") + ">" + esc(AGENTS[a.key].name) + "</option>"; } });
+  (PROJECTS[currentProj] ? (PROJECTS[currentProj].agents || []) : []).forEach(function (a) { if (AGENTS[a.key]) { seen[a.key] = true; agOpts += "<option" + (card.a === AGENTS[a.key].name ? " selected" : "") + ">" + esc(AGENTS[a.key].name) + "</option>"; } });
   if (!seen[agentKeyByName(card.a)]) agOpts += "<option selected>" + esc(card.a) + "</option>";
   var colOpts = "";
   var total = kcols().length + extraCols.length;
@@ -1959,8 +1961,9 @@ export function kbAddComment() {
   (card.comments || (card.comments = [])).push({ text: v, at: Date.now() });
   renderKanban(); kbRenderDlg();
 }
-export function kbTeamOpen() { kbDlgMode = "team"; kbDelAsk = false; kbRenderDlg(); }
+export function kbTeamOpen() { if (!PROJECTS[currentProj]) return; kbDlgMode = "team"; kbDelAsk = false; kbRenderDlg(); }
 export function kbTeamSave() {
+  if (!PROJECTS[currentProj]) return;
   var keys = [];
   document.querySelectorAll("[data-teamkey]").forEach(function (el) { if (el.checked) keys.push(el.getAttribute("data-teamkey")); });
   PROJECTS[currentProj].team = keys;
@@ -2056,15 +2059,17 @@ function runCleanV84() {
     if (window.localStorage.getItem('minime.cleaned-v84')) return;
     var raw = null; try { raw = window.localStorage.getItem('minime.homeState'); } catch (_) {}
     if (raw) {
-      try { window.localStorage.setItem('minime.homeState.pre-v84', raw); } catch (_) {}
+      try { if (!window.localStorage.getItem('minime.homeState.pre-v84')) window.localStorage.setItem('minime.homeState.pre-v84', raw); } catch (_) {}
       try { var st = JSON.parse(raw); if (st && typeof st === 'object') { st.projects = {}; st.currentProj = null; window.localStorage.setItem('minime.homeState', JSON.stringify(st)); } } catch (_) {}
     }
-    try { var lb = window.localStorage.getItem('minime.library.added'); if (lb) window.localStorage.setItem('minime.library.added.pre-v84', lb); } catch (_) {}
+    try { var lb = window.localStorage.getItem('minime.library.added'); if (lb && !window.localStorage.getItem('minime.library.added.pre-v84')) window.localStorage.setItem('minime.library.added.pre-v84', lb); } catch (_) {}
     try { window.localStorage.setItem('minime.library.added', '[]'); } catch (_) {}
     try { LIB_ADDED = []; } catch (_) {}
-    try { var kb = window.localStorage.getItem('minime.kanban'); if (kb) window.localStorage.setItem('minime.kanban.pre-v84', kb); } catch (_) {}
+    try { var kb = window.localStorage.getItem('minime.kanban'); if (kb && !window.localStorage.getItem('minime.kanban.pre-v84')) window.localStorage.setItem('minime.kanban.pre-v84', kb); } catch (_) {}
     try { window.localStorage.setItem('minime.kanban', JSON.stringify({ v: 2, cards: {}, team: {}, extraCols: [] })); } catch (_) {}
-    try { window.localStorage.setItem('minime.cleaned-v84', '1'); } catch (_) {}
+    var _ok = !raw;
+    if (raw) { try { var vb = JSON.parse(window.localStorage.getItem('minime.homeState') || 'null'); _ok = !!vb && vb.projects && Object.keys(vb.projects).length === 0; } catch (_) { _ok = true; } }
+    if (_ok) { try { window.localStorage.setItem('minime.cleaned-v84', '1'); } catch (_) {} }
   } catch (_) {}
 }
 export function initV5() {
@@ -2077,6 +2082,8 @@ export function initV5() {
   loadKanban();
   // v76: agen/proyek kustom + pilihan terakhir dimuat sebelum render pertama.
   loadHomeState();
+  // v85 (audit B1/M1): store Kanban (kartu+tim) menang atas snapshot homeState yang usang.
+  loadKanban();
   // v77: node Graph + setting trigger dimuat sebelum render pertama.
   loadGraphState();
   document.addEventListener("mousemove", function (e) {
