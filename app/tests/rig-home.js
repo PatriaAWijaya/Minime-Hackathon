@@ -75,6 +75,20 @@ try {
   dom.window.renderDetail();
   await tick(100);
 
+  // 0. v84: mulai nol -> buat proyek uji berisi semua agen roster.
+  document.querySelector('.agent-plus').click();
+  await tick(50);
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New channel')).click();
+  await tick(100);
+  const ncName0 = document.getElementById('ncName');
+  ncName0.value = 'Proyek Uji';
+  ncName0.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  document.querySelectorAll('.chan-row input[type="checkbox"]').forEach((cb) => cb.click());
+  await tick(50);
+  document.getElementById('ncCreateBtn').click();
+  await tick(100);
+
   // 1. Kotak Search + filter nama.
   check('kolom agen: kotak Search ada', !!document.getElementById('navSearch'), '');
   const rows = () => [...document.querySelectorAll('#agentList .agent')].filter((el) => el.style.display !== 'none');

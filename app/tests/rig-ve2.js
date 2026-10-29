@@ -89,7 +89,7 @@ const store = new Map();
 try {
   const dom = makeDom(store);
   const { document } = dom.window;
-  await tick(500);
+  await waitFor(() => document.querySelector('[data-view="media"]'), 'mount rail media', 100);
   document.querySelector('[data-view="media"]').click();
   await tick(100);
   document.getElementById('ms-tabbtn-video').click();

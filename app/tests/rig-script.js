@@ -96,6 +96,24 @@ function clickRadio(value) {
 
 try {
   await waitFor(() => document.querySelector('[data-view="media"]'), 'tombol rail media');
+
+  // 0. v84: mulai nol -> buat proyek uji (Revisi butuh proyek untuk chat + Kanban).
+  dom.window.showView('home');
+  await tick(100);
+  document.querySelector('.agent-plus').click();
+  await tick(50);
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New channel')).click();
+  await tick(100);
+  const ncName0 = document.getElementById('ncName');
+  ncName0.value = 'Proyek Uji';
+  ncName0.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  document.querySelectorAll('.chan-row input[type="checkbox"]').forEach((cb) => cb.click());
+  await tick(50);
+  document.getElementById('ncCreateBtn').click();
+  await tick(100);
+  document.querySelector('[data-view="media"]').click();
+  await tick(100);
   document.querySelector('[data-view="media"]').click();
   await tick(100);
   const scriptBtn = await waitFor(() => document.getElementById('ms-tabbtn-script'), 'tombol tab script');
@@ -161,16 +179,16 @@ try {
   const rows = () => document.getElementById('libGrid')?.querySelectorAll('.lib-card').length || 0;
   [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Simpan ke Library').click();
   await tick(100);
-  check('simpan menambah 1 kartu Library', rows() === 6, 'rows=' + rows());
+  check('simpan menambah 1 kartu Library', rows() === 1, 'rows=' + rows());
   check('catatan tersimpan tampil', (document.getElementById('se-note')?.textContent || '').includes('Tersimpan'), document.getElementById('se-note')?.textContent || '');
   [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Simpan ke Library').click();
   await tick(100);
-  check('simpan ulang tidak menduplikasi', rows() === 6, 'rows=' + rows());
+  check('simpan ulang tidak menduplikasi', rows() === 1, 'rows=' + rows());
 
   // Gunakan -> tetap 1 baris (dedup) + pindah ke editor berikutnya (Image).
   [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Gunakan').click();
   await tick(150);
-  check('gunakan tidak menduplikasi Library', rows() === 6, 'rows=' + rows());
+  check('gunakan tidak menduplikasi Library', rows() === 1, 'rows=' + rows());
   check('gunakan beralih ke Image Editor', document.getElementById('ms-tab-image')?.style.display !== 'none', document.getElementById('ms-tab-image')?.style.display || '');
 
   // Recall Library -> Media Studio: muat isi ke output Script Editor.

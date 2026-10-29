@@ -114,7 +114,7 @@ const fetchCount = () =>
 const libRows = () => document.getElementById('libGrid')?.querySelectorAll('.lib-card').length || 0;
 
 try {
-  await tick(500);
+  await waitFor(() => typeof dom.window.showView === 'function', 'mount showView', 120);
   dom.window.showView('media');
   dom.window.mediaTab('image');
   await tick(100);

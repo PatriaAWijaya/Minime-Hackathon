@@ -111,6 +111,22 @@ try {
   await waitFor(() => document.getElementById('chatInput'), 'mount chatInput', 200);
   store.set('minime.metaKey', 'rig-key');
 
+  // 0. v84: mulai nol -> buat proyek uji berisi semua agen roster.
+  dom.window.showView('home');
+  await tick(100);
+  document.querySelector('.agent-plus').click();
+  await tick(50);
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New channel')).click();
+  await tick(100);
+  const ncName0 = document.getElementById('ncName');
+  ncName0.value = 'Proyek Uji';
+  ncName0.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  document.querySelectorAll('.chan-row input[type="checkbox"]').forEach((cb) => cb.click());
+  await tick(50);
+  document.getElementById('ncCreateBtn').click();
+  await tick(100);
+
   // 1. Pesan langsung: ack Prime + jawaban, tanpa delegasi.
   await sendMsg('halo');
   await waitFor(() => bodyText().includes('Baik, saya mengerti'), 'ack Prime', 120);

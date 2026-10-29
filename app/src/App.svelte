@@ -567,11 +567,9 @@
     <div class="view active" id="view-home">
       <div class="colhead chat-date-head">
         <div class="chat-date">{t('home.chatdate', lang)}</div>
-        <div class="chat-proj" id="chatProj">TEST Kopi Surabaya</div>
+        <div class="chat-proj" id="chatProj">—</div>
         <label style="margin-top:8px">{t('home.proj', lang)}
           <select id="projectSel" onchange={(e) => { switchProject(e.currentTarget.value) }} style="margin-top:4px">
-            <option value="kopi">TEST Kopi Surabaya</option>
-            <option value="produk">TEST Produk Digital</option>
           </select>
         </label>
       </div>

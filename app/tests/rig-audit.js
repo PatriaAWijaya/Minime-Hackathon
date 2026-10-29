@@ -66,6 +66,23 @@ try {
   const { document } = dom.window;
   const W = dom.window;
   await tick(500);
+  for (let i = 0; i < 60 && typeof W.showView !== 'function'; i++) await tick(50);
+
+  // 0. v84: mulai nol -> buat proyek uji berisi semua agen roster.
+  W.showView('home');
+  await tick(100);
+  document.querySelector('.agent-plus').click();
+  await tick(50);
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New channel')).click();
+  await tick(100);
+  const ncName0 = document.getElementById('ncName');
+  ncName0.value = 'Proyek Uji';
+  ncName0.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  document.querySelectorAll('.chan-row input[type="checkbox"]').forEach((cb) => cb.click());
+  await tick(50);
+  document.getElementById('ncCreateBtn').click();
+  await tick(100);
 
   // 1. Penghitung karakter chat.
   const chatInput = document.getElementById('chatInput');
@@ -109,10 +126,14 @@ try {
   W.showView('kanban');
   W.renderKanban();
   await tick(50);
+  const pk0 = Object.keys(W.PROJECTS)[0];
+  W.PROJECTS[pk0].kanban.push({ t: 'Kartu Approval', a: 'Prime Agent', c: 2 }, { t: 'Kartu Biasa', a: 'Riset', c: 0 });
+  W.renderKanban();
+  await tick(50);
   const projKey = Object.keys(W.PROJECTS).find((k) => W.PROJECTS[k].kanban && W.PROJECTS[k].kanban.length);
   const cards = () => W.PROJECTS[projKey].kanban;
   const apprIdx = cards().findIndex((c) => c.c === 2);
-  check('kartu Butuh Approval ada di seed', apprIdx >= 0, cards().map((c) => c.c).join(','));
+  check('kartu Butuh Approval ada', apprIdx >= 0, cards().map((c) => c.c).join(','));
   if (apprIdx >= 0) {
     W.kbOpen(apprIdx);
     await tick(50);

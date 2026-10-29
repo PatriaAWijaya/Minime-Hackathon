@@ -11,7 +11,7 @@ import { readThumb } from './image-api.js';
 
 // B4: Kanban (TEST Kopi) + Planner now come from real artifacts via
 // backend-data.js; the dummy literals below were replaced, not kept.
-import { campaignCounts, campaignDrafts, campaignLeads, campaignPipeline, kopiKanban } from './backend-data.js';
+import { campaignCounts, campaignDrafts, campaignLeads, campaignPipeline } from './backend-data.js';
 import { tr, getLang, MONTHS } from './i18n.js';
 import { COST_TOTAL, readLiveCost, fmtInt } from './cost.js';
 
@@ -35,7 +35,9 @@ export function renderAgents() {
       });
       html += '</div>';
     });
+    if (!Object.keys(PROJECTS).length) html = "<div class='notice'>" + tr("proj.empty") + "</div>";
     document.getElementById("agentList").innerHTML = html;
+    renderGraphProjSel();
   }
 
 export function toggleAgent(idx, pid) {
@@ -89,7 +91,7 @@ export function selectAgent(key, pid) {
     if (pid) currentProj = pid;
     document.getElementById("projectSel").value = currentProj;
     renderAgents(); renderDetail(); renderChat(); renderKanban();
-    document.getElementById("chatProj").textContent = PROJECTS[currentProj].name;
+    document.getElementById("chatProj").textContent = PROJECTS[currentProj] ? PROJECTS[currentProj].name : "—";
     saveHomeState();
   }
 
@@ -150,6 +152,7 @@ export function setInstructions(v) { AGENTS[selectedAgent].instructions = v; sav
 
 /* ---------- Proyek & Chat ---------- */
 export function switchProject(pid) {
+    if (!PROJECTS[pid]) return;
     currentProj = pid; saveHomeState();
     document.getElementById("chatProj").textContent = PROJECTS[pid].name;
     renderAgents(); renderChat(); renderKanban(); renderDetail();
@@ -158,7 +161,11 @@ export function switchProject(pid) {
 export function renderChat() {
     var box = document.getElementById("chatBox");
     box.innerHTML = "";
-    PROJECTS[currentProj].chat.forEach(function (m, i) {
+    var _cp = PROJECTS[currentProj];
+    var _cpEl = document.getElementById("chatProj"); if (_cpEl) _cpEl.textContent = _cp ? _cp.name : "—";
+    var _ci = document.getElementById("chatInput"); if (_ci) _ci.disabled = !_cp;
+    if (!_cp) return;
+    _cp.chat.forEach(function (m, i) {
       var div = document.createElement("div");
       div.setAttribute("data-idx", String(i));
       div.className = "msg " + (m.who === "user" ? "user" : (m.curation ? "curation" : (m.who === "prime" ? "prime" : "")));
@@ -178,7 +185,8 @@ export function renderChat() {
    mengubah toggle Nonaktif (itu kontrol eksplisit user di Tools). */
 export function activateAgent(key) {
     var pid = null;
-    if (PROJECTS[currentProj].agents.some(function (a) { return a.key === key; })) pid = currentProj;
+    var _cur = PROJECTS[currentProj];
+    if (_cur && _cur.agents.some(function (a) { return a.key === key; })) pid = currentProj;
     else Object.keys(PROJECTS).forEach(function (p) {
       if (!pid && PROJECTS[p].agents.some(function (a) { return a.key === key; })) pid = p;
     });
@@ -190,6 +198,7 @@ export function activateAgent(key) {
   }
 
 export function postChat(who, name, color, text, curation) {
+    if (!PROJECTS[currentProj]) return;
     PROJECTS[currentProj].chat.push({ who: who, name: name, color: color, text: text, curation: !!curation });
     renderChat();
   }
@@ -226,8 +235,9 @@ export function doSearch() {
     var q = document.getElementById("searchInput").value.trim().toLowerCase();
     var results = document.getElementById("searchResults");
     if (!q) { results.innerHTML = ""; document.getElementById("searchCount").textContent = ""; return; }
-    var hits = PROJECTS[currentProj].chat.map(function (m, i) { return { m: m, i: i }; }).filter(function (h) { return h.m.text.toLowerCase().indexOf(q) !== -1 || h.m.name.toLowerCase().indexOf(q) !== -1; });
-    document.getElementById("searchCount").textContent = tr('search.count', {n: hits.length, q: q, proj: PROJECTS[currentProj].name});
+    var _sp = PROJECTS[currentProj];
+    var hits = _sp ? _sp.chat.map(function (m, i) { return { m: m, i: i }; }).filter(function (h) { return h.m.text.toLowerCase().indexOf(q) !== -1 || h.m.name.toLowerCase().indexOf(q) !== -1; }) : [];
+    document.getElementById("searchCount").textContent = tr('search.count', {n: hits.length, q: q, proj: _sp ? _sp.name : ""});
     results.innerHTML = hits.map(function (h) { return '<div class="search-hit" onclick="searchJump(' + h.i + ')" style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer"><b>' + esc(h.m.name) + ':</b> ' + h.m.text + '</div>'; }).join("") || "<p>" + tr('search.empty') + "</p>";
   }
 
@@ -252,6 +262,7 @@ export function renderKanban() {
     var teamAvs = document.getElementById("kbTeamAvs"), teamNote = document.getElementById("kbTeamNote");
     if (teamAvs) teamAvs.innerHTML = kbTeam().map(function (k, idx) { var a2 = AGENTS[k]; return a2 ? "<div class='av' style='width:28px;height:28px;font-size:12px;background:" + a2.color + (idx > 0 ? ";margin-left:-8px" : "") + "'>" + esc(a2.name.charAt(0)) + "</div>" : ""; }).join("");
     if (teamNote) teamNote.textContent = kbTeam().map(function (k) { return AGENTS[k] ? AGENTS[k].name : ""; }).filter(Boolean).join(", ");
+    if (!PROJECTS[currentProj]) { document.getElementById("kanbanTitle").textContent = "—"; var _kbw = document.getElementById("kanbanBox"); if (_kbw) _kbw.innerHTML = "<div class='notice'>" + tr("proj.empty") + "</div>"; return; }
     document.getElementById("kanbanTitle").textContent = PROJECTS[currentProj].name;
     var wrap = document.getElementById("kanbanBox");
     var cards = PROJECTS[currentProj].kanban || [];
@@ -835,7 +846,7 @@ export function libMedia(i) {
 export function libRevise(i) {
     var item = libAll()[i];
     if (!item) return;
-    PROJECTS[currentProj].kanban.push({ t: "Revisi: " + item.o, a: item.a, c: 3 });
+    if (PROJECTS[currentProj]) PROJECTS[currentProj].kanban.push({ t: "Revisi: " + item.o, a: item.a, c: 3 });
     renderKanban();
     showView("home");
     postChat("prime", "Prime Agent", "#EB87B4", "Perbaikan dibuka untuk '" + esc(item.o) + "' — kartunya masuk kolom Revisi di Kanban, menunggu catatanmu (simulasi).", true);
@@ -886,9 +897,7 @@ function loadKanban() {
 
 /** B7: re-derive backend data in the current language (after a language switch). */
 export function refreshBackendData() {
-  PROJECTS.kopi.kanban = kopiKanban();
-  // Audit v66 L-B1: ganti bahasa TIDAK boleh menimpa Kanban user —
-  // data tersimpan menang atas snapshot.
+  // v84: tanpa seed proyek — hanya Kanban tersimpan user yang dimuat.
   loadKanban();
 }
 
@@ -1281,11 +1290,16 @@ export function naCreate() {
     if (!name) return;
     var key = plusSlug(name, function (s) { return !!AGENTS[s]; });
     AGENTS[key] = { name: name, color: naState.color, shape: naState.shape, role: help || 'General-purpose assistant', goal: help || 'General-purpose assistant', skills: [], model: naModelLabel(naState.model), effort: naState.effort };
-    PROJECTS[currentProj].agents.push({ key: key, status: 'Idle', task: 'Baru dibuat' });
-    saveHomeState();
-    showView('home');
-    selectAgent(key, currentProj);
-    detailNote(tr('na.note.created', { name: name, proj: PROJECTS[currentProj].name }));
+    if (PROJECTS[currentProj]) {
+      PROJECTS[currentProj].agents.push({ key: key, status: 'Idle', task: 'Baru dibuat' });
+      saveHomeState();
+      showView('home');
+      selectAgent(key, currentProj);
+      detailNote(tr('na.note.created', { name: name, proj: PROJECTS[currentProj].name }));
+    } else {
+      saveHomeState();
+      showView('home');
+    }
   }
 
 export function plusNewChannel() {
@@ -1377,39 +1391,8 @@ export var AGENTS = {
     produk: { name: "Produk Digital", color: "#666666", role: "Brief produk digital", goal: "Brief, struktur fitur MVP, dan riset pengguna dari arahan produk.", skills: ["brief-produk", "riset-pengguna", "fitur-mvp"], model: "Gemini (fallback dari Meta)", always: false }
   };
 
-var PROJECTS = {
-    kopi: { name: "TEST Kopi Surabaya", agents: [
-      { key: "prime", status: "Aktif", task: "Mengkurasi hasil tim" },
-      { key: "riset", status: "Selesai", task: "Riset behaviour + spending" },
-      { key: "strategi", status: "Selesai", task: "STP v2 (GSTP lolos)" },
-      { key: "kreatif", status: "Selesai", task: "Kalender 7 hari + brief" },
-      { key: "media", status: "Menunggu provider", task: "Gambar Hari 1–7" },
-      { key: "distribusi", status: "Idle", task: "—" }
-    ], chat: [
-      { who: "user", name: "Patria", color: "#374151", text: "Riset pasar es kopi Surabaya untuk mahasiswa, lalu buatkan konten 7 hari beserta gambarnya." },
-      { who: "prime", name: "Prime Agent", color: "#EB87B4", text: "Siap. Saya pecah jadi: Riset → Strategi (STP, menunggu GSTP darimu) → Kreatif (kalender + brief) → Media (gambar) → Distribusi (draf penjadwalan). Saya tugaskan Riset sekarang." },
-      { who: "riset", name: "Riset", color: "#525252", text: "Riset selesai: audiens mahasiswa/pekerja muda Surabaya, behaviour digital tinggi (on-screen panjang, video pendek), spending sensitif harga, transaksi dominan via WhatsApp + QRIS." },
-      { who: "strategi", name: "Strategi", color: "#404040", text: "STP draf: segmen mahasiswa/pekerja muda 18–28, targeting Urban Hustlers via WhatsApp Business + Reels/TikTok, positioning es kopi susu harian paling praktis via WA + QRIS. Menunggu GSTP." },
-      { who: "prime", name: "Prime Agent", color: "#EB87B4", text: "Kurasi Prime: STP di atas sudah saya periksa — segmen dan targetingnya konsisten dengan riset behaviour dan spending. Saya rekomendasikan untuk disetujui di gerbang GSTP, tetapi keputusan tetap di tanganmu.", curation: true },
-      { who: "kreatif", name: "Kreatif", color: "#5b5b5b", text: "Kalender 7 hari + 7 brief selesai (setelah GSTP). Tema mencakup kenyamanan digital, konsistensi kualitas, dan efisiensi urban; semua CTA mengarah ke WA/QRIS." },
-      { who: "media", name: "Media", color: "#5b5b5b", text: "Gambar Hari 1–7 masih menunggu provider (Meta Image belum aktif). Saya tidak membuat gambar palsu — statusnya pending-provider sampai generator aktif atau fallback Canva dipakai." }
-    ], kanban: kopiKanban() },
-    produk: { name: "TEST Produk Digital", agents: [
-      { key: "prime", status: "Aktif", task: "Mengkurasi brief produk" },
-      { key: "riset", status: "Mengerjakan", task: "Riset pengguna aplikasi kopi" },
-      { key: "produk", status: "Mengerjakan", task: "Struktur fitur MVP" }
-    ], chat: [
-      { who: "user", name: "Patria", color: "#374151", text: "Buatkan brief produk digital untuk aplikasi pemesanan kopi via WhatsApp." },
-      { who: "prime", name: "Prime Agent", color: "#EB87B4", text: "Siap. Saya tugaskan Riset untuk riset pengguna, lalu Produk Digital menyusun brief dan struktur fitur MVP." },
-      { who: "riset", name: "Riset", color: "#525252", text: "Riset pengguna berjalan: pemesanan via chat sudah jadi kebiasaan, hambatan utamanya antre dan pembayaran tunai (simulasi)." }
-    ], kanban: [
-      { t: "Riset pengguna aplikasi kopi", a: "Riset", c: 1 },
-      { t: "Struktur fitur MVP", a: "Produk Digital", c: 1 },
-      { t: "Brief produk (draf)", a: "Produk Digital", c: 0 }
-    ]}
-  };
-
-var currentProj = "kopi", selectedAgent = "prime";
+var PROJECTS = {};
+var currentProj = null, selectedAgent = "prime";
 
 /* Collapsible project groups (28 Okt): status buka/tutup per project
    disimpan di localStorage agar bertahan antar restart; default semua
@@ -1583,10 +1566,14 @@ export function graphSelect(key) { graphSel = GNODES[key] ? key : null; graphDel
 export function graphClosePanel() { graphPopupOpen = false; graphSel = null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
 export function graphOpenPopup(k) { if (!GNODES[k]) return; graphSelect(k); graphPopupOpen = true; renderGraphPanel(); }
 export function renderGraphProjSel() {
-  var el = document.getElementById("graphProjSel"); if (!el) return;
-  el.innerHTML = "";
-  Object.keys(PROJECTS).forEach(function (pid) {
-    var o = document.createElement("option"); o.value = pid; o.textContent = PROJECTS[pid].name; if (pid === currentProj) o.selected = true; el.appendChild(o);
+  ["graphProjSel", "projectSel"].forEach(function (id) {
+    var el = document.getElementById(id); if (!el) return;
+    el.innerHTML = "";
+    var keys = Object.keys(PROJECTS);
+    if (!keys.length) { var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "—"; o0.selected = true; el.appendChild(o0); return; }
+    keys.forEach(function (pid) {
+      var o = document.createElement("option"); o.value = pid; o.textContent = PROJECTS[pid].name; if (pid === currentProj) o.selected = true; el.appendChild(o);
+    });
   });
 }
 function graphSelNode() { return graphSel && GNODES[graphSel] ? GNODES[graphSel] : null; }
@@ -1609,7 +1596,7 @@ export function renderGraphPanel() {
   }
   var nd = graphSelNode();
   if (!nd) { ov.style.display = "none"; p.innerHTML = ""; return; }
-  var html = "<div class='g-head'><span>" + esc(nd.icon || "") + " " + esc(nd.name) + "</span><button class='g-x' onclick='graphClosePanel()'>×</button></div>";
+  var html = "<div class='g-head'><span>" + esc(nd.icon || "") + " " + esc(nd.name) + (nd.locked ? " 🔒" : "") + "</span><button class='g-x' onclick='graphClosePanel()'>×</button></div>";
   html += "<div class='g-row'><label>" + tr("graph.name") + "</label><input class='g-input' value=\"" + esc(nd.name) + "\" oninput='graphRename(this.value)'></div>";
   html += "<div class='g-row'><label>" + tr("graph.desc") + "</label><textarea class='g-input' oninput='graphRedesc(this.value)'>" + esc(nd.desc || "") + "</textarea></div>";
   if (nd.kind === "decision") {
@@ -1689,7 +1676,10 @@ export function graphDuplicate() {
   nodeCounter++;
   var nk = "baru" + nodeCounter;
   var copy = JSON.parse(JSON.stringify(nd));
+  copy.name = (nd.name || "Node") + " (salinan)";
   copy.x = Math.min(90, (copy.x || 10) + 6);
+  copy.y = Math.min(84, (copy.y || 10) + 12);
+  if (copy.kind === "trigger" && copy.trig) copy.trig.active = false;
   GNODES[nk] = copy;
   saveGraphState();
   graphSelect(nk);
@@ -2043,18 +2033,7 @@ export function ollamaCheck() {
 
 /* ---------- Library ---------- */
 var LIB_ADDED = loadLibAdded();
-var LIB = [
-    { o: "STP v2 — TEST Kopi Surabaya", a: "Strategi", s: "Disetujui (GSTP)", badge: "b-ok", kind: "doc", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27",
-      content: "Ringkasan snapshot Fase 1 (file lengkap: docs/fase-1-output.json, brand TEST-BRAND-001 / TEST Kopi Surabaya, FIKSI).\n\nPositioning: TEST Kopi menjadi solusi es kopi susu harian yang konsisten, higienis, dan terjangkau bagi mahasiswa serta pekerja muda Surabaya melalui akses pemesanan instan via WhatsApp yang anti-ribet.\n\nPilar: Digital Convenience (WhatsApp + QRIS tanpa instalasi aplikasi), Quality Consistency (standar higienitas dan rasa konsisten tiap cup), dan keterjangkauan harian (es kopi susu Rp15.000).\n\nStatus: Disetujui Patria 27 Okt 2026 (GSTP)." },
-    { o: "Riset behaviour digital + spending", a: "Riset", s: "Disetujui", badge: "b-ok", kind: "doc", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27",
-      content: "Ringkasan snapshot Fase 1 (file lengkap: docs/fase-1-output.json, research.facts = 5 fakta).\n\nBrief: audiens mahasiswa dan pekerja muda Surabaya 18–30 tahun; masalah: kopi kafe terasa mahal untuk harian, sementara warkop tradisional sering tidak konsisten rasa dan kebersihannya; tawaran: es kopi susu Rp15.000, rasa konsisten, disajikan cepat, bisa dipesan lewat chat.\n\nTemuan: preferensi kuat pada titik harga di bawah Rp20.000 untuk konsumsi harian, dan pemesanan lewat aplikasi pesan singkat lebih dipilih daripada mengunduh aplikasi khusus." },
-    { o: "Kalender 7 hari + 7 brief", a: "Kreatif", s: "Disetujui (GKonten)", badge: "b-ok", kind: "script", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27",
-      content: "Ringkasan snapshot Fase 2 (file lengkap: docs/fase-2-output.json; 7 hari + 7 brief, GKonten disetujui Patria).\n\nHari 1 — Kemudahan Pesan via WhatsApp (Video Pendek, IG/TikTok). Hook: \u201cCapek antre kopi saat buru-buru ke kampus/kantor?\u201d\nHari 2 — Standarisasi Rasa yang Konsisten (Behind the Scenes, WA Status).\nHari 3 — Efisiensi QRIS untuk Urban Hustler (Testimoni, IG/TikTok).\nHari 4 — Solusi Higienitas Kopi Harian (Foto Produk, WA Status).\nHari 5 — Promo Bundling Hemat (Edukasi/Info Promo, IG/TikTok).\nHari 6 — Kecepatan Layanan (Video POV/Interaksi Admin, WA Status).\nHari 7 — Lifestyle & Refuel (Video Estetik/Reels, IG/TikTok).\n\nCatatan Fase 2: tidak ada gambar yang dihasilkan — provider gambar menunggu aktivasi Meta; tidak ada placeholder yang diklaim sebagai hasil generate." },
-    { o: "Gambar Hari 1–7 (menunggu provider)", a: "Media", s: "Menunggu provider", badge: "b-wait", kind: "image", proj: "TEST Kopi Surabaya", addedAt: "2026-10-27",
-      content: "Ringkasan snapshot Fase 3 (file lengkap: docs/fase-3-output.json; 7 carousel x 3 slide, QC 100/100 semua item, tanpa pelanggaran keras).\n\nTema per hari sama dengan kalender Fase 2 (Hari 1: Kemudahan Pesan via WhatsApp s.d. Hari 7: Lifestyle & Refuel).\n\nStatus gambar: pending-provider — image null di semua slide. File gambar belum ada; tombol Media Studio pada kartu ini membuka dialog ini, bukan editor gambar kosong." },
-    { o: "Brief produk digital (draf)", a: "Produk Digital", s: "DRAF", badge: "b-idle", kind: "doc", proj: "TEST Produk Digital",
-      content: "Draf placeholder — belum ada isi dan belum bertanggal (karena itu hanya muncul di filter periode \u201cSemua\u201d). Isi di sini setelah brief produk digital ditulis." }
-  ];
+var LIB = [];
 
 /* ---------- Media Studio ---------- */
 
@@ -2068,7 +2047,28 @@ var _sv2 = showView;
 var _sa2 = selectAgent;
 
 
+/* v84: migrasi sekali jalan — backup simpanan lama, lalu HAPUS SEMUA proyek
+   tersimpan (seed + buatan user) + Kanban per-proyek + Library tambahan,
+   sesuai perintah "hapus semua, mulai nol". Agen roster, alur Graph, dan
+   data Campaign tidak disentuh. Berjalan sebelum loadKanban/loadHomeState. */
+function runCleanV84() {
+  try {
+    if (window.localStorage.getItem('minime.cleaned-v84')) return;
+    var raw = null; try { raw = window.localStorage.getItem('minime.homeState'); } catch (_) {}
+    if (raw) {
+      try { window.localStorage.setItem('minime.homeState.pre-v84', raw); } catch (_) {}
+      try { var st = JSON.parse(raw); if (st && typeof st === 'object') { st.projects = {}; st.currentProj = null; window.localStorage.setItem('minime.homeState', JSON.stringify(st)); } } catch (_) {}
+    }
+    try { var lb = window.localStorage.getItem('minime.library.added'); if (lb) window.localStorage.setItem('minime.library.added.pre-v84', lb); } catch (_) {}
+    try { window.localStorage.setItem('minime.library.added', '[]'); } catch (_) {}
+    try { LIB_ADDED = []; } catch (_) {}
+    try { var kb = window.localStorage.getItem('minime.kanban'); if (kb) window.localStorage.setItem('minime.kanban.pre-v84', kb); } catch (_) {}
+    try { window.localStorage.setItem('minime.kanban', JSON.stringify({ v: 2, cards: {}, team: {}, extraCols: [] })); } catch (_) {}
+    try { window.localStorage.setItem('minime.cleaned-v84', '1'); } catch (_) {}
+  } catch (_) {}
+}
 export function initV5() {
+  runCleanV84();
   // Penjadwal native (v61): timer antrean mulai sekali saat app hidup.
   initSocialScheduler();
   // v77: penjadwal trigger Graph (hanya selama app terbuka).

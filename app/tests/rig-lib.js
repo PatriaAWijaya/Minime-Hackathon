@@ -71,37 +71,48 @@ const bodyText = () => document.body.textContent || '';
 
 try {
   await waitFor(() => document.getElementById('chatInput'), 'mount chatInput', 200);
+
+  // 0. v84: mulai nol -> buat proyek uji (Revisi butuh proyek untuk chat + Kanban).
+  dom.window.showView('home');
+  await tick(100);
+  document.querySelector('.agent-plus').click();
+  await tick(50);
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New channel')).click();
+  await tick(100);
+  const ncName0 = document.getElementById('ncName');
+  ncName0.value = 'Proyek Uji';
+  ncName0.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  document.querySelectorAll('.chan-row input[type="checkbox"]').forEach((cb) => cb.click());
+  await tick(50);
+  document.getElementById('ncCreateBtn').click();
+  await tick(100);
   dom.window.showView('library');
   await tick(200);
 
-  // 1. Kartu awal + meta agen/project/judul.
-  check('kartu awal 5 baris bawaan', cards().length === 5, 'cards=' + cards().length);
-  check('kartu memuat agen + project + judul', cards().every((c) => c.textContent.includes('Agen:') && c.textContent.includes('Project:')) && cards().some((c) => c.textContent.includes('STP v2')));
-  check('hitungan 5 dari 5 file', (document.getElementById('libFilterCount')?.textContent || '').includes('5'));
+  // 1. v84: Library mulai kosong (tanpa baris seed).
+  check('kartu awal 0 (tanpa seed)', cards().length === 0, 'cards=' + cards().length);
 
-  // 2. Filter: jenis, agen, project, periode (item baru = hari ini).
-  dom.window.libSetFilter('kind', 'script');
-  await tick(100);
-  check('filter jenis naskah menyaring ke 1 (Kalender)', cards().length === 1 && cards()[0].textContent.includes('Kalender 7 hari'), 'cards=' + cards().length);
-  dom.window.libSetFilter('kind', 'image');
-  await tick(100);
-  check('filter jenis gambar menyaring ke 1 (Gambar Hari 1-7)', cards().length === 1 && cards()[0].textContent.includes('Gambar Hari 1'), 'cards=' + cards().length);
-  dom.window.libSetFilter('kind', 'doc');
-  await tick(100);
-  check('filter jenis dokumen menyaring ke 3', cards().length === 3, 'cards=' + cards().length);
-  dom.window.libSetFilter('kind', 'all');
-  dom.window.libSetFilter('agent', 'Riset');
-  await tick(100);
-  check('filter agen Riset menyaring ke 1', cards().length === 1 && cards()[0].textContent.includes('Riset behaviour'), 'cards=' + cards().length);
-  dom.window.libSetFilter('agent', 'all');
-  dom.window.libSetFilter('proj', 'TEST Produk Digital');
-  await tick(100);
-  check('filter project menyaring ke 1', cards().length === 1 && cards()[0].textContent.includes('Brief produk digital'), 'cards=' + cards().length);
-  dom.window.libSetFilter('proj', 'all');
-  await tick(100);
+  // 2. Tambah + filter: jenis, agen, project, periode (item baru = hari ini).
   dom.window.libAddScript('NASKAH-LIB-UJI', 'ISI-LIB-UJI-HARI-INI');
   await tick(100);
-  check('simpan baru menambah kartu', cards().length === 6, 'cards=' + cards().length);
+  check('simpan baru menambah kartu', cards().length === 1, 'cards=' + cards().length);
+  check('kartu memuat agen + project + judul', cards().every((c) => c.textContent.includes('Agen:') && c.textContent.includes('Project:')) && cards().some((c) => c.textContent.includes('NASKAH-LIB-UJI')));
+  dom.window.libSetFilter('kind', 'script');
+  await tick(100);
+  check('filter jenis naskah menyaring ke 1', cards().length === 1 && cards()[0].textContent.includes('NASKAH-LIB-UJI'), 'cards=' + cards().length);
+  dom.window.libSetFilter('kind', 'doc');
+  await tick(100);
+  check('filter jenis dokumen menyaring ke 0', cards().length === 0, 'cards=' + cards().length);
+  dom.window.libSetFilter('kind', 'all');
+  dom.window.libSetFilter('agent', 'Kreatif');
+  await tick(100);
+  check('filter agen Kreatif menyaring ke 1', cards().length === 1 && cards()[0].textContent.includes('NASKAH-LIB-UJI'), 'cards=' + cards().length);
+  dom.window.libSetFilter('agent', 'all');
+  dom.window.libSetFilter('proj', 'Proyek Uji');
+  await tick(100);
+  check('filter project menyaring ke 1', cards().length === 1 && cards()[0].textContent.includes('NASKAH-LIB-UJI'), 'cards=' + cards().length);
+  dom.window.libSetFilter('proj', 'all');
   dom.window.libSetFilter('period', 'today');
   await tick(100);
   check('filter periode hari ini hanya item baru', cards().length === 1 && cards()[0].textContent.includes('NASKAH-LIB-UJI'), 'cards=' + cards().length);
@@ -113,27 +124,10 @@ try {
   first.dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true }));
   await tick(100);
   check('klik 2x membuka dialog detail', document.getElementById('libDetailDlg')?.style.display === 'block' && (document.getElementById('libDetailDlg')?.textContent || '').includes(first.querySelector('.lib-title')?.textContent || ''));
-  check('detail baris bawaan memuat konten asli Fase', (document.getElementById('libDetailDlg')?.textContent || '').includes('Positioning'));
+  check('detail memuat isi yang disimpan', (document.getElementById('libDetailDlg')?.textContent || '').includes('ISI-LIB-UJI-HARI-INI'));
   [...document.querySelectorAll('#libDetailDlg button')].find((b) => b.textContent.trim() === 'Tutup').click();
   await tick(100);
   check('tombol Tutup menutup dialog', document.getElementById('libDetailDlg')?.style.display === 'none');
-
-  // 3b. Media Studio baris bawaan memuat konten asli (bukan judul saja).
-  const stp = cards().find((c) => c.textContent.includes('STP v2'));
-  [...stp.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Media Studio').click();
-  await tick(150);
-  check('Media Studio baris bawaan membuka tab Script', document.getElementById('ms-tab-script')?.style.display !== 'none');
-  check('Media Studio baris bawaan memuat isi asli', (document.getElementById('se-output')?.value || '').includes('higienis'));
-  dom.window.showView('library');
-  await tick(100);
-
-  // 3c. Media Studio pada gambar tanpa file membuka dialog status (bukan editor kosong).
-  const gambar = cards().find((c) => c.textContent.includes('Gambar Hari 1'));
-  [...gambar.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Media Studio').click();
-  await tick(100);
-  check('Media Studio gambar tanpa file membuka dialog status', document.getElementById('libDetailDlg')?.style.display === 'block' && (document.getElementById('libDetailDlg')?.textContent || '').includes('pending-provider'));
-  [...document.querySelectorAll('#libDetailDlg button')].find((b) => b.textContent.trim() === 'Tutup').click();
-  await tick(100);
 
   // 4. Media Studio + Revisi dari kartu.
   const added = cards().find((c) => c.textContent.includes('NASKAH-LIB-UJI'));
@@ -162,22 +156,14 @@ try {
   await tick(100);
   [...document.querySelectorAll('#libConfirmDlg button')].find((b) => b.textContent.trim() === 'Ya, hapus').click();
   await tick(100);
-  check('Ya, hapus menghapus kartu', !cards().some((c) => c.textContent.includes('NASKAH-LIB-UJI')) && cards().length === 5, 'cards=' + cards().length);
+  check('Ya, hapus menghapus kartu', !cards().some((c) => c.textContent.includes('NASKAH-LIB-UJI')) && cards().length === 0, 'cards=' + cards().length);
   check('hapus baris user persist di localStorage', (store.get('minime.library.added') || '') === '[]');
   check('kartu Kanban Revisi ikut terhapus', !bodyText().includes('Revisi: NASKAH-LIB-UJI'));
 
-  // 6. Hapus baris bawaan -> tombstone persist + tetap hilang setelah render ulang.
-  const builtin = cards()[0];
-  const builtinTitle = builtin.querySelector('.lib-title')?.textContent || '';
-  [...builtin.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hapus').click();
-  await tick(100);
-  [...document.querySelectorAll('#libConfirmDlg button')].find((b) => b.textContent.trim() === 'Ya, hapus').click();
-  await tick(100);
-  check('hapus baris bawaan mengurangi kartu', cards().length === 4, 'cards=' + cards().length);
-  check('tombstone baris bawaan tersimpan', (store.get('minime.library.deleted') || '').includes(builtinTitle));
+  // 6. v84: render ulang tetap kosong (tanpa baris bawaan).
   dom.window.renderLib();
   await tick(100);
-  check('baris bawaan tetap hilang setelah render ulang', cards().length === 4 && !cards().some((c) => (c.querySelector('.lib-title')?.textContent || '') === builtinTitle));
+  check('render ulang tetap 0 kartu', cards().length === 0, 'cards=' + cards().length);
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));
   failures++;
