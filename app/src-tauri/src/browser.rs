@@ -81,9 +81,7 @@ pub fn classify_navigation(url: &str) -> NavDecision {
     // membukanya di browser sistem tidak berguna dan merusak UI-nya.
     // Aturan sufiks, bukan daftar host satu per satu, karena Stripe
     // memakai beberapa host frame (m-outer, inner, dsb.).
-    if host == "js.stripe.com"
-        || host.ends_with(".stripe.com")
-        || host.ends_with(".stripe.network")
+    if host == "js.stripe.com" || host.ends_with(".stripe.com") || host.ends_with(".stripe.network")
     {
         return NavDecision::Allow;
     }
