@@ -1785,3 +1785,8 @@ dokumen lama yang dipakai.
 - LinkedIn: tetap client_id kosong (env kosong, sudah didiagnosis).
 - Facebook: URL OAuth memakai client_id 4452783818294531 — hash SHA-256-nya SAMA PERSIS dengan FACEBOOK_APP_ID env (terverifikasi tanpa menampilkan nilai). Facebook menjawab "App not active" — status aplikasi itu sendiri di Meta yang nonaktif, bukan salah konfigurasi Postiz. Channel lama (PatriaBicara, Branding Marketing & AI) tetap tampil di panel; yang diblokir hanya login BARU sampai app diaktifkan ulang di developers.facebook.com.
 - Instagram (Standalone): URL instagram.com/oauth/authorize membawa client_id=undefined — provider membaca INSTAGRAM_APP_ID/SECRET dan keduanya TIDAK ADA di env (len=0). Perlu ID + secret aplikasi Instagram. Catatan: tile Instagram (Facebook Business) memakai jalur Facebook, jadi ikut kena masalah "App not active" yang sama.
+
+## Wizard langkah 2 v58 (29 Okt, perintah Patria 16:05)
+- Keluhan: langkah wizard "Akun Postiz + API key tersimpan di Pengaturan" tetap muncul sebagai tugas padahal kunci sudah ada di menu Setting. Penyebab: langkah 2 hanya centang dari hasil klik Uji koneksi di wizard (postizLastTest sesi) — tiap restart app, wizard menagih lagi walau kunci tersimpan.
+- Perbaikan: kunci tersimpan (readPostizKey) -> langkah 2 = centang ringkas tanpa lagi hint + tombol Buka Pengaturan. Tombol Uji SENGAJA dipertahankan: ping itulah yang membuktikan langkah 3 otomatis (jumlah channel); percobaan pertama yang menyembunyikan total blok membuat rig-batch gagal (tombol Uji tidak ditemukan) — bukti jalur itu dibutuhkan. Gerbang: 9 rig PASS, gate-test 14/14, ledger md5 tak berubah.
+- Push: kode c8f77ad <-> 7ff5d60 (tree identik).
