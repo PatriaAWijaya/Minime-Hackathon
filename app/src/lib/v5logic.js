@@ -13,6 +13,7 @@ import { readThumb } from './image-api.js';
 // backend-data.js; the dummy literals below were replaced, not kept.
 import { campaignCounts, campaignDrafts, campaignLeads, campaignPipeline, kopiKanban } from './backend-data.js';
 import { tr, getLang, MONTHS } from './i18n.js';
+import { COST_TOTAL, readLiveCost, fmtInt } from './cost.js';
 
 /* ---------- Agen ---------- */
 export function renderAgents() {
@@ -68,6 +69,12 @@ export function selectAgent(key, pid) {
 export function renderDetail() {
     var ag = AGENTS[selectedAgent], proj = PROJECTS[currentProj];
     var ins = ag.instructions || (selectedAgent === "prime" ? "General-purpose assistant" : ag.goal);
+    // Usage nyata (v75): konstanta historis + pemakaian live device-only.
+    var live = readLiveCost();
+    var usageVal = fmtInt(COST_TOTAL.calls + live.calls, getLang()) + ' calls · ' + fmtInt(COST_TOTAL.tokens + live.tokens, getLang()) + ' token';
+    // Toggle notifikasi tersimpan (default ON, seperti lampiran).
+    var notiOn = true;
+    try { notiOn = window.localStorage.getItem('minime.notify') !== '0'; } catch (_) {}
     var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox" checked onchange="detailNote(\'' + jsEsc(tr('detail.note.skill', {s: s})) + '\')"> <span>' + s + '</span></div>'; }).join("");
     document.getElementById("detailBody").innerHTML =
       '<div class="detail-avatar-wrap"><div class="detail-avatar" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div><button class="avatar-edit" onclick="detailNote(\'' + jsEsc(tr('detail.note.avatar', {name: ag.name})) + '\')" title="Ubah avatar">✎</button></div>'
@@ -86,11 +93,21 @@ export function renderDetail() {
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.tables', {name: ag.name})) + '\')"><span>' + tr('detail.tables') + '</span><span class="d-val">' + tr('detail.val.tables') + '</span></div></div>'
       + '<div class="d-label">' + tr('detail.does') + '</div><div class="d-rows">'
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.routines', {name: ag.name})) + '\')"><span>' + tr('detail.routines') + '</span><span class="d-val">' + tr('detail.val.configured') + '</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.usage', {name: ag.name})) + '\')"><span>' + tr('detail.usage') + '</span><span class="d-val">— ›</span></div></div>'
+      + '<div class="d-row" onclick="showView(\'billing\')"><span>' + tr('detail.usage') + '</span><span class="d-val">' + usageVal + ' ›</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.publish')) + '\')"><span>' + tr('detail.publish') + '</span><span class="d-val">›</span></div></div>'
+      + '<div class="d-label">' + tr('detail.rules') + '</div><div class="d-rows">'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.permissions')) + '\')"><span>' + tr('detail.permissions') + '</span><span class="d-val">' + tr('detail.val.fullaccess') + '</span></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.folders')) + '\')"><span>' + tr('detail.folders') + '</span><span class="d-val">' + tr('detail.val.allfiles') + '</span></div>'
+      + '<div class="d-row"><span>' + tr('detail.notifications') + '</span><label class="d-switch"><input type="checkbox" id="homeNotify"' + (notiOn ? ' checked' : '') + ' onchange="homeNotifyToggle(this.checked)"><span class="d-slider"></span></label></div>'
+      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.advanced')) + '\')"><span>' + tr('detail.advanced') + '</span><span class="d-val">›</span></div></div>'
       + '<div class="notice" id="detailNotice" style="display:none"></div>';
   }
 
 export function detailNote(t) { var n = document.getElementById("detailNotice"); if (n) { n.style.display = "block"; n.textContent = t; } }
+
+export function homeNotifyToggle(v) {
+  try { window.localStorage.setItem('minime.notify', v ? '1' : '0'); } catch (_) {}
+}
 
 export function toggleSkillList() { var el = document.getElementById("skillList"); if (el) el.style.display = el.style.display === "none" ? "block" : "none"; }
 
@@ -1118,5 +1135,5 @@ export function initV5() {
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, grabDX, grabDY, graphRunning, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
+  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, grabDY, graphRunning, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, playTimer2, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showSetNotice, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, ve2Add, ve2Note, ve2Play, ve2Select, ve2SyncName, ve2Transport, veTool, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach });
 }

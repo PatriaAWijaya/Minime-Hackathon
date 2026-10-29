@@ -228,3 +228,14 @@ h3 { font-size: 18px; }
 .soc-wiz-step { font-size: 12px; padding: 4px 8px; border-radius: 20px; background: #2a2a2a; color: #aaa; }
 .soc-wiz-step.on { background: #EB87B4; color: #222; font-weight: bold; }
 .soc-wiz-uri { font-family: monospace; width: 280px; background: #111; color: #ddd; border: 1px solid #333; border-radius: 8px; padding: 6px 8px; }
+/* ---- Home gaya lampiran v75: proporsi kolom + avatar kotak + switch ---- */
+#agentCol { width: 300px; }
+#detailCol { width: 340px; }
+#agentList .av { border-radius: 12px; width: 40px; height: 40px; }
+#agentList .agent { margin-left: 8px; margin-right: 8px; }
+.d-switch { position: relative; display: inline-flex; cursor: pointer; }
+.d-switch input { display: none; }
+.d-switch .d-slider { width: 38px; height: 22px; border-radius: 20px; background: #3a3a3a; position: relative; transition: background .15s; flex-shrink: 0; }
+.d-switch .d-slider::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #ececec; transition: left .15s; }
+.d-switch input:checked + .d-slider { background: #EB87B4; }
+.d-switch input:checked + .d-slider::after { left: 19px; }
