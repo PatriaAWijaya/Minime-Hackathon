@@ -74,12 +74,9 @@ function platIconHTML(id, sm) {
   var mcls = sm ? 'soc-mono sm' : 'soc-mono';
   return '<span class="' + mcls + '">' + (p ? p.mono : '?') + '</span>';
 }
-function fmtTime(ms) {
-  try { return new Date(ms).toLocaleString(); } catch (_) { return String(ms); }
-}
 function dayKey(ms) {
   var d = new Date(ms);
-  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 function tokenValid(ch) {
   if (!ch) return false;
@@ -155,7 +152,7 @@ function renderCalendar() {
   var cells = '';
   for (var i = 0; i < startDay; i++) cells += '<div class="soc-cal-day empty"></div>';
   for (var d = 1; d <= daysIn; d++) {
-    var k = y + '-' + (m + 1) + '-' + d;
+    var k = dayKey(new Date(y, m, d).getTime());
     var chips = (byDay[k] || []).map(function (it) {
       var fail = it.status === 'failed' ? ' <span class="soc-item-fail">' + tr('soc.status.failed') + '</span>' : '';
       var cls = it.status === 'sent' ? ' soc-item-sent' : (it.status === 'draft' ? ' soc-item-draft' : '');

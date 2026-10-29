@@ -7,9 +7,9 @@
 //  4. Toggle notifikasi tersimpan + default ON.
 //  5. Baris Usage menampilkan angka nyata (bukan "—") + klik -> Billing.
 //  6. Ubah nama agen di panel detail -> daftar agen ikut berubah.
-//  7. Menu + berisi persis New agent / New channel / New section.
+//  7. Menu + berisi persis New agent / New project / New section.
 //  8. New agent: isi nama -> Create -> agen muncul di daftar + terpilih.
-//  9. New channel: nama + pilih agen -> Create -> grup baru muncul.
+//  9. New project: nama + pilih agen -> Create -> grup baru muncul.
 //  10. New section: input inline + Enter -> grup baru muncul.
 //  11. Persistensi: DOM baru dengan store yang sama menampilkan agen,
 //      channel, dan section buatan di atas (bukti localStorage).
@@ -78,7 +78,7 @@ try {
   // 0. v84: mulai nol -> buat proyek uji berisi semua agen roster.
   document.querySelector('.agent-plus').click();
   await tick(50);
-  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New channel')).click();
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New project')).click();
   await tick(100);
   const ncName0 = document.getElementById('ncName');
   ncName0.value = 'Proyek Uji';
@@ -151,7 +151,7 @@ try {
   await tick(100);
   const menuText = document.getElementById('addMenu')?.textContent || '';
   check('menu + terbuka berisi New agent', menuText.includes('New agent'), menuText);
-  check('menu + terbuka berisi New channel', menuText.includes('New channel'), menuText);
+  check('menu + terbuka berisi New project', menuText.includes('New project'), menuText);
   check('menu + terbuka berisi New section', menuText.includes('New section'), menuText);
 
   // 8. New agent: isi nama -> Create -> muncul + terpilih.
@@ -172,12 +172,12 @@ try {
   check('Create agent -> daftar menampilkan Agen Uji', [...document.querySelectorAll('#agentList .agent')].some((el) => el.textContent.includes('Agen Uji')), '');
   check('Create agent -> kembali ke Home + agen terpilih', !!document.querySelector('#view-home.active') && !!document.querySelector('#agentList .agent.sel'), '');
 
-  // 9. New channel: nama + pilih agen -> grup baru muncul.
+  // 9. New project: nama + pilih agen -> grup baru muncul.
   document.querySelector('.agent-plus').click();
   await tick(50);
-  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New channel')).click();
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New project')).click();
   await tick(100);
-  check('dialog New channel tampil', !!document.querySelector('.chan-card'), '');
+  check('dialog New project tampil', !!document.querySelector('.chan-card'), '');
   const ncName = document.getElementById('ncName');
   ncName.value = 'Channel Uji';
   ncName.dispatchEvent(new dom.window.Event('input', { bubbles: true }));

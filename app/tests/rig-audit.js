@@ -73,7 +73,7 @@ try {
   await tick(100);
   document.querySelector('.agent-plus').click();
   await tick(50);
-  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New channel')).click();
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New project')).click();
   await tick(100);
   const ncName0 = document.getElementById('ncName');
   ncName0.value = 'Proyek Uji';
@@ -256,11 +256,12 @@ try {
   await tick(50);
   check('hapus garis -> jumlah edge berkurang', document.querySelectorAll('#graphEdges path').length === edgesBefore - 1, document.querySelectorAll('#graphEdges path').length + ' vs ' + edgesBefore);
 
-  // 6. Settings: Simpan + Ollama.
-  document.getElementById('apiKeyGemini').value = 'test-key-123';
-  W.saveSettings();
-  await tick(50);
-  check('Simpan menulis minime.geminiKey + nota', store.get('minime.geminiKey') === 'test-key-123' && (document.getElementById('setNotice')?.textContent || '').includes('Gemini'), document.getElementById('setNotice')?.textContent);
+  // 6. Settings v87 (B4): tombol Simpan bersama DIHAPUS — kunci hanya lewat
+  // Hubungkan per-kunci (diuji rig-settings); Ollama tetap.
+  dom.window.showView('settings');
+  await tick(100);
+  check('tombol Simpan bersama + setNotice hilang', ![...document.querySelectorAll('button')].some((b) => (b.textContent || '').includes('Simpan Pengaturan')) && !document.getElementById('setNotice'), '');
+  check('tombol Hubungkan per-kunci hadir', [...document.querySelectorAll('button')].some((b) => (b.textContent || '').includes('Hubungkan API')), '');
   dom.window.fetch = async () => ({ ok: true, json: async () => ({ models: [{ name: 'a' }, { name: 'b' }] }) });
   W.ollamaCheck();
   await tick(100);

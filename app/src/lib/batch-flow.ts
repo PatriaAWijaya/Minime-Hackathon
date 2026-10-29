@@ -34,7 +34,7 @@ import { metaGenerateImage, addImgSpend, RATIO_SIZE, readThumb } from './image-a
 import { recordLiveCost } from './cost.js';
 import { esc } from './esc.js';
 
-export const BATCH_LS = 'minime.batch';
+const BATCH_LS = 'minime.batch';
 export type BatchChoice = { files: string[]; label: string };
 export type BatchScript = { day: number; title: string; concept: string; visual: string };
 export type BatchCard = {
@@ -68,7 +68,7 @@ function emptyBatch(): BatchState {
   };
 }
 
-export function readBatch(): BatchState {
+function readBatch(): BatchState {
   try {
     const raw = window.localStorage.getItem(BATCH_LS);
     const o = raw ? JSON.parse(raw) : null;

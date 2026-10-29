@@ -1,4 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
 import { renderNativePlanner, initSocialScheduler, socNextRepeat } from './social.js';
 import { esc, jsEsc } from './esc.js';
 import { readThumb } from './image-api.js';
@@ -11,7 +10,7 @@ import { readThumb } from './image-api.js';
 
 // B4: Kanban (TEST Kopi) + Planner now come from real artifacts via
 // backend-data.js; the dummy literals below were replaced, not kept.
-import { campaignCounts, campaignDrafts, campaignLeads, campaignPipeline } from './backend-data.js';
+import { campaignCounts, campaignDrafts, campaignLeads } from './backend-data.js';
 import { tr, getLang, MONTHS } from './i18n.js';
 import { COST_TOTAL, readLiveCost, fmtInt } from './cost.js';
 
@@ -73,25 +72,23 @@ export function loadHomeState() {
     AGENTS = agents; PROJECTS = projects;
     if (PROJECTS[st.currentProj]) currentProj = st.currentProj;
     if (AGENTS[st.selectedAgent]) selectedAgent = st.selectedAgent;
-    var ps = document.getElementById('projectSel'); if (ps) ps.value = currentProj || "";
-    var cp = document.getElementById('chatProj'); if (cp && PROJECTS[currentProj]) cp.textContent = PROJECTS[currentProj].name;
+    syncProjectUI(currentProj);
   }
 
-export function plusSlug(name, taken) {
+function plusSlug(name, taken) {
     var base = (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'item';
     var slug = base, i = 2;
     while (taken(slug)) { slug = base + '-' + i; i++; }
     return slug;
   }
 
-export function plusCloseMenu() { var m = document.getElementById('addMenu'); if (m) m.classList.remove('open'); }
+function plusCloseMenu() { var m = document.getElementById('addMenu'); if (m) m.classList.remove('open'); }
 
 export function selectAgent(key, pid) {
     selectedAgent = key;
     if (pid) currentProj = pid;
-    document.getElementById("projectSel").value = currentProj || "";
+    syncProjectUI(currentProj);
     renderAgents(); renderDetail(); renderChat(); renderKanban();
-    document.getElementById("chatProj").textContent = PROJECTS[currentProj] ? PROJECTS[currentProj].name : "—";
     saveHomeState();
   }
 
@@ -151,12 +148,17 @@ export function retitleAgent(v) { AGENTS[selectedAgent].role = v; renderAgents()
 export function setInstructions(v) { AGENTS[selectedAgent].instructions = v; saveHomeState(); detailNote("Simulasi: instructions tersimpan (tampilan saja)."); }
 
 /* ---------- Proyek & Chat ---------- */
+function syncProjectUI(pid) {
+  var ps = document.getElementById('projectSel'); if (ps) ps.value = pid || "";
+  var cp = document.getElementById('chatProj'); if (cp) cp.textContent = PROJECTS[pid] ? PROJECTS[pid].name : "—";
+  renderGraphProjSel();
+}
 export function switchProject(pid) {
     if (!PROJECTS[pid]) return;
     currentProj = pid;
     var _pa = PROJECTS[pid].agents || [];
     if (_pa.length && !_pa.some(function (a) { return a.key === selectedAgent; })) selectedAgent = _pa[0].key; saveHomeState();
-    document.getElementById("chatProj").textContent = PROJECTS[pid].name;
+    syncProjectUI(pid);
     renderAgents(); renderChat(); renderKanban(); renderDetail();
   }
 
@@ -172,9 +174,12 @@ export function renderChat() {
       div.setAttribute("data-idx", String(i));
       div.className = "msg " + (m.who === "user" ? "user" : (m.curation ? "curation" : (m.who === "prime" ? "prime" : "")));
       var who = esc(String(m.name || ""));
+      // N1 v87: hanya pesan user di-escape (input luar tak boleh jadi HTML);
+      // pesan agen adalah HTML app sendiri (mis. tombol Buka di Media Studio).
+      var body = m.who === "user" ? esc(m.text) : m.text;
       div.innerHTML = m.curation
-        ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + m.text + '</div></div>'
-        : '<div class="body"><div class="bubble"><div class="who">' + who + '</div>' + m.text + '</div></div>';
+        ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + body + '</div></div>'
+        : '<div class="body"><div class="bubble"><div class="who">' + who + '</div>' + body + '</div></div>';
       box.appendChild(div);
     });
     box.scrollTop = box.scrollHeight;
@@ -218,7 +223,7 @@ export function sendChat() {
     var input = document.getElementById("chatInput");
     var text = input.value.trim();
     if (!text) return;
-    postChat("user", "Patria", "#374151", text.replace(/</g, "&lt;"));
+    postChat("user", "Patria", "#374151", text);
     input.value = "";
     var saved = text;
     setTimeout(function () {
@@ -405,7 +410,7 @@ export function renderGraph() {
       if (k === graphSel) {
         var bar = document.createElement("div");
         bar.className = "n8n-nodebar";
-        (function () { var _bb = [["\u29C9", graphDuplicate, "graph.dup"], [nd.locked ? "\uD83D\uDD13" : "\uD83D\uDD12", graphToggleLock, nd.locked ? "graph.unlock" : "graph.lock"]]; if (!nd.locked) _bb.push(["\uD83D\uDDD1", graphAskDelete, "graph.del"]); return _bb; })().forEach(function (b) {
+        [["\u29C9", graphDuplicate, "graph.dup"], [nd.locked ? "\uD83D\uDD13" : "\uD83D\uDD12", graphToggleLock, nd.locked ? "graph.unlock" : "graph.lock"]].forEach(function (b) {
           var bb = document.createElement("button");
           bb.textContent = b[0]; bb.title = tr(b[2]);
           bb.addEventListener("mousedown", function (e) { e.stopPropagation(); });
@@ -487,35 +492,38 @@ export function renderGraph() {
     });
   }
 
+function createNode(template, opts) {
+  opts = opts || {};
+  nodeCounter++;
+  var nk = "baru" + nodeCounter;
+  var nd = template;
+  if (!nd.name) nd.name = "Node Baru " + nodeCounter;
+  GNODES[nk] = nd;
+  if (opts.edgeFrom && GNODES[opts.edgeFrom]) GEDGES.push({ f: opts.edgeFrom, t: nk, l: "" });
+  saveGraphState();
+  graphSelect(nk);
+  showNotice("graphNotice", opts.edgeFrom && GNODES[opts.edgeFrom] ? "Simulasi: node baru ditambahkan setelah " + GNODES[opts.edgeFrom].name + " (tampilan saja)." : tr("graph.node_added"));
+  return nk;
+}
 export function addNodeAfter(key) {
-    nodeCounter++;
-    var src = GNODES[key];
-    var nk = "baru" + nodeCounter;
-    GNODES[nk] = { name: "Node Baru " + nodeCounter, sub: "simulasi", icon: "＋", x: Math.min(90, src.x + 14), y: src.y, w: 150, kind: "output", desc: "Node baru dari tombol ＋ (simulasi) — di aplikasi sungguhan, node ini bisa diisi agen/tool lain." };
-    GEDGES.push({ f: key, t: nk, l: "" });
-    saveGraphState();
-    graphSelect(nk);
-    var n = document.getElementById("graphNotice");
-    n.style.display = "block";
-    n.textContent = "Simulasi: node baru ditambahkan setelah " + src.name + " (tampilan saja).";
-    return nk;
-  }
+  var src = GNODES[key]; if (!src) return null;
+  return createNode({ sub: "simulasi", icon: "＋", x: Math.min(90, src.x + 14), y: src.y, w: 150, kind: "output", desc: "Node baru dari tombol ＋ (simulasi) — di aplikasi sungguhan, node ini bisa diisi agen/tool lain." }, { edgeFrom: key });
+}
 
+function showNotice(id, msg) { var n = document.getElementById(id); if (n) { n.style.display = "block"; n.textContent = msg; } }
 export function runGraphSim(kind) {
     kind = kind || "manual";
     if (graphRunning) return;
     graphRunning = true;
     var seq = ["trigger", "prime", "gate", "dist"];
     var i = 0;
-    var n = document.getElementById("graphNotice");
-    n.style.display = "block";
-    n.textContent = "Simulasi berjalan: Trigger → Prime Agent → GSTP → Distribusi (draf)…";
+    showNotice("graphNotice", "Simulasi berjalan: Trigger → Prime Agent → GSTP → Distribusi (draf)…");
     function step() {
       document.querySelectorAll(".n8n-node").forEach(function (el) { el.classList.remove("exec"); });
       if (i >= seq.length) {
         graphRunning = false;
         graphSimTimer = null;
-        n.textContent = "Simulasi selesai: alur berjalan Trigger → Prime Agent → GSTP (true) → Distribusi (draf). Gerbang sungguhan tetap menunggu keputusanmu — simulasi ini tidak menyetujui apa pun.";
+        showNotice("graphNotice", "Simulasi selesai: alur berjalan Trigger → Prime Agent → GSTP (true) → Distribusi (draf). Gerbang sungguhan tetap menunggu keputusanmu — simulasi ini tidak menyetujui apa pun.");
         graphRunsAdd(kind);
         return;
       }
@@ -591,10 +599,8 @@ export function libAddScript(title, content) {
    ditebak tanggalnya). Indeks kartu = indeks global libAll(), karena
    aksi (Media/Hapus/Revisi/detail) memakai indeks itu. */
 var libFilter = { kind: "all", period: "all", agent: "all", proj: "all" };
-function libTodayISO() {
-  var n = new Date();
-  return n.getFullYear() + "-" + String(n.getMonth() + 1).padStart(2, "0") + "-" + String(n.getDate()).padStart(2, "0");
-}
+function dateISO(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function libTodayISO() { return dateISO(new Date()); }
 function libKindOf(item) {
   if (item.kind === "script") return "script";
   if (item.kind === "image") return "image";
@@ -603,22 +609,23 @@ function libKindOf(item) {
 function libKindLabel(kind) {
   return kind === "script" ? tr('lib.kind.script') : kind === "image" ? tr('lib.kind.image') : tr('lib.kind.doc');
 }
-function libDayDiff(addedAt) {
-  if (!addedAt) return null;
-  var parts = addedAt.split("-");
+function parseISODate(s) {
+  if (!s) return null;
+  var parts = s.split("-");
   if (parts.length !== 3) return null;
   var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-  if (isNaN(d.getTime())) return null;
+  return isNaN(d.getTime()) ? null : d;
+}
+function libDayDiff(addedAt) {
+  var d = parseISODate(addedAt);
+  if (!d) return null;
   var now = new Date();
   var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.round((today.getTime() - d.getTime()) / 86400000);
 }
 function libDateLabel(item) {
-  if (!item.addedAt) return "—";
-  var parts = item.addedAt.split("-");
-  if (parts.length !== 3) return "—";
-  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-  if (isNaN(d.getTime())) return "—";
+  var d = parseISODate(item.addedAt);
+  if (!d) return "—";
   return d.getDate() + " " + MONTHS[getLang()][d.getMonth()] + " " + d.getFullYear();
 }
 function libMatchPeriod(item) {
@@ -631,13 +638,12 @@ function libMatchPeriod(item) {
   if (libFilter.period === "d90") return diff <= 90;
   return true;
 }
+function optionHtml(value, label, selected) { return "<option" + (value === label ? "" : " value='" + esc(String(value)) + "'") + (selected ? " selected" : "") + ">" + esc(String(label)) + "</option>"; }
 function fillLibSelect(id, values, current) {
   var sel = document.getElementById(id);
   if (!sel) return "all";
   var keep = values.indexOf(current) !== -1 ? current : "all";
-  sel.innerHTML = "<option value='all'>" + esc(tr('lib.filter.all')) + "</option>" + values.map(function (v) {
-    return "<option value='" + esc(v) + "'" + (v === keep ? " selected" : "") + ">" + esc(v) + "</option>";
-  }).join("");
+  sel.innerHTML = optionHtml('all', tr('lib.filter.all'), false) + values.map(function (v) { return optionHtml(v, v, v === keep); }).join("");
   return keep;
 }
 export function libSetFilter(dim, value) {
@@ -856,7 +862,6 @@ export function libRevise(i) {
     postChat("prime", "Prime Agent", "#EB87B4", "Perbaikan dibuka untuk '" + esc(item.o) + "' — kartunya masuk kolom Revisi di Kanban, menunggu catatanmu (simulasi).", true);
   }
 
-export function mediaBadge(s) { return s === "Siap untuk Post" ? "b-ok" : (s === "Menunggu GKonten" || s === "Menunggu provider" ? "b-wait" : "b-idle"); }
 
 
 export function renderPlanner() {
@@ -865,7 +870,7 @@ export function renderPlanner() {
 
 /* Kanban persistensi (audit v66 L-B1): snapshot build-time hanya
    fallback — bila localStorage punya Kanban tersimpan, itulah yang
-   dipakai, termasuk saat ganti bahasa (refreshBackendData). */
+   dipakai, termasuk saat ganti bahasa. */
 var KANBAN_LS = "minime.kanban";
 function saveKanban() {
   try {
@@ -895,7 +900,8 @@ function loadKanban() {
       }
     }
   } catch (_) {
-    // Korup: pakai snapshot.
+    // Korup: backup mentah (pola loadGraphState) lalu pakai snapshot.
+    try { var _raw = window.localStorage.getItem(KANBAN_LS); if (_raw) window.localStorage.setItem(KANBAN_LS + ".corrupt", _raw); window.localStorage.removeItem(KANBAN_LS); } catch (_) {}
   }
 }
 
@@ -977,7 +983,7 @@ export function cpLeadDetail(id) {
   var lead = cpLeadsAll().find(function (l) { return String(l.id) === String(id); });
   var box = document.getElementById('cpDlg');
   if (!box || !lead) return;
-  var stageOpts = CP_STAGES.map(function (st) { return '<option' + (st === lead.stage ? ' selected' : '') + '>' + esc(st) + '</option>'; }).join('');
+  var stageOpts = CP_STAGES.map(function (st) { return optionHtml(st, st, st === lead.stage); }).join('');
   box.innerHTML = '<div class="kb-dlg"><h3>' + esc(lead.id) + ' ' + esc(lead.name) + '</h3>'
     + '<p>' + esc(lead.channel) + (lead.contact ? ' · ' + esc(lead.contact) : '') + ' · ' + tr('cp.score') + ' ' + (lead.score == null ? '—' : lead.score) + (lead.manual ? ' · ' + tr('cp.lead.manual') : '') + '</p>'
     + '<label>' + tr('cp.lead.stage') + '<br><select id="cpDlgStage" class="input" style="width:100%">' + stageOpts + '</select></label>'
@@ -1094,7 +1100,7 @@ export function renderCampaign() {
   }
   var fu = document.getElementById('cp-followup-body');
   if (fu) {
-    var leadOpts = leads.map(function (l) { return '<option value="' + esc(l.id) + '">' + esc(l.id) + ' ' + esc(l.name) + '</option>'; }).join('');
+    var leadOpts = leads.map(function (l) { return optionHtml(l.id, l.id + ' ' + l.name, false); }).join('');
     var tasks = cpFuLoad().map(function (t) {
       var lead = leads.find(function (l) { return String(l.id) === String(t.leadId); });
       return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><input type="checkbox" data-cp-futoggle="' + esc(t.id) + '"' + (t.done ? ' checked' : '') + '><span style="' + (t.done ? 'text-decoration:line-through;color:#a1a1a1' : '') + '">' + esc(t.text) + (lead ? ' (' + esc(lead.name) + ')' : '') + '</span><button class="btn btn-sm" data-cp-fudel="' + esc(t.id) + '">' + tr('cp.fu.delete') + '</button></div>';
@@ -1217,7 +1223,7 @@ export function renderAddMenu() {
       + '<button class="plus-item" onclick="plusNewSection()"><span class="plus-ic">▤</span>' + tr('plus.new_section') + '</button>';
   }
 
-/* ---------- Menu + v76: New agent / New channel / New section (ala OpenBot) ---------- */
+/* ---------- Menu + v76: New agent / New project / New section (ala OpenBot) ---------- */
 var NA_COLORS = ['#F97316', '#EF4444', '#F59E0B', '#EAB308', '#22C55E', '#14B8A6', '#3B82F6', '#A855F7', '#EB87B4'];
 var NA_SHAPES = ['circle', 'squircle', 'blob', 'hexagon', 'diamond'];
 var NA_EFFORTS = ['Low', 'Medium', 'High', 'Extra high', 'Max'];
@@ -1231,8 +1237,8 @@ var naState = { color: '#F97316', shape: 'blob', model: 'meta', effort: 'Medium'
 var ncSel = {};
 var nsBusy = false;
 
-export function naModelLabel(m) { return tr('na.model_' + m); }
-export function naEffortLabel(e) { return tr('na.effort_' + e.toLowerCase().replace(' ', '_')); }
+function naModelLabel(m) { return tr('na.model_' + m); }
+function naEffortLabel(e) { return tr('na.effort_' + e.toLowerCase().replace(' ', '_')); }
 
 export function plusNewAgent() {
     plusCloseMenu();
@@ -1241,7 +1247,7 @@ export function plusNewAgent() {
     showView('newagent');
   }
 
-export function naRender() {
+function naRender() {
     var body = document.getElementById('newAgentBody');
     if (!body) return;
     var letter = (naState.name.trim().charAt(0) || 'A').toUpperCase();
@@ -1269,10 +1275,11 @@ export function naPickShape(sh) { naState.shape = sh; naRender(); }
 export function naModelToggle() { naState.modelOpen = !naState.modelOpen; naRender(); }
 export function naPickModel(m) { naState.model = m; naState.modelOpen = false; naRender(); }
 export function naEffort(e) { naState.effort = e; naRender(); }
-export function naModelFilter(q) {
+function filterRows(selector, q) {
     q = (q || '').toLowerCase();
-    document.querySelectorAll('.na-model-row').forEach(function (el) { el.style.display = el.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none'; });
+    document.querySelectorAll(selector).forEach(function (el) { el.style.display = el.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none'; });
   }
+export function naModelFilter(q) { filterRows('.na-model-row', q); }
 export function naNameInput(el) {
     naState.name = el.value;
     var pv = document.getElementById('naPreview'); if (pv) pv.textContent = (el.value.trim().charAt(0) || 'A').toUpperCase();
@@ -1322,10 +1329,7 @@ export function plusNewChannel() {
 export function ncClose() { document.getElementById('chanOverlay').innerHTML = ''; }
 export function ncToggle(k, v) { ncSel[k] = !!v; }
 export function ncUpdateCreate() { var b = document.getElementById('ncCreateBtn'), n = document.getElementById('ncName'); if (b) b.disabled = !(n && n.value.trim()); }
-export function ncFilter(q) {
-    q = (q || '').toLowerCase();
-    document.querySelectorAll('.chan-row').forEach(function (el) { el.style.display = el.textContent.toLowerCase().indexOf(q) !== -1 ? '' : 'none'; });
-  }
+export function ncFilter(q) { filterRows('.chan-row', q); }
 export function ncCreate() {
     var nameEl = document.getElementById('ncName');
     var name = nameEl ? nameEl.value.trim() : '';
@@ -1336,8 +1340,7 @@ export function ncCreate() {
     currentProj = pid;
     saveHomeState();
     ncClose();
-    var ps = document.getElementById('projectSel'); if (ps) ps.value = pid;
-    var cp = document.getElementById('chatProj'); if (cp) cp.textContent = name;
+    syncProjectUI(pid);
     renderAgents(); renderDetail(); renderChat(); renderKanban();
     detailNote(tr('nc.note.created', { name: name, n: keys.length }));
   }
@@ -1362,8 +1365,7 @@ export function nsConfirm() {
     PROJECTS[pid] = { name: v, agents: [], chat: [], kanban: [] };
     currentProj = pid;
     saveHomeState();
-    var ps = document.getElementById('projectSel'); if (ps) ps.value = pid;
-    var cp = document.getElementById('chatProj'); if (cp) cp.textContent = v;
+    syncProjectUI(pid);
     renderAgents(); renderDetail(); renderChat(); renderKanban();
     detailNote(tr('ns.note.created', { name: v }));
   }
@@ -1453,7 +1455,7 @@ function graphTrigDef() {
   return { type: "schedule", freq: "daily", days: [0, 1, 2, 3, 4, 5, 6], hour: 9, min: 0, ampm: "AM", active: true,
            date: graphISODate(d), monthDay: d.getDate(), month: d.getMonth() + 1, day: d.getDate(), cron: "", firedOnce: false };
 }
-function graphISODate(d) { return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+function graphISODate(d) { return dateISO(d); }
 function graphTrigFill(t) {
   var d = graphTrigDef();
   if (!t || typeof t !== "object") return d;
@@ -1463,59 +1465,37 @@ function graphTrigFill(t) {
 }
 function graphTrigOf(nd) { if (!nd.trig) nd.trig = graphTrigDef(); return graphTrigFill(nd.trig); }
 
-export function graphNextRun(t, now) {
+function sortDays(days) { return days.slice().sort(function (a, b) { return a - b; }); }
+function graphRunAt(t, now, dir) {
   if (!t || t.type !== "schedule") return null;
   t = graphTrigFill(t);
   var h = t.hour % 12 + (t.ampm === "PM" ? 12 : 0);
   function at(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, t.min, 0, 0); }
   var n = now || new Date();
-  if (t.freq === "once") { var c1 = at(new Date(t.date + "T00:00:00")); return c1 > n ? c1 : null; }
-  if (t.freq === "hourly") { var c2 = new Date(n.getFullYear(), n.getMonth(), n.getDate(), n.getHours(), t.min, 0, 0); if (c2 <= n) c2 = new Date(c2.getTime() + 3600000); return c2; }
-  if (t.freq === "daily") { var c3 = at(n); if (c3 <= n) c3 = new Date(c3.getTime() + 86400000); return c3; }
+  var fwd = dir > 0;
+  function after(c) { return fwd ? c > n : c <= n; }
+  if (t.freq === "once") { var c1 = at(new Date(t.date + "T00:00:00")); return after(c1) ? c1 : null; }
+  if (t.freq === "hourly") { var c2 = new Date(n.getFullYear(), n.getMonth(), n.getDate(), n.getHours(), t.min, 0, 0); if (fwd ? c2 <= n : c2 > n) c2 = new Date(c2.getTime() + dir * 3600000); return c2; }
+  if (t.freq === "daily") { var c3 = at(n); if (fwd ? c3 <= n : c3 > n) c3 = new Date(c3.getTime() + dir * 86400000); return c3; }
   if (t.freq === "weekly") {
-    var days = t.days.slice().sort(function (a, b) { return a - b; });
-    for (var i = 0; i < 8; i++) { var d = new Date(n.getFullYear(), n.getMonth(), n.getDate() + i); if (days.indexOf(d.getDay()) >= 0) { var c4 = at(d); if (c4 > n) return c4; } }
+    var days = sortDays(t.days);
+    for (var i = 0; i < 8; i++) { var d = new Date(n.getFullYear(), n.getMonth(), n.getDate() + dir * i); if (days.indexOf(d.getDay()) >= 0) { var c4 = at(d); if (after(c4)) return c4; } }
     return null;
   }
   if (t.freq === "monthly") {
     var md = Math.min(t.monthDay, 31), y = n.getFullYear(), m = n.getMonth();
-    for (var k = 0; k < 2; k++) { var last = new Date(y, m + 1, 0).getDate(); var c5 = new Date(y, m, Math.min(md, last), h, t.min, 0, 0); if (c5 > n) return c5; m++; if (m > 11) { m = 0; y++; } }
+    for (var k = 0; k < 2; k++) { var last = new Date(y, m + 1, 0).getDate(); var c5 = new Date(y, m, Math.min(md, last), h, t.min, 0, 0); if (after(c5)) return c5; m += dir; if (m > 11) { m = 0; y++; } if (m < 0) { m = 11; y--; } }
     return null;
   }
   if (t.freq === "yearly") {
     var y2 = n.getFullYear();
-    for (var k2 = 0; k2 < 2; k2++) { var last2 = new Date(y2, t.month, 0).getDate(); var c6 = new Date(y2, t.month - 1, Math.min(t.day, last2), h, t.min, 0, 0); if (c6 > n) return c6; y2++; }
+    for (var k2 = 0; k2 < 2; k2++) { var last2 = new Date(y2, t.month, 0).getDate(); var c6 = new Date(y2, t.month - 1, Math.min(t.day, last2), h, t.min, 0, 0); if (after(c6)) return c6; y2 += dir; }
     return null;
   }
   return null;
 }
-
-export function graphPrevRun(t, now) {
-  if (!t || t.type !== "schedule") return null;
-  t = graphTrigFill(t);
-  var h = t.hour % 12 + (t.ampm === "PM" ? 12 : 0);
-  function at(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, t.min, 0, 0); }
-  var n = now || new Date();
-  if (t.freq === "once") { var c1 = at(new Date(t.date + "T00:00:00")); return c1 <= n ? c1 : null; }
-  if (t.freq === "hourly") { var c2 = new Date(n.getFullYear(), n.getMonth(), n.getDate(), n.getHours(), t.min, 0, 0); if (c2 > n) c2 = new Date(c2.getTime() - 3600000); return c2; }
-  if (t.freq === "daily") { var c3 = at(n); if (c3 > n) c3 = new Date(c3.getTime() - 86400000); return c3; }
-  if (t.freq === "weekly") {
-    var days = t.days.slice().sort(function (a, b) { return a - b; });
-    for (var i = 0; i < 8; i++) { var d = new Date(n.getFullYear(), n.getMonth(), n.getDate() - i); if (days.indexOf(d.getDay()) >= 0) { var c4 = at(d); if (c4 <= n) return c4; } }
-    return null;
-  }
-  if (t.freq === "monthly") {
-    var md = Math.min(t.monthDay, 31), y = n.getFullYear(), m = n.getMonth();
-    for (var k = 0; k < 2; k++) { var last = new Date(y, m + 1, 0).getDate(); var c5 = new Date(y, m, Math.min(md, last), h, t.min, 0, 0); if (c5 <= n) return c5; m--; if (m < 0) { m = 11; y--; } }
-    return null;
-  }
-  if (t.freq === "yearly") {
-    var y2 = n.getFullYear();
-    for (var k2 = 0; k2 < 2; k2++) { var last2 = new Date(y2, t.month, 0).getDate(); var c6 = new Date(y2, t.month - 1, Math.min(t.day, last2), h, t.min, 0, 0); if (c6 <= n) return c6; y2--; }
-    return null;
-  }
-  return null;
-}
+export function graphNextRun(t, now) { return graphRunAt(t, now, 1); }
+export function graphPrevRun(t, now) { return graphRunAt(t, now, -1); }
 
 export function graphTrigSummary(t) {
   if (!t) return "";
@@ -1526,7 +1506,7 @@ export function graphTrigSummary(t) {
   var time = t.hour + ":" + ("0" + t.min).slice(-2) + " " + t.ampm;
   var days = "";
   if (t.freq === "daily") days = tr("graph.every_day");
-  else if (t.freq === "weekly") days = t.days.length >= 7 ? tr("graph.every_day") : t.days.slice().sort(function (a, b) { return a - b; }).map(function (d) { return "SMTWTFS"[d]; }).join(" ");
+  else if (t.freq === "weekly") days = t.days.length >= 7 ? tr("graph.every_day") : sortDays(t.days).map(function (d) { return "SMTWTFS"[d]; }).join(" ");
   else if (t.freq === "hourly") days = tr("graph.every_hour");
   else if (t.freq === "monthly") days = String(t.monthDay);
   else if (t.freq === "yearly") days = t.day + " " + MONTHS[getLang()][t.month - 1];
@@ -1564,9 +1544,9 @@ export function loadGraphState() {
   }
 }
 
-export function graphSelect(key) { graphSel = GNODES[key] ? key : null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
-export function graphClosePanel() { graphPopupOpen = false; graphSel = null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
-export function graphOpenPopup(k) { if (!GNODES[k]) return; graphSelect(k); graphPopupOpen = true; renderGraphPanel(); }
+export function graphSelect(key) { graphSel = GNODES[key] ? key : null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
+export function graphClosePanel() { graphPopupOpen = false; graphSel = null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
+function graphOpenPopup(k) { if (!GNODES[k]) return; graphSelect(k); graphPopupOpen = true; renderGraphPopup(); }
 export function renderGraphProjSel() {
   ["graphProjSel", "projectSel"].forEach(function (id) {
     var el = document.getElementById(id); if (!el) return;
@@ -1580,7 +1560,7 @@ export function renderGraphProjSel() {
 }
 function graphSelNode() { return graphSel && GNODES[graphSel] ? GNODES[graphSel] : null; }
 
-export function renderGraphPanel() {
+export function renderGraphPopup() {
   var p = document.getElementById("graphPopupCard");
   var ov = document.getElementById("graphPopup");
   if (!p || !ov) return;
@@ -1610,11 +1590,11 @@ export function renderGraphPanel() {
   if (nd.kind === "trigger") {
     var t = graphTrigOf(nd);
     html += "<div class='g-row'><label>" + tr("graph.type") + "</label><select class='g-input' onchange='graphSetTrig(\"type\", this.value)'" + dis + ">";
-    ["schedule", "manual", "webhook"].forEach(function (v) { html += "<option value='" + v + "'" + (t.type === v ? " selected" : "") + ">" + tr("graph.trig." + v) + "</option>"; });
+    ["schedule", "manual", "webhook"].forEach(function (v) { html += optionHtml(v, tr("graph.trig." + v), t.type === v); });
     html += "</select></div>";
     if (t.type === "schedule") {
       html += "<div class='g-row'><label>" + tr("graph.freq") + "</label><select class='g-input' onchange='graphSetTrig(\"freq\", this.value)'" + dis + ">";
-      ["once", "hourly", "daily", "weekly", "monthly", "yearly", "custom"].forEach(function (v) { html += "<option value='" + v + "'" + (t.freq === v ? " selected" : "") + ">" + tr("graph.freq." + v) + "</option>"; });
+      ["once", "hourly", "daily", "weekly", "monthly", "yearly", "custom"].forEach(function (v) { html += optionHtml(v, tr("graph.freq." + v), t.freq === v); });
       html += "</select></div>";
       if (t.freq === "weekly") {
         html += "<div class='g-row'><label>" + tr("graph.days") + "</label><div class='g-days'>";
@@ -1625,7 +1605,7 @@ export function renderGraphPanel() {
       if (t.freq === "monthly") html += "<div class='g-row'><label>" + tr("graph.date") + "</label><input class='g-input' type='number' min='1' max='31' value='" + t.monthDay + "' onchange='graphSetTrigNum(\"monthDay\", this.value)'" + dis + "></div>";
       if (t.freq === "yearly") {
         html += "<div class='g-row'><label>" + tr("graph.date") + "</label><div class='g-flex'><select class='g-input' onchange='graphSetTrigNum(\"month\", this.value)'>";
-        MONTHS[getLang()].forEach(function (m, i) { html += "<option value='" + (i + 1) + "'" + (t.month === i + 1 ? " selected" : "") + ">" + m + "</option>"; });
+        MONTHS[getLang()].forEach(function (m, i) { html += optionHtml(i + 1, m, t.month === i + 1); });
         html += "</select><input class='g-input' type='number' min='1' max='31' value='" + t.day + "' onchange='graphSetTrigNum(\"day\", this.value)'" + dis + "></div></div>";
       }
       if (t.freq === "hourly") html += "<div class='g-row'><label>" + tr("graph.time") + "</label><input class='g-input' type='number' min='0' max='59' value='" + t.min + "' onchange='graphSetTrigNum(\"min\", this.value)'" + dis + "></div>";
@@ -1654,64 +1634,57 @@ function graphPopupSaved() { var el = document.getElementById("graphPopupSaved")
 function graphPopupTitle(nd) { var el = document.getElementById("graphPopupTitle"); if (el) el.textContent = (nd.icon || "") + " " + nd.name + (nd.locked ? " 🔒" : ""); }
 export function graphRename(v) { var nd = graphSelNode(); if (!nd || nd.locked) return; nd.name = v; saveGraphState(); renderGraph(); graphPopupTitle(nd); graphPopupSaved(); }
 export function graphRedesc(v) { var nd = graphSelNode(); if (!nd || nd.locked) return; nd.desc = v; saveGraphState(); graphPopupSaved(); }
-export function graphSetBranch(side, v) { var nd = graphSelNode(); if (!nd || nd.locked) return; if (side === "T") nd.branchT = v; else nd.branchF = v; saveGraphState(); renderGraph(); renderGraphPanel(); }
+export function graphSetBranch(side, v) { var nd = graphSelNode(); if (!nd || nd.locked) return; if (side === "T") nd.branchT = v; else nd.branchF = v; saveGraphState(); renderGraph(); renderGraphPopup(); }
 function graphTrigSync(nd) { var t = graphTrigOf(nd); nd.sub = graphTrigSummary(t); }
-export function graphSetTrig(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return; graphTrigOf(nd)[field] = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel(); }
+export function graphSetTrig(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return; graphTrigOf(nd)[field] = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPopup(); }
 export function graphSetTrigNum(field, v) {
   var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return;
   var n = parseInt(v, 10); if (isNaN(n)) return;
   var max = field === "hour" ? 12 : field === "min" ? 59 : field === "month" ? 12 : 31;
   var min = (field === "monthDay" || field === "day" || field === "hour" || field === "month") ? 1 : 0;
   graphTrigOf(nd)[field] = Math.max(min, Math.min(max, n));
-  graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel();
+  graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPopup();
 }
-export function graphSetTrigBool(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return; graphTrigOf(nd)[field] = !!v; saveGraphState(); renderGraph(); renderGraphPanel(); }
-export function graphSetAmpm(v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return; graphTrigOf(nd).ampm = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel(); }
+export function graphSetTrigBool(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return; graphTrigOf(nd)[field] = !!v; saveGraphState(); renderGraph(); renderGraphPopup(); }
+export function graphSetAmpm(v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return; graphTrigOf(nd).ampm = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPopup(); }
 export function graphToggleDay(d) {
   var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return;
   var t = graphTrigOf(nd);
   var i = t.days.indexOf(d);
   if (i >= 0) { if (t.days.length > 1) t.days.splice(i, 1); }
   else t.days.push(d);
-  t.days.sort(function (a, b) { return a - b; });
-  graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPanel();
+  t.days = sortDays(t.days);
+  graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPopup();
 }
 export function graphRunNow() { runGraphSim("manual"); }
 export function graphDuplicate() {
   var nd = graphSelNode(); if (!nd) return;
-  nodeCounter++;
-  var nk = "baru" + nodeCounter;
   var copy = JSON.parse(JSON.stringify(nd));
   copy.locked = false;
   copy.name = (nd.name || "Node") + " (salinan)";
   copy.x = Math.min(90, (copy.x || 10) + 6);
   copy.y = Math.min(84, (copy.y || 10) + 12);
   if (copy.kind === "trigger" && copy.trig) copy.trig.active = false;
-  GNODES[nk] = copy;
-  saveGraphState();
-  graphSelect(nk);
-  var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.node_added"); }
+  createNode(copy, {});
 }
-export function graphToggleLock() { var nd = graphSelNode(); if (!nd) return; nd.locked = !nd.locked; saveGraphState(); renderGraph(); renderGraphPanel(); }
-export function graphAskDelete() { var nd = graphSelNode(); if (nd && nd.locked) return; if (graphSel && GNODES[graphSel]) graphPopupOpen = true; graphDelAsk = true; renderGraphPanel(); }
-export function graphCancelDelete() { graphDelAsk = false; renderGraphPanel(); }
+export function graphToggleLock() { var nd = graphSelNode(); if (!nd) return; nd.locked = !nd.locked; saveGraphState(); renderGraph(); renderGraphPopup(); }
+export function graphAskDelete() { var nd = graphSelNode(); if (nd && nd.locked) return; if (graphSel && GNODES[graphSel]) graphPopupOpen = true; graphDelAsk = true; renderGraphPopup(); }
+export function graphCancelDelete() { graphDelAsk = false; renderGraphPopup(); }
 export function graphConfirmDelete() {
   if (!graphSel || !GNODES[graphSel] || GNODES[graphSel].locked) return;
   var key = graphSel;
   delete GNODES[key];
   for (var i = GEDGES.length - 1; i >= 0; i--) { if (GEDGES[i].f === key || GEDGES[i].t === key) GEDGES.splice(i, 1); }
   graphSel = null; graphDelAsk = false; graphPopupOpen = false;
-  saveGraphState(); renderGraph(); renderGraphPanel();
-  var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.node_deleted"); }
+  saveGraphState(); renderGraph(); renderGraphPopup();
+  showNotice("graphNotice", tr("graph.node_deleted"));
 }
 export function graphAddNode() {
   if (graphSel && GNODES[graphSel]) { addNodeAfter(graphSel); return; }
-  nodeCounter++;
-  var nk = "baru" + nodeCounter;
-  GNODES[nk] = { name: "Node Baru " + nodeCounter, sub: "simulasi", icon: "＋", x: 45, y: 45, w: 150, kind: "output", desc: "Node baru dari toolbar + Add node." };
-  saveGraphState();
-  graphSelect(nk);
-  var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.node_added"); }
+  var keys = Object.keys(GNODES);
+  var last = keys.length ? keys[keys.length - 1] : null;
+  var src = last ? GNODES[last] : null;
+  createNode({ sub: "simulasi", icon: "＋", x: src ? Math.min(90, src.x + 14) : 45, y: src ? src.y : 45, w: 150, kind: "output", desc: "Node baru dari toolbar + Add node." }, last ? { edgeFrom: last } : {});
 }
 
 function graphRunsGet() { try { return JSON.parse(localStorage.getItem("minime.graphRuns") || "[]"); } catch (_) { return []; } }
@@ -1845,10 +1818,17 @@ export function waRecToggle() {
   } catch (_) { box.innerHTML = esc(tr("att.mic_unavail")); }
 }
 
-function memLoad() { try { return JSON.parse(localStorage.getItem("minime.agentMemories") || "{}"); } catch (_) { return {}; } }
-function memSave(o) { try { localStorage.setItem("minime.agentMemories", JSON.stringify(o)); } catch (_) {} }
-function fileLoad() { try { return JSON.parse(localStorage.getItem("minime.agentFiles") || "{}"); } catch (_) { return {}; } }
-function fileSave(o) { try { localStorage.setItem("minime.agentFiles", JSON.stringify(o)); } catch (_) {} }
+function jsonStore(key) {
+  return {
+    load: function () { try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (_) { return {}; } },
+    save: function (o) { try { localStorage.setItem(key, JSON.stringify(o)); } catch (_) {} }
+  };
+}
+var memStore = jsonStore("minime.agentMemories"), fileStore = jsonStore("minime.agentFiles");
+function memLoad() { return memStore.load(); }
+function memSave(o) { memStore.save(o); }
+function fileLoad() { return fileStore.load(); }
+function fileSave(o) { fileStore.save(o); }
 export function detailModelToggle() { detailModelOpen = !detailModelOpen; renderDetail(); }
 export function detailModelSet(v) { var ag = AGENTS[selectedAgent]; if (!ag) return; ag.model = v; detailModelOpen = false; saveHomeState(); renderDetail(); }
 export function detailEffortToggle() { detailEffortOpen = !detailEffortOpen; renderDetail(); }
@@ -1930,11 +1910,11 @@ export function kbRenderDlg() {
   if (!card) { kbClose(); return; }
   var agOpts = "";
   var seen = {};
-  (PROJECTS[currentProj] ? (PROJECTS[currentProj].agents || []) : []).forEach(function (a) { if (AGENTS[a.key]) { seen[a.key] = true; agOpts += "<option" + (card.a === AGENTS[a.key].name ? " selected" : "") + ">" + esc(AGENTS[a.key].name) + "</option>"; } });
-  if (!seen[agentKeyByName(card.a)]) agOpts += "<option selected>" + esc(card.a) + "</option>";
+  (PROJECTS[currentProj] ? (PROJECTS[currentProj].agents || []) : []).forEach(function (a) { if (AGENTS[a.key]) { seen[a.key] = true; agOpts += optionHtml(AGENTS[a.key].name, AGENTS[a.key].name, card.a === AGENTS[a.key].name); } });
+  if (!seen[agentKeyByName(card.a)]) agOpts += optionHtml(card.a, card.a, true);
   var colOpts = "";
   var total = kcols().length + extraCols.length;
-  for (var ci = 0; ci < total; ci++) colOpts += "<option value='" + ci + "'" + (card.c === ci ? " selected" : "") + ">" + esc(colName(ci)) + "</option>";
+  for (var ci = 0; ci < total; ci++) colOpts += optionHtml(ci, colName(ci), card.c === ci);
   var comments = (card.comments || []).map(function (c) { return "<div class='kb-comment'>" + esc(c.text) + "</div>"; }).join("") || "<p>" + tr("detail.mem.empty") + "</p>";
   var html = "<div class='kb-dlg'><h4>" + tr("kb.dlg.title") + "</h4>"
     + "<label>" + tr("kb.dlg.title_label") + "</label><input id='kbDlgTitle' class='g-input' value=\"" + esc(card.t) + "\">"
@@ -1980,40 +1960,29 @@ export function graphStopSim() {
   if (graphSimTimer) { clearTimeout(graphSimTimer); graphSimTimer = null; }
   graphRunning = false;
   document.querySelectorAll(".n8n-node").forEach(function (el) { el.classList.remove("exec"); });
-  var n = document.getElementById("graphNotice");
-  if (n) { n.style.display = "block"; n.textContent = tr("graph.stopped"); }
+  showNotice("graphNotice", tr("graph.stopped"));
 }
-export function graphSelectEdge(f, t) { graphSelEdge = { f: f, t: t }; graphSel = null; graphPopupOpen = true; graphDelAsk = false; graphEdgeDelAsk = false; renderGraph(); renderGraphPanel(); }
+export function graphSelectEdge(f, t) { graphSelEdge = { f: f, t: t }; graphSel = null; graphPopupOpen = true; graphDelAsk = false; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
 export function graphConfirmEdgeDel() {
   if (!graphSelEdge) return;
   var f = graphSelEdge.f, t = graphSelEdge.t;
   for (var i = GEDGES.length - 1; i >= 0; i--) { if (GEDGES[i].f === f && GEDGES[i].t === t) GEDGES.splice(i, 1); }
   graphSelEdge = null; graphEdgeDelAsk = false; graphPopupOpen = false;
-  saveGraphState(); renderGraph(); renderGraphPanel();
-  var n = document.getElementById("graphNotice"); if (n) { n.style.display = "block"; n.textContent = tr("graph.edge.deleted"); }
+  saveGraphState(); renderGraph(); renderGraphPopup();
+  showNotice("graphNotice", tr("graph.edge.deleted"));
 }
 
-export function saveSettings() {
-  var fields = [];
-  var g = document.getElementById("apiKeyGemini"), m = document.getElementById("apiKeyMeta"), o = document.getElementById("ollamaUrl");
-  try {
-    if (g && g.value) { localStorage.setItem("minime.geminiKey", g.value); fields.push("Gemini"); }
-    if (m && m.value) { localStorage.setItem("minime.metaKey", m.value); fields.push("Meta"); }
-    if (o && o.value) { localStorage.setItem("minime.ollamaUrl", o.value); fields.push("Ollama"); }
-  } catch (_) {}
-  var n = document.getElementById("setNotice");
-  if (n) { n.style.display = "block"; n.textContent = fields.length ? tr("set.save.done", { fields: fields.join(", ") }) : tr("set.save.none"); }
-}
+
 function detailModelOpts(ag) {
   var labels = ["meta", "gemini", "deepseek", "qwen"].map(function (m) { return naModelLabel(m); });
-  var opts = "<option value=''>" + esc(tr("detail.model.default")) + "</option>";
-  labels.forEach(function (l) { opts += "<option value=\"" + esc(l) + "\"" + (ag.model === l ? " selected" : "") + ">" + esc(l) + "</option>"; });
-  if (ag.model && labels.indexOf(ag.model) < 0) opts += "<option value=\"" + esc(ag.model) + "\" selected>" + esc(ag.model) + "</option>";
+  var opts = optionHtml('', tr("detail.model.default"), false);
+  labels.forEach(function (l) { opts += optionHtml(l, l, ag.model === l); });
+  if (ag.model && labels.indexOf(ag.model) < 0) opts += optionHtml(ag.model, ag.model, true);
   return opts;
 }
 function detailEffortOpts(ag) {
   var vals = [["Low", "na.effort_low"], ["Medium", "na.effort_medium"], ["High", "na.effort_high"], ["Extra high", "na.effort_extra"], ["Max", "na.effort_max"]];
-  return vals.map(function (v) { return "<option value='" + v[0] + "'" + ((ag.effort || "Low") === v[0] ? " selected" : "") + ">" + tr(v[1]) + "</option>"; }).join("");
+  return vals.map(function (v) { return optionHtml(v[0], tr(v[1]), (ag.effort || "Low") === v[0]); }).join("");
 }
 function detailMemSection() {
   var list = (memLoad()[selectedAgent] || []);
@@ -2025,8 +1994,8 @@ function detailFilesSection() {
   var rows = list.map(function (f, i) { return "<div class='d-memrow'><span>" + esc(f.name) + " (" + f.size + " B)</span> <button class='btn btn-sm' onclick='detailFilesDel(" + i + ")'>" + tr("detail.mem.del") + "</button></div>"; }).join("") || "<p>" + tr("detail.files.empty") + "</p>";
   return "<div class='d-label'>" + tr("detail.files") + "</div><div class='d-rows'>" + rows + "<button class='btn btn-primary' onclick='detailFilesPick()'>" + tr("detail.files.add") + "</button></div>";
 }
-export function graphAskEdgeDel() { graphEdgeDelAsk = true; renderGraphPanel(); }
-export function graphCancelEdgeDel() { graphEdgeDelAsk = false; renderGraphPanel(); }
+export function graphAskEdgeDel() { graphEdgeDelAsk = true; renderGraphPopup(); }
+export function graphCancelEdgeDel() { graphEdgeDelAsk = false; renderGraphPopup(); }
 
 export function ollamaCheck() {
   var inp = document.getElementById("ollamaUrl"), note = document.getElementById("ollamaNote");
@@ -2144,5 +2113,5 @@ export function initV5() {
   waInputChanged();
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
-  Object.assign(window, { AGENTS, GEDGES, GNODES, kcols, LIB, LIB_ADDED, PROJECTS, _ra2, _sa2, _sv2, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, currentProj, curvePath, detailNote, doSearch, dragCard, dragMoved, dragNode, dragStart, extraCols, filterAgents, homeNotifyToggle, grabDX, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, grabDY, graphRunning, graphSelect, graphClosePanel, renderGraphPanel, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, kanbanTab, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaBadge, mediaTab, navJump, nodeCounter, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, selectedAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, viewBack, viewForward, viewHist, viewHistIdx, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, saveSettings, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel });
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }

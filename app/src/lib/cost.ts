@@ -139,12 +139,16 @@ export function fmtUsd(
   return '$' + (a === b ? a : a + '–' + b);
 }
 
+export function fmtIdrNum(n: number): string {
+  return Math.round(n).toLocaleString('id-ID');
+}
+
 export function fmtIdr(
   r: { idrMin: number; idrMax: number },
-  lang: string,
+  _lang: string,
 ): string {
-  const a = dec(String(r.idrMin), lang);
-  const b = dec(String(r.idrMax), lang);
+  const a = fmtIdrNum(r.idrMin);
+  const b = fmtIdrNum(r.idrMax);
   return 'Rp' + (a === b ? a : a + '–' + b);
 }
 

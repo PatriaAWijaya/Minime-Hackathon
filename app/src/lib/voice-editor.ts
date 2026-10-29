@@ -64,7 +64,7 @@ function setNote(msg: string): void {
   if (n) n.textContent = msg;
 }
 
-export function fmtTime(s: number): string {
+function fmtDuration(s: number): string {
   if (!isFinite(s) || s < 0) return '—';
   const m = Math.floor(s / 60);
   const sec = s - m * 60;
@@ -215,7 +215,7 @@ function vedDraw(): void {
     for (let t = 0; t <= dur; t += step) {
       const x = (t / dur) * w;
       g.fillRect(x, h - 8, 1, 8);
-      g.fillText(fmtTime(t), x + 2, h - 12);
+      g.fillText(fmtDuration(t), x + 2, h - 12);
     }
   }
   // Seleksi.
@@ -246,7 +246,7 @@ function vedTick(): void {
   const timeEl = el('vedTime');
   if (audio && timeEl) {
     timeEl.textContent =
-      fmtTime(audio.currentTime) + ' / ' + fmtTime(current?.buf?.duration ?? NaN);
+      fmtDuration(audio.currentTime) + ' / ' + fmtDuration(current?.buf?.duration ?? NaN);
     // Seleksi di bawah ambang (sisa jalur mouseleave lama) tidak
     // boleh menghentikan putar — seleksi valid selalu >= 0,05 dtk.
     if (sel && sel.end - sel.start >= 0.05 && audio.currentTime >= sel.end) {
@@ -324,8 +324,8 @@ function renderSelInfo(): void {
     return;
   }
   info.textContent = tr('ved.sel_info')
-    .replace('{start}', fmtTime(sel.start))
-    .replace('{end}', fmtTime(sel.end))
+    .replace('{start}', fmtDuration(sel.start))
+    .replace('{end}', fmtDuration(sel.end))
     .replace('{dur}', (sel.end - sel.start).toFixed(1));
 }
 
@@ -342,7 +342,7 @@ function mimeFor(file: string): string {
   return 'audio/wav';
 }
 
-export async function vedLoadAsset(id: string, seekTo?: number): Promise<boolean> {
+async function vedLoadAsset(id: string, seekTo?: number): Promise<boolean> {
   const list = loadAssets();
   const asset = list.find((a) => a.id === id);
   if (!asset) return false;
@@ -602,7 +602,7 @@ export async function vedCutSel(): Promise<void> {
   }
 }
 
-export function vedRenderAssets(): void {
+function vedRenderAssets(): void {
   const box = el('vedAssets');
   if (!box) return;
   const list = loadAssets();
@@ -628,7 +628,7 @@ export function vedRenderAssets(): void {
         '</b> <span class="badge">' +
         esc(tr('ved.src.' + a.source)) +
         '</span> <span style="color:#a1a1a1;font-size:13px">' +
-        esc(fmtTime(a.duration)) +
+        esc(fmtDuration(a.duration)) +
         ' · ' +
         esc(new Date(a.createdAt).toLocaleString()) +
         ' · ' +
@@ -706,7 +706,7 @@ async function vedDeleteAsset(id: string): Promise<void> {
   setNote(tr('ved.deleted'));
 }
 
-export async function vedTranscribe(id: string): Promise<void> {
+async function vedTranscribe(id: string): Promise<void> {
   const list = loadAssets();
   const asset = list.find((a) => a.id === id);
   if (!asset) return;
@@ -750,7 +750,7 @@ export async function vedTranscribe(id: string): Promise<void> {
   }
 }
 
-export function vedRenderTranscript(id?: string): void {
+function vedRenderTranscript(id?: string): void {
   const box = el('vedTranscript');
   if (!box) return;
   const showId = id ?? lastTranscriptId;
@@ -777,7 +777,7 @@ export function vedRenderTranscript(id?: string): void {
           '<div data-ved-seek="' +
           s.start +
           '" style="cursor:pointer;padding:4px 0;border-bottom:1px solid #2a2a2a"><span style="color:#A6EBB1;font-size:13px">' +
-          esc(fmtTime(s.start) + ' – ' + fmtTime(s.end)) +
+          esc(fmtDuration(s.start) + ' – ' + fmtDuration(s.end)) +
           '</span> ' +
           esc(s.text) +
           '</div>',

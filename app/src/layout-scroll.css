@@ -315,7 +315,7 @@ h3 { font-size: 18px; }
 .g-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .g-delask { margin-top: 10px; font-size: 13px; }
 .graph-toolbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
-.graph-toolbar #graphZoomLabel { font-size: 13px; color: #a1a1a1; min-width: 44px; text-align: center; }
+.graph-head-btns #graphZoomLabel { font-size: 13px; color: #a1a1a1; min-width: 44px; text-align: center; }
 .graph-hist { background: #1f1f1f; border: 1px solid #262626; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; color: #ececec; }
 .g-hist-row { padding: 3px 0; border-bottom: 1px solid #262626; }
 .g-hist-row:last-child { border-bottom: none; }

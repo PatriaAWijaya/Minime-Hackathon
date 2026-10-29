@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, saveSettings, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -12,7 +12,7 @@
   import { initBatchFlow, batchRefreshUI } from "./lib/batch-flow.js";
   import { readImgSpend } from "./lib/image-api.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
-  import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtInt, fmtUsd, readLiveCost } from "./lib/cost.js";
+  import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtIdrNum, fmtInt, fmtUsd, readLiveCost } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
   import { invoke } from "@tauri-apps/api/core";
 
@@ -1003,8 +1003,8 @@
         </div>
         <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px">
           <h3 style="margin:0 0 12px">{t('billing.limit', lang)}</h3>
-          <div>{t('billing.limit.hard', lang)}: {fmtUsd(BILLING_HARD_LIMIT, lang)} (≈ Rp{fmtInt(90740, lang)})</div>
-          <div>{t('billing.used', lang)}: ${(COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd).toFixed(4)} (≈ Rp{fmtInt(Math.round((COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd) * 18137), lang)})</div>
+          <div>{t('billing.limit.hard', lang)}: {fmtUsd(BILLING_HARD_LIMIT, lang)} (≈ Rp{fmtIdrNum(90740)})</div>
+          <div>{t('billing.used', lang)}: ${(COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd).toFixed(4)} (≈ Rp{fmtIdrNum(Math.round((COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd) * 18137))})</div>
           {#if COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd > BILLING_HARD_LIMIT.usdMax}
           <div style="color:#EB87B4;margin-top:8px">{t('billing.over', lang)}</div>
           {/if}
@@ -1020,8 +1020,6 @@
         <div class="key-card"><b>{t('key.gemini', lang)}</b><div class="key-row"><input type="password" id="apiKeyGemini" placeholder={t('key.ph.empty', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnGemini" onclick={() => { connectKey('gemini') }}>{t('key.connect', lang)}</button></div><span id="keyNoteGemini"></span></div>
         <div class="key-card"><b>{t('key.meta', lang)}</b><div class="key-row"><input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnMeta" onclick={() => { connectKey('meta') }}>{t('key.connect', lang)}</button></div><span id="keyNoteMeta"></span></div>
         <div class="key-card"><b>{t('set.ollama.url', lang)}</b><div class="key-row"><input id="ollamaUrl" placeholder="http://127.0.0.1:11434" style="width:320px"> <button class="btn btn-primary" onclick={() => { ollamaCheck() }}>{t('set.ollama.check', lang)}</button></div><span id="ollamaNote"></span></div>
-        <button class="btn btn-primary" onclick={() => { saveSettings() }}>{t('settings.save', lang)}</button>
-        <div class="notice" id="setNotice" style="display:none"></div>
       </div>
     </div>
   </div>

@@ -295,7 +295,7 @@ function renderSeMain(): void {
   }
 }
 
-export function buildScriptPrompt(s: SeState): string {
+function buildScriptPrompt(s: SeState): string {
   if (s.menu === 'artikel') {
     return [
       `${tr('se.prompt.artikel')} ${s.topic}.`,
@@ -337,7 +337,7 @@ export function buildScriptPrompt(s: SeState): string {
   return lines.join('\n');
 }
 
-export async function seGenerate(): Promise<void> {
+async function seGenerate(): Promise<void> {
   const needKey =
     state.menu === 'social' ? 'se.err.needWhat' : state.menu === 'artikel' ? 'se.err.needTopic' : 'se.err.needPremise';
   const required = state.menu === 'social' ? state.what : state.menu === 'artikel' ? state.topic : state.premise;

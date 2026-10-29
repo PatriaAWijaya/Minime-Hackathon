@@ -102,7 +102,7 @@ try {
   await tick(100);
   document.querySelector('.agent-plus').click();
   await tick(50);
-  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New channel')).click();
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New project')).click();
   await tick(100);
   const ncName0 = document.getElementById('ncName');
   ncName0.value = 'Proyek Uji';

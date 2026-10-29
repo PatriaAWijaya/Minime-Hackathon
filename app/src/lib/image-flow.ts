@@ -24,6 +24,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
+import { fmtIdrNum } from './cost.js';
 import { readKeys } from './chat.js';
 import { libAddImage } from './v5logic.js';
 import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, addImgSpend, readImgSpend, readThumb, thumbCache } from './image-api.js';
@@ -87,7 +88,7 @@ function renderCost(): void {
   const s = readImgSpend();
   if (c) {
     c.textContent = s.images > 0
-      ? tr('img.cost.total', { n: s.images, usd: s.usd.toFixed(2), idr: s.idr.toLocaleString('id-ID') })
+      ? tr('img.cost.total', { n: s.images, usd: s.usd.toFixed(2), idr: fmtIdrNum(s.idr) })
       : '';
   }
 }
@@ -185,7 +186,7 @@ async function generate(): Promise<void> {
     renderVariants();
     renderCost();
     setNote(tr('img.status.done', { n: variants.length })
-      + ' ' + tr('img.cost', { n: variants.length, usd: usd.toFixed(2), idr: Math.round(usd * IMG_USD_RATE).toLocaleString('id-ID') }));
+      + ' ' + tr('img.cost', { n: variants.length, usd: usd.toFixed(2), idr: fmtIdrNum(Math.round(usd * IMG_USD_RATE)) }));
   } catch (e) {
     setNote(tr('img.err.api') + ' ' + (e instanceof Error ? e.message : String(e)));
   } finally {

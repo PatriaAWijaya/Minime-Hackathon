@@ -14,7 +14,6 @@ import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { AGENTS, activateAgent, hasProject, isAgentDeactivated, mediaTab, postChat, showView } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
-import { invoke } from '@tauri-apps/api/core';
 import { recordLiveCost } from './cost.js';
 
 const GEMINI_KEY_LS = 'minime.geminiKey';
@@ -47,7 +46,7 @@ function saveKey(kind: KeyKind, value: string): void {
   }
 }
 
-export function isKeyValidated(kind: KeyKind): boolean {
+function isKeyValidated(kind: KeyKind): boolean {
   try {
     const raw = window.localStorage.getItem(VALIDATED_LS);
     if (!raw) return false;
@@ -198,7 +197,7 @@ function normPadded(text: string): string {
   return ' ' + text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
 }
 
-export function delegateFor(text: string): AgentKey | null {
+function delegateFor(text: string): AgentKey | null {
   // Audit v66 C-M1: skor, bukan urutan kaku — frasa bernilai 2, kata
   // bernilai 1, seri dimenangkan aturan yang lebih dulu. Contoh:
   // 'jadwal posting video' -> distribusi (2) mengalahkan kreatif (1).
@@ -218,7 +217,7 @@ export function delegateFor(text: string): AgentKey | null {
   return best;
 }
 
-export function mediaNeeded(text: string): boolean {
+function mediaNeeded(text: string): boolean {
   const low = normPadded(text);
   return MEDIA_WORDS.some((w) => low.includes(' ' + w + ' '));
 }

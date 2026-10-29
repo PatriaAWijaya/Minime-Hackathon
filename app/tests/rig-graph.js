@@ -259,7 +259,7 @@ try {
   await tick(100);
   document.querySelector('.agent-plus').click();
   await tick(50);
-  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New channel')).click();
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New project')).click();
   await tick(100);
   const nc0 = document.getElementById('ncName');
   nc0.value = 'Proyek Uji';
@@ -356,6 +356,17 @@ try {
   btn14('Ya, hapus').click();
   await tick(100);
   check('hapus model -> node + garis putus hilang + popup tutup', !dom.window.GNODES.model && !dom.window.GEDGES.some((e) => e.t === 'model') && pop14().style.display === 'none', Object.keys(dom.window.GNODES).join(','));
+
+  // 15. v87 (B3): + Tambah Node tanpa seleksi menempel ke node terakhir.
+  const before15 = Object.keys(dom.window.GNODES).length;
+  dom.window.graphClosePanel();
+  await tick(50);
+  dom.window.graphAddNode();
+  await tick(100);
+  const keys15 = Object.keys(dom.window.GNODES);
+  const last15 = keys15[keys15.length - 1];
+  check('tambah node tanpa seleksi -> node baru +1 + punya edge masuk', keys15.length === before15 + 1 && dom.window.GEDGES.some((e) => e.t === last15), keys15.length + '|' + last15);
+  check('node baru berkelas ok', document.querySelector('[data-nkey="' + last15 + '"]')?.classList.contains('ok') === true, document.querySelector('[data-nkey="' + last15 + '"]')?.className);
 
 } catch (e) {
   // eslint-disable-next-line no-console
