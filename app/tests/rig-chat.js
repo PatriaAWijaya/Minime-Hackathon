@@ -49,7 +49,7 @@ async function fetchStub(url, opts) {
   // QC mengembalikan verdict; sisanya hasil kerja agen.
   let content = 'NASKAH-UJI: Hook kopi susu, isi 5W1H, CTA order via chat.';
   if (body.includes('Bagi brief')) {
-    content = body.includes('Halo utama') ? '[]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat carousel kopi susu"}]';
+    content = (body.includes('Halo utama') || body.includes('jadwal posting')) ? '[]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat carousel kopi susu"}]';
   } else if (body.includes('QC hasil kerja agen')) {
     content = 'QC: riset LOLOS, kreatif LOLOS. Semua hasil siap dipakai.';
   }
@@ -248,6 +248,26 @@ try {
   check('v103: laporan tersimpan sebagai dokumen Library', lib103.some((it) => (it.o || '').includes('Laporan Lengkap Project') && (it.content || '').includes('Project selesai')), 'n=' + lib103.length);
   const list103 = document.getElementById('agentList')?.textContent || '';
   check('v103: list agen menampilkan Riset + Kreatif aktif', list103.includes('Riset') && list103.includes('Kreatif'), list103.slice(0, 200));
+
+  // 8. v104 (aturan Patria 30 Okt 16:16): delegasi tunggal TANPA project
+  // tetap memunculkan agen di list (grup Dari Graph) + panel detail.
+  Object.keys(dom.window.PROJECTS).forEach((k) => { delete dom.window.PROJECTS[k]; });
+  Object.keys(dom.window.GNODES).forEach((k) => { delete dom.window.GNODES[k]; });
+  dom.window.GEDGES.length = 0;
+  dom.window.renderAgents(); dom.window.renderGraph(); dom.window.renderChat();
+  await tick(100);
+  const ci104 = document.getElementById('chatInput');
+  ci104.value = 'jadwal posting video minggu depan';
+  dom.window.sendChat();
+  await tick(900);
+  const nodes104 = Object.values(dom.window.GNODES);
+  check('v104: delegasi tanpa project membuat node Graph-only Distribusi', nodes104.some((nd) => nd.agent === 'distribusi' && !nd.proj), JSON.stringify(nodes104.map((nd) => nd.agent + ':' + nd.proj)));
+  const list104 = document.getElementById('agentList')?.textContent || '';
+  check('v104: list menampilkan grup Dari Graph + Distribusi', list104.includes('Dari Graph') && list104.includes('Distribusi'), list104.slice(0, 300));
+  const detail104 = document.getElementById('detailBody')?.textContent || '';
+  check('v104: panel detail berpindah ke Distribusi', detail104.includes('Distribusi'), detail104.slice(0, 200));
+  const box104 = document.getElementById('chatBox')?.textContent || '';
+  check('v104: bubble kesediaan Distribusi tampil', box104.includes('Siap') && box104.includes('NASKAH-UJI'), box104.slice(0, 300));
 
 } catch (e) {
   // eslint-disable-next-line no-console

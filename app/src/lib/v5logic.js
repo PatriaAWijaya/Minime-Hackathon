@@ -2346,7 +2346,22 @@ export function ensureProjectForBrief(text) {
   return first;
 }
 export function graphNoteDelegation(agentKey, briefText) {
-  var pid = currentProj; if (!pid || !PROJECTS[pid] || !AGENTS[agentKey]) return;
+  if (!AGENTS[agentKey]) return;
+  var pid = currentProj;
+  if (!pid || !PROJECTS[pid]) {
+    /* v104 (aturan Patria 30 Okt 16:16): delegasi tanpa project tetap
+       memunculkan agen — sebagai node Graph-only (proj null) yang tampil
+       di grup "Dari Graph" pada list agen aktif, bukan hilang diam-diam. */
+    var existing = Object.keys(GNODES).filter(function (k) { return GNODES[k].agent === agentKey && !GNODES[k].proj; });
+    if (existing.length) {
+      if (briefText && !GNODES[existing[0]].brief) { GNODES[existing[0]].brief = briefText; saveGraphState(); }
+      renderAgents(); renderGraph(); return;
+    }
+    var primeNull = Object.keys(GNODES).filter(function (k) { return GNODES[k].agent === "prime" && !GNODES[k].proj; })[0] || null;
+    var n = Object.keys(GNODES).filter(function (k) { return GNODES[k].agent && !GNODES[k].proj; }).length;
+    createNode({ name: AGENTS[agentKey].name, sub: AGENTS[agentKey].role || "", icon: AGENTS[agentKey].name.charAt(0), x: Math.min(88, 10 + 22 * n), y: n < 4 ? 32 : 60, w: 170, kind: "output", desc: "", agent: agentKey, proj: null, brief: briefText || "" }, primeNull ? { edgeFrom: primeNull } : {});
+    renderAgents(); renderGraph(); return;
+  }
   graphEnsureAgentNode(agentKey, pid, briefText);
   if (agentKey !== "prime") graphSyncAgent(agentKey, pid, briefText);
 }

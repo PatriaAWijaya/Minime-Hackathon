@@ -410,8 +410,10 @@ export async function sendChatReal(): Promise<void> {
   }
   const ag = (AGENTS as Record<string, { name: string; color: string; role: string }>)[delegate];
   postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.delegate.announce', { agent: esc(ag.name), task: esc(taskShort(text)) }));
-  activateAgent(delegate);
+  // v104: node dibuat DULU supaya activateAgent menemukan agen (di project
+  // atau di Graph-only) dan memindahkannya ke panel detail + list aktif.
   graphNoteDelegation(delegate, text);
+  activateAgent(delegate);
   postChat(delegate, ag.name, ag.color, tr('chat.delegate.agentack'));
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').';
   const trace = 'trace-chat-' + delegate + '-' + Date.now();
