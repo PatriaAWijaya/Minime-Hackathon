@@ -237,7 +237,7 @@ function studioButton(resultText: string, agentKey: string): string {
   const idx = pendingStudios.length - 1;
   return (
     '<br><br>' + esc(tr('chat.studio.note')) +
-    '<br><button class="btn btn-sm" onclick="approveStudio(' + idx + ')">' + esc(tr('chat.studio.approve')) + '</button>'
+    '<br><button class="btn btn-sm" data-act="chat-approve" data-idx="' + idx + '">' + esc(tr('chat.studio.approve')) + '</button>'
   );
 }
 

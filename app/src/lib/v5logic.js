@@ -82,8 +82,130 @@ function graphOnlyAgents() {
   });
   return out;
 }
+// v97: delegated wiring — ganti inline onclick/onchange/oninput (kelas yang
+// terbukti mati di WebView live, v91/v93). Pola: data-act + SATU listener
+// per container persisten; render ulang innerHTML tidak memutus wiring.
+var detailWired = false;
+function detailWire() {
+  if (detailWired) return;
+  var box = document.getElementById("detailBody"); if (!box) return; detailWired = true;
+  box.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !box.contains(el)) return;
+    var act = el.getAttribute("data-act"), idx = parseInt(el.getAttribute("data-idx") || "0", 10);
+    if (act === "d-avatar") detailAvatarPick();
+    else if (act === "d-model-toggle") detailModelToggle();
+    else if (act === "d-effort-toggle") detailEffortToggle();
+    else if (act === "d-note") detailNote(el.getAttribute("data-text") || "");
+    else if (act === "d-mem-toggle") detailMemToggle();
+    else if (act === "d-skill-list") toggleSkillList();
+    else if (act === "d-files-toggle") detailFilesToggle();
+    else if (act === "d-show") showView(el.getAttribute("data-view") || "home");
+    else if (act === "d-mem-add") detailMemAdd();
+    else if (act === "d-mem-del") detailMemDel(idx);
+    else if (act === "d-files-pick") detailFilesPick();
+    else if (act === "d-files-del") detailFilesDel(idx);
+    else if (act === "d-go-graph") detailGoGraph(el.getAttribute("data-key") || "");
+  });
+  box.addEventListener("change", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !box.contains(el)) return;
+    var act = el.getAttribute("data-act");
+    if (act === "d-skill") detailSkillToggle(el.getAttribute("data-skill") || "", el.checked);
+    else if (act === "d-rename") renameAgent(el.value);
+    else if (act === "d-retitle") retitleAgent(el.value);
+    else if (act === "d-instructions") setInstructions(el.value);
+    else if (act === "d-model-set") detailModelSet(el.value);
+    else if (act === "d-effort-set") detailEffortSet(el.value);
+    else if (act === "d-notify") homeNotifyToggle(el.checked);
+  });
+}
+var searchWired = false;
+function searchWire() {
+  if (searchWired) return;
+  var box = document.getElementById("searchResults"); if (!box) return; searchWired = true;
+  box.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !box.contains(el)) return;
+    if (el.getAttribute("data-act") === "s-jump") searchJump(parseInt(el.getAttribute("data-idx") || "0", 10));
+  });
+}
+var kanbanWired = false;
+function kanbanWire() {
+  if (kanbanWired) return;
+  var box = document.getElementById("kanbanBox");
+  if (box) box.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !box.contains(el)) return;
+    var act = el.getAttribute("data-act"), idx = parseInt(el.getAttribute("data-idx") || "0", 10);
+    if (act === "kb-open") kbOpen(idx);
+    else if (act === "kb-open-pid") kbOpenPid(el.getAttribute("data-pid") || "", idx);
+    else if (act === "kb-add-list") addKanbanList();
+  });
+  var dlg = document.getElementById("kbDlg");
+  if (dlg) dlg.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !dlg.contains(el)) return;
+    var act = el.getAttribute("data-act");
+    if (act === "kb-close") kbClose();
+    else if (act === "kb-team-save") kbTeamSave();
+    else if (act === "kb-save") kbSave();
+    else if (act === "kb-approve") kbApprove();
+    else if (act === "kb-ask-del") kbAskDel();
+    else if (act === "kb-del") kbDel();
+    else if (act === "kb-add-comment") kbAddComment();
+  });
+  if (box || dlg) kanbanWired = true;
+}
+var libWired = false;
+function libWire() {
+  if (libWired) return;
+  var grid = document.getElementById("libGrid");
+  if (grid) grid.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !grid.contains(el)) return;
+    var act = el.getAttribute("data-act"), idx = parseInt(el.getAttribute("data-idx") || "0", 10);
+    if (act === "lib-media") libMedia(idx);
+    else if (act === "lib-delete") libDelete(idx);
+    else if (act === "lib-revise") libRevise(idx);
+    else if (act === "lib-restore") libRestoreArchived(idx);
+  });
+  var dd = document.getElementById("libDetailDlg");
+  if (dd) dd.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !dd.contains(el)) return;
+    var act = el.getAttribute("data-act"), idx = parseInt(el.getAttribute("data-idx") || "0", 10);
+    if (act === "lib-close") libDetailClose();
+    else if (act === "lib-close-media") { libDetailClose(); libMedia(idx); }
+    else if (act === "lib-delete") libDelete(idx);
+    else if (act === "lib-close-revise") { libDetailClose(); libRevise(idx); }
+  });
+  var cd = document.getElementById("libConfirmDlg");
+  if (cd) cd.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !cd.contains(el)) return;
+    var act = el.getAttribute("data-act");
+    if (act === "lib-confirm-close") libConfirmClose();
+    else if (act === "lib-confirm-delete") libConfirmDelete();
+  });
+  if (grid || dd || cd) libWired = true;
+}
+var homeChatWired = false;
+function homeChatWire() {
+  if (homeChatWired) return;
+  var box = document.getElementById("view-home"); if (!box) return; homeChatWired = true;
+  box.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !box.contains(el)) return;
+    var act = el.getAttribute("data-act"), idx = parseInt(el.getAttribute("data-idx") || "0", 10);
+    if (act === "chat-approve") { if (window.approveStudio) window.approveStudio(idx); }
+    else if (act === "wa-cam") waCamShot();
+    else if (act === "wa-rec") waRecToggle();
+    else if (act === "wa-rm") waRemoveAtt(idx);
+  });
+}
 export function renderAgents() {
-    agentListWire();
+    agentListWire(); detailWire(); searchWire(); kanbanWire(); libWire(); homeChatWire();
     var html = "", rowNo = -1;
     Object.keys(PROJECTS).forEach(function (pid) {
       var proj = PROJECTS[pid];
@@ -178,7 +300,7 @@ function detailGraphTasks() {
     var nd = GNODES[k];
     if (nd.agent !== selectedAgent) return;
     var pn = (nd.proj && PROJECTS[nd.proj]) ? PROJECTS[nd.proj].name : "—";
-    rows.push("<div class='d-row' onclick=\"detailGoGraph('" + jsEsc(k) + "')\"><span>" + esc(nd.name) + " • " + esc(pn) + "</span><span class='d-val'>" + esc((nd.brief || "").split("\n")[0].slice(0, 40) || "—") + " ›</span></div>");
+    rows.push("<div class='d-row' data-act=\"d-go-graph\" data-key=\"" + esc(k) + "\"><span>" + esc(nd.name) + " • " + esc(pn) + "</span><span class='d-val'>" + esc((nd.brief || "").split("\n")[0].slice(0, 40) || "—") + " ›</span></div>");
   });
   if (!rows.length) return "";
   return "<div class='d-label'>" + tr('detail.graph_tasks') + "</div><div class='d-rows'>" + rows.join("") + "</div>";
@@ -198,34 +320,34 @@ export function renderDetail() {
     var notiOn = true;
     try { notiOn = window.localStorage.getItem('minime.notify') !== '0'; } catch (_) {}
     var skillsOff = ag.skillsOff || [];
-    var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox"' + (skillsOff.indexOf(s) >= 0 ? '' : ' checked') + ' onchange="detailSkillToggle(\'' + jsEsc(s) + '\', this.checked)"> <span>' + s + '</span></div>'; }).join("");
+    var skills = ag.skills.map(function (s) { return '<div class="skillrow"><input type="checkbox"' + (skillsOff.indexOf(s) >= 0 ? '' : ' checked') + ' data-act="d-skill" data-skill="' + esc(s) + '"> <span>' + s + '</span></div>'; }).join("");
     var memCount = (memLoad()[selectedAgent] || []).length;
     var fileCount = (fileLoad()[selectedAgent] || []).length;
     document.getElementById("detailBody").innerHTML =
-      '<div class="detail-avatar-wrap"><div class="detail-avatar av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + (ag.avatar ? '<img src="' + esc(ag.avatar) + '" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="">' : esc(ag.name.charAt(0))) + '</div><button class="avatar-edit" onclick="detailAvatarPick()" title="Ubah avatar">✎</button></div>'
-      + '<div class="d-label">' + tr('detail.name') + '</div><input type="text" class="d-field" value="' + esc(ag.name) + '" onchange="renameAgent(this.value)">'
-      + '<div class="d-label">' + tr('detail.title') + '</div><input type="text" class="d-field" placeholder="Describe what your agent does" value="' + esc(ag.role) + '" onchange="retitleAgent(this.value)">'
-      + '<div class="d-label">' + tr('detail.instructions') + '</div><textarea class="d-field d-area" onchange="setInstructions(this.value)">' + esc(ins) + '</textarea>'
+      '<div class="detail-avatar-wrap"><div class="detail-avatar av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + (ag.avatar ? '<img src="' + esc(ag.avatar) + '" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" alt="">' : esc(ag.name.charAt(0))) + '</div><button class="avatar-edit" data-act="d-avatar" title="Ubah avatar">✎</button></div>'
+      + '<div class="d-label">' + tr('detail.name') + '</div><input type="text" class="d-field" value="' + esc(ag.name) + '" data-act="d-rename">'
+      + '<div class="d-label">' + tr('detail.title') + '</div><input type="text" class="d-field" placeholder="Describe what your agent does" value="' + esc(ag.role) + '" data-act="d-retitle">'
+      + '<div class="d-label">' + tr('detail.instructions') + '</div><textarea class="d-field d-area" data-act="d-instructions">' + esc(ins) + '</textarea>'
       + '<div class="d-label">' + tr('detail.brain') + '</div><div class="d-rows">'
-      + (detailModelOpen ? '<div class="d-row"><span>' + tr('detail.model') + '</span><select class="d-val" onchange="detailModelSet(this.value)">' + detailModelOpts(ag) + '</select></div>' : '<div class="d-row" onclick="detailModelToggle()"><span>' + tr('detail.model') + '</span><span class="d-val">' + esc(ag.model || tr('detail.model.default')) + ' ›</span></div>')
-      + (detailEffortOpen ? '<div class="d-row"><span>' + tr('detail.reasoning') + '</span><select class="d-val" onchange="detailEffortSet(this.value)">' + detailEffortOpts(ag) + '</select></div>' : '<div class="d-row" onclick="detailEffortToggle()"><span>' + tr('detail.reasoning') + '</span><span class="d-val">' + (ag.effort ? esc(ag.effort) + ' ↕' : tr('detail.val.low')) + '</span></div>')
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.backup_chain')) + '\')"><span>' + tr('detail.backup') + '</span><span class="d-val">Meta → Gemini → Ollama ›</span></div></div>'
+      + (detailModelOpen ? '<div class="d-row"><span>' + tr('detail.model') + '</span><select class="d-val" data-act="d-model-set">' + detailModelOpts(ag) + '</select></div>' : '<div class="d-row" data-act="d-model-toggle"><span>' + tr('detail.model') + '</span><span class="d-val">' + esc(ag.model || tr('detail.model.default')) + ' ›</span></div>')
+      + (detailEffortOpen ? '<div class="d-row"><span>' + tr('detail.reasoning') + '</span><select class="d-val" data-act="d-effort-set">' + detailEffortOpts(ag) + '</select></div>' : '<div class="d-row" data-act="d-effort-toggle"><span>' + tr('detail.reasoning') + '</span><span class="d-val">' + (ag.effort ? esc(ag.effort) + ' ↕' : tr('detail.val.low')) + '</span></div>')
+      + '<div class="d-row" data-act="d-note" data-text="' + esc(tr('detail.note.backup_chain')) + '"><span>' + tr('detail.backup') + '</span><span class="d-val">Meta → Gemini → Ollama ›</span></div></div>'
       + '<div class="d-label">' + tr('detail.knows') + '</div><div class="d-rows">'
-      + '<div class="d-row" onclick="detailMemToggle()"><span>' + tr('detail.memories') + '</span><span class="d-val">' + tr('detail.mem.count', {n: memCount}) + ' ›</span></div>'
-      + '<div class="d-row" onclick="toggleSkillList()"><span>' + tr('detail.skills') + '</span><span class="d-val">' + ag.skills.length + ' assigned ›</span></div>'
+      + '<div class="d-row" data-act="d-mem-toggle"><span>' + tr('detail.memories') + '</span><span class="d-val">' + tr('detail.mem.count', {n: memCount}) + ' ›</span></div>'
+      + '<div class="d-row" data-act="d-skill-list"><span>' + tr('detail.skills') + '</span><span class="d-val">' + ag.skills.length + ' assigned ›</span></div>'
       + '<div id="skillList" style="display:none">' + skills + '</div>'
-      + '<div class="d-row" onclick="detailFilesToggle()"><span>' + tr('detail.files') + '</span><span class="d-val">' + tr('detail.files.count', {n: fileCount}) + ' ›</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.tables', {name: ag.name})) + '\')"><span>' + tr('detail.tables') + '</span><span class="d-val">' + tr('detail.val.tables') + '</span></div></div>'
+      + '<div class="d-row" data-act="d-files-toggle"><span>' + tr('detail.files') + '</span><span class="d-val">' + tr('detail.files.count', {n: fileCount}) + ' ›</span></div>'
+      + '<div class="d-row" data-act="d-note" data-text="' + esc(tr('detail.note.tables', {name: ag.name})) + '"><span>' + tr('detail.tables') + '</span><span class="d-val">' + tr('detail.val.tables') + '</span></div></div>'
       + '<div class="d-label">' + tr('detail.does') + '</div><div class="d-rows">'
-      + '<div class="d-row" onclick="showView(\'graph\')"><span>' + tr('detail.routines') + '</span><span class="d-val">' + tr('detail.val.configured') + '</span></div>'
-      + '<div class="d-row" onclick="showView(\'billing\')"><span>' + tr('detail.usage') + '</span><span class="d-val">' + usageVal + ' ›</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.publish')) + '\')"><span>' + tr('detail.publish') + '</span><span class="d-val">›</span></div></div>'
+      + '<div class="d-row" data-act="d-show" data-view="graph"><span>' + tr('detail.routines') + '</span><span class="d-val">' + tr('detail.val.configured') + '</span></div>'
+      + '<div class="d-row" data-act="d-show" data-view="billing"><span>' + tr('detail.usage') + '</span><span class="d-val">' + usageVal + ' ›</span></div>'
+      + '<div class="d-row" data-act="d-note" data-text="' + esc(tr('detail.note.publish')) + '"><span>' + tr('detail.publish') + '</span><span class="d-val">›</span></div></div>'
       + detailGraphTasks()
       + '<div class="d-label">' + tr('detail.rules') + '</div><div class="d-rows">'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.permissions')) + '\')"><span>' + tr('detail.permissions') + '</span><span class="d-val">' + tr('detail.val.fullaccess') + '</span></div>'
-      + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.folders')) + '\')"><span>' + tr('detail.folders') + '</span><span class="d-val">' + tr('detail.val.allfiles') + '</span></div>'
-      + '<div class="d-row"><span>' + tr('detail.notifications') + '</span><label class="d-switch"><input type="checkbox" id="homeNotify"' + (notiOn ? ' checked' : '') + ' onchange="homeNotifyToggle(this.checked)"><span class="d-slider"></span></label></div>'
-      + '<div class="d-row" onclick="showView(\'settings\')"><span>' + tr('detail.advanced') + '</span><span class="d-val">›</span></div></div>'
+      + '<div class="d-row" data-act="d-note" data-text="' + esc(tr('detail.note.permissions')) + '"><span>' + tr('detail.permissions') + '</span><span class="d-val">' + tr('detail.val.fullaccess') + '</span></div>'
+      + '<div class="d-row" data-act="d-note" data-text="' + esc(tr('detail.note.folders')) + '"><span>' + tr('detail.folders') + '</span><span class="d-val">' + tr('detail.val.allfiles') + '</span></div>'
+      + '<div class="d-row"><span>' + tr('detail.notifications') + '</span><label class="d-switch"><input type="checkbox" id="homeNotify"' + (notiOn ? ' checked' : '') + ' data-act="d-notify"><span class="d-slider"></span></label></div>'
+      + '<div class="d-row" data-act="d-show" data-view="settings"><span>' + tr('detail.advanced') + '</span><span class="d-val">›</span></div></div>'
       + (detailMemOpen ? detailMemSection() : '') + (detailFilesOpen ? detailFilesSection() : '')
       + '<div class="notice" id="detailNotice" style="display:none"></div>';
   }
@@ -351,7 +473,7 @@ export function doSearch() {
     var _sp = PROJECTS[currentProj];
     var hits = _sp ? _sp.chat.map(function (m, i) { return { m: m, i: i }; }).filter(function (h) { return h.m.text.toLowerCase().indexOf(q) !== -1 || h.m.name.toLowerCase().indexOf(q) !== -1; }) : [];
     document.getElementById("searchCount").textContent = tr('search.count', {n: hits.length, q: q, proj: _sp ? _sp.name : ""});
-    results.innerHTML = hits.map(function (h) { return '<div class="search-hit" onclick="searchJump(' + h.i + ')" style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer"><b>' + esc(h.m.name) + ':</b> ' + h.m.text + '</div>'; }).join("") || "<p>" + tr('search.empty') + "</p>";
+    results.innerHTML = hits.map(function (h) { return '<div class="search-hit" data-act=\"s-jump\" data-idx=\"' + h.i + '\" style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer"><b>' + esc(h.m.name) + ':</b> ' + h.m.text + '</div>'; }).join("") || "<p>" + tr('search.empty') + "</p>";
   }
 
 export function agentKeyByName(n) {
@@ -388,14 +510,14 @@ export function renderKanban() {
     (function () { var kf = document.getElementById("kbFilter"); if (!kf) return; var cur = kf.value; kf.innerHTML = "<option value=\"\">" + tr('home.allagents') + "</option>" + Object.keys(AGENTS).map(function (k) { return "<option>" + esc(AGENTS[k].name) + "</option>"; }).join(""); if (cur) kf.value = cur; })();
     var filter = document.getElementById("kbFilter") ? document.getElementById("kbFilter").value : "";
     function vis(card) { return !filter || card.a === filter; }
-    function kbOpenCall(pid, i) { return pid === currentProj ? "kbOpen(" + i + ")" : "kbOpenPid('" + jsEsc(pid) + "', " + i + ")"; }
+    function kbOpenAttrs(pid, i) { return pid === currentProj ? "data-act=\"kb-open\" data-idx=\"" + i + "\"" : "data-act=\"kb-open-pid\" data-pid=\"" + esc(pid) + "\" data-idx=\"" + i + "\""; }
     if (kanbanTab === "table") {
       var rows = "";
       kbGroups.forEach(function (gpid) {
         var gc = PROJECTS[gpid].kanban || [];
         if (kbProjView === "all") rows += "<tr><td colspan='4'><b>" + esc(PROJECTS[gpid].name) + "</b></td></tr>";
         rows += gc.map(function (card, i) { return { card: card, i: i }; }).filter(function (x) { return vis(x.card); }).map(function (x) {
-          return "<tr onclick='" + kbOpenCall(gpid, x.i) + "' style='cursor:pointer'><td><b>" + esc(x.card.t) + "</b></td><td>" + esc(x.card.a) + "</td><td>" + colName(x.card.c) + "</td><td>💬 " + cardComments(x.card) + "</td></tr>";
+          return "<tr " + kbOpenAttrs(gpid, x.i) + " style='cursor:pointer'><td><b>" + esc(x.card.t) + "</b></td><td>" + esc(x.card.a) + "</td><td>" + colName(x.card.c) + "</td><td>💬 " + cardComments(x.card) + "</td></tr>";
         }).join("");
       });
       wrap.innerHTML = "<table><tr><th>Tugas</th><th>Agen</th><th>Status</th><th>Komentar</th></tr>" + rows + "</table>";
@@ -407,7 +529,7 @@ export function renderKanban() {
         var gc = PROJECTS[gpid].kanban || [];
         if (kbProjView === "all") listHtml += "<div class='kb-projhead'>" + esc(PROJECTS[gpid].name) + "</div>";
         listHtml += gc.map(function (card, i) { return { card: card, i: i }; }).filter(function (x) { return vis(x.card); }).map(function (x) {
-          return "<div class='todayitem' onclick='" + kbOpenCall(gpid, x.i) + "' style='cursor:pointer'><b>" + esc(x.card.t) + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + esc(x.card.a) + " • " + colName(x.card.c) + " • 💬 " + cardComments(x.card) + "</small></div>";
+          return "<div class='todayitem' " + kbOpenAttrs(gpid, x.i) + " style='cursor:pointer'><b>" + esc(x.card.t) + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + esc(x.card.a) + " • " + colName(x.card.c) + " • 💬 " + cardComments(x.card) + "</small></div>";
         }).join("");
       });
       wrap.innerHTML = listHtml || "<p>Tidak ada tugas untuk filter ini.</p>";
@@ -457,7 +579,7 @@ export function renderKanban() {
       wrap.appendChild(board);
     });
     var addList = document.createElement("div"); addList.className = "addlist";
-    addList.innerHTML = "<button class='btn' onclick='addKanbanList()'>＋ Add another list</button>";
+    addList.innerHTML = "<button class='btn' data-act='kb-add-list'>＋ Add another list</button>";
     wrap.appendChild(addList);
   }
 
@@ -859,7 +981,7 @@ export function renderLib() {
           + "<div class='lib-title'>" + esc(item.o) + "</div>"
           + "<div class='lib-meta'>" + esc(tr('lib.card.agent')) + ": " + esc(item.a) + " • " + esc(tr('lib.card.project')) + ": " + esc(item.proj || "—") + "</div>"
           + "<div class='lib-meta'>" + esc(tr('lib.card.type')) + ": " + esc(libKindLabel(libKindOf(item))) + " • " + esc(tr('lib.card.date')) + ": " + esc(libDateLabel(item)) + " • " + esc(tr('lib.view.archive')) + ": " + esc(item.archivedAt || "—") + "</div>"
-          + "<div class='lib-actions'><button class='btn btn-sm' onclick='libRestoreArchived(" + ai + ")'>" + esc(tr('lib.btn.restore')) + "</button></div></div>";
+          + "<div class='lib-actions'><button class='btn btn-sm' data-act='lib-restore' data-idx='" + ai + "'>" + esc(tr('lib.btn.restore')) + "</button></div></div>";
       });
       grid.innerHTML = acards.join("") || "<div class='se-note'>" + esc(tr('lib.archive_empty')) + "</div>";
       var cntA = document.getElementById("libFilterCount");
@@ -892,9 +1014,9 @@ export function renderLib() {
         + "<div class='lib-meta'>" + esc(tr('lib.card.agent')) + ": " + esc(item.a) + " • " + esc(tr('lib.card.project')) + ": " + esc(item.proj || "—") + "</div>"
         + "<div class='lib-meta'>" + esc(tr('lib.card.type')) + ": " + esc(libKindLabel(libKindOf(item))) + " • " + esc(tr('lib.card.date')) + ": " + esc(libDateLabel(item)) + " <span class='badge " + item.badge + "'>" + esc(item.s) + "</span></div>"
         + "<div class='lib-actions'>"
-        + "<button class='btn btn-sm' onclick='libMedia(" + gi + ")'>" + esc(tr('lib.btn.media')) + "</button>"
-        + "<button class='btn btn-sm' onclick='libDelete(" + gi + ")'>" + esc(tr('lib.btn.delete')) + "</button>"
-        + "<button class='btn btn-sm' onclick='libRevise(" + gi + ")'>" + esc(tr('lib.btn.revise')) + "</button>"
+        + "<button class='btn btn-sm' data-act='lib-media' data-idx='" + gi + "'>" + esc(tr('lib.btn.media')) + "</button>"
+        + "<button class='btn btn-sm' data-act='lib-delete' data-idx='" + gi + "'>" + esc(tr('lib.btn.delete')) + "</button>"
+        + "<button class='btn btn-sm' data-act='lib-revise' data-idx='" + gi + "'>" + esc(tr('lib.btn.revise')) + "</button>"
         + "</div></div>");
     });
     grid.innerHTML = cards.join("") || "<div class='se-note'>" + esc(tr('lib.empty')) + "</div>";
@@ -935,16 +1057,16 @@ export function libDetail(i, ev) {
   } else {
     preview = "<div class='se-note'>" + esc(tr('lib.detail.nocontent')) + "</div>";
   }
-  dlg.innerHTML = "<div class='lib-dialog-backdrop' onclick='libDetailClose()'></div><div class='lib-dialog-card'>"
+  dlg.innerHTML = "<div class='lib-dialog-backdrop' data-act='lib-close'></div><div class='lib-dialog-card'>"
     + "<div class='lib-title'>" + esc(item.o) + "</div>"
     + "<div class='lib-meta'>" + esc(tr('lib.card.agent')) + ": " + esc(item.a) + " • " + esc(tr('lib.card.project')) + ": " + esc(item.proj || "—") + "</div>"
     + "<div class='lib-meta'>" + esc(tr('lib.card.type')) + ": " + esc(libKindLabel(libKindOf(item))) + " • " + esc(tr('lib.card.date')) + ": " + esc(libDateLabel(item)) + " <span class='badge " + item.badge + "'>" + esc(item.s) + "</span></div>"
     + preview
     + "<div class='lib-actions'>"
-    + "<button class='btn btn-sm' onclick='libDetailClose(); libMedia(" + i + ")'>" + esc(tr('lib.btn.media')) + "</button>"
-    + "<button class='btn btn-sm' onclick='libDelete(" + i + ")'>" + esc(tr('lib.btn.delete')) + "</button>"
-    + "<button class='btn btn-sm' onclick='libDetailClose(); libRevise(" + i + ")'>" + esc(tr('lib.btn.revise')) + "</button>"
-    + "<button class='btn btn-sm' onclick='libDetailClose()'>" + esc(tr('lib.detail.close')) + "</button>"
+    + "<button class='btn btn-sm' data-act='lib-close-media' data-idx='" + i + "'>" + esc(tr('lib.btn.media')) + "</button>"
+    + "<button class='btn btn-sm' data-act='lib-delete' data-idx='" + i + "'>" + esc(tr('lib.btn.delete')) + "</button>"
+    + "<button class='btn btn-sm' data-act='lib-close-revise' data-idx='" + i + "'>" + esc(tr('lib.btn.revise')) + "</button>"
+    + "<button class='btn btn-sm' data-act='lib-close'>" + esc(tr('lib.detail.close')) + "</button>"
     + "</div></div>";
   dlg.style.display = "block";
   var img = dlg.querySelector("[data-lib-idx]");
@@ -972,12 +1094,12 @@ export function libDelete(i) {
   var dlg = document.getElementById("libConfirmDlg");
   if (!dlg) return;
   libPendingDelete = i;
-  dlg.innerHTML = "<div class='lib-dialog-backdrop' onclick='libConfirmClose()'></div><div class='lib-dialog-card'>"
+  dlg.innerHTML = "<div class='lib-dialog-backdrop' data-act='lib-confirm-close'></div><div class='lib-dialog-card'>"
     + "<div class='lib-title'>" + esc(tr('lib.confirm.title')) + "</div>"
     + "<div class='lib-detail-pre'>" + esc(tr('lib.confirm.text', { title: item.o })) + "</div>"
     + "<div class='lib-actions'>"
-    + "<button class='btn btn-sm' onclick='libConfirmDelete()'>" + esc(tr('lib.confirm.yes')) + "</button>"
-    + "<button class='btn btn-sm' onclick='libConfirmClose()'>" + esc(tr('lib.confirm.no')) + "</button>"
+    + "<button class='btn btn-sm' data-act='lib-confirm-delete'>" + esc(tr('lib.confirm.yes')) + "</button>"
+    + "<button class='btn btn-sm' data-act='lib-confirm-close'>" + esc(tr('lib.confirm.no')) + "</button>"
     + "</div></div>";
   dlg.style.display = "block";
 }
@@ -1401,7 +1523,7 @@ export function waAttach(kind) {
         navigator.mediaDevices.getUserMedia({ video: true }).then(function (stream) {
           waCamStream = stream;
           var n = waNoteEl(); n.style.display = 'block';
-          n.innerHTML = "<div id='waChips'></div><div id='waCamBox'><video id='waCamVideo' autoplay playsinline style='width:100%;max-height:220px;background:#000'></video> <button class='btn btn-primary' onclick='waCamShot()'>" + tr('att.take') + "</button></div><div id='waRecBox'></div>";
+          n.innerHTML = "<div id='waChips'></div><div id='waCamBox'><video id='waCamVideo' autoplay playsinline style='width:100%;max-height:220px;background:#000'></video> <button class='btn btn-primary' data-act='wa-cam'>" + tr('att.take') + "</button></div><div id='waRecBox'></div>";
           waRenderChips();
           document.getElementById('waCamVideo').srcObject = stream;
         }).catch(function () { var n2 = waNoteEl(); n2.style.display = 'block'; n2.textContent = tr('att.cam_unavail'); waPickFile('image/*', function (f) { waAddMeta(f.name, f.size, 'image'); }); });
@@ -1411,7 +1533,7 @@ export function waAttach(kind) {
     if (kind === 'Audio') {
       if (window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         var n4 = waNoteEl(); n4.style.display = 'block';
-        n4.innerHTML = "<div id='waChips'></div><div id='waCamBox'></div><div id='waRecBox'><button class='btn btn-primary' onclick='waRecToggle()'>" + tr('att.rec_start') + "</button></div>";
+        n4.innerHTML = "<div id='waChips'></div><div id='waCamBox'></div><div id='waRecBox'><button class='btn btn-primary' data-act='wa-rec'>" + tr('att.rec_start') + "</button></div>";
         waRenderChips();
       } else { var n5 = waNoteEl(); n5.style.display = 'block'; n5.textContent = tr('att.mic_unavail'); waPickFile('audio/*', function (f) { waAddMeta(f.name, f.size, 'audio'); }); }
       return;
@@ -2174,7 +2296,7 @@ var graphSelEdge = null, graphEdgeDelAsk = false, graphSimTimer = null;
 function waNoteEl() { return document.getElementById("waNote"); }
 function waRenderChips() {
   var n = waNoteEl(); if (!n) return;
-  var chips = waAttachments.map(function (a, i) { return "<span class='wa-chip'>" + esc(a.name) + " <button onclick='waRemoveAtt(" + i + ")'>×</button></span>"; }).join(" ");
+  var chips = waAttachments.map(function (a, i) { return "<span class='wa-chip'>" + esc(a.name) + " <button data-act='wa-rm' data-idx='" + i + "'>×</button></span>"; }).join(" ");
   var err = waAttErr ? "<div class='wa-err'>" + esc(waAttErr) + "</div>" : "";
   var cam = document.getElementById("waCamBox") ? document.getElementById("waCamBox").outerHTML : "";
   var rec = document.getElementById("waRecBox") ? document.getElementById("waRecBox").outerHTML : "";
@@ -2238,7 +2360,7 @@ export function waRecToggle() {
         waRenderChips();
       };
       waRec.start();
-      box.innerHTML = "<span>" + tr("att.recording") + "</span> <button onclick='waRecToggle()'>" + tr("att.rec_stop") + "</button>";
+      box.innerHTML = "<span>" + tr("att.recording") + "</span> <button data-act='wa-rec'>" + tr("att.rec_stop") + "</button>";
     }).catch(function () { box.innerHTML = esc(tr("att.mic_unavail")); waPickFile("audio/*", function (f) { waAddMeta(f.name, f.size, "audio"); }); });
   } catch (_) { box.innerHTML = esc(tr("att.mic_unavail")); }
 }
@@ -2330,7 +2452,7 @@ export function kbRenderDlg() {
       return "<label class='kb-teamrow'><input type='checkbox' data-teamkey='" + esc(k) + "'" + (team.indexOf(k) >= 0 ? " checked" : "") + "> " + esc(AGENTS[k].name) + "</label>";
     }).join("");
     box.innerHTML = "<div class='kb-dlg'><h4>" + tr("kb.team.title") + "</h4><p>" + tr("kb.team.note") + "</p>" + rows
-      + "<div class='kb-dlg-btns'><button class='btn btn-primary' onclick='kbTeamSave()'>" + tr("kb.team.save") + "</button> <button class='btn' onclick='kbClose()'>" + tr("kb.dlg.close") + "</button></div></div>";
+      + "<div class='kb-dlg-btns'><button class='btn btn-primary' data-act='kb-team-save'>" + tr("kb.team.save") + "</button> <button class='btn' data-act='kb-close'>" + tr("kb.dlg.close") + "</button></div></div>";
     return;
   }
   var cards = kbCards(), card = cards[kbDlgIdx];
@@ -2347,12 +2469,12 @@ export function kbRenderDlg() {
     + "<label>" + tr("kb.dlg.title_label") + "</label><input id='kbDlgTitle' class='g-input' value=\"" + esc(card.t) + "\">"
     + "<label>" + tr("kb.dlg.agent") + "</label><select id='kbDlgAgent' class='g-input'>" + agOpts + "</select>"
     + "<label>" + tr("kb.dlg.col") + "</label><select id='kbDlgCol' class='g-input'>" + colOpts + "</select>"
-    + "<div class='kb-dlg-btns'><button class='btn btn-primary' onclick='kbSave()'>" + tr("kb.dlg.save") + "</button> "
-    + (card.c === 2 ? "<button class='btn' onclick='kbApprove()'>" + tr("kb.dlg.approve") + "</button> " : "")
-    + "<button class='btn' onclick='kbAskDel()'>" + tr("kb.dlg.delete") + "</button> <button class='btn' onclick='kbClose()'>" + tr("kb.dlg.close") + "</button></div>";
-  if (kbDelAsk) html += "<div class='g-delask'>" + tr("kb.dlg.del_ask") + " <button class='btn' onclick='kbDel()'>" + tr("kb.dlg.delete") + "</button> <button class='btn' onclick='kbClose()'>" + tr("kb.dlg.close") + "</button></div>";
+    + "<div class='kb-dlg-btns'><button class='btn btn-primary' data-act='kb-save'>" + tr("kb.dlg.save") + "</button> "
+    + (card.c === 2 ? "<button class='btn' data-act='kb-approve'>" + tr("kb.dlg.approve") + "</button> " : "")
+    + "<button class='btn' data-act='kb-ask-del'>" + tr("kb.dlg.delete") + "</button> <button class='btn' data-act='kb-close'>" + tr("kb.dlg.close") + "</button></div>";
+  if (kbDelAsk) html += "<div class='g-delask'>" + tr("kb.dlg.del_ask") + " <button class='btn' data-act='kb-del'>" + tr("kb.dlg.delete") + "</button> <button class='btn' data-act='kb-close'>" + tr("kb.dlg.close") + "</button></div>";
   html += "<h4>" + tr("kb.dlg.comments") + " (" + (card.comments || []).length + ")</h4>" + comments
-    + "<div class='g-flex'><input id='kbDlgComment' class='g-input' placeholder=\"" + esc(tr("kb.dlg.comment_ph")) + "\"> <button class='btn btn-primary' onclick='kbAddComment()'>" + tr("kb.dlg.comment_add") + "</button></div></div>";
+    + "<div class='g-flex'><input id='kbDlgComment' class='g-input' placeholder=\"" + esc(tr("kb.dlg.comment_ph")) + "\"> <button class='btn btn-primary' data-act='kb-add-comment'>" + tr("kb.dlg.comment_add") + "</button></div></div>";
   box.innerHTML = html;
 }
 export function kbSave() {
@@ -2411,13 +2533,13 @@ function detailEffortOpts(ag) {
 }
 function detailMemSection() {
   var list = (memLoad()[selectedAgent] || []);
-  var rows = list.map(function (t, i) { return "<div class='d-memrow'><span>" + esc(t) + "</span> <button class='btn btn-sm' onclick='detailMemDel(" + i + ")'>" + tr("detail.mem.del") + "</button></div>"; }).join("") || "<p>" + tr("detail.mem.empty") + "</p>";
-  return "<div class='d-label'>" + tr("detail.memories") + "</div><div class='d-rows'>" + rows + "<textarea id='memNew' class='d-field d-area' placeholder=\"" + esc(tr("detail.mem.ph")) + "\"></textarea><button class='btn btn-primary' onclick='detailMemAdd()'>" + tr("detail.mem.add") + "</button></div>";
+  var rows = list.map(function (t, i) { return "<div class='d-memrow'><span>" + esc(t) + "</span> <button class='btn btn-sm' data-act='d-mem-del' data-idx='" + i + "'>" + tr("detail.mem.del") + "</button></div>"; }).join("") || "<p>" + tr("detail.mem.empty") + "</p>";
+  return "<div class='d-label'>" + tr("detail.memories") + "</div><div class='d-rows'>" + rows + "<textarea id='memNew' class='d-field d-area' placeholder=\"" + esc(tr("detail.mem.ph")) + "\"></textarea><button class='btn btn-primary' data-act='d-mem-add'>" + tr("detail.mem.add") + "</button></div>";
 }
 function detailFilesSection() {
   var list = (fileLoad()[selectedAgent] || []);
-  var rows = list.map(function (f, i) { return "<div class='d-memrow'><span>" + esc(f.name) + " (" + f.size + " B)</span> <button class='btn btn-sm' onclick='detailFilesDel(" + i + ")'>" + tr("detail.mem.del") + "</button></div>"; }).join("") || "<p>" + tr("detail.files.empty") + "</p>";
-  return "<div class='d-label'>" + tr("detail.files") + "</div><div class='d-rows'>" + rows + "<button class='btn btn-primary' onclick='detailFilesPick()'>" + tr("detail.files.add") + "</button></div>";
+  var rows = list.map(function (f, i) { return "<div class='d-memrow'><span>" + esc(f.name) + " (" + f.size + " B)</span> <button class='btn btn-sm' data-act='d-files-del' data-idx='" + i + "'>" + tr("detail.mem.del") + "</button></div>"; }).join("") || "<p>" + tr("detail.files.empty") + "</p>";
+  return "<div class='d-label'>" + tr("detail.files") + "</div><div class='d-rows'>" + rows + "<button class='btn btn-primary' data-act='d-files-pick'>" + tr("detail.files.add") + "</button></div>";
 }
 export function graphAskEdgeDel() { graphEdgeDelAsk = true; renderGraphPopup(); }
 export function graphCancelEdgeDel() { graphEdgeDelAsk = false; renderGraphPopup(); }
@@ -2563,5 +2685,6 @@ export function initV5() {
   waInputChanged();
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
+
   Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }
