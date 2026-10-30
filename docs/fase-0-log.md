@@ -2280,3 +2280,10 @@ dokumen lama yang dipakai.
 - i18n: 4 kunci settings.theme.* (825 -> 829/bahasa, paritas penuh, 0 duplikat).
 - Gerbang: root tsc bersih, 13 rig lolos (rig-settings seksi tema baru 6 cek), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, cargo fmt/check/check --tests 0 warning/error. Koreksi rig: minifier CSS menghapus kutip atribut ([data-theme=dark]) sehingga asersi awal gagal — CSS-nya benar, asersinya yang diperbaiki.
 - Push kode: lokal ac92c0d ↔ remote 954d36b (tree identik).
+
+## v110 — tema glossy + duo-tone violet-magenta (30 Okt 2026 ~19:45 WIB, revisi Patria 19:31 "glossy kurang, terlalu biru" + "tone 2 warna, violet dan magenta")
+- Palet digeser dari biru-ungu ke duo violet + magenta: dasar gelap #150A26 -> #1B0A2E (plum kemerahan), aksen violet #A855F7 + magenta #D946EF/#E879F9, border bernuansa magenta, teks #FDF4FF; cahaya latar violet + magenta. Terang ikut duo-tone yang sama (#9333EA -> #D946EF).
+- Tombol primer + filter aktif kini gradien 135deg violet -> magenta dengan highlight atas + bayangan magenta.
+- Glossy diperkuat: blur kaca 14px -> 18px (saturate 160%), lapisan sheen cahaya atas (gradien putih 14% -> 0) + highlight tepi inset + bayangan lembut pada semua permukaan kaca (agen, kartu Kanban, node, bubble, kartu media, popup).
+- Gerbang: root tsc bersih, 13 rig lolos (rig-settings +1 cek v110), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error. Koreksi rig: minifier menghapus nol blur (inset 0 1px 0 -> inset 0 1px) dan mengubah rgba ke hex-alpha — asersi disesuaikan ke bentuk minified; cek v109 lama yang menuntut token #150a26 dihapus karena token itu sudah diganti v110.
+- Push kode: lokal ceab502 ↔ remote c853316 (tree identik).
