@@ -2304,3 +2304,8 @@ dokumen lama yang dipakai.
 - Bubble user #A6EBB1 -> #8ED694 (kedua aturan bubble user diubah; tetap hijau pastel, bukan hijau tua; font hitam dan header dark violet tidak berubah; header agen tetap hijau #A6EBB1). Koreksi rig: selektor header agen memakai spasi descendant (.msg .bubble .who), bukan compound.
 - Gerbang: root tsc bersih, 13 rig lolos (rig-chat +1 cek v113), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error.
 - Push kode: lokal c1692c2 ↔ remote a3773dc (tree identik).
+
+## v114 — workstation video editor fluid (30 Okt 2026 ~20:20 WIB, perintah Patria 20:08)
+- Akar: .ms-video (wadah tab Video) dikunci max-width: 880px sejak v81 (model kartu ringkas), sehingga workstation tidak melebar mengikuti window. Cap dicabut -> width: 100%, max-width: none. Preview sudah flex:1 + min-width:0, video width:100%, panel samping fixed (260/240px) + flex-wrap yang sudah ada menangani window sempit.
+- Gerbang: root tsc bersih, 13 rig lolos (rig-ve2 §13 baru: aturan fluid ada + cap 880px hilang dari CSS ter-build), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error.
+- Push kode: lokal ce236f2 ↔ remote a7236a7 (tree identik).
