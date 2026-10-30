@@ -467,6 +467,57 @@ try {
   await tick(50);
   check('v108: pan 0 + zoom 100% via graphPanTo/graphZoomSet (tombol Reset dihapus v115)', (zoom20().style.transform || '').includes('translate(0px, 0px)') && (zoom20().style.transform || '').includes('scale(1)') && document.getElementById('graphZoomLabel')?.textContent === '100%', zoom20().style.transform || '');
 
+
+  // 21. v117 (Alur 3): aksi Graph tercermin di list agen aktif.
+  dom.window.showView('graph');
+  await tick(100);
+  const pids21a = new Set(Object.keys(dom.window.PROJECTS));
+  [...document.querySelectorAll('#view-graph button')].find((b) => b.textContent.trim() === 'Buat Project Baru').click();
+  await tick(100);
+  const pid21 = Object.keys(dom.window.PROJECTS).find((k) => !pids21a.has(k));
+  check('v117: Buat Project Baru dari Graph -> folder di list + dropdown', !!pid21 && [...document.querySelectorAll('#agentList .group')].some((el) => el.textContent.includes(dom.window.PROJECTS[pid21].name)) && [...document.getElementById('graphProjSel').options].some((o) => o.value === pid21), pid21 || '');
+  check('v117: project baru punya node Prime', Object.values(dom.window.GNODES).some((nd) => nd.proj === pid21 && nd.agent === 'prime'), '');
+  const nodesBefore21 = new Set(Object.keys(dom.window.GNODES));
+  dom.window.graphAddNode();
+  await tick(100);
+  const node21 = Object.keys(dom.window.GNODES).find((k) => !nodesBefore21.has(k));
+  dom.window.graphSelect(node21);
+  await tick(50);
+  dom.window.graphSetAgent('riset');
+  await tick(100);
+  const gAgents21 = () => document.querySelector('.gagents[data-pid="' + pid21 + '"]')?.textContent || '';
+  check('v117: pasang agen di node -> anggota project + baris list', dom.window.PROJECTS[pid21].agents.some((a) => a.key === 'riset') && gAgents21().includes('Riset'), gAgents21().slice(0, 150));
+  dom.window.graphSelect(node21);
+  await tick(50);
+  dom.window.graphSetBrief('Tugas uji Alur 3');
+  await tick(100);
+  check('v117: brief node -> tugas anggota + tampil di list', dom.window.PROJECTS[pid21].agents.find((a) => a.key === 'riset')?.task === 'Tugas uji Alur 3' && gAgents21().includes('Tugas uji Alur 3'), gAgents21().slice(0, 150));
+  dom.window.graphSelect(node21);
+  await tick(50);
+  dom.window.graphDeleteNode();
+  await tick(100);
+  check('v117: hapus node -> node hilang, anggota project TETAP', !Object.values(dom.window.GNODES).some((nd) => nd.proj === pid21 && nd.agent === 'riset') && dom.window.PROJECTS[pid21].agents.some((a) => a.key === 'riset'), '');
+  const nodesBefore21b = new Set(Object.keys(dom.window.GNODES));
+  dom.window.graphAddNode();
+  await tick(100);
+  const node21b = Object.keys(dom.window.GNODES).find((k) => !nodesBefore21b.has(k));
+  dom.window.GNODES[node21b].proj = null;
+  dom.window.graphSelect(node21b);
+  await tick(50);
+  dom.window.graphSetAgent('media');
+  await tick(100);
+  check('v117: agen di node Graph-only TIDAK mencemari project aktif', !dom.window.PROJECTS[pid21].agents.some((a) => a.key === 'media'), dom.window.PROJECTS[pid21].agents.map((a) => a.key).join(','));
+  // Kontainer Dari Graph adalah satu-satunya .gagents TANPA data-pid
+  // (header-nya pakai kunci i18n agent.graph_group, bukan teks literal).
+  // graphOnlyAgents SENGAJA mengecualikan agen yang sudah jadi anggota
+  // project manapun — jadi Media baru tampil di Dari Graph setelah ia
+  // bukan anggota project manapun (S21 seksi terakhir, mutasi aman).
+  Object.values(dom.window.PROJECTS).forEach((pr) => { pr.agents = (pr.agents || []).filter((a) => a.key !== 'media'); });
+  dom.window.renderAgents();
+  await tick(50);
+  const dgText21 = document.querySelector('#agentList .gagents:not([data-pid])')?.textContent || '';
+  check('v117: agen Graph-only tampil di grup Dari Graph (bukan anggota project)', dgText21.includes('Media'), dgText21.slice(0, 150));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-graph exception :: ' + (e && e.stack ? e.stack : e));

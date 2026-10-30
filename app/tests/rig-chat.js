@@ -49,7 +49,7 @@ async function fetchStub(url, opts) {
   // QC mengembalikan verdict; sisanya hasil kerja agen.
   let content = 'NASKAH-UJI: Hook kopi susu, isi 5W1H, CTA order via chat.';
   if (body.includes('Bagi brief')) {
-    content = (body.includes('Halo utama') || body.includes('jadwal posting')) ? '[]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat naskah video kopi susu"}]';
+    content = (body.includes('Halo utama') || body.includes('jadwal posting') || body.includes('halo') || body.includes('brief produk digital')) ? '[]' : (body.includes('Alur 2') ? '[{"agent":"riset","task":"Riset pasar Alur 2"},{"agent":"strategi","task":"Strategi Alur 2"},{"agent":"kreatif","task":"Buat naskah Alur 2"}]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat naskah video kopi susu"}]');
   } else if (body.includes('QC hasil kerja agen')) {
     content = 'QC: riset LOLOS, kreatif LOLOS. Semua hasil siap dipakai.';
   }
@@ -145,7 +145,7 @@ try {
   check('ack Prime ramah tampil', bodyText().includes('Baik, saya mengerti'));
   check('pesan langsung tanpa delegasi', countOcc('Saya delegasikan') === 0);
   check('pesan langsung tanpa tombol studio', ![...document.querySelectorAll('#chatBox button')].some((b) => b.textContent.trim() === 'Buka di Media Studio'));
-  check('pesan langsung 1 model call', fetchCount() === 1, 'fetch=' + fetchCount());
+  check('pesan langsung: split kosong + jawaban (2 fetch)', fetchCount() === 2, 'fetch=' + fetchCount());
 
   // 2. Delegasi Riset: pengumuman + aktif di list + hasil, tanpa studio.
   await sendMsg('buatkan riset pasar kopi susu');
@@ -155,7 +155,7 @@ try {
   const sel = document.querySelector('#agentList .agent.sel');
   check('Riset aktif di list (.sel)', !!sel && sel.textContent.includes('Riset'), sel?.textContent || '');
   check('Riset tanpa tombol studio (bukan skill-nya)', ![...document.querySelectorAll('#chatBox button')].some((b) => b.textContent.trim() === 'Buka di Media Studio'));
-  check('delegasi Riset 1 model call lagi', fetchCount() === 2, 'fetch=' + fetchCount());
+  check('delegasi Riset 1 model call lagi', fetchCount() === 3, 'fetch=' + fetchCount());
 
   // 3. Delegasi Kreatif + studio: tombol Approve -> pindah studio.
   await sendMsg('buatkan naskah video kopi');
@@ -169,13 +169,13 @@ try {
   check('Approve membuka tab Script', document.getElementById('ms-tab-script')?.style.display === 'block', document.getElementById('ms-tab-script')?.style.display || '');
   check('Approve memuat hasil ke output Script', (document.getElementById('se-output')?.value || '').includes('NASKAH-UJI'), document.getElementById('se-output')?.value || '');
   check('Approve dikonfirmasi di chat', bodyText().includes('Baik, saya buka Media Studio'));
-  check('delegasi Kreatif 1 model call lagi', fetchCount() === 3, 'fetch=' + fetchCount());
+  check('delegasi Kreatif 1 model call lagi', fetchCount() === 4, 'fetch=' + fetchCount());
 
   // 4. Produk tidak pernah jadi target delegasi.
   const delegBefore = countOcc('Saya delegasikan');
   dom.window.showView('home');
   await sendMsg('buatkan brief produk digital');
-  await waitFor(() => fetchCount() === 4, 'model call produk', 120);
+  await waitFor(() => fetchCount() === 6, 'model call produk', 120);
   await tick(200);
   check('produk tidak didelegasikan', countOcc('Saya delegasikan') === delegBefore, 'sebelum=' + delegBefore + ' sesudah=' + countOcc('Saya delegasikan'));
 
@@ -332,6 +332,28 @@ try {
   await tick(100);
   const userLink116 = [...document.querySelectorAll('#chatBox a[data-act="chat-link"]')].find((a) => (a.getAttribute('data-url') || '').includes('user.id'));
   check('v116: link di bubble user juga aktif (tanpa double-escape &)', userLink116?.getAttribute('data-url') === 'https://user.id/a?x=1&y=2', userLink116?.getAttribute('data-url') || 'tidak ada');
+
+
+  // 13. v117 (Alur 2): brief di project beranggota -> fan-out HANYA anggota aktif.
+  const pid117 = 'alur2-uji';
+  dom.window.PROJECTS[pid117] = { name: 'Alur 2 Uji', agents: [{ key: 'riset', status: 'Idle', task: '—' }, { key: 'kreatif', status: 'Idle', task: '—' }], chat: [], kanban: [] };
+  dom.window.switchProject(pid117);
+  await tick(100);
+  const projCount117 = Object.keys(dom.window.PROJECTS).length;
+  let libBefore117 = [];
+  try { libBefore117 = JSON.parse(store.get('minime.library.added') || '[]'); } catch (_) { libBefore117 = []; }
+  await sendMsg('Brief Alur 2 kopi susu gula aren');
+  await tick(1500);
+  const box117 = document.getElementById('chatBox')?.textContent || '';
+  const agents117 = dom.window.PROJECTS[pid117].agents;
+  check('v117: Alur 2 mendelegasikan ke riset + kreatif (anggota aktif)', box117.includes('Riset') && box117.includes('Kreatif') && box117.includes('NASKAH-UJI'), box117.slice(0, 300));
+  check('v117: strategi (bukan anggota) TIDAK didelegasikan/ditambahkan', !agents117.some((a) => a.key === 'strategi') && !box117.includes('Strategi'), agents117.map((a) => a.key).join(','));
+  check('v117: tugas anggota diperbarui dari brief', agents117.find((a) => a.key === 'riset')?.task === 'Riset pasar Alur 2' && agents117.find((a) => a.key === 'kreatif')?.task === 'Buat naskah Alur 2', agents117.map((a) => a.key + ':' + a.task).join(' | '));
+  check('v117: QC + laporan progres tampil (bukan laporan selesai)', box117.includes('KURASI PRIME') && box117.includes('Laporan Progres') && box117.includes('project tetap berjalan'), box117.slice(-400));
+  check('v117: TIDAK membuat project baru', Object.keys(dom.window.PROJECTS).length === projCount117, 'n=' + Object.keys(dom.window.PROJECTS).length);
+  let libAfter117 = [];
+  try { libAfter117 = JSON.parse(store.get('minime.library.added') || '[]'); } catch (_) { libAfter117 = []; }
+  check('v117: TIDAK menambah dokumen Library', libAfter117.length === libBefore117.length, libBefore117.length + ' -> ' + libAfter117.length);
 
 } catch (e) {
   // eslint-disable-next-line no-console

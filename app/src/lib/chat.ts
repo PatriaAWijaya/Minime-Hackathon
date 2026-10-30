@@ -11,7 +11,7 @@
 // No key -> that provider is skipped by the chain (LiveUnavailableError
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
-import { AGENTS, activateAgent, currentProjectName, ensureProjectForBrief, graphNoteDelegation, hasProject, isAgentDeactivated, libAddReport, markChatApproveDone, mediaTab, postChat, showView } from './v5logic.js';
+import { AGENTS, activateAgent, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, libAddReport, markChatApproveDone, mediaTab, postChat, showView } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
@@ -320,10 +320,10 @@ async function splitBriefTasks(router: ModelRouter, cfg: ReturnType<typeof defau
 
 // v103 (Alur 1): laporan lengkap mentah (tanpa escape — pengirim meng-escape
 // saat posting bubble; salinan Library menyimpan teks mentah yang sama).
-function composeFlowReport(name: string, brief: string, results: { name: string; task: string; text: string }[], qc: string): string {
-  const lines = [tr('flow.report.title') + ' — ' + name, '', tr('flow.report.brief') + ': ' + brief, ''];
+function composeFlowReport(name: string, brief: string, results: { name: string; task: string; text: string }[], qc: string, doneText?: string, titleText?: string): string {
+  const lines = [(titleText || tr('flow.report.title')) + ' — ' + name, '', tr('flow.report.brief') + ': ' + brief, ''];
   for (const r of results) lines.push('- ' + r.name + ' (' + r.task + '): ' + r.text, '');
-  lines.push(tr('flow.report.qc') + ': ' + qc, '', tr('flow.report.done'));
+  lines.push(tr('flow.report.qc') + ': ' + qc, '', doneText || tr('flow.report.done'));
   return lines.join('\n');
 }
 
@@ -343,6 +343,16 @@ export async function sendChatReal(): Promise<void> {
   // obrolan biasa tetap di Main chat (v101) tanpa membuat project.
   const flow1 = !hasProject();
   const flow1Tasks = flow1 ? await splitBriefTasks(router, cfg, text) : [];
+  // v117 (Alur 2): project SUDAH ada — brief dipecah sama seperti Alur 1,
+  // tapi fan-out DIBATASI ke anggota aktif project (status Nonaktif
+  // dikecualikan oleh currentProjectMemberKeys). Bukan anggota TIDAK
+  // ditambahkan/diaktifkan; tanpa tugas anggota -> jalur lama di bawah.
+  // Delegasi eksplisit (keyword satu agen) selalu menang atas fan-out:
+  // pesan yang menyebut satu agen tetap lewat jalur delegasi tunggal lama
+  // dan split tidak dijalankan untuknya (hemat 1 model call).
+  const hasExplicitDelegate = !flow1 && delegateFor(text) !== null;
+  const flow2Raw = (!flow1 && !hasExplicitDelegate) ? await splitBriefTasks(router, cfg, text) : [];
+  const flow2Tasks = flow2Raw.filter((t) => currentProjectMemberKeys().includes(t.agent));
   if (flow1 && flow1Tasks.length > 0) ensureProjectForBrief(text);
   postChat('user', 'Patria', '#374151', esc(text));
   input.value = '';
@@ -396,6 +406,53 @@ export async function sendChatReal(): Promise<void> {
       return;
     }
     // Split gagal/kosong: jatuh ke delegasi tunggal lama di bawah.
+  }
+  // v117 (Alur 2): fan-out ke anggota aktif saja — pengumuman, node
+  // Graph (tanpa mengubah keanggotaan), ack agen sebagai laporan progres,
+  // model call, lalu QC + laporan progres Prime ke user. TANPA membuat
+  // project baru dan TANPA dokumen Library (project tetap berjalan).
+  if (flow2Tasks.length > 0) {
+    const results: { name: string; task: string; text: string }[] = [];
+    for (const t of flow2Tasks) {
+      const ag = (AGENTS as Record<string, { name: string; color: string; role: string }>)[t.agent];
+      postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.delegate.announce', { agent: esc(ag.name), task: esc(taskShort(t.task)) }));
+      graphNoteDelegationForMember(t.agent, t.task);
+      activateAgent(t.agent);
+      postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
+      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').';
+      const trace = 'trace-flow2-' + t.agent + '-' + Date.now();
+      let resultText: string;
+      try {
+        const r = await router.callWithFallback(t.task, trace);
+        recordLiveCost(r);
+        const footer =
+          ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
+          (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '') +
+          (r.promptTokens != null || r.completionTokens != null ? ' · ' + (r.promptTokens ?? '—') + '+' + (r.completionTokens ?? '—') + ' token' : '');
+        const studio = t.agent === 'kreatif' && mediaNeeded(t.task) ? studioButton(r.text, t.agent) : '';
+        resultText = r.text;
+        postChat(t.agent, ag.name, ag.color, esc(r.text) + footer + studio);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        resultText = tr('chat.error') + msg;
+        postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
+      }
+      results.push({ name: ag.name, task: t.task, text: resultText });
+    }
+    let qcText: string;
+    try {
+      cfg.systemInstruction = 'QC hasil kerja agen: nilai tiap hasil terhadap brief. Balas dengan verdict singkat per agen: LOLOS atau REVISI + satu kalimat alasan, diakhiri satu kalimat simpulan. Bahasa Indonesia.';
+      const qcInput = 'Brief: ' + text + '\n\nHasil agen:\n' + results.map((r) => '- ' + r.name + ': ' + r.text).join('\n');
+      const q = await router.callWithFallback(qcInput, 'trace-flow2-qc-' + Date.now());
+      recordLiveCost(q);
+      qcText = q.text;
+    } catch {
+      qcText = tr('flow.qc.unavailable');
+    }
+    postChat('prime', 'Prime Agent', '#EB87B4', qcText, true);
+    const report = composeFlowReport(currentProjectName(), text, results, qcText, tr('flow2.report.done'), tr('flow2.report.title'));
+    postChat('prime', 'Prime Agent', '#EB87B4', esc(report), true);
+    return;
   }
   // Audit v66 C-M1: agen yang dinonaktifkan user tidak lagi menjawab
   // lewat chat — delegasi jatuh kembali ke Prime.

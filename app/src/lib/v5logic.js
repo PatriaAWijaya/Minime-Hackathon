@@ -2421,13 +2421,18 @@ export function graphSetAgent(v) {
   nd.agent = v || "";
   if (v && AGENTS[v] && nd.kind !== "trigger") nd.sub = AGENTS[v].name;
   saveGraphState();
-  if (v) graphSyncAgent(v, currentProj, nd.brief);
+  // v117 (Alur 3): sinkron ke project node itu sendiri; node Graph-only
+  // (proj null) TIDAK boleh mencemari project aktif.
+  if (v && nd.proj) graphSyncAgent(v, nd.proj, nd.brief);
   renderGraph(); renderAgents(); renderDetail(); graphPopupSaved();
 }
 export function graphSetBrief(v) {
   var nd = graphSelNode(); if (!nd || nd.locked) return;
   nd.brief = v; saveGraphState(); graphPopupSaved();
-  if (nd.agent) graphSyncAgent(nd.agent, currentProj, v);
+  if (nd.agent && nd.proj) graphSyncAgent(nd.agent, nd.proj, v);
+  // v117: render ulang list + detail — tanpa ini label tugas di list
+  // tetap menampilkan nilai lama walau data anggota sudah diperbarui.
+  renderAgents(); renderDetail();
 }
 export function graphSetBranch(side, v) { var nd = graphSelNode(); if (!nd || nd.locked) return; if (side === "T") nd.branchT = v; else nd.branchF = v; saveGraphState(); renderGraph(); renderGraphPopup(); }
 function graphTrigSync(nd) { var t = graphTrigOf(nd); nd.sub = graphTrigSummary(t); }
@@ -2548,6 +2553,29 @@ export function graphNewProject() {
    project aktif; nama = baris pertama brief (maks 60 karakter). */
 export function hasProject() { return !!PROJECTS[currentProj]; }
 export function currentProjectName() { var p = PROJECTS[currentProj]; return p ? p.name : ""; }
+
+/* v117 (Alur 2): kunci anggota AKTIF project saat ini (status Nonaktif
+   dikecualikan — audit v66 C-M1: agen nonaktif tidak menjawab via chat). */
+export function currentProjectMemberKeys() {
+  var p = PROJECTS[currentProj];
+  if (!p || !p.agents) return [];
+  return p.agents.filter(function (a) { return a.status !== "Nonaktif"; }).map(function (a) { return a.key; });
+}
+/* v117 (Alur 2): delegasi HANYA untuk anggota aktif — node Graph dipastikan
+   + label tugas anggota diperbarui, TANPA menambah/mengaktifkan ulang
+   anggota (beda dari graphNoteDelegation yang memanggil graphSyncAgent).
+   Bukan anggota / tanpa project -> diam-diam tidak terjadi apa-apa. */
+export function graphNoteDelegationForMember(agentKey, briefText) {
+  if (!AGENTS[agentKey] || !PROJECTS[currentProj]) return;
+  var proj = PROJECTS[currentProj];
+  var member = null;
+  (proj.agents || []).forEach(function (a) { if (a.key === agentKey && a.status !== "Nonaktif") member = a; });
+  if (!member) return;
+  graphEnsureAgentNode(agentKey, currentProj, briefText);
+  var t = briefText ? String(briefText).split("\n")[0].slice(0, 60) : "";
+  if (t) member.task = t;
+  saveHomeState();
+}
 export function ensureProjectForBrief(text) {
   if (PROJECTS[currentProj]) return PROJECTS[currentProj].name;
   var first = String(text || "").split("\n")[0].trim().slice(0, 60) || "Project";
@@ -3060,5 +3088,5 @@ export function initV5() {
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
 
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphNewProject, markChatApproveDone, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphNoteDelegationForMember, currentProjectMemberKeys, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphNewProject, markChatApproveDone, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }
