@@ -2299,3 +2299,8 @@ dokumen lama yang dipakai.
 - Temuan saat implementasi: sudah ada 3 aturan bubble user yang saling menutupi (pink lama #EB87B4 di baris atas, var panel2 tema di blok tema) — ketiganya diselaraskan ke hijau pastel, bukan ditambah aturan keempat; background-color dipakai (bukan shorthand) supaya sheen glossy v110 tidak terhapus. Header agen tetap hijau #A6EBB1 (aturan lebih spesifik untuk user menang).
 - Gerbang: root tsc bersih, 13 rig lolos (rig-chat §11 baru 2 cek), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error.
 - Push kode: lokal 6dbf3b1 ↔ remote 7a20eee (tree identik).
+
+## v113 — bubble user sedikit lebih gelap (30 Okt 2026 ~20:10 WIB, perintah Patria 20:01 "masih terlalu terang")
+- Bubble user #A6EBB1 -> #8ED694 (kedua aturan bubble user diubah; tetap hijau pastel, bukan hijau tua; font hitam dan header dark violet tidak berubah; header agen tetap hijau #A6EBB1). Koreksi rig: selektor header agen memakai spasi descendant (.msg .bubble .who), bukan compound.
+- Gerbang: root tsc bersih, 13 rig lolos (rig-chat +1 cek v113), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error.
+- Push kode: lokal c1692c2 ↔ remote a3773dc (tree identik).
