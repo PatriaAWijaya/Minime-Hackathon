@@ -435,7 +435,7 @@ export function renderGraph() {
       var del = document.createElement("div");
       del.className = "n8n-del"; del.textContent = "\u00D7"; del.title = tr("graph.del");
       del.addEventListener("mousedown", function (e) { e.stopPropagation(); });
-      del.addEventListener("click", function (e) { e.stopPropagation(); graphOpenPopup(k); graphAskDelete(); });
+      del.addEventListener("click", function (e) { e.stopPropagation(); graphSelect(k); graphDeleteNode(); });
       el.appendChild(del);
       el.addEventListener("mousedown", function (e) {
         if (nd.locked) return;
@@ -1534,7 +1534,7 @@ var lastNodeRects = {}, dragWH = null;
 var nodeCounter = 0;
 
 /* ---------- Graph v77: setting per node ala OpenBot ---------- */
-var graphSel = null, graphZoom = 1, graphDelAsk = false, graphHistOn = false, graphTimer = null, graphLastCheck = null, graphPopupOpen = false;
+var graphSel = null, graphZoom = 1, graphHistOn = false, graphTimer = null, graphLastCheck = null, graphPopupOpen = false;
 
 function graphZoomEl() { return document.getElementById("graphZoom") || document.getElementById("graphBox"); }
 function graphLocale() { var l = getLang(); return l === "id" ? "id-ID" : l === "zh" ? "zh-CN" : "en-US"; }
@@ -1651,8 +1651,8 @@ function updateDragEdges() {
     path.setAttribute("d", curvePath(x1, y1, x2, y2));
   });
 }
-export function graphSelect(key) { graphSel = GNODES[key] ? key : null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
-export function graphClosePanel() { graphPopupOpen = false; graphSel = null; graphDelAsk = false; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
+export function graphSelect(key) { graphSel = GNODES[key] ? key : null; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
+export function graphClosePanel() { graphPopupOpen = false; graphSel = null; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
 function graphOpenPopup(k) { if (!GNODES[k]) return; graphSelect(k); graphPopupOpen = true; renderGraphPopup(); }
 export function renderGraphProjSel() {
   ["graphProjSel", "projectSel"].forEach(function (id) {
@@ -1733,16 +1733,17 @@ export function renderGraphPopup() {
     }
     html += "<button class='g-run' data-act='grun'>" + tr("graph.run_now") + "</button>";
   }
-  html += "<div class='g-actions'><button class='btn' data-act='gdup'>" + tr("graph.dup") + "</button><button class='btn' data-act='glock'>" + (nd.locked ? tr("graph.unlock") : tr("graph.lock")) + "</button><button class='btn' data-act='gaskdel'" + dis + ">" + tr("graph.del") + "</button></div>";
-  if (graphDelAsk) html += "<div class='g-delask'>" + tr("graph.del_ask") + " <button class='btn' data-act='gconfirmdel'>" + tr("graph.del_yes") + "</button> <button class='btn' data-act='gcancelDel'>" + tr("graph.del_no") + "</button></div>";
+  html += "<div class='g-actions'><button class='btn' data-act='gdup'>" + tr("graph.dup") + "</button><button class='btn' data-act='glock'>" + (nd.locked ? tr("graph.unlock") : tr("graph.lock")) + "</button><button class='btn' data-act='gdel'" + dis + ">" + tr("graph.del") + "</button></div>";
   p.innerHTML = html;
 }
 
 /* v91: popup Graph di-wire lewat listener terdaftar di kartu popup (bukan
    inline onclick). Inline terbukti mati di WebView live: tombol × node
-   (addEventListener) membuka popup + konfirmasi, tapi semua tombol popup
-   (Duplikat/Kunci/Hapus/Ya, hapus/Batal) tidak merespons sama sekali.
-   Delegasi di kartu bertahan melewati penggantian innerHTML tiap render. */
+   (addEventListener) bekerja, tapi semua tombol popup
+   (Duplikat/Kunci/Hapus) tidak merespons sama sekali.
+   Delegasi di kartu bertahan melewati penggantian innerHTML tiap render.
+   v92: hapus node satu langkah — graphDeleteNode saja, tanpa konfirmasi
+   (perintah Patria 30 Okt 11:29). */
 var graphPopupWired = false;
 function graphPopupDispatch(act, el) {
   switch (act) {
@@ -1758,9 +1759,7 @@ function graphPopupDispatch(act, el) {
     case "grun": graphRunNow(); break;
     case "gdup": graphDuplicate(); break;
     case "glock": graphToggleLock(); break;
-    case "gaskdel": graphAskDelete(); break;
-    case "gconfirmdel": graphConfirmDelete(); break;
-    case "gcancelDel": graphCancelDelete(); break;
+    case "gdel": graphDeleteNode(); break;
     case "gaskedgedel": graphAskEdgeDel(); break;
     case "gconfirmedgedel": graphConfirmEdgeDel(); break;
     case "gcanceledgedel": graphCancelEdgeDel(); break;
@@ -1827,14 +1826,15 @@ export function graphDuplicate() {
   createNode(copy, {});
 }
 export function graphToggleLock() { var nd = graphSelNode(); if (!nd) return; nd.locked = !nd.locked; saveGraphState(); renderGraph(); renderGraphPopup(); }
-export function graphAskDelete() { var nd = graphSelNode(); if (nd && nd.locked) return; if (graphSel && GNODES[graphSel]) graphPopupOpen = true; graphDelAsk = true; renderGraphPopup(); }
-export function graphCancelDelete() { graphDelAsk = false; renderGraphPopup(); }
-export function graphConfirmDelete() {
+/* v92 (perintah Patria 30 Okt 11:29): SATU fungsi hapus node, tanpa
+   konfirmasi dua langkah. Tombol Hapus di popup dan handle × di node
+   sama-sama memanggil fungsi ini; klik hapus = node terhapus. */
+export function graphDeleteNode() {
   if (!graphSel || !GNODES[graphSel] || GNODES[graphSel].locked) return;
   var key = graphSel;
   delete GNODES[key];
   for (var i = GEDGES.length - 1; i >= 0; i--) { if (GEDGES[i].f === key || GEDGES[i].t === key) GEDGES.splice(i, 1); }
-  graphSel = null; graphDelAsk = false; graphPopupOpen = false;
+  graphSel = null; graphPopupOpen = false;
   saveGraphState(); renderGraph(); renderGraphPopup();
   showNotice("graphNotice", tr("graph.node_deleted"));
 }
@@ -2127,7 +2127,7 @@ export function graphStopSim() {
   document.querySelectorAll(".n8n-node").forEach(function (el) { el.classList.remove("exec"); });
   showNotice("graphNotice", tr("graph.stopped"));
 }
-export function graphSelectEdge(f, t) { graphSelEdge = { f: f, t: t }; graphSel = null; graphPopupOpen = true; graphDelAsk = false; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
+export function graphSelectEdge(f, t) { graphSelEdge = { f: f, t: t }; graphSel = null; graphPopupOpen = true; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
 export function graphConfirmEdgeDel() {
   if (!graphSelEdge) return;
   var f = graphSelEdge.f, t = graphSelEdge.t;
@@ -2307,5 +2307,5 @@ export function initV5() {
   waInputChanged();
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphPrimeFirst, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }

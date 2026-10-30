@@ -136,16 +136,13 @@ try {
   }
   check('hari Senin saja -> ringkasan Weekly M 9 AM', sumText() === 'Weekly • M • 9:00 AM', sumText());
 
-  // 6. Duplikat lalu hapus pakai konfirmasi.
+  // 6. Duplikat lalu hapus satu langkah (v92: Hapus langsung menghapus).
   [...panel().querySelectorAll('button')].find((b) => b.textContent === 'Duplikat').click();
   await tick(100);
   check('duplikat -> 10 node + ada yang terpilih', nodeCount() === 10 && !!document.querySelector('.n8n-node.sel'), nodeCount());
   [...panel().querySelectorAll('button')].find((b) => b.textContent === 'Hapus').click();
   await tick(100);
-  check('klik Hapus -> baris konfirmasi tampil', panelText().includes('Hapus node ini?'), panelText().slice(0, 200));
-  [...panel().querySelectorAll('button')].find((b) => b.textContent === 'Ya, hapus').click();
-  await tick(100);
-  check('konfirmasi hapus -> kembali 9 node + popup tutup', nodeCount() === 9 && popup().style.display === 'none', nodeCount() + ' ' + popup().style.display);
+  check('klik Hapus -> kembali 9 node + popup tutup, tanpa konfirmasi', nodeCount() === 9 && popup().style.display === 'none' && !panelText().includes('Ya, hapus'), nodeCount() + ' ' + popup().style.display);
 
   // 7. Label cabang decision.
   dbl(document.querySelector('[data-nkey="gate"]'));
@@ -211,10 +208,7 @@ try {
   check('play node pertama -> badge riwayat = 2', document.getElementById('graphHistBadge')?.textContent === '2', document.getElementById('graphHistBadge')?.textContent);
   document.querySelector('.n8n-node.sel .n8n-del').click();
   await tick(100);
-  check('klik hapus node -> popup konfirmasi tampil', !!document.querySelector('.g-delask'), document.getElementById('graphPopupCard')?.textContent?.slice(0, 80));
-  document.querySelector('.g-delask button').click();
-  await tick(100);
-  check('konfirmasi hapus -> node 11 -> 10', nodeCount() === 10, nodeCount());
+  check('klik handle × node -> langsung hapus, node 11 -> 10 (v92, tanpa popup/konfirmasi)', nodeCount() === 10, nodeCount());
 
   // 12. v83: node seragam + outline sehat + popup + topbar.
   check('semua node punya avatar + nama/job', [...document.querySelectorAll('.n8n-node')].every((el) => el.querySelector('.nrow .nava') && el.querySelector('.nrow .nname') && el.querySelector('.nrow .nsub')), '');
@@ -248,9 +242,7 @@ try {
   await tick(100);
   [...panel().querySelectorAll('button')].find((b) => b.textContent === 'Hapus').click();
   await tick(100);
-  [...panel().querySelectorAll('button')].find((b) => b.textContent === 'Ya, hapus').click();
-  await tick(100);
-  check('hapus gate -> dist + revisi jadi yatim (pink)', document.querySelector('[data-nkey="dist"]').classList.contains('bad') && document.querySelector('[data-nkey="revisi"]').classList.contains('bad'), '');
+  check('hapus gate (v92, satu langkah) -> dist + revisi jadi yatim (pink)', document.querySelector('[data-nkey="dist"]').classList.contains('bad') && document.querySelector('[data-nkey="revisi"]').classList.contains('bad'), '');
   document.querySelector('.graph-head-btns button.btn-primary').click();
   await tick(150);
   [...document.querySelectorAll('.graph-head-btns button')].find((b) => b.textContent.includes('Hentikan')).click();
@@ -302,15 +294,7 @@ try {
   check('Buka kunci -> gembok hilang + tombol kembali Kunci', !ptext13().includes('🔒') && !!btn13('Kunci'), '');
   btn13('Hapus').click();
   await tick(100);
-  check('Hapus -> konfirmasi tampil', !!btn13('Ya, hapus') && !!btn13('Batal'), '');
-  btn13('Batal').click();
-  await tick(100);
-  check('Batal -> konfirmasi hilang, node tetap ada', !btn13('Ya, hapus') && nodes13().length === base13 + 1, nodes13().length);
-  btn13('Hapus').click();
-  await tick(100);
-  btn13('Ya, hapus').click();
-  await tick(100);
-  check('Ya, hapus -> salinan hilang + popup tertutup', nodes13().length === base13 && popup().style.display === 'none', nodes13().length + '|' + popup().style.display);
+  check('Hapus (v92, satu langkah) -> salinan hilang + popup tertutup, tanpa konfirmasi', nodes13().length === base13 && popup().style.display === 'none' && !btn13('Ya, hapus'), nodes13().length + '|' + popup().style.display);
   dbl13(document.querySelector('[data-nkey="trigger"]'));
   await tick(100);
   btn13('Duplikat').click();
@@ -345,7 +329,7 @@ try {
   await tick(100);
   check('kunci -> input + hapus nonaktif', dom.window.GNODES.model.locked === true && nameIn14().disabled === true && descIn14().disabled === true && btn14('Hapus').disabled === true, JSON.stringify(dom.window.GNODES.model.locked) + '|' + nameIn14().disabled + '|' + btn14('Hapus').disabled);
   dom.window.graphRename('Seharusnya Gagal');
-  dom.window.graphConfirmDelete();
+  dom.window.graphDeleteNode();
   await tick(50);
   check('node terkunci tak bisa rename/hapus', dom.window.GNODES.model.name === 'Model Uji' && !!dom.window.GNODES.model, dom.window.GNODES.model.name);
   btn14('Duplikat').click();
@@ -362,9 +346,7 @@ try {
   check('buka kunci -> input aktif lagi', dom.window.GNODES.model.locked === false && nameIn14().disabled === false, JSON.stringify(dom.window.GNODES.model.locked));
   btn14('Hapus').click();
   await tick(100);
-  btn14('Ya, hapus').click();
-  await tick(100);
-  check('hapus model -> node + garis putus hilang + popup tutup', !dom.window.GNODES.model && !dom.window.GEDGES.some((e) => e.t === 'model') && pop14().style.display === 'none', Object.keys(dom.window.GNODES).join(','));
+  check('hapus model (v92, satu langkah) -> node + garis putus hilang + popup tutup', !dom.window.GNODES.model && !dom.window.GEDGES.some((e) => e.t === 'model') && pop14().style.display === 'none', Object.keys(dom.window.GNODES).join(','));
 
   // 15. v87 (B3): + Tambah Node tanpa seleksi menempel ke node terakhir.
   const before15 = Object.keys(dom.window.GNODES).length;
