@@ -2287,3 +2287,9 @@ dokumen lama yang dipakai.
 - Glossy diperkuat: blur kaca 14px -> 18px (saturate 160%), lapisan sheen cahaya atas (gradien putih 14% -> 0) + highlight tepi inset + bayangan lembut pada semua permukaan kaca (agen, kartu Kanban, node, bubble, kartu media, popup).
 - Gerbang: root tsc bersih, 13 rig lolos (rig-settings +1 cek v110), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error. Koreksi rig: minifier menghapus nol blur (inset 0 1px 0 -> inset 0 1px) dan mengubah rgba ke hex-alpha — asersi disesuaikan ke bentuk minified; cek v109 lama yang menuntut token #150a26 dihapus karena token itu sudah diganti v110.
 - Push kode: lokal ceab502 ↔ remote c853316 (tree identik).
+
+## v111 — tema gelap diredam (30 Okt 2026 ~19:50 WIB, revisi Patria 19:37 "agak lebih gelap, masih terlalu violet dan pink")
+- Hanya tema gelap yang diubah (terang tidak disentuh): dasar #1B0A2E -> #0E0718 (nyaris hitam-ungu), panel/kaca digelapkan (rgb turun, alfa dipertahankan agar kaca tetap terbaca), teks #FDF4FF -> #E9E2F2, muted #D8B4FE -> #A89AC2, border magenta -> nuansa ungu redup, cahaya latar violet/magenta dipangkas (0.35/0.28 -> 0.22/0.16).
+- Duo-tone dipertahankan tapi pekat: gradien tombol #9333EA -> #D946EF menjadi #6D28D9 -> #A21CAF; kilau glossy dipertahankan (blur 18px tetap) tapi lebih redup (sheen 14% -> 8%, highlight tepi 0.18 -> 0.10) agar gelap tidak silau.
+- Gerbang: root tsc bersih, 13 rig lolos (rig-settings cek v111 ganti token dasar), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error.
+- Push kode: lokal 2bc32a5 ↔ remote f70b830 (tree identik).
