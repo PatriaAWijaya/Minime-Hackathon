@@ -12,8 +12,6 @@
   .sidebar .spacer { flex: 1; }
   .railicon { width: 26px; height: 26px; display: block; }
   .appmark { width: 46px; height: 46px; border-radius: 10px; display: block; margin-bottom: 6px; flex-shrink: 0; }
-  .brand { padding: 12px 14px 4px; flex-shrink: 0; }
-  .brand img { width: 150px; height: auto; display: block; }
   .col { display: flex; flex-direction: column; min-height: 0; background: #171717; }
   .colhead { padding: 14px 14px 10px; border-bottom: 1px solid #262626; flex-shrink: 0; }
   .colhead h2 { font-size: 17px; margin: 0 0 4px; }
@@ -148,7 +146,6 @@
   .agent-topbar { display: flex; align-items: center; gap: 8px; padding: 14px 14px 10px; flex-shrink: 0; }
   .scope-dot { width: 12px; height: 12px; border-radius: 50%; background: #FFD1DC; flex-shrink: 0; }
   .agent-scope { font-weight: 700; font-size: 16px; }
-  .nav-arrow { background: transparent; border: none; color: #a1a1a1; font-size: 22px; cursor: pointer; padding: 0 4px; }
   .agent-plus { margin-left: 2px; background: #262626; border: 1px solid #3a3a3a; color: #ececec; width: 36px; height: 36px; border-radius: 10px; font-size: 20px; cursor: pointer; flex-shrink: 0; }
   .add-menu { display: none; margin: 0 14px 10px; background: #1f1f1f; border: 1px solid #2a2a2a; border-radius: 10px; padding: 10px; flex-shrink: 0; }
   .add-menu.open { display: block; }

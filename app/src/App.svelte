@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -559,12 +559,9 @@
   </div>
 
   <div class="col" id="agentCol">
-    <div class="brand"><img src="minime-logo.png" alt="MiniMe"></div>
     <div class="agent-topbar">
       <span class="scope-dot"></span><span class="agent-scope">Local</span><span style="color:#a1a1a1">⌄</span>
       <span style="flex:1"></span>
-      <button class="nav-arrow" onclick={() => { viewBack() }} title={t('title.back', lang)}>‹</button>
-      <button class="nav-arrow" onclick={() => { viewForward() }} title={t('title.advance', lang)}>›</button>
       <button class="agent-plus" onclick={() => { toggleAddMenu() }} title={t('title.addagent', lang)}>＋</button>
     </div>
     <div class="add-menu" id="addMenu"></div>

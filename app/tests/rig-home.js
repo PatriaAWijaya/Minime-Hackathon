@@ -7,12 +7,12 @@
 //  4. Toggle notifikasi tersimpan + default ON.
 //  5. Baris Usage menampilkan angka nyata (bukan "—") + klik -> Billing.
 //  6. Ubah nama agen di panel detail -> daftar agen ikut berubah.
-//  7. Menu + berisi persis New agent / New project / New section.
-//  8. New agent: isi nama -> Create -> agen muncul di daftar + terpilih.
-//  9. New project: nama + pilih agen -> Create -> grup baru muncul.
-//  10. New section: input inline + Enter -> grup baru muncul.
+//  7. Menu + berisi persis New agent / New project (Section dihapus v92).
+//  8. New agent: picker kartu -> Buat agen baru -> isi nama -> Create -> muncul + terpilih.
+//  9. New project: nama + pilih agen -> Create -> grup baru + graph project.
 //  11. Persistensi: DOM baru dengan store yang sama menampilkan agen,
-//      channel, dan section buatan di atas (bukti localStorage).
+//      channel buatan di atas (bukti localStorage).
+//  12. v92: picker Aktifkan + DnD + Prime dikecualikan dari project.
 // Jalankan: npm run rig:home (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -93,7 +93,7 @@ try {
   ncName0.value = 'Proyek Uji';
   ncName0.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   await tick(50);
-  document.querySelectorAll('.chan-row input[type="checkbox"]').forEach((cb) => cb.click());
+  document.querySelectorAll('.chan-list .pick-card input[type="checkbox"]').forEach((cb) => cb.click());
   await tick(50);
   document.getElementById('ncCreateBtn').click();
   await tick(100);
@@ -102,7 +102,7 @@ try {
   check('kolom agen: kotak Search ada', !!document.getElementById('navSearch'), '');
   const rows = () => [...document.querySelectorAll('#agentList .agent')].filter((el) => el.style.display !== 'none');
   check('daftar agen tampil (>=6 baris)', rows().length >= 6, rows().length);
-  check('baris agen terpilih (.sel) ada', !!document.querySelector('#agentList .agent.sel'), '');
+  check('v92: baris Prime tidak tampil (Prime orkestrator, bukan anggota)', ![...document.querySelectorAll('#agentList .agent')].some((el) => el.textContent.includes('Prime Agent')), '');
   const search = document.getElementById('navSearch');
   search.value = 'strategi';
   search.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
@@ -159,14 +159,19 @@ try {
   document.querySelector('.agent-plus').click();
   await tick(100);
   const menuText = document.getElementById('addMenu')?.textContent || '';
+  const menuItems = [...document.querySelectorAll('#addMenu .plus-item')];
   check('menu + terbuka berisi New agent', menuText.includes('New agent'), menuText);
   check('menu + terbuka berisi New project', menuText.includes('New project'), menuText);
-  check('menu + terbuka berisi New section', menuText.includes('New section'), menuText);
+  check('menu + v92: New section DIHAPUS (hanya 2 item kartu)', menuItems.length === 2 && !menuText.includes('New section'), menuItems.length + ' :: ' + menuText);
 
-  // 8. New agent: isi nama -> Create -> muncul + terpilih.
+  // 8. New agent: picker kartu -> Buat agen baru -> isi nama -> Create -> muncul + terpilih.
   [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New agent')).click();
   await tick(100);
-  check('New agent -> form tampil di tengah (kolom agen tetap terlihat)', !!document.querySelector('#view-newagent.active') && !document.querySelector('.app').classList.contains('no-nav'), '');
+  check('New agent -> picker kartu tampil', !!document.querySelector('.pick-card'), '');
+  check('New agent -> picker berisi tombol Buat agen baru', !!document.querySelector('[data-act="pick-new"]'), '');
+  document.querySelector('[data-act="pick-new"]').click();
+  await tick(100);
+  check('Buat agen baru -> form tampil di tengah (kolom agen tetap terlihat)', !!document.querySelector('#view-newagent.active') && !document.querySelector('.app').classList.contains('no-nav'), '');
   check('form New agent: warna + bentuk + saran tampil', !!document.querySelector('.na-dot') && !!document.querySelector('.na-shape') && !!document.querySelector('.na-sug-card'), '');
   document.querySelector('.na-sug-card').click();
   await tick(100);
@@ -192,23 +197,13 @@ try {
   ncName.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   await tick(50);
   check('tombol Create channel aktif setelah nama diisi', !document.getElementById('ncCreateBtn').disabled, '');
-  document.querySelector('.chan-row input[type="checkbox"]').click();
+  document.querySelector('.chan-list .pick-card input[type="checkbox"]').click();
   await tick(50);
   document.getElementById('ncCreateBtn').click();
   await tick(100);
   check('Create channel -> grup Channel Uji muncul di daftar', [...document.querySelectorAll('#agentList .group')].some((el) => el.textContent.includes('Channel Uji')), document.getElementById('agentList').textContent.slice(0, 200));
-
-  // 10. New section: input inline + Enter -> grup baru muncul.
-  document.querySelector('.agent-plus').click();
-  await tick(50);
-  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New section')).click();
-  await tick(100);
-  check('New section -> baris input inline muncul', !!document.getElementById('nsInput'), '');
-  const nsInput = document.getElementById('nsInput');
-  nsInput.value = 'Section Uji';
-  nsInput.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-  await tick(100);
-  check('Enter -> grup Section Uji muncul di daftar', [...document.querySelectorAll('#agentList .group')].some((el) => el.textContent.includes('Section Uji')), '');
+  const pidUji = Object.keys(dom.window.PROJECTS).find((p) => dom.window.PROJECTS[p].name === 'Channel Uji');
+  check('Create channel -> graph project berisi node Prime + agen', Object.values(dom.window.GNODES).some((n) => n.proj === pidUji && n.agent === 'prime') && Object.values(dom.window.GNODES).some((n) => n.proj === pidUji && n.agent && n.agent !== 'prime'), pidUji);
 
   // 11. Persistensi: DOM baru dengan store yang sama.
   const dom2 = makeDom(store);
@@ -218,8 +213,32 @@ try {
   const list2 = dom2.window.document.getElementById('agentList').textContent;
   check('persistensi: Agen Uji ada setelah muat ulang', list2.includes('Agen Uji'), list2.slice(0, 200));
   check('persistensi: Channel Uji ada setelah muat ulang', list2.includes('Channel Uji'), '');
-  check('persistensi: Section Uji ada setelah muat ulang', list2.includes('Section Uji'), '');
   check('persistensi: nama Riset Baru bertahan', list2.includes('Riset Baru'), '');
+
+
+  // 12. v92: picker Aktifkan + DnD + Prime dikecualikan.
+  dom.window.PROJECTS['pk2'] = { name: 'P DnD', agents: [], chat: [], kanban: [] };
+  dom.window.switchProject('pk2');
+  await tick(100);
+  document.querySelector('.agent-plus').click();
+  await tick(50);
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New agent')).click();
+  await tick(100);
+  check('picker agen tampil (kartu)', !!document.querySelector('.pick-card'), '');
+  const actBtn = document.querySelector('[data-act="pick-activate"]');
+  check('picker: ada tombol Aktifkan', !!actBtn, '');
+  const actKey = actBtn?.getAttribute('data-key');
+  actBtn.click();
+  await tick(100);
+  check('Aktifkan -> agen masuk project pk2', (dom.window.PROJECTS['pk2'].agents || []).some((a) => a.key === actKey), JSON.stringify(dom.window.PROJECTS['pk2'].agents));
+  check('Aktifkan -> node graph project pk2 ada', Object.values(dom.window.GNODES).some((n) => n.proj === 'pk2' && n.agent === actKey), '');
+  check('Aktifkan -> tombol jadi Aktif', actBtn.disabled && actBtn.textContent.includes('Aktif'), actBtn.textContent);
+  const otherKey = Object.keys(dom.window.AGENTS).find((k) => k !== 'prime' && k !== actKey);
+  const dropped = dom.window.agentDropToProject('pk2', otherKey);
+  check('DnD -> agen lain masuk pk2', dropped && dom.window.PROJECTS['pk2'].agents.some((a) => a.key === otherKey), '');
+  check('DnD -> node graph agen lain ada', Object.values(dom.window.GNODES).some((n) => n.proj === 'pk2' && n.agent === otherKey), '');
+  check('DnD -> Prime DITOLAK', dom.window.agentDropToProject('pk2', 'prime') === false && !dom.window.PROJECTS['pk2'].agents.some((a) => a.key === 'prime'), '');
+  check('Prime tidak tampil di list agen', ![...document.querySelectorAll('#agentList .agent')].some((el) => el.textContent.includes('Prime Agent')), '');
 
 } catch (e) {
   // eslint-disable-next-line no-console

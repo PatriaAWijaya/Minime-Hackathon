@@ -266,13 +266,14 @@ try {
   nc0.value = 'Proyek Uji';
   nc0.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   await tick(50);
-  document.querySelectorAll('.chan-row input[type="checkbox"]').forEach((cb) => cb.click());
+  document.querySelectorAll('.chan-list .pick-card input[type="checkbox"]').forEach((cb) => cb.click());
   await tick(50);
   document.getElementById('ncCreateBtn').click();
   await tick(100);
   dom.window.showView('graph');
   dom.window.renderGraph();
   await tick(100);
+  const base13b = nodes13().length;
   check('dropdown berisi proyek baru', [...document.getElementById('graphProjSel').options].map((o) => o.value).join(',') === 'proyek-uji', [...document.getElementById('graphProjSel').options].map((o) => o.value).join(','));
   document.getElementById('graphProjSel').value = 'proyek-uji';
   document.getElementById('graphProjSel').dispatchEvent(new dom.window.Event('change', { bubbles: true }));
@@ -284,7 +285,7 @@ try {
   btn13('Duplikat').click();
   await tick(100);
   const sal13 = nodes13().find((el) => el.textContent.includes('(salinan)'));
-  check('Duplikat -> node bertambah + nama (salinan) + popup mengikuti', nodes13().length === base13 + 1 && !!sal13 && ptext13().includes('(salinan)'), nodes13().length + '|' + ptext13().slice(0, 80));
+  check('Duplikat -> node bertambah + nama (salinan) + popup mengikuti', nodes13().length === base13b + 1 && !!sal13 && ptext13().includes('(salinan)'), nodes13().length + '|' + ptext13().slice(0, 80));
   check('salinan node model yatim (pink, belum terhubung)', !!sal13 && sal13.classList.contains('bad'), sal13?.className || '');
   btn13('Kunci').click();
   await tick(100);
@@ -294,7 +295,7 @@ try {
   check('Buka kunci -> gembok hilang + tombol kembali Kunci', !ptext13().includes('🔒') && !!btn13('Kunci'), '');
   btn13('Hapus').click();
   await tick(100);
-  check('Hapus (v92, satu langkah) -> salinan hilang + popup tertutup, tanpa konfirmasi', nodes13().length === base13 && popup().style.display === 'none' && !btn13('Ya, hapus'), nodes13().length + '|' + popup().style.display);
+  check('Hapus (v92, satu langkah) -> salinan hilang + popup tertutup, tanpa konfirmasi', nodes13().length === base13b && popup().style.display === 'none' && !btn13('Ya, hapus'), nodes13().length + '|' + popup().style.display);
   dbl13(document.querySelector('[data-nkey="trigger"]'));
   await tick(100);
   btn13('Duplikat').click();

@@ -78,7 +78,7 @@ try {
   ncName0.value = 'Proyek Uji';
   ncName0.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   await tick(50);
-  document.querySelectorAll('.chan-row input[type="checkbox"]').forEach((cb) => cb.click());
+  document.querySelectorAll('.chan-list .pick-card input[type="checkbox"]').forEach((cb) => cb.click());
   await tick(50);
   document.getElementById('ncCreateBtn').click();
   await tick(100);

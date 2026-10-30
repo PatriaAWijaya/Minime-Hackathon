@@ -242,6 +242,13 @@ h3 { font-size: 18px; }
 /* ---- Menu + v76 ala OpenBot: item menu, form New agent, dialog channel ---- */
 .plus-item { display: flex !important; align-items: center; gap: 10px; }
 .plus-ic { width: 22px; text-align: center; color: #a1a1a1; font-size: 15px; }
+.plus-sub { color: #a1a1a1; font-size: 12px; }
+.pick-card { border: 1px solid #2a2a2a; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; background: #1e1e1e; }
+.pick-card:hover { border-color: #3a3a3a; }
+.pick-top { display: flex; gap: 10px; align-items: center; }
+.pick-top small { color: #a1a1a1; }
+.pick-desc { margin-top: 8px; color: #a1a1a1; font-size: 13px; line-height: 1.45; }
+.group.drop-over { outline: 2px solid #EB87B4; outline-offset: -2px; border-radius: 8px; }
 .na-wrap { max-width: 560px; margin: 0 auto; padding: 24px 20px 40px; }
 .na-top { display: flex; margin-bottom: 8px; }
 .na-cancel { background: transparent; border: none; color: #a1a1a1; font-size: 14px; cursor: pointer; }
@@ -280,12 +287,7 @@ h3 { font-size: 18px; }
 .chan-head { display: flex; justify-content: space-between; align-items: center; font-size: 16px; margin-bottom: 4px; }
 .chan-x { background: transparent; border: none; color: #a1a1a1; font-size: 20px; cursor: pointer; }
 .chan-list { margin-top: 10px; }
-.chan-row { display: flex; gap: 10px; align-items: center; padding: 9px 6px; cursor: pointer; font-size: 14px; border-radius: 8px; }
-.chan-row:hover { background: #262626; }
-.chan-row small { color: #a1a1a1; }
 .chan-foot { display: flex; justify-content: flex-end; }
-.agent.ns-new input { flex: 1; background: transparent; border: none; color: #ececec; font-size: 14px; outline: none; }
-.agent.ns-new button { background: transparent; border: none; color: #a1a1a1; font-size: 14px; cursor: pointer; }
 
 /* ---------- Graph v77: panel setting per node + toolbar ---------- */
 .graph-head-btns { display: flex; gap: 8px; align-items: center; }

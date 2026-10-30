@@ -15,21 +15,73 @@ import { tr, getLang, MONTHS } from './i18n.js';
 import { COST_TOTAL, readLiveCost, fmtInt } from './cost.js';
 
 /* ---------- Agen ---------- */
+var agentListWired = false;
+function agentListWire() {
+  var list = document.getElementById("agentList"); if (!list || agentListWired) return; agentListWired = true;
+  list.addEventListener("click", function (e) {
+    var el = e.target.closest ? e.target.closest("[data-act]") : null;
+    if (!el || !list.contains(el)) return;
+    var act = el.getAttribute("data-act");
+    if (act === "sel-agent") selectAgent(el.getAttribute("data-key"), el.getAttribute("data-pid"));
+    else if (act === "toggle-agent") toggleAgent(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
+    else if (act === "toggle-group") toggleGroup(el.getAttribute("data-pid"));
+  });
+  list.addEventListener("dragstart", function (e) {
+    var el = e.target.closest ? e.target.closest("[data-dragkey]") : null;
+    if (!el || !list.contains(el)) return;
+    agentDragStart(e, el.getAttribute("data-dragkey"));
+  });
+  list.addEventListener("dragover", function (e) {
+    var holder = e.target.closest ? e.target.closest("[data-pid]") : null;
+    if (!holder || !list.contains(holder)) return;
+    e.preventDefault();
+    var pid = holder.getAttribute("data-pid");
+    list.querySelectorAll(".group.drop-over").forEach(function (g) { if (g.getAttribute("data-pid") !== pid) g.classList.remove("drop-over"); });
+    var head = list.querySelector('.group[data-pid="' + pid + '"]');
+    if (head) head.classList.add("drop-over");
+  });
+  list.addEventListener("drop", function (e) {
+    var holder = e.target.closest ? e.target.closest("[data-pid]") : null;
+    if (!holder || !list.contains(holder)) return;
+    e.preventDefault();
+    list.querySelectorAll(".group.drop-over").forEach(function (g) { g.classList.remove("drop-over"); });
+    agentDrop(e, holder.getAttribute("data-pid"));
+  });
+  list.addEventListener("dragend", function () {
+    list.querySelectorAll(".group.drop-over").forEach(function (g) { g.classList.remove("drop-over"); });
+  });
+}
+export function agentDragStart(e, key) { try { e.dataTransfer.setData("text/plain", key); e.dataTransfer.effectAllowed = "move"; } catch (_) {} }
+export function agentDrop(e, pid) {
+  var key = "";
+  try { key = e.dataTransfer.getData("text/plain"); } catch (_) {}
+  if (key) agentDropToProject(pid, key);
+}
+export function agentDropToProject(pid, key) {
+  if (!PROJECTS[pid] || !AGENTS[key] || key === "prime") return false;
+  graphSyncAgent(key, pid, "");
+  graphEnsureAgentNode(key, pid);
+  saveGraphState();
+  renderAgents(); renderGraph();
+  return true;
+}
 export function renderAgents() {
+    agentListWire();
     var html = "", rowNo = -1;
     Object.keys(PROJECTS).forEach(function (pid) {
       var proj = PROJECTS[pid];
       var collapsed = !!collapsedGroups[pid];
-      html += '<div class="group" onclick="toggleGroup(\'' + pid + '\')">' + (collapsed ? '▸' : '▾') + ' ' + esc(proj.name) + (pid === currentProj ? ' • PROYEK AKTIF' : '') + '</div>';
+      html += '<div class="group" data-act="toggle-group" data-pid="' + pid + '">' + (collapsed ? '▸' : '▾') + ' ' + esc(proj.name) + (pid === currentProj ? ' • PROYEK AKTIF' : '') + '</div>';
       html += '<div class="gagents" data-pid="' + pid + '"' + (collapsed ? ' style="display:none"' : '') + '>';
       proj.agents.forEach(function (a, i) {
         var ag = AGENTS[a.key], off = a.status === "Nonaktif";
         rowNo++;
+        if (a.key === "prime") return;
         var times = ["2:32 PM", "1:47 PM", "12:05 PM", "11:20 AM", "10:02 AM", "9:15 AM", "8:40 AM", "7:55 AM"];
-        html += '<div class="agent ' + (selectedAgent === a.key && pid === currentProj ? 'sel' : '') + (off ? ' off' : '') + (pid === currentProj ? ' curproj' : '') + '" onclick="selectAgent(\'' + a.key + '\',\'' + pid + '\')">'
+        html += '<div class="agent ' + (selectedAgent === a.key && pid === currentProj ? 'sel' : '') + (off ? ' off' : '') + (pid === currentProj ? ' curproj' : '') + '" data-act="sel-agent" data-key="' + a.key + '" data-pid="' + pid + '" draggable="true" data-dragkey="' + a.key + '">'
           + (ag.avatar ? '<img class="av av-shape-' + (ag.shape || 'circle') + '" src="' + esc(ag.avatar) + '" style="background:' + ag.color + ';object-fit:cover;padding:0" alt="">' : '<div class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div>')
           + '<div class="meta"><b>' + esc(ag.name) + '</b> <span class="badge ' + (off ? 'b-no' : 'b-ok') + '">' + esc(a.status) + '</span><br><small>' + esc(a.task) + '</small></div>'
-          + (ag.always ? '' : '<button class="toggle" onclick="event.stopPropagation();toggleAgent(' + i + ',\'' + pid + '\')">' + (off ? 'Aktifkan' : 'Nonaktifkan') + '</button>')
+          + (ag.always ? '' : '<button class="toggle" data-act="toggle-agent" data-idx="' + i + '" data-pid="' + pid + '">' + (off ? 'Aktifkan' : 'Nonaktifkan') + '</button>')
           + '</div>';
       });
       html += '</div>';
@@ -1346,12 +1398,22 @@ export function waMic() {
 
 export function toggleAddMenu() { document.getElementById('addMenu').classList.toggle('open'); }
 
+var addMenuWired = false;
+function addMenuWire() {
+  var m = document.getElementById("addMenu"); if (!m || addMenuWired) return; addMenuWired = true;
+  m.addEventListener("click", function (e) {
+    var el = e.target.closest ? e.target.closest("[data-act]") : null;
+    if (!el || !m.contains(el)) return;
+    if (el.getAttribute("data-act") === "plus-agent") plusNewAgent();
+    else if (el.getAttribute("data-act") === "plus-channel") plusNewChannel();
+  });
+}
 export function renderAddMenu() {
     var menu = document.getElementById('addMenu');
     if (!menu) return;
-    menu.innerHTML = '<button class="plus-item" onclick="plusNewAgent()"><span class="plus-ic">◎</span>' + tr('plus.new_agent') + '</button>'
-      + '<button class="plus-item" onclick="plusNewChannel()"><span class="plus-ic">#</span>' + tr('plus.new_channel') + '</button>'
-      + '<button class="plus-item" onclick="plusNewSection()"><span class="plus-ic">▤</span>' + tr('plus.new_section') + '</button>';
+    addMenuWire();
+    menu.innerHTML = '<button class="plus-item" data-act="plus-agent"><span class="plus-ic">◎</span><span><b>' + tr('plus.new_agent') + '</b><br><small class="plus-sub">' + tr('plus.new_agent_d') + '</small></span></button>'
+      + '<button class="plus-item" data-act="plus-channel"><span class="plus-ic">#</span><span><b>' + tr('plus.new_channel') + '</b><br><small class="plus-sub">' + tr('plus.new_channel_d') + '</small></span></button>';
   }
 
 /* ---------- Menu + v76: New agent / New project / New section (ala OpenBot) ---------- */
@@ -1366,40 +1428,124 @@ var NA_SUGS = [
 ];
 var naState = { color: '#F97316', shape: 'blob', model: 'meta', effort: 'Medium', modelOpen: false, name: '', help: '' };
 var ncSel = {};
-var nsBusy = false;
 
 function naModelLabel(m) { return tr('na.model_' + m); }
 function naEffortLabel(e) { return tr('na.effort_' + e.toLowerCase().replace(' ', '_')); }
 
 export function plusNewAgent() {
     plusCloseMenu();
-    naState = { color: '#F97316', shape: 'blob', model: 'meta', effort: 'Medium', modelOpen: false, name: '', help: '' };
-    naRender();
-    showView('newagent');
+    pickRender();
   }
-
+/* v92: picker aktivasi agen (kartu ringkas, ketuk kartu -> deskripsi
+   lengkap; tombol Aktifkan -> agen masuk list aktif + graph project).
+   Satu listener delegated di #chanOverlay (elemen persisten) melayani
+   picker + dialog project — tanpa inline onclick di innerHTML. */
+var chanWired = false;
+function chanWire() {
+  var ov = document.getElementById("chanOverlay"); if (!ov || chanWired) return; chanWired = true;
+  ov.addEventListener("click", function (e) {
+    if (e.target && e.target.tagName === "INPUT" && e.target.type === "checkbox") return;
+    var el = e.target.closest ? e.target.closest("[data-act]") : null;
+    if (!el || !ov.contains(el)) return;
+    var act = el.getAttribute("data-act"), key = el.getAttribute("data-key");
+    if (act === "chan-close") ncClose();
+    else if (act === "pick-expand" || act === "nc-expand") chanToggleDesc(el);
+    else if (act === "pick-activate") pickActivate(key, el);
+    else if (act === "pick-new") { ncClose(); naState = { color: '#F97316', shape: 'blob', model: 'meta', effort: 'Medium', modelOpen: false, name: '', help: '' }; naRender(); showView('newagent'); }
+    else if (act === "pick-goto-project") { ncClose(); plusNewChannel(); }
+    else if (act === "nc-create") ncCreate();
+  });
+  ov.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t && t.classList && t.classList.contains("chan-check")) ncToggle(t.getAttribute("data-key"), t.checked);
+  });
+  ov.addEventListener("input", function (e) {
+    var t = e.target; if (!t) return;
+    if (t.id === "ncName") ncUpdateCreate();
+    else if (t.id === "ncSearch") ncFilter(t.value);
+  });
+}
+function chanToggleDesc(card) {
+  var ov = document.getElementById("chanOverlay"); if (!ov || !card) return;
+  var desc = card.querySelector(".pick-desc"); if (!desc) return;
+  var show = desc.style.display === "none";
+  ov.querySelectorAll(".pick-desc").forEach(function (d) { d.style.display = "none"; });
+  desc.style.display = show ? "block" : "none";
+}
+function pickRender() {
+  chanWire();
+  var body = "";
+  if (!currentProj || !PROJECTS[currentProj]) {
+    body = "<p>" + tr('pick.noproj') + "</p><button class='btn btn-primary' data-act='pick-goto-project'>" + tr('pick.create_proj') + "</button>";
+  } else {
+    body = Object.keys(AGENTS).filter(function (k) { return k !== "prime"; }).map(function (k) {
+      var ag = AGENTS[k];
+      var ex = (PROJECTS[currentProj].agents || []).find(function (a) { return a.key === k; });
+      var on = !!ex && ex.status !== "Nonaktif";
+      var btn = on ? "<button class='btn' disabled>" + tr('pick.active') + "</button>" : "<button class='btn btn-primary' data-act='pick-activate' data-key='" + k + "'>" + tr('pick.activate') + "</button>";
+      return "<div class='pick-card' data-act='pick-expand' data-key='" + k + "'><div class='pick-top'><span class='av av-shape-" + (ag.shape || 'circle') + "' style='background:" + ag.color + "'>" + esc(ag.name.charAt(0)) + "</span><span><b>" + esc(ag.name) + "</b><br><small>" + esc(ag.role) + "</small></span><span style='flex:1'></span>" + btn + "</div><div class='pick-desc' style='display:none'>" + esc(ag.goal || ag.role) + "</div></div>";
+    }).join("");
+  }
+  document.getElementById('chanOverlay').innerHTML = '<div class="chan-back" data-act="chan-close"></div><div class="chan-card">'
+    + '<div class="chan-head"><b>' + tr('pick.title') + '</b><button class="chan-x" data-act="chan-close">×</button></div>'
+    + body
+    + '<div style="margin-top:12px"><button class="btn" data-act="pick-new">' + tr('pick.new_custom') + '</button></div>'
+    + '</div>';
+}
+function pickActivate(key, btnEl) {
+  if (!currentProj || !PROJECTS[currentProj] || !AGENTS[key] || key === "prime") return;
+  graphSyncAgent(key, currentProj, "");
+  graphEnsureAgentNode(key, currentProj);
+  saveGraphState();
+  renderAgents(); renderGraph();
+  if (btnEl) { btnEl.textContent = tr('pick.active'); btnEl.disabled = true; }
+}
 function naRender() {
     var body = document.getElementById('newAgentBody');
     if (!body) return;
+    naWire();
     var letter = (naState.name.trim().charAt(0) || 'A').toUpperCase();
-    var colors = NA_COLORS.map(function (c) { return '<button class="na-dot' + (naState.color === c ? ' sel' : '') + '" style="background:' + c + '" onclick="naPickColor(\'' + c + '\')"></button>'; }).join('');
-    var shapes = NA_SHAPES.map(function (sh) { return '<button class="na-shape' + (naState.shape === sh ? ' sel' : '') + '" onclick="naPickShape(\'' + sh + '\')"><span class="av av-shape-' + sh + '" style="background:' + naState.color + '">' + letter + '</span></button>'; }).join('');
-    var models = ['meta', 'gemini', 'deepseek', 'qwen'].map(function (m) { return '<div class="na-model-row" onclick="naPickModel(\'' + m + '\')"><span class="na-radio' + (naState.model === m ? ' on' : '') + '">' + (naState.model === m ? '✓' : '') + '</span><span>' + naModelLabel(m) + '</span></div>'; }).join('');
-    var efforts = NA_EFFORTS.map(function (e) { return '<button class="na-effort-btn' + (naState.effort === e ? ' sel' : '') + '" onclick="naEffort(\'' + e + '\')">' + naEffortLabel(e) + '</button>'; }).join('');
-    var sugs = NA_SUGS.map(function (sg, i) { return '<div class="na-sug-card" onclick="naSuggest(' + i + ')"><b>' + tr(sg.name) + '</b><br><small>' + tr(sg.name + 'd') + '</small></div>'; }).join('');
+    var colors = NA_COLORS.map(function (c) { return '<button class="na-dot' + (naState.color === c ? ' sel' : '') + '" style="background:' + c + '" data-act="na-color" data-val="' + c + '"></button>'; }).join('');
+    var shapes = NA_SHAPES.map(function (sh) { return '<button class="na-shape' + (naState.shape === sh ? ' sel' : '') + '" data-act="na-shape" data-val="' + sh + '"><span class="av av-shape-' + sh + '" style="background:' + naState.color + '">' + letter + '</span></button>'; }).join('');
+    var models = ['meta', 'gemini', 'deepseek', 'qwen'].map(function (m) { return '<div class="na-model-row" data-act="na-model" data-val="' + m + '"><span class="na-radio' + (naState.model === m ? ' on' : '') + '">' + (naState.model === m ? '✓' : '') + '</span><span>' + naModelLabel(m) + '</span></div>'; }).join('');
+    var efforts = NA_EFFORTS.map(function (e) { return '<button class="na-effort-btn' + (naState.effort === e ? ' sel' : '') + '" data-act="na-effort" data-val="' + e + '">' + naEffortLabel(e) + '</button>'; }).join('');
+    var sugs = NA_SUGS.map(function (sg, i) { return '<div class="na-sug-card" data-act="na-sug" data-val="' + i + '"><b>' + tr(sg.name) + '</b><br><small>' + tr(sg.name + 'd') + '</small></div>'; }).join('');
     body.innerHTML = '<div class="na-wrap">'
-      + '<div class="na-top"><span style="flex:1"></span><button class="na-cancel" onclick="naCancel()">' + tr('na.cancel') + '</button></div>'
+      + '<div class="na-top"><span style="flex:1"></span><button class="na-cancel" data-act="na-cancel">' + tr('na.cancel') + '</button></div>'
       + '<div class="na-preview"><div id="naPreview" class="av av-shape-' + naState.shape + ' na-big" style="background:' + naState.color + '">' + letter + '</div></div>'
       + '<div class="na-colors">' + colors + '</div>'
       + '<div class="na-shapes">' + shapes + '</div>'
-      + '<div class="d-label">' + tr('na.name') + ' *</div><input id="naName" class="d-field" value="' + esc(naState.name) + '" oninput="naNameInput(this)">'
-      + '<div class="d-label">' + tr('na.help') + '</div><textarea id="naHelp" class="d-field d-area" placeholder="' + esc(tr('na.help_ph')) + '" oninput="naHelpInput(this)">' + esc(naState.help) + '</textarea>'
-      + '<div class="d-label">' + tr('na.model') + '</div><div class="na-model-field" onclick="naModelToggle()"><span>' + naModelLabel(naState.model) + ' · ' + naEffortLabel(naState.effort) + '</span><span>⌄</span></div>'
-      + (naState.modelOpen ? '<div class="na-model-pop"><input class="d-field" placeholder="' + esc(tr('na.search_models')) + '" oninput="naModelFilter(this.value)"><div class="na-model-list">' + models + '</div><div class="d-label">' + tr('na.effort') + '</div><div class="na-effort">' + efforts + '</div></div>' : '')
-      + '<button id="naCreateBtn" class="na-create" ' + (naState.name.trim() ? '' : 'disabled') + ' onclick="naCreate()">' + tr('na.create') + '</button>'
+      + '<div class="d-label">' + tr('na.name') + ' *</div><input id="naName" class="d-field" value="' + esc(naState.name) + '">'
+      + '<div class="d-label">' + tr('na.help') + '</div><textarea id="naHelp" class="d-field d-area" placeholder="' + esc(tr('na.help_ph')) + '">' + esc(naState.help) + '</textarea>'
+      + '<div class="d-label">' + tr('na.model') + '</div><div class="na-model-field" data-act="na-model-toggle"><span>' + naModelLabel(naState.model) + ' · ' + naEffortLabel(naState.effort) + '</span><span>⌄</span></div>'
+      + (naState.modelOpen ? '<div class="na-model-pop"><input id="naModelQ" class="d-field" placeholder="' + esc(tr('na.search_models')) + '"><div class="na-model-list">' + models + '</div><div class="d-label">' + tr('na.effort') + '</div><div class="na-effort">' + efforts + '</div></div>' : '')
+      + '<button id="naCreateBtn" class="na-create" ' + (naState.name.trim() ? '' : 'disabled') + ' data-act="na-create">' + tr('na.create') + '</button>'
       + '<div class="d-label">' + tr('na.suggestions') + '</div><div class="na-sug">' + sugs + '</div>'
       + '</div>';
   }
+var naWired = false;
+function naWire() {
+  var b = document.getElementById('newAgentBody'); if (!b || naWired) return; naWired = true;
+  b.addEventListener("click", function (e) {
+    var el = e.target.closest ? e.target.closest("[data-act]") : null;
+    if (!el || !b.contains(el)) return;
+    var act = el.getAttribute("data-act"), val = el.getAttribute("data-val");
+    if (act === "na-color") naPickColor(val);
+    else if (act === "na-shape") naPickShape(val);
+    else if (act === "na-model-toggle") naModelToggle();
+    else if (act === "na-model") naPickModel(val);
+    else if (act === "na-effort") naEffort(val);
+    else if (act === "na-sug") naSuggest(parseInt(val, 10));
+    else if (act === "na-cancel") naCancel();
+    else if (act === "na-create") naCreate();
+  });
+  b.addEventListener("input", function (e) {
+    var t = e.target; if (!t) return;
+    if (t.id === "naName") naNameInput(t);
+    else if (t.id === "naHelp") naHelpInput(t);
+    else if (t.id === "naModelQ") naModelFilter(t.value);
+  });
+}
 
 export function naPickColor(c) { naState.color = c; naRender(); }
 export function naPickShape(sh) { naState.shape = sh; naRender(); }
@@ -1443,63 +1589,39 @@ export function naCreate() {
   }
 
 export function plusNewChannel() {
-    plusCloseMenu();
-    ncSel = {};
-    var rows = Object.keys(AGENTS).map(function (k) {
+    plusCloseMenu(); chanWire(); ncSel = {};
+    var rows = Object.keys(AGENTS).filter(function (k) { return k !== "prime"; }).map(function (k) {
       var ag = AGENTS[k];
-      return '<label class="chan-row"><input type="checkbox" onchange="ncToggle(\'' + k + '\', this.checked)"><span class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</span><span><b>' + esc(ag.name) + '</b><br><small>' + esc(ag.role) + '</small></span></label>';
+      return '<div class="pick-card" data-act="nc-expand" data-key="' + k + '"><div class="pick-top"><input type="checkbox" class="chan-check" data-key="' + k + '"><span class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</span><span><b>' + esc(ag.name) + '</b><br><small>' + esc(ag.role) + '</small></span></div><div class="pick-desc" style="display:none">' + esc(ag.goal || ag.role) + '</div></div>';
     }).join('');
-    document.getElementById('chanOverlay').innerHTML = '<div class="chan-back" onclick="ncClose()"></div><div class="chan-card">'
-      + '<div class="chan-head"><b>' + tr('nc.title') + '</b><button class="chan-x" onclick="ncClose()">×</button></div>'
-      + '<div class="d-label">' + tr('nc.name') + '</div><input id="ncName" class="d-field" placeholder="' + esc(tr('nc.name_ph')) + '" oninput="ncUpdateCreate()">'
-      + '<div class="d-label">' + tr('nc.add') + '</div><input class="d-field" placeholder="' + esc(tr('nc.search')) + '" oninput="ncFilter(this.value)">'
+    document.getElementById('chanOverlay').innerHTML = '<div class="chan-back" data-act="chan-close"></div><div class="chan-card">'
+      + '<div class="chan-head"><b>' + tr('nc.title') + '</b><button class="chan-x" data-act="chan-close">×</button></div>'
+      + '<div class="d-label">' + tr('nc.name') + '</div><input id="ncName" class="d-field" placeholder="' + esc(tr('nc.name_ph')) + '">'
+      + '<div class="d-label">' + tr('nc.add') + '</div><input id="ncSearch" class="d-field" placeholder="' + esc(tr('nc.search')) + '">'
       + '<div class="chan-list">' + rows + '</div>'
-      + '<div class="chan-foot"><button id="ncCreateBtn" class="na-create" disabled onclick="ncCreate()">' + tr('nc.create') + '</button></div>'
+      + '<div class="chan-foot"><button id="ncCreateBtn" class="na-create" disabled data-act="nc-create">' + tr('nc.create') + '</button></div>'
       + '</div>';
   }
 export function ncClose() { document.getElementById('chanOverlay').innerHTML = ''; }
 export function ncToggle(k, v) { ncSel[k] = !!v; }
 export function ncUpdateCreate() { var b = document.getElementById('ncCreateBtn'), n = document.getElementById('ncName'); if (b) b.disabled = !(n && n.value.trim()); }
-export function ncFilter(q) { filterRows('.chan-row', q); }
+export function ncFilter(q) { filterRows('.chan-list .pick-card', q); }
 export function ncCreate() {
     var nameEl = document.getElementById('ncName');
     var name = nameEl ? nameEl.value.trim() : '';
     if (!name) return;
     var pid = plusSlug(name, function (s) { return !!PROJECTS[s]; });
-    var keys = Object.keys(ncSel).filter(function (k) { return ncSel[k] && AGENTS[k]; });
+    var keys = Object.keys(ncSel).filter(function (k) { return ncSel[k] && AGENTS[k] && k !== 'prime'; });
     PROJECTS[pid] = { name: name, agents: keys.map(function (k) { return { key: k, status: 'Idle', task: '—' }; }), chat: [], kanban: [] };
     currentProj = pid;
     saveHomeState();
     ncClose();
     syncProjectUI(pid);
-    renderAgents(); renderDetail(); renderChat(); renderKanban();
+    graphBuildProject(pid);
+    renderAgents(); renderDetail(); renderChat(); renderKanban(); renderGraph();
     detailNote(tr('nc.note.created', { name: name, n: keys.length }));
   }
 
-export function plusNewSection() {
-    plusCloseMenu();
-    nsBusy = false;
-    var list = document.getElementById('agentList');
-    var row = document.createElement('div');
-    row.className = 'agent ns-new';
-    row.innerHTML = '<input id="nsInput" placeholder="' + esc(tr('ns.name_ph')) + '" onkeydown="if (event.key === \'Enter\') nsConfirm(); if (event.key === \'Escape\') { nsBusy = true; renderAgents(); }" onblur="nsConfirm()"><button onmousedown="nsConfirm()">▾</button>';
-    list.insertBefore(row, list.firstChild);
-    var inp = document.getElementById('nsInput'); if (inp) inp.focus();
-  }
-export function nsConfirm() {
-    if (nsBusy) return;
-    var inp = document.getElementById('nsInput');
-    var v = inp ? inp.value.trim() : '';
-    nsBusy = true;
-    if (!v) { renderAgents(); return; }
-    var pid = plusSlug(v, function (s) { return !!PROJECTS[s]; });
-    PROJECTS[pid] = { name: v, agents: [], chat: [], kanban: [] };
-    currentProj = pid;
-    saveHomeState();
-    syncProjectUI(pid);
-    renderAgents(); renderDetail(); renderChat(); renderKanban();
-    detailNote(tr('ns.note.created', { name: v }));
-  }
 
 /* Audit v66 C-M1: status Nonaktif agen dipakai chat.ts — agen yang
    dinonaktifkan user tidak menjawab lewat chat (delegasi jatuh ke
@@ -1512,9 +1634,7 @@ export function isAgentDeactivated(key) {
   return !!m && m.status === "Nonaktif";
 }
 
-export function viewBack() { if (viewHistIdx > 0) { navJump = true; viewHistIdx--; _sv2(viewHist[viewHistIdx]); navJump = false; } }
 
-export function viewForward() { if (viewHistIdx < viewHist.length - 1) { navJump = true; viewHistIdx++; _sv2(viewHist[viewHistIdx]); navJump = false; } }
 
 export var AGENTS = {
     prime: { name: "Prime Agent", color: "#EB87B4", role: "Personal Assistant — orkestrasi & kurasi", goal: "Memastikan setiap arahan menjadi tugas yang jelas, didelegasikan ke agen yang tepat, dan hasilnya dikurasi sebelum final.", skills: ["Orkestrasi delegasi", "Kurasi hasil agen", "Penegakan gerbang GSTP/GKonten/GBatch"], model: "Meta (Muse) → Gemini → Ollama", always: true },
@@ -1907,7 +2027,6 @@ export function graphPrimeFirst() {
   // v91: node + langsung terikat agen prime + project aktif.
   if (graphVisibleKeys().length) return;
   createNode({ name: "Prime Agent", sub: "Orkestrasi & kurasi", icon: "\uD83E\uDD16", x: 45, y: 45, w: 195, kind: "prime", desc: "Agen utama: memecah arahan, memanggil agen, dan mengkurasi semua hasil sebelum final.", agent: "prime", proj: currentProj }, {});
-  if (currentProj) graphSyncAgent("prime", currentProj, "");
 }
 /* v91 (perintah Patria 30 Okt 12:38): dua arah Graph <-> menu utama.
    - Popup node: pilih agen + brief tugas -> agen itu AKTIF di project
@@ -1918,6 +2037,7 @@ export function graphPrimeFirst() {
      tiap agen digantung langsung di Prime). Brief diisi dari pesan user
      hanya bila masih kosong (editan popup menang). */
 function graphSyncAgent(agentKey, pid, brief) {
+  if (agentKey === "prime") return;
   var proj = PROJECTS[pid]; if (!proj || !AGENTS[agentKey]) return;
   if (!proj.agents) proj.agents = [];
   var ex = null;
@@ -1927,23 +2047,34 @@ function graphSyncAgent(agentKey, pid, brief) {
   else { if (ex.status === "Nonaktif") ex.status = "Idle"; if (t) ex.task = t; }
   saveHomeState();
 }
-export function graphNoteDelegation(agentKey, briefText) {
-  var pid = currentProj; if (!pid || !PROJECTS[pid] || !AGENTS[agentKey]) return;
+/* v92: satu jalur pembuatan node agen per-project (dipakai delegasi chat,
+   picker aktivasi, DnD, dan pembuatan project). Prime selalu dibuat sebagai
+   node orkestrator, BUKAN sebagai anggota project. */
+export function graphEnsureAgentNode(agentKey, pid, briefText) {
+  if (!pid || !PROJECTS[pid] || !AGENTS[agentKey]) return null;
   var chain = Object.keys(GNODES).filter(function (k) { return GNODES[k].proj === pid && GNODES[k].agent; });
   var primeKey = null, aKey = null;
   chain.forEach(function (k) { if (GNODES[k].agent === "prime") primeKey = k; if (GNODES[k].agent === agentKey) aKey = k; });
   if (!primeKey) {
     primeKey = createNode({ name: "Prime Agent", sub: "Orkestrasi & kurasi", icon: "\uD83E\uDD16", x: 10, y: 32, w: 195, kind: "prime", desc: "Agen utama: memecah arahan, memanggil agen, dan mengkurasi semua hasil sebelum final.", agent: "prime", proj: pid, brief: briefText || "" }, { quiet: true });
   } else if (briefText && !GNODES[primeKey].brief) { GNODES[primeKey].brief = briefText; saveGraphState(); }
-  if (agentKey !== "prime") {
-    if (!aKey) {
-      var n = Object.keys(GNODES).filter(function (k) { return GNODES[k].proj === pid && GNODES[k].agent; }).length;
-      var nx = n < 4 ? 10 + 22 * n : 10 + 22 * (n - 4), ny = n < 4 ? 32 : 60;
-      aKey = createNode({ name: AGENTS[agentKey].name, sub: AGENTS[agentKey].role || "", icon: AGENTS[agentKey].name.charAt(0), x: Math.min(88, nx), y: ny, w: 170, kind: "output", desc: "", agent: agentKey, proj: pid, brief: briefText || "" }, { edgeFrom: primeKey, quiet: true });
-    } else if (briefText && !GNODES[aKey].brief) { GNODES[aKey].brief = briefText; saveGraphState(); }
-  }
-  graphSyncAgent(agentKey, pid, briefText);
-  graphSyncAgent("prime", pid, briefText);
+  if (agentKey === "prime") return primeKey;
+  if (!aKey) {
+    var n = Object.keys(GNODES).filter(function (k) { return GNODES[k].proj === pid && GNODES[k].agent; }).length;
+    var nx = n < 4 ? 10 + 22 * n : 10 + 22 * (n - 4), ny = n < 4 ? 32 : 60;
+    aKey = createNode({ name: AGENTS[agentKey].name, sub: AGENTS[agentKey].role || "", icon: AGENTS[agentKey].name.charAt(0), x: Math.min(88, nx), y: ny, w: 170, kind: "output", desc: "", agent: agentKey, proj: pid, brief: briefText || "" }, { edgeFrom: primeKey, quiet: true });
+  } else if (briefText && !GNODES[aKey].brief) { GNODES[aKey].brief = briefText; saveGraphState(); }
+  return aKey;
+}
+export function graphBuildProject(pid) {
+  if (!pid || !PROJECTS[pid]) return;
+  graphEnsureAgentNode("prime", pid);
+  (PROJECTS[pid].agents || []).forEach(function (a) { if (a.key !== "prime") graphEnsureAgentNode(a.key, pid); });
+}
+export function graphNoteDelegation(agentKey, briefText) {
+  var pid = currentProj; if (!pid || !PROJECTS[pid] || !AGENTS[agentKey]) return;
+  graphEnsureAgentNode(agentKey, pid, briefText);
+  if (agentKey !== "prime") graphSyncAgent(agentKey, pid, briefText);
 }
 export function graphAddNode() {
   if (graphSel && GNODES[graphSel]) { addNodeAfter(graphSel); return; }
@@ -2285,7 +2416,6 @@ var LIB = [];
 
 var _ra2 = renderAgents;
 
-var viewHist = ['home'], viewHistIdx = 0, navJump = false;
 
 var _sv2 = showView;
 
@@ -2401,14 +2531,11 @@ export function initV5() {
       sendChat = function () { waApplyAttachments(); _sc(); waClearAttachments(); waInputChanged(); };
     })();
   renderAgents = function () { _ra2(); renderAddMenu(); };
-  showView = function (id) {
-      if (!navJump) { viewHist = viewHist.slice(0, viewHistIdx + 1); if (viewHist[viewHistIdx] !== id) { viewHist.push(id); viewHistIdx++; } }
-      _sv2(id);
-    };
+  showView = function (id) { _sv2(id); };
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, detailGoGraph, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }
