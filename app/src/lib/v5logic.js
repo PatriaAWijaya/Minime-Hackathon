@@ -438,7 +438,6 @@ export function setInstructions(v) { AGENTS[selectedAgent].instructions = v; sav
 
 /* ---------- Proyek & Chat ---------- */
 function syncProjectUI(pid) {
-  var ps = document.getElementById('projectSel'); if (ps) ps.value = pid || "";
   var cp = document.getElementById('chatProj'); if (cp) cp.textContent = PROJECTS[pid] ? PROJECTS[pid].name : "—";
   renderGraphProjSel();
 }
@@ -939,6 +938,19 @@ export function libAddScript(title, content) {
     if (all[k].content && all[k].content === content) return { index: k, added: false };
   }
   LIB_ADDED.push({ o: title, a: "Kreatif", s: "Draf", badge: "b-idle", content: content, kind: "script", proj: PROJECTS[currentProj] ? PROJECTS[currentProj].name : "", addedAt: libTodayISO() });
+  if (!saveLibAdded()) { LIB_ADDED.pop(); renderLib(); return { index: -1, added: false, saveFailed: true }; }
+  renderLib();
+  return { index: all.length, added: true };
+}
+
+/* v103 (Alur 1): laporan akhir project sebagai dokumen Library (kind
+   "report" dirender galeri sebagai dokumen umum — lib.kind.doc). */
+export function libAddReport(title, content) {
+  var all = libAll();
+  for (var k = 0; k < all.length; k++) {
+    if (all[k].content && all[k].content === content) return { index: k, added: false };
+  }
+  LIB_ADDED.push({ o: title, a: "Prime Agent", s: "Selesai", badge: "b-ok", content: content, kind: "report", proj: currentProjectName(), addedAt: libTodayISO() });
   if (!saveLibAdded()) { LIB_ADDED.pop(); renderLib(); return { index: -1, added: false, saveFailed: true }; }
   renderLib();
   return { index: all.length, added: true };
@@ -2313,6 +2325,25 @@ export function graphBuildProject(pid) {
   if (!pid || !PROJECTS[pid]) return;
   graphEnsureAgentNode("prime", pid);
   (PROJECTS[pid].agents || []).forEach(function (a) { if (a.key !== "prime") graphEnsureAgentNode(a.key, pid); });
+}
+
+/* v103 (Alur 1, perintah Patria 30 Okt 16:02 "lanjut"): project dari brief.
+   hasProject sempat dihapus v101 sebagai dead code — kini dipakai gerbang
+   Alur 1. ensureProjectForBrief membuat project HANYA bila belum ada
+   project aktif; nama = baris pertama brief (maks 60 karakter). */
+export function hasProject() { return !!PROJECTS[currentProj]; }
+export function currentProjectName() { var p = PROJECTS[currentProj]; return p ? p.name : ""; }
+export function ensureProjectForBrief(text) {
+  if (PROJECTS[currentProj]) return PROJECTS[currentProj].name;
+  var first = String(text || "").split("\n")[0].trim().slice(0, 60) || "Project";
+  var pid = plusSlug(first, function (s) { return !!PROJECTS[s]; });
+  PROJECTS[pid] = { name: first, agents: [], chat: [], kanban: [] };
+  currentProj = pid;
+  saveHomeState();
+  syncProjectUI(pid);
+  graphBuildProject(pid);
+  renderAgents(); renderDetail(); renderChat(); renderKanban(); renderGraph();
+  return first;
 }
 export function graphNoteDelegation(agentKey, briefText) {
   var pid = currentProj; if (!pid || !PROJECTS[pid] || !AGENTS[agentKey]) return;

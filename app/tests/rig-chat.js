@@ -40,11 +40,22 @@ async function invokeStub(cmd) {
   throw new Error('unexpected invoke ' + cmd);
 }
 
-async function fetchStub(url) {
+async function fetchStub(url, opts) {
   log.push('fetch:' + String(url));
+  let body = '';
+  try { body = typeof opts?.body === 'string' ? opts.body : JSON.stringify(opts?.body || ''); } catch (_) { body = ''; }
+  // v103: stub model per jenis call — split brief (Bagi brief) mengembalikan
+  // tugas JSON; sapaan 'Halo utama' dinilai bukan brief (array kosong);
+  // QC mengembalikan verdict; sisanya hasil kerja agen.
+  let content = 'NASKAH-UJI: Hook kopi susu, isi 5W1H, CTA order via chat.';
+  if (body.includes('Bagi brief')) {
+    content = body.includes('Halo utama') ? '[]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat carousel kopi susu"}]';
+  } else if (body.includes('QC hasil kerja agen')) {
+    content = 'QC: riset LOLOS, kreatif LOLOS. Semua hasil siap dipakai.';
+  }
   return makeResp({
     jsonData: {
-      choices: [{ message: { content: 'NASKAH-UJI: Hook kopi susu, isi 5W1H, CTA order via chat.' } }],
+      choices: [{ message: { content } }],
       usage: { prompt_tokens: 42, completion_tokens: 30 },
     },
   });
@@ -208,6 +219,35 @@ try {
   let mc101 = [];
   try { mc101 = JSON.parse(store.get('minime.mainChat') || '[]'); } catch (_) { mc101 = []; }
   check('v101: Main chat tersimpan persisten (minime.mainChat)', Array.isArray(mc101) && mc101.some((m) => (m.text || '').includes('Halo utama')), 'n=' + mc101.length);
+
+  // 7. v103 (Alur 1): brief pertama tanpa project -> project otomatis +
+  // fan-out ke agen + QC Prime + laporan lengkap + dokumen Library.
+  const ci103 = document.getElementById('chatInput');
+  ci103.value = 'Brief kopi susu gula aren untuk pasar Surabaya';
+  dom.window.sendChat();
+  await tick(900);
+  const projKeys = Object.keys(dom.window.PROJECTS);
+  check('v103: brief pertama membuat tepat 1 project', projKeys.length === 1, 'n=' + projKeys.length);
+  const proj103 = projKeys.length ? dom.window.PROJECTS[projKeys[0]] : null;
+  check('v103: nama project = baris pertama brief', !!proj103 && proj103.name === 'Brief kopi susu gula aren untuk pasar Surabaya', proj103 ? proj103.name : 'tanpa project');
+  const agKeys103 = (proj103?.agents || []).map((a) => a.key);
+  check('v103: agen riset + kreatif jadi anggota project', agKeys103.includes('riset') && agKeys103.includes('kreatif'), agKeys103.join(','));
+  dom.window.showView('graph');
+  await tick(200);
+  const graphHtml103 = document.getElementById('graphNodes')?.innerHTML || '';
+  check('v103: node Graph riset + kreatif ada di project baru', graphHtml103.includes('Riset') && graphHtml103.includes('Kreatif'), graphHtml103.slice(0, 200));
+  dom.window.showView('home');
+  await tick(200);
+  const box103 = document.getElementById('chatBox')?.textContent || '';
+  check('v103: bubble pengumuman project + delegasi tampil', box103.includes('Project dibuat') && box103.includes('Saya delegasikan'), box103.slice(0, 300));
+  check('v103: hasil kerja agen tampil', box103.includes('NASKAH-UJI'), box103.slice(0, 300));
+  check('v103: QC Prime tampil sebagai kurasi', box103.includes('KURASI PRIME') && box103.includes('QC: riset LOLOS'), box103.slice(0, 500));
+  check('v103: laporan lengkap + status selesai tampil', box103.includes('Laporan Lengkap Project') && box103.includes('Project selesai'), box103.slice(-500));
+  let lib103 = [];
+  try { lib103 = JSON.parse(store.get('minime.library.added') || '[]'); } catch (_) { lib103 = []; }
+  check('v103: laporan tersimpan sebagai dokumen Library', lib103.some((it) => (it.o || '').includes('Laporan Lengkap Project') && (it.content || '').includes('Project selesai')), 'n=' + lib103.length);
+  const list103 = document.getElementById('agentList')?.textContent || '';
+  check('v103: list agen menampilkan Riset + Kreatif aktif', list103.includes('Riset') && list103.includes('Kreatif'), list103.slice(0, 200));
 
 } catch (e) {
   // eslint-disable-next-line no-console
