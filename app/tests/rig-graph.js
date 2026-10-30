@@ -433,6 +433,33 @@ try {
   check('klik + -> node Prime pertama dibuat di tengah', !!primeFirst && primeFirst.x === 45 && primeFirst.y === 45, JSON.stringify(primeFirst || null));
   check('setelah + diklik -> tombol + hilang', document.getElementById('graphEmptyPlus')?.style.display === 'none', document.getElementById('graphEmptyPlus')?.style.display || '');
 
+
+  // 20. v108: geser workspace (drag latar) + reset tampilan.
+  dom.window.showView('graph');
+  await tick(100);
+  const gb20 = document.getElementById('graphBox');
+  const zoom20 = () => document.getElementById('graphZoom');
+  const pan20 = () => { try { return JSON.parse(store.get('minime.graphState') || '{}').pan || null; } catch (_) { return null; } };
+  check('v108: tombol Reset tampilan ada di header Graph', [...document.querySelectorAll('#view-graph button')].some((b) => b.textContent.trim() === 'Reset tampilan'), '');
+  gb20.dispatchEvent(new dom.window.MouseEvent('mousedown', { bubbles: true, clientX: 100, clientY: 100 }));
+  document.dispatchEvent(new dom.window.MouseEvent('mousemove', { bubbles: true, clientX: 150, clientY: 130 }));
+  document.dispatchEvent(new dom.window.MouseEvent('mouseup', { bubbles: true }));
+  await tick(50);
+  check('v108: drag latar menggeser workspace (+50,+30)', (zoom20().style.transform || '').includes('translate(50px, 30px)'), zoom20().style.transform || '');
+  check('v108: pan tersimpan di graphState', pan20() && pan20().x === 50 && pan20().y === 30, JSON.stringify(pan20()));
+  const node20 = document.querySelector('.n8n-node');
+  const before20 = zoom20().style.transform;
+  if (node20) {
+    node20.dispatchEvent(new dom.window.MouseEvent('mousedown', { bubbles: true, clientX: 200, clientY: 200 }));
+    document.dispatchEvent(new dom.window.MouseEvent('mousemove', { bubbles: true, clientX: 260, clientY: 240 }));
+    document.dispatchEvent(new dom.window.MouseEvent('mouseup', { bubbles: true }));
+    await tick(50);
+  }
+  check('v108: drag node TIDAK menggeser workspace', zoom20().style.transform === before20, zoom20().style.transform || '');
+  dom.window.graphResetView();
+  await tick(50);
+  check('v108: reset mengembalikan pan 0 + zoom 100%', (zoom20().style.transform || '').includes('translate(0px, 0px)') && (zoom20().style.transform || '').includes('scale(1)') && document.getElementById('graphZoomLabel')?.textContent === '100%', zoom20().style.transform || '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-graph exception :: ' + (e && e.stack ? e.stack : e));

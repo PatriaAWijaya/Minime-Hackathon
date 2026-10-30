@@ -734,6 +734,7 @@ function graphHealth(k) {
 function graphVisible(k) { var nd = GNODES[k]; return !nd || !nd.proj || nd.proj === currentProj; }
 function graphVisibleKeys() { return Object.keys(GNODES).filter(function (k) { return graphVisible(k); }); }
 export function renderGraph() {
+  applyGraphView();
     var ep = document.getElementById("graphEmptyPlus");
     if (ep) ep.style.display = graphVisibleKeys().length ? "none" : "flex";
     var wrap = document.getElementById("graphNodes");
@@ -2040,6 +2041,7 @@ var nodeCounter = 0;
 
 /* ---------- Graph v77: setting per node ala OpenBot ---------- */
 var graphSel = null, graphZoom = 1, graphHistOn = false, graphTimer = null, graphLastCheck = null, graphPopupOpen = false;
+var graphPanX = 0, graphPanY = 0, panDrag = null, panSuppressClick = false;
 
 function graphZoomEl() { return document.getElementById("graphZoom") || document.getElementById("graphBox"); }
 function graphLocale() { var l = getLang(); return l === "id" ? "id-ID" : l === "zh" ? "zh-CN" : "en-US"; }
@@ -2116,7 +2118,7 @@ export function graphNextText(t, now) {
 }
 
 export function saveGraphState() {
-  try { localStorage.setItem("minime.graphState", JSON.stringify({ nodes: GNODES, edges: GEDGES, counter: nodeCounter })); return true; }
+  try { localStorage.setItem("minime.graphState", JSON.stringify({ nodes: GNODES, edges: GEDGES, counter: nodeCounter, pan: { x: graphPanX, y: graphPanY } })); return true; }
   catch (_) { return false; }
 }
 export function loadGraphState() {
@@ -2130,6 +2132,7 @@ export function loadGraphState() {
     Object.keys(s.nodes).forEach(function (k) { var nd = s.nodes[k]; if (!nd || typeof nd.name !== "string" || typeof nd.kind !== "string" || typeof nd.x !== "number" || typeof nd.y !== "number") ok = false; });
     if (!ok) throw new Error("bad node");
     GNODES = s.nodes; GEDGES = s.edges; nodeCounter = s.counter || 0;
+    if (s.pan && typeof s.pan.x === "number" && typeof s.pan.y === "number") { graphPanX = s.pan.x; graphPanY = s.pan.y; }
     Object.keys(GNODES).forEach(function (k) { if (GNODES[k].kind === "trigger") { GNODES[k].trig = graphTrigFill(GNODES[k].trig); GNODES[k].sub = graphTrigSummary(GNODES[k].trig); } });
     return true;
   } catch (_) {
@@ -2503,10 +2506,20 @@ export function initGraphScheduler() {
     if (due) { saveGraphState(); runGraphSim("auto"); }
   }, 30000);
 }
+/* v108 (perintah Patria 30 Okt 19:06): geser workspace Graph. Pan adalah
+   translasi piksel pada #graphZoom yang sama dengan zoom — edge (svg)
+   dan node bergerak bersama, jadi matematika edge (relatif terhadap
+   rect #graphZoom) tidak berubah. Urutan transform: translate dulu lalu
+   scale, sehingga jarak geser = jarak layar apa pun zoom-nya. */
+function applyGraphView() {
+  var el = document.getElementById("graphZoom"); if (el) el.style.transform = "translate(" + graphPanX + "px, " + graphPanY + "px) scale(" + graphZoom + ")";
+  var lab = document.getElementById("graphZoomLabel"); if (lab) lab.textContent = Math.round(graphZoom * 100) + "%";
+}
+export function graphPanTo(x, y) { graphPanX = x; graphPanY = y; applyGraphView(); saveGraphState(); }
+export function graphResetView() { graphPanX = 0; graphPanY = 0; graphZoomSet(1); saveGraphState(); }
 export function graphZoomSet(z) {
   graphZoom = Math.max(0.5, Math.min(2, z));
-  var el = document.getElementById("graphZoom"); if (el) el.style.transform = "scale(" + graphZoom + ")";
-  var lab = document.getElementById("graphZoomLabel"); if (lab) lab.textContent = Math.round(graphZoom * 100) + "%";
+  applyGraphView();
 }
 export function graphZoomIn() { graphZoomSet(graphZoom + 0.25); }
 export function graphZoomOut() { graphZoomSet(graphZoom - 0.25); }
@@ -2873,6 +2886,33 @@ export function initV5() {
   document.addEventListener("mouseup", function () { if (dragNode && dragMoved) { saveGraphState(); renderGraph(); } dragNode = null; });
   var gb = document.getElementById("graphBox");
   if (gb) gb.addEventListener("click", function (e) { if (e.target.closest && e.target.closest(".n8n-node")) return; graphClosePanel(); });
+  /* v108: geser workspace — drag latar kanvas (bukan node, bukan tombol).
+     Klik yang mengikuti drag ditekan sekali (capture) supaya tidak ikut
+     menyeleksi edge / menutup panel; flag dibersihkan mousedown berikut
+     karena klik setelah pan tidak didahului mousedown baru. */
+  if (gb) gb.addEventListener("mousedown", function (e) {
+    if (e.button !== 0) return;
+    if (e.target.closest && (e.target.closest(".n8n-node") || e.target.closest("button"))) return;
+    panDrag = { sx: e.clientX, sy: e.clientY, bx: graphPanX, by: graphPanY, moved: false };
+    gb.classList.add("graph-panning");
+    e.preventDefault();
+  });
+  document.addEventListener("mousemove", function (e) {
+    if (!panDrag) return;
+    var dx = e.clientX - panDrag.sx, dy = e.clientY - panDrag.sy;
+    if (Math.abs(dx) + Math.abs(dy) > 5) panDrag.moved = true;
+    graphPanX = panDrag.bx + dx; graphPanY = panDrag.by + dy;
+    applyGraphView();
+  });
+  document.addEventListener("mouseup", function () {
+    if (!panDrag) return;
+    if (panDrag.moved) panSuppressClick = true;
+    panDrag = null;
+    if (gb) gb.classList.remove("graph-panning");
+    saveGraphState();
+  });
+  document.addEventListener("mousedown", function () { panSuppressClick = false; });
+  document.addEventListener("click", function (e) { if (panSuppressClick) { panSuppressClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
   document.querySelectorAll(".sidebar button").forEach(function (b) {
       b.addEventListener("click", function () { showView(b.getAttribute("data-view")); });
     });
@@ -2911,5 +2951,5 @@ export function initV5() {
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
 
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphResetView, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }

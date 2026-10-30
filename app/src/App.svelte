@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphPrimeFirst, graphZoomIn, graphZoomOut, graphResetView, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -640,6 +640,7 @@
         <button class="btn" onclick={() => { graphZoomOut() }}>−</button>
         <span id="graphZoomLabel">100%</span>
         <button class="btn" onclick={() => { graphZoomIn() }}>+</button>
+        <button class="btn" onclick={() => { graphResetView() }}>{t('graph.pan.reset', lang)}</button>
         <button class="btn" onclick={() => { graphToggleHist() }}>{t('graph.hist', lang)} <span class="g-badge" id="graphHistBadge"></span></button>
         <button class="btn btn-primary" onclick={() => { runGraphSim() }}>{t('graph.run', lang)}</button>
         <button class="btn" onclick={() => { graphStopSim() }}>{t('graph.stop', lang)}</button>
