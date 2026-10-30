@@ -175,8 +175,7 @@ try {
   await tick(100);
   document.querySelector('.g-run').click();
   await tick(4200);
-  const notice = document.getElementById('graphNotice')?.textContent || '';
-  check('Run now -> notice selesai', notice.includes('selesai'), notice.slice(0, 120));
+  check('Run now -> riwayat tercatat', JSON.parse(store.get('minime.graphRuns') || '[]').length >= 1, store.get('minime.graphRuns'));
   check('badge riwayat = 1', document.getElementById('graphHistBadge')?.textContent === '1', document.getElementById('graphHistBadge')?.textContent);
   [...document.querySelectorAll('.graph-head-btns button')].find((b) => b.textContent.includes('Riwayat')).click();
   await tick(100);
@@ -247,7 +246,7 @@ try {
   await tick(150);
   [...document.querySelectorAll('.graph-head-btns button')].find((b) => b.textContent.includes('Hentikan')).click();
   await tick(100);
-  check('play lalu stop di topbar -> notice dihentikan', (document.getElementById('graphNotice')?.textContent || '').includes('dihentikan') && !document.querySelector('.n8n-node.exec'), document.getElementById('graphNotice')?.textContent);
+  check('play lalu stop di topbar -> tanpa .exec', !document.querySelector('.n8n-node.exec'), '');
 
 
   // 13. v84 (laporan Patria 04:01): tombol popup harus berefek nyata + terlihat.

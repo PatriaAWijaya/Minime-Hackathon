@@ -250,7 +250,7 @@ try {
   await tick(150);
   W.graphStopSim();
   await tick(50);
-  check('Hentikan -> notice dihentikan + tanpa .exec', (document.getElementById('graphNotice')?.textContent || '').includes('dihentikan') && !document.querySelector('.n8n-node.exec'), document.getElementById('graphNotice')?.textContent);
+  check('Hentikan -> tanpa .exec', !document.querySelector('.n8n-node.exec'), '');
   const edgesBefore = document.querySelectorAll('#graphEdges path').length;
   W.graphSelectEdge('gate', 'dist');
   await tick(50);

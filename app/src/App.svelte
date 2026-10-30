@@ -654,7 +654,6 @@
           <div class="n8n-canvas" id="graphBox"><div id="graphZoom"><svg id="graphEdges"></svg><div id="graphNodes"></div></div><button id="graphEmptyPlus" class="graph-empty-plus" onclick={() => { graphPrimeFirst() }}>+</button></div>
         </div>
         <div id="graphPopup" class="g-popup" style="display:none" onclick={(e) => { if (e.target === e.currentTarget) graphClosePanel(); }}><div class="g-popup-card" id="graphPopupCard"></div></div>
-        <div class="notice" id="graphNotice" style="display:none"></div>
       </div>
     </div>
     <div class="view" id="view-library">

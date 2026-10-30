@@ -638,7 +638,6 @@ function createNode(template, opts) {
   if (opts.edgeFrom && GNODES[opts.edgeFrom]) GEDGES.push({ f: opts.edgeFrom, t: nk, l: "" });
   saveGraphState();
   graphSelect(nk);
-  if (!opts.quiet) showNotice("graphNotice", opts.edgeFrom && GNODES[opts.edgeFrom] ? "Simulasi: node baru ditambahkan setelah " + GNODES[opts.edgeFrom].name + " (tampilan saja)." : tr("graph.node_added"));
   return nk;
 }
 export function addNodeAfter(key) {
@@ -653,13 +652,11 @@ export function runGraphSim(kind) {
     graphRunning = true;
     var seq = ["trigger", "prime", "gate", "dist"];
     var i = 0;
-    showNotice("graphNotice", "Simulasi berjalan: Trigger → Prime Agent → GSTP → Distribusi (draf)…");
     function step() {
       document.querySelectorAll(".n8n-node").forEach(function (el) { el.classList.remove("exec"); });
       if (i >= seq.length) {
         graphRunning = false;
         graphSimTimer = null;
-        showNotice("graphNotice", "Simulasi selesai: alur berjalan Trigger → Prime Agent → GSTP (true) → Distribusi (draf). Gerbang sungguhan tetap menunggu keputusanmu — simulasi ini tidak menyetujui apa pun.");
         graphRunsAdd(kind);
         return;
       }
@@ -2051,7 +2048,6 @@ export function graphDeleteNode() {
   for (var i = GEDGES.length - 1; i >= 0; i--) { if (GEDGES[i].f === key || GEDGES[i].t === key) GEDGES.splice(i, 1); }
   graphSel = null; graphPopupOpen = false;
   saveGraphState(); renderGraph(); renderGraphPopup(); renderAgents(); renderDetail();
-  showNotice("graphNotice", tr("graph.node_deleted"));
 }
 export function graphPrimeFirst() {
   // v90 (perintah Patria 30 Okt 09:23): kanvas kosong -> tombol + tengah
@@ -2391,7 +2387,6 @@ export function graphStopSim() {
   if (graphSimTimer) { clearTimeout(graphSimTimer); graphSimTimer = null; }
   graphRunning = false;
   document.querySelectorAll(".n8n-node").forEach(function (el) { el.classList.remove("exec"); });
-  showNotice("graphNotice", tr("graph.stopped"));
 }
 export function graphSelectEdge(f, t) { graphSelEdge = { f: f, t: t }; graphSel = null; graphPopupOpen = true; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
 export function graphConfirmEdgeDel() {
@@ -2400,7 +2395,6 @@ export function graphConfirmEdgeDel() {
   for (var i = GEDGES.length - 1; i >= 0; i--) { if (GEDGES[i].f === f && GEDGES[i].t === t) GEDGES.splice(i, 1); }
   graphSelEdge = null; graphEdgeDelAsk = false; graphPopupOpen = false;
   saveGraphState(); renderGraph(); renderGraphPopup();
-  showNotice("graphNotice", tr("graph.edge.deleted"));
 }
 
 
