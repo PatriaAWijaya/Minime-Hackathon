@@ -286,6 +286,11 @@ try {
   const box104 = document.getElementById('chatBox')?.textContent || '';
   check('v104: bubble kesediaan Distribusi tampil', box104.includes('Siap') && box104.includes('NASKAH-UJI'), box104.slice(0, 300));
 
+
+  // 11. v112: bubble user hijau pastel + font hitam + header dark violet.
+  check('v112: CSS ter-build mengatur bubble user hijau pastel + font hitam', /\.msg\.user\s+\.bubble\s*\{[^}]*#a6ebb1[^}]*#262626/.test(cssText), '');
+  check('v112: CSS ter-build mengatur header nama user dark violet', /\.msg\.user\s+\.bubble\s+\.who\s*\{[^}]*#4c1d95/.test(cssText), '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-chat exception :: ' + (e && e.stack ? e.stack : e));
