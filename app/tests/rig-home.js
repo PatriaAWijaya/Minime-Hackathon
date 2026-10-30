@@ -282,6 +282,39 @@ try {
   await tick(50);
   check('v95: kembali ke Home -> baris Graph basi hilang', ![...document.querySelectorAll('#agentList .agent')].some((el) => el.textContent.includes('Brief media uji')), '');
 
+
+  // 15. v98: tombol kerja per agen aktif (play/stop/X) + hilang dari list & Graph.
+  const pid98 = Object.keys(dom.window.PROJECTS)[0];
+  dom.window.switchProject(pid98);
+  (dom.window.PROJECTS[pid98].agents || []).forEach((a) => { if (a.key === 'riset') a.status = 'Idle'; });
+  if (!(dom.window.PROJECTS[pid98].agents || []).some((a) => a.key === 'riset')) dom.window.PROJECTS[pid98].agents.push({ key: 'riset', status: 'Idle', task: 'Tugas uji v98' });
+  dom.window.graphEnsureAgentNode('riset', pid98);
+  dom.window.renderAgents();
+  await tick(50);
+  const row98 = () => [...document.querySelectorAll('#agentList .agent')].find((el) => el.getAttribute('data-pid') === pid98 && el.querySelector('[data-act="a-play"]') && el.textContent.includes('Riset'));
+  check('v98: baris agen aktif punya 3 tombol kerja', !!row98() && !!row98().querySelector('[data-act="a-play"]') && !!row98().querySelector('[data-act="a-stop"]') && !!row98().querySelector('[data-act="a-deact"]'), row98()?.innerHTML?.slice(0, 200) || '');
+  row98().querySelector('[data-act="a-play"]').click();
+  await tick(50);
+  const ag98 = (dom.window.PROJECTS[pid98].agents || []).find((a) => a.key === 'riset');
+  check('v98: play -> Bekerja + node Graph ada', !!ag98 && ag98.running === true && !!row98() && row98().textContent.includes('Bekerja') && Object.values(dom.window.GNODES).some((n) => n.proj === pid98 && n.agent === 'riset'), '');
+  row98().querySelector('[data-act="a-stop"]').click();
+  await tick(50);
+  check('v98: stop -> kembali Idle + simulasi berhenti', !!ag98 && ag98.running === false && !!row98() && row98().textContent.includes('Idle') && dom.window.graphRunning !== true, '');
+  row98().querySelector('[data-act="a-deact"]').click();
+  await tick(50);
+  check('v98: X -> status Nonaktif + baris hilang dari list', !!ag98 && ag98.status === 'Nonaktif' && !row98(), '');
+  check('v98: X -> node Graph project itu hilang + edge ikut', !Object.values(dom.window.GNODES).some((n) => n.proj === pid98 && n.agent === 'riset') && !dom.window.GEDGES.some((e) => { const f = dom.window.GNODES[e.f], t = dom.window.GNODES[e.t]; return (f && f.agent === 'riset' && f.proj === pid98) || (t && t.agent === 'riset' && t.proj === pid98); }), '');
+  dom.window.plusNewAgent();
+  await tick(50);
+  document.querySelector('#chanOverlay [data-act="pick-activate"][data-key="riset"]').click();
+  await tick(50);
+  check('v98: reaktivasi picker -> baris + node kembali (bukan hapus permanen)', !!row98() && (dom.window.PROJECTS[pid98].agents || []).find((a) => a.key === 'riset').status !== 'Nonaktif' && Object.values(dom.window.GNODES).some((n) => n.proj === pid98 && n.agent === 'riset'), '');
+  const node98 = Object.keys(dom.window.GNODES).find((k) => dom.window.GNODES[k].proj === pid98 && dom.window.GNODES[k].agent === 'riset');
+  dom.window.GNODES[node98].locked = true;
+  row98().querySelector('[data-act="a-deact"]').click();
+  await tick(50);
+  check('v98: node TERKUNCI dipertahankan saat X (aturan v86), baris tetap hilang', !!dom.window.GNODES[node98] && !row98(), '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-home exception :: ' + (e && e.stack ? e.stack : e));

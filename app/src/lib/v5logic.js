@@ -23,7 +23,9 @@ function agentListWire() {
     if (!el || !list.contains(el)) return;
     var act = el.getAttribute("data-act");
     if (act === "sel-agent") selectAgent(el.getAttribute("data-key"), el.getAttribute("data-pid"));
-    else if (act === "toggle-agent") toggleAgent(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
+    else if (act === "a-play") agentPlay(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
+    else if (act === "a-stop") agentStop(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
+    else if (act === "a-deact") agentDeactivate(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
     else if (act === "toggle-group") toggleGroup(el.getAttribute("data-pid"));
   });
   list.addEventListener("dragstart", function (e) {
@@ -215,12 +217,13 @@ export function renderAgents() {
       proj.agents.forEach(function (a, i) {
         var ag = AGENTS[a.key], off = a.status === "Nonaktif";
         rowNo++;
-        if (a.key === "prime") return;
+        if (a.key === "prime" || off) return;
+        var badgeTxt = a.running ? tr('agent.working') : a.status;
         var times = ["2:32 PM", "1:47 PM", "12:05 PM", "11:20 AM", "10:02 AM", "9:15 AM", "8:40 AM", "7:55 AM"];
-        html += '<div class="agent ' + (selectedAgent === a.key && pid === currentProj ? 'sel' : '') + (off ? ' off' : '') + (pid === currentProj ? ' curproj' : '') + '" data-act="sel-agent" data-key="' + a.key + '" data-pid="' + pid + '" draggable="true" data-dragkey="' + a.key + '">'
+        html += '<div class="agent ' + (selectedAgent === a.key && pid === currentProj ? 'sel' : '') + (a.running ? ' running' : '') + (pid === currentProj ? ' curproj' : '') + '" data-act="sel-agent" data-key="' + a.key + '" data-pid="' + pid + '" draggable="true" data-dragkey="' + a.key + '">'
           + (ag.avatar ? '<img class="av av-shape-' + (ag.shape || 'circle') + '" src="' + esc(ag.avatar) + '" style="background:' + ag.color + ';object-fit:cover;padding:0" alt="">' : '<div class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div>')
-          + '<div class="meta"><b>' + esc(ag.name) + '</b> <span class="badge ' + (off ? 'b-no' : 'b-ok') + '">' + esc(a.status) + '</span><br><small>' + esc(a.task) + '</small></div>'
-          + (ag.always ? '' : '<button class="toggle" data-act="toggle-agent" data-idx="' + i + '" data-pid="' + pid + '">' + (off ? 'Aktifkan' : 'Nonaktifkan') + '</button>')
+          + '<div class="meta"><b>' + esc(ag.name) + '</b> <span class="badge b-ok">' + esc(badgeTxt) + '</span><br><small>' + esc(a.task) + '</small></div>'
+          + '<span class="agent-acts"><button class="iconbtn" data-act="a-play" data-idx="' + i + '" data-pid="' + pid + '" title="' + esc(tr('agent.play')) + '">\u25B6</button><button class="iconbtn" data-act="a-stop" data-idx="' + i + '" data-pid="' + pid + '" title="' + esc(tr('agent.stop')) + '">\u23F9</button><button class="iconbtn" data-act="a-deact" data-idx="' + i + '" data-pid="' + pid + '" title="' + esc(tr('agent.deactivate')) + '">\u2715</button></span>'
           + '</div>';
       });
       html += '</div>';
@@ -241,10 +244,40 @@ export function renderAgents() {
     renderGraphProjSel();
   }
 
-export function toggleAgent(idx, pid) {
-    var a = PROJECTS[pid].agents[idx];
-    a.status = a.status === "Nonaktif" ? "Idle" : "Nonaktif";
-    renderAgents(); renderDetail(); saveHomeState();
+/* v98 (perintah Patria 30 Okt 14:40): tombol kerja per agen aktif.
+   - Play: tandai Bekerja, pastikan node Graph project itu ada, jalankan
+     simulasi alur (satu-satunya "proses kerja" app saat ini).
+   - Stop: bersihkan tanda Bekerja + hentikan simulasi yang sedang jalan.
+   - X: Nonaktifkan -> baris hilang dari list aktif (renderAgents hanya
+     merender agen aktif) DAN node Graph project itu milik agen dihapus
+     (edge-nya ikut, splice in-place; node TERKUNCI dipertahankan, aturan v86).
+     Reaktivasi tetap bisa lewat menu + picker (pickActivate) dan popup Graph
+     (graphSyncAgent) — agen tidak dihapus permanen, hanya Nonaktif. */
+export function agentPlay(idx, pid) {
+    var proj = PROJECTS[pid]; if (!proj || !proj.agents[idx]) return;
+    var a = proj.agents[idx]; if (a.status === "Nonaktif") return;
+    a.running = true;
+    var nodeKey = graphEnsureAgentNode(a.key, pid);
+    if (nodeKey) { graphSel = nodeKey; renderGraph(); }
+    saveHomeState(); saveGraphState(); renderAgents();
+    runGraphSim("manual");
+  }
+export function agentStop(idx, pid) {
+    var proj = PROJECTS[pid]; if (!proj || !proj.agents[idx]) return;
+    proj.agents[idx].running = false;
+    graphStopSim();
+    saveHomeState(); renderAgents(); renderGraph();
+  }
+export function agentDeactivate(idx, pid) {
+    var proj = PROJECTS[pid]; if (!proj || !proj.agents[idx]) return;
+    var a = proj.agents[idx], key = a.key;
+    a.status = "Nonaktif"; a.running = false;
+    var removed = [];
+    Object.keys(GNODES).forEach(function (k) { var nd = GNODES[k]; if (nd.agent === key && nd.proj === pid && !nd.locked) removed.push(k); });
+    removed.forEach(function (k) { delete GNODES[k]; });
+    for (var i = GEDGES.length - 1; i >= 0; i--) { if (removed.indexOf(GEDGES[i].f) >= 0 || removed.indexOf(GEDGES[i].t) >= 0) GEDGES.splice(i, 1); }
+    if (graphSel && removed.indexOf(graphSel) >= 0) { graphSel = null; graphPopupOpen = false; }
+    saveHomeState(); saveGraphState(); renderAgents(); renderGraph(); renderGraphPopup(); renderDetail();
   }
 
 export function saveHomeState() {
@@ -779,6 +812,8 @@ export function runGraphSim(kind) {
       if (i >= seq.length) {
         graphRunning = false;
         graphSimTimer = null;
+        Object.keys(PROJECTS).forEach(function (pid) { (PROJECTS[pid].agents || []).forEach(function (a) { a.running = false; }); });
+        saveHomeState(); if (document.getElementById("agentList")) renderAgents();
         graphRunsAdd(kind);
         return;
       }
@@ -2686,5 +2721,5 @@ export function initV5() {
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
 
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }
