@@ -2050,7 +2050,7 @@ export function graphDeleteNode() {
   delete GNODES[key];
   for (var i = GEDGES.length - 1; i >= 0; i--) { if (GEDGES[i].f === key || GEDGES[i].t === key) GEDGES.splice(i, 1); }
   graphSel = null; graphPopupOpen = false;
-  saveGraphState(); renderGraph(); renderGraphPopup();
+  saveGraphState(); renderGraph(); renderGraphPopup(); renderAgents(); renderDetail();
   showNotice("graphNotice", tr("graph.node_deleted"));
 }
 export function graphPrimeFirst() {
@@ -2563,7 +2563,7 @@ export function initV5() {
       sendChat = function () { waApplyAttachments(); _sc(); waClearAttachments(); waInputChanged(); };
     })();
   renderAgents = function () { _ra2(); renderAddMenu(); };
-  showView = function (id) { _sv2(id); };
+  showView = function (id) { _sv2(id); if (id === "home") renderAgents(); };
   renderAgents();
   selectAgent = function (k, pid) { _sa2(k, pid); var inp = document.getElementById('chatInput'); if (inp) inp.placeholder = 'Message ' + AGENTS[k].name; };
   waInputChanged();

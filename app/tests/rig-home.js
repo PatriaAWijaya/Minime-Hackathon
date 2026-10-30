@@ -14,6 +14,7 @@
 //      channel buatan di atas (bukti localStorage).
 //  12. v92: picker Aktifkan + DnD + Prime dikecualikan dari project.
 //  13. v94: agen Graph tanpa proyek tampil di list + delegasi + adopsi DnD.
+//  14. v95: hapus node Graph -> list ikut hilang; kembali ke Home -> list segar.
 // Jalankan: npm run rig:home (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -261,6 +262,25 @@ try {
   check('v94: adopsi DnD -> produk masuk project', adopted && (dom.window.PROJECTS[firstPid].agents || []).some((a) => a.key === 'produk'), '');
   check('v94: adopsi -> grup Graph tak lagi menampilkan produk', ![...document.querySelectorAll('#agentList .agent')].some((el) => el.textContent.includes('Brief produk baru')), '');
   check('v94: adopsi -> node graph project ada', Object.values(dom.window.GNODES).some((n) => n.proj === firstPid && n.agent === 'produk'), '');
+
+  // 14. v95: hapus node Graph -> list ikut hilang; kembali ke Home -> list segar.
+  Object.values(dom.window.PROJECTS).forEach((p) => { p.agents = (p.agents || []).filter((a) => a.key !== 'media'); });
+  dom.window.GNODES['gx2'] = { name: 'Media', sub: 'Media', agent: 'media', brief: 'Brief media uji', proj: null, x: 10, y: 10, w: 150, kind: 'output' };
+  dom.window.renderAgents();
+  await tick(50);
+  check('v95: baris Graph media tampil', [...document.querySelectorAll('#agentList .agent')].some((el) => el.textContent.includes('Brief media uji')), '');
+  dom.window.graphSelect('gx2');
+  dom.window.graphDeleteNode();
+  await tick(50);
+  check('v95: hapus node -> baris Graph hilang', ![...document.querySelectorAll('#agentList .agent')].some((el) => el.textContent.includes('Brief media uji')), '');
+  dom.window.GNODES['gx3'] = { name: 'Media', sub: 'Media', agent: 'media', brief: 'Brief media uji', proj: null, x: 10, y: 10, w: 150, kind: 'output' };
+  dom.window.renderAgents();
+  await tick(50);
+  check('v95: baris Graph media tampil lagi', [...document.querySelectorAll('#agentList .agent')].some((el) => el.textContent.includes('Brief media uji')), '');
+  delete dom.window.GNODES['gx3'];
+  dom.window.showView('home');
+  await tick(50);
+  check('v95: kembali ke Home -> baris Graph basi hilang', ![...document.querySelectorAll('#agentList .agent')].some((el) => el.textContent.includes('Brief media uji')), '');
 
 } catch (e) {
   // eslint-disable-next-line no-console
