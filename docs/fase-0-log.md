@@ -2272,3 +2272,11 @@ dokumen lama yang dipakai.
 - Perintah Patria 19:16: rekap detail sudah/belum + cek konsistensi logic, code, performa; tanpa fungsi tumpang tindih; nol error lolos; compact namun powerful.
 - Hasil: 13 rig lolos, gate-test 14 grup lolos, tsc bersih, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error. i18n 825/bahasa 0 duplikat. Duplikasi definisi fungsi 0 (282 v5logic + 18 chat.ts). Bridge 166 lengkap. Dialog native live 0. Bentuk PROJECTS konsisten di kedua pembuatnya. Bundle JS 464 KB mentah / ~150 KB gzip, CSS 39 KB — stabil vs v97.
 - Temuan kode: NOL. Dua alarm palsu diklarifikasi (regex grep ikut menangkap kunci baru proj-del-confirm; socNextRepeat adalah impor social.js). Dokumen rekap: docs/rekap-pekerjaan-30-okt.md.
+
+## v109 — tema mengikuti sistem + Dark Violet Glass (30 Okt 2026 ~19:45 WIB, perintah Patria 19:23)
+- Default = setelan desktop user (prefers-color-scheme, di-resolve JS menjadi data-theme="dark"|"light" pada <html>, dengan listener perubahan sistem saat mode system). Pilihan di Settings: Mengikuti sistem / Gelap / Terang, tersimpan di minime.theme ('system' default).
+- Gelap = Dark Violet Glass: dasar ungu sangat gelap #150A26 + cahaya radial violet, panel/kartu/bubble/node kaca tembus pandang (rgba violet + backdrop blur 14px), aksen violet #A78BFA/#8B5CF6. Terang = bersih dengan aksen violet yang sama (#7C3AED/#6D28D9) agar satu keluarga aksen di kedua tema.
+- Implementasi: variabel --t-* di layout-scroll.css (satu blok komponen melayani kedua tema; app.css TIDAK diedit, aturan menang lewat urutan + spesifisitas setara, fallback ke warna lama bila variabel hilang). app/AGENTS.md diperbarui (aturan tema monokrom-pink lama diganti).
+- i18n: 4 kunci settings.theme.* (825 -> 829/bahasa, paritas penuh, 0 duplikat).
+- Gerbang: root tsc bersih, 13 rig lolos (rig-settings seksi tema baru 6 cek), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, cargo fmt/check/check --tests 0 warning/error. Koreksi rig: minifier CSS menghapus kutip atribut ([data-theme=dark]) sehingga asersi awal gagal — CSS-nya benar, asersinya yang diperbaiki.
+- Push kode: lokal ac92c0d ↔ remote 954d36b (tree identik).
