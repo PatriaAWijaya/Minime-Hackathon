@@ -2073,7 +2073,7 @@ var lastNodeRects = {}, dragWH = null;
 var nodeCounter = 0;
 
 /* ---------- Graph v77: setting per node ala OpenBot ---------- */
-var graphSel = null, graphZoom = 1, graphHistOn = false, graphTimer = null, graphLastCheck = null, graphPopupOpen = false;
+var graphSel = null, graphZoom = 1, graphTimer = null, graphLastCheck = null, graphPopupOpen = false;
 var graphPanX = 0, graphPanY = 0, panDrag = null, panSuppressClick = false;
 
 function graphZoomEl() { return document.getElementById("graphZoom") || document.getElementById("graphBox"); }
@@ -2449,6 +2449,23 @@ export function graphBuildProject(pid) {
   (PROJECTS[pid].agents || []).forEach(function (a) { if (a.key !== "prime") graphEnsureAgentNode(a.key, pid); });
 }
 
+/* v115 (perintah Patria 30 Okt 21:05): buat project baru dari header Graph.
+   Nama otomatis "Project Baru" (+ nomor bila sudah ada); pid via plusSlug;
+   langsung menjadi project aktif + node Prime di Graph (sinkron dua arah:
+   folder muncul di list agen). Rename tersedia lewat pensil di header. */
+export function graphNewProject() {
+  var base = tr('proj.new');
+  var name = base, n = 2;
+  while (Object.keys(PROJECTS).some(function (pid) { return PROJECTS[pid].name === name; })) { name = base + ' ' + n; n++; }
+  var pid = plusSlug(name, function (s) { return !!PROJECTS[s]; });
+  PROJECTS[pid] = { name: name, agents: [], chat: [], kanban: [] };
+  currentProj = pid;
+  saveHomeState();
+  syncProjectUI(pid); renderAgents(); renderDetail(); renderChat(); renderKanban();
+  graphBuildProject(pid); renderGraph();
+  return pid;
+}
+
 /* v103 (Alur 1, perintah Patria 30 Okt 16:02 "lanjut"): project dari brief.
    hasProject sempat dihapus v101 sebagai dead code — kini dipakai gerbang
    Alur 1. ensureProjectForBrief membuat project HANYA bila belum ada
@@ -2501,21 +2518,6 @@ function graphRunsAdd(kind) {
   r.unshift({ at: new Date().toISOString(), kind: kind });
   r = r.slice(0, 50);
   try { localStorage.setItem("minime.graphRuns", JSON.stringify(r)); } catch (_) {}
-  renderGraphHist();
-}
-export function graphToggleHist() { graphHistOn = !graphHistOn; renderGraphHist(); }
-export function renderGraphHist() {
-  var el = document.getElementById("graphHist"); if (!el) return;
-  var badge = document.getElementById("graphHistBadge");
-  var runs = graphRunsGet();
-  if (badge) badge.textContent = runs.length ? String(runs.length) : "";
-  if (!graphHistOn) { el.style.display = "none"; return; }
-  el.style.display = "block";
-  if (!runs.length) { el.innerHTML = "<div class='g-hist-empty'>" + tr("graph.hist_empty") + "</div>"; return; }
-  el.innerHTML = runs.slice(0, 10).map(function (r) {
-    var d = new Date(r.at);
-    return "<div class='g-hist-row'>" + d.toLocaleString(graphLocale(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + " — " + tr("graph.hist_run") + " (" + esc(r.kind) + ")</div>";
-  }).join("");
 }
 export function initGraphScheduler() {
   if (graphTimer) return;
@@ -2549,7 +2551,6 @@ function applyGraphView() {
   var lab = document.getElementById("graphZoomLabel"); if (lab) lab.textContent = Math.round(graphZoom * 100) + "%";
 }
 export function graphPanTo(x, y) { graphPanX = x; graphPanY = y; applyGraphView(); saveGraphState(); }
-export function graphResetView() { graphPanX = 0; graphPanY = 0; graphZoomSet(1); saveGraphState(); }
 export function graphZoomSet(z) {
   graphZoom = Math.max(0.5, Math.min(2, z));
   applyGraphView();
@@ -2957,7 +2958,6 @@ export function initV5() {
   renderChat();
   renderKanban();
   renderGraph();
-  renderGraphHist();
   renderLib();
   renderPlanner();
   (function () {
@@ -2984,5 +2984,5 @@ export function initV5() {
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
 
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphResetView, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphNewProject, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }

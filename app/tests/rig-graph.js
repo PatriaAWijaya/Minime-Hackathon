@@ -176,10 +176,6 @@ try {
   document.querySelector('.g-run').click();
   await tick(4200);
   check('Run now -> riwayat tercatat', JSON.parse(store.get('minime.graphRuns') || '[]').length >= 1, store.get('minime.graphRuns'));
-  check('badge riwayat = 1', document.getElementById('graphHistBadge')?.textContent === '1', document.getElementById('graphHistBadge')?.textContent);
-  [...document.querySelectorAll('.graph-head-btns button')].find((b) => b.textContent.includes('Riwayat')).click();
-  await tick(100);
-  check('riwayat tampil + baris Simulasi selesai', (document.getElementById('graphHist')?.textContent || '').includes('Simulasi selesai'), document.getElementById('graphHist')?.textContent);
 
   // 10. Zoom + Add node.
   dom.window.graphZoomIn();
@@ -204,7 +200,6 @@ try {
   check('+ di node decision menambah node (10 -> 11)', nodeCount() === 11, nodeCount());
   document.querySelector('[data-nkey="trigger"] .n8n-play').click();
   await tick(4200);
-  check('play node pertama -> badge riwayat = 2', document.getElementById('graphHistBadge')?.textContent === '2', document.getElementById('graphHistBadge')?.textContent);
   document.querySelector('.n8n-node.sel .n8n-del').click();
   await tick(100);
   check('klik handle × node -> langsung hapus, node 11 -> 10 (v92, tanpa popup/konfirmasi)', nodeCount() === 10, nodeCount());
@@ -217,7 +212,7 @@ try {
   check('topbar punya dropdown proyek', !!document.getElementById('graphProjSel'), '');
   check('dropdown kosong saat nol proyek (placeholder)', [...document.getElementById('graphProjSel').options].map((o) => o.value).join(',') === '', [...document.getElementById('graphProjSel').options].map((o) => o.value).join(','));
   check('zoom label pindah ke topbar', !!document.querySelector('.graph-head-btns #graphZoomLabel'), '');
-  check('topbar punya tombol Hentikan', [...document.querySelectorAll('.graph-head-btns button')].some((b) => b.textContent.includes('Hentikan')), '');
+  check('topbar punya tombol Hentikan (v115: ikon ⏹ + tooltip Hentikan)', [...document.querySelectorAll('.graph-head-btns button')].some((b) => b.textContent.trim() === '⏹' && b.title.includes('Hentikan')), '');
   document.querySelector('[data-nkey="prime"]').click();
   await tick(100);
   check('klik node tidak membuka popup', popup().style.display === 'none', popup().style.display);
@@ -242,9 +237,9 @@ try {
   [...panel().querySelectorAll('button')].find((b) => b.textContent === 'Hapus').click();
   await tick(100);
   check('hapus gate (v92, satu langkah) -> dist + revisi jadi yatim (pink)', document.querySelector('[data-nkey="dist"]').classList.contains('bad') && document.querySelector('[data-nkey="revisi"]').classList.contains('bad'), '');
-  document.querySelector('.graph-head-btns button.btn-primary').click();
+  [...document.querySelectorAll('.graph-head-btns button')].find((b) => b.textContent.trim() === '▶').click();
   await tick(150);
-  [...document.querySelectorAll('.graph-head-btns button')].find((b) => b.textContent.includes('Hentikan')).click();
+  [...document.querySelectorAll('.graph-head-btns button')].find((b) => b.textContent.trim() === '⏹').click();
   await tick(100);
   check('play lalu stop di topbar -> tanpa .exec', !document.querySelector('.n8n-node.exec'), '');
 
@@ -440,7 +435,19 @@ try {
   const gb20 = document.getElementById('graphBox');
   const zoom20 = () => document.getElementById('graphZoom');
   const pan20 = () => { try { return JSON.parse(store.get('minime.graphState') || '{}').pan || null; } catch (_) { return null; } };
-  check('v108: tombol Reset tampilan ada di header Graph', [...document.querySelectorAll('#view-graph button')].some((b) => b.textContent.trim() === 'Reset tampilan'), '');
+  check('v115: tombol Reset + Riwayat SUDAH hilang dari header Graph', ![...document.querySelectorAll('#view-graph button')].some((b) => b.textContent.trim() === 'Reset tampilan' || b.textContent.trim() === 'Riwayat'), '');
+  check('v115: tombol Buat Project Baru ada di header Graph', [...document.querySelectorAll('#view-graph button')].some((b) => b.textContent.trim() === 'Buat Project Baru'), '');
+  check('v115: Jalankan + Hentikan hanya ikon (Play/Stop) + tooltip label penuh', (() => { const btns = [...document.querySelectorAll('#view-graph button')]; const play = btns.find((b) => b.textContent.trim() === '▶'); const stop = btns.find((b) => b.textContent.trim() === '⏹'); return !!play && play.title.includes('Jalankan') && !!stop && stop.title.includes('Hentikan'); })(), '');
+  const projCount115 = Object.keys(dom.window.PROJECTS).length;
+  const names115 = new Set(Object.values(dom.window.PROJECTS).map((pr) => pr.name));
+  const pid115 = dom.window.graphNewProject();
+  await tick(100);
+  const name115 = dom.window.PROJECTS[pid115] ? dom.window.PROJECTS[pid115].name : '';
+  check('v115: Buat Project Baru -> project baru aktif + folder muncul di list', !!dom.window.PROJECTS[pid115] && /^Project Baru( \d+)?$/.test(name115) && !names115.has(name115) && Object.keys(dom.window.PROJECTS).length === projCount115 + 1 && [...document.querySelectorAll('#agentList .group')].some((el) => el.textContent.includes(name115)), pid115 + ':' + name115);
+  check('v115: project baru punya node Prime di Graph', Object.values(dom.window.GNODES).some((nd) => nd.proj === pid115 && nd.agent === 'prime'), '');
+  const pid115b = dom.window.graphNewProject();
+  const name115b = dom.window.PROJECTS[pid115b] ? dom.window.PROJECTS[pid115b].name : '';
+  check('v115: project kedua bernama beda (tanpa duplikat nama)', /^Project Baru( \d+)?$/.test(name115b) && name115b !== name115, name115b);
   gb20.dispatchEvent(new dom.window.MouseEvent('mousedown', { bubbles: true, clientX: 100, clientY: 100 }));
   document.dispatchEvent(new dom.window.MouseEvent('mousemove', { bubbles: true, clientX: 150, clientY: 130 }));
   document.dispatchEvent(new dom.window.MouseEvent('mouseup', { bubbles: true }));
@@ -456,9 +463,9 @@ try {
     await tick(50);
   }
   check('v108: drag node TIDAK menggeser workspace', zoom20().style.transform === before20, zoom20().style.transform || '');
-  dom.window.graphResetView();
+  dom.window.graphPanTo(0, 0); dom.window.graphZoomSet(1);
   await tick(50);
-  check('v108: reset mengembalikan pan 0 + zoom 100%', (zoom20().style.transform || '').includes('translate(0px, 0px)') && (zoom20().style.transform || '').includes('scale(1)') && document.getElementById('graphZoomLabel')?.textContent === '100%', zoom20().style.transform || '');
+  check('v108: pan 0 + zoom 100% via graphPanTo/graphZoomSet (tombol Reset dihapus v115)', (zoom20().style.transform || '').includes('translate(0px, 0px)') && (zoom20().style.transform || '').includes('scale(1)') && document.getElementById('graphZoomLabel')?.textContent === '100%', zoom20().style.transform || '');
 
 } catch (e) {
   // eslint-disable-next-line no-console

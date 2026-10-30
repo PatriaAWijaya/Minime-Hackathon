@@ -291,8 +291,6 @@ h3 { font-size: 18px; }
 
 /* ---------- Graph v77: panel setting per node + toolbar ---------- */
 .graph-head-btns { display: flex; gap: 8px; align-items: center; }
-.g-badge { display: inline-block; min-width: 18px; text-align: center; background: #EB87B4; color: #262626; border-radius: 9px; font-size: 11px; font-weight: 700; padding: 0 4px; }
-.g-badge:empty { display: none; }
 .graph-wrap { display: block; height: 100%; }
 .kb-projhead { font-weight: 700; margin: 14px 0 6px; }
 .graph-empty-plus { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 72px; height: 72px; border-radius: 50%; border: none; background: #EB87B4; color: #262626; font-size: 40px; line-height: 1; cursor: pointer; z-index: 5; display: none; align-items: center; justify-content: center; }
@@ -320,7 +318,6 @@ h3 { font-size: 18px; }
 .g-delask { margin-top: 10px; font-size: 13px; }
 .graph-toolbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
 .graph-head-btns #graphZoomLabel { font-size: 13px; color: #a1a1a1; min-width: 44px; text-align: center; }
-.graph-hist { background: #1f1f1f; border: 1px solid #262626; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; color: #ececec; }
 .g-hist-row { padding: 3px 0; border-bottom: 1px solid #262626; }
 .g-hist-row:last-child { border-bottom: none; }
 .n8n-node.sel { box-shadow: 0 0 0 2px #EB87B4; }
