@@ -430,16 +430,16 @@ h3 { font-size: 18px; }
    sehingga satu blok melayani kedua tema; app.css TIDAK diedit (aturan
    ini menang karena datang sesudahnya dengan spesifisitas setara). */
 [data-theme="dark"] {
-  --t-bg: #1B0A2E; --t-bg-soft: #241040;
-  --t-panel: rgba(88, 28, 135, 0.45); --t-panel2: rgba(74, 20, 110, 0.60);
-  --t-glass: rgba(108, 40, 150, 0.42);
-  --t-border: rgba(232, 121, 249, 0.30); --t-border-strong: rgba(217, 70, 239, 0.50);
-  --t-text: #FDF4FF; --t-muted: #D8B4FE; --t-faint: #B79CE0;
-  --t-accent: #A855F7; --t-accent2: #E879F9; --t-accent-strong: #9333EA; --t-accent-soft: rgba(217, 70, 239, 0.16);
-  --t-accent-grad: linear-gradient(135deg, #9333EA, #D946EF);
+  --t-bg: #0E0718; --t-bg-soft: #160A26;
+  --t-panel: rgba(48, 20, 80, 0.50); --t-panel2: rgba(38, 16, 64, 0.65);
+  --t-glass: rgba(60, 26, 92, 0.45);
+  --t-border: rgba(168, 130, 210, 0.22); --t-border-strong: rgba(190, 90, 215, 0.35);
+  --t-text: #E9E2F2; --t-muted: #A89AC2; --t-faint: #7E7396;
+  --t-accent: #8E7CC3; --t-accent2: #B87AC4; --t-accent-strong: #6D28D9; --t-accent-soft: rgba(162, 28, 175, 0.14);
+  --t-accent-grad: linear-gradient(135deg, #6D28D9, #A21CAF);
   --t-accent-text: #FFFFFF;
-  --t-canvas-bg: #170A26; --t-dot: rgba(232, 121, 249, 0.35);
-  --t-input-bg: rgba(40, 16, 66, 0.70); --t-hover-bg: rgba(217, 70, 239, 0.14);
+  --t-canvas-bg: #0C0514; --t-dot: rgba(190, 140, 210, 0.25);
+  --t-input-bg: rgba(24, 10, 40, 0.75); --t-hover-bg: rgba(162, 28, 175, 0.12);
 }
 [data-theme="light"] {
   --t-bg: #FBF5FF; --t-bg-soft: #FFFFFF;
@@ -453,7 +453,7 @@ h3 { font-size: 18px; }
   --t-canvas-bg: #F3E8FF; --t-dot: rgba(217, 70, 239, 0.28);
   --t-input-bg: #FFFFFF; --t-hover-bg: #F5D0FE;
 }
-[data-theme="dark"] body { background-image: radial-gradient(700px 320px at 15% -5%, rgba(147, 51, 234, 0.35), transparent 60%), radial-gradient(520px 280px at 95% 0%, rgba(217, 70, 239, 0.28), transparent 60%); }
+[data-theme="dark"] body { background-image: radial-gradient(700px 320px at 15% -5%, rgba(109, 40, 180, 0.22), transparent 60%), radial-gradient(520px 280px at 95% 0%, rgba(162, 28, 175, 0.16), transparent 60%); }
 body { background: var(--t-bg, #0e0e0e); color: var(--t-text, #ececec); }
 .banner { background: var(--t-panel2, #1a1a1a); border-bottom-color: var(--t-accent, #FFD1DC); color: var(--t-text, #ececec); }
 .banner b { color: var(--t-accent, #FFD1DC); }
@@ -486,7 +486,7 @@ body { background: var(--t-bg, #0e0e0e); color: var(--t-text, #ececec); }
 .composer { border-top-color: var(--t-border, #262626); background: var(--t-panel, #171717); }
 .composer textarea { background: var(--t-input-bg, #262626); border-color: var(--t-border, #3a3a3a); color: var(--t-text, #ececec); }
 .btn { background: var(--t-panel2, #262626); border-color: var(--t-border, #3a3a3a); color: var(--t-text, #ececec); }
-.btn-primary { background: var(--t-accent-grad, #FFD1DC); border-color: transparent; color: var(--t-accent-text, #262626); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 14px rgba(217, 70, 239, 0.35); }
+.btn-primary { background: var(--t-accent-grad, #FFD1DC); border-color: transparent; color: var(--t-accent-text, #262626); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 14px rgba(162, 28, 175, 0.30); }
 .chip { border-color: var(--t-accent, #FFD1DC); background: var(--t-panel2, #262626); color: var(--t-text, #ececec); }
 .notice { background: var(--t-glass, #1f1f1f); border-color: var(--t-accent, #FFD1DC); color: var(--t-text, #ececec); }
 .kcol { background: var(--t-panel, #1f1f1f); }
@@ -551,6 +551,6 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
    permukaan kaca (gelap maupun terang; putih di atas kaca ungu memberi
    kesan basah, bukan sekadar tembus pandang). */
 .agent, .kcard, .n8n-node, .msg .bubble, .mediacard, .gnode, .add-menu, .wa-pop, .todayitem {
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 42%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 8px 24px rgba(0, 0, 0, 0.22);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 42%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 8px 24px rgba(0, 0, 0, 0.30);
 }

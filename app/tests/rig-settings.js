@@ -187,7 +187,7 @@ try {
   const cssLink109 = html.match(/<link[^>]*href="([^"]+\.css)"/);
   const cssText109 = (cssLink109 ? fs.readFileSync(path.join(distDir, cssLink109[1]), 'utf-8') : '').toLowerCase();
   check('v109: CSS ter-build memuat Dark Violet Glass (data-theme dark + blur)', cssText109.includes('data-theme') && cssText109.includes('backdrop-filter'), '');
-  check('v110: CSS ter-build memuat duo violet-magenta + glossy (dasar #1b0a2e + gradien + sheen)', cssText109.includes('#1b0a2e') && cssText109.includes('#d946ef') && cssText109.includes('linear-gradient') && cssText109.includes('inset 0 1px'), '');
+  check('v111: CSS ter-build tema gelap diredam (dasar #0e0718 + magenta pekat #a21caf + gradien + sheen)', cssText109.includes('#0e0718') && cssText109.includes('#a21caf') && cssText109.includes('linear-gradient') && cssText109.includes('inset 0 1px'), '');
 } catch (e) {
   check('rig-settings exception', false, e && e.stack ? e.stack : String(e));
 }
