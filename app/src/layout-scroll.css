@@ -405,3 +405,12 @@ h3 { font-size: 18px; }
 #agentList .agent .iconbtn:hover { border-color: #EB87B4; }
 #agentList .agent.running { border-color: #A6EBB1; }
 #agentList .agent.running .iconbtn[data-act="a-stop"], #agentList .agent.running .iconbtn[data-act="g-stop"] { background: #EB87B4; color: #262626; border-color: #EB87B4; }
+
+/* v106 (perintah Patria 30 Okt 16:39): teks tidak boleh keluar dari area.
+   app.css adalah salinan verbatim prototype — tidak diedit; aturan ini
+   tinggal di sini (diimpor sesudah app.css, jadi menang). Bubble chat
+   tidak punya pemenggal kata: token panjang tanpa spasi (URL, nama
+   konstanta, path) meluber melewati max-width bubble. */
+.msg .bubble { overflow-wrap: anywhere; word-break: break-word; }
+.msg .body { min-width: 0; }
+#chatBox { overflow-x: hidden; }

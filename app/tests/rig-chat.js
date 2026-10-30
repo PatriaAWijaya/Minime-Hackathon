@@ -200,6 +200,10 @@ try {
   check('CSS ter-build memuat hijau #A6EBB1', cssText.includes('#a6ebb1'));
   check('CSS ter-build memuat aturan bubble user', cssText.includes('.msg.user .body') && cssText.includes('.msg.user .bubble'));
   check('CSS ter-build memuat aturan header dalam bubble', cssText.includes('.msg.user .bubble .who') && cssText.includes('.msg .bubble .who'));
+  // 9. v106 (perintah Patria 30 Okt 16:39): teks panjang tidak keluar area.
+  const msgBubbleRules = cssText.match(/\.msg\s+\.bubble\s*\{[^}]*\}/g) || [];
+  check('v106: CSS bubble chat memakai overflow-wrap', msgBubbleRules.some((r) => r.includes('overflow-wrap')), msgBubbleRules.join(' | ').slice(0, 300));
+  check('v106: CSS chatBox menyembunyikan luapan horizontal', /#chatbox\s*\{[^}]*overflow-x\s*:\s*hidden/.test(cssText), '');
   const userBubbleRules = cssText.match(/\.msg\.user \.bubble\{[^}]*\}/g) || [];
   check('isi bubble user rata kanan', userBubbleRules.some((r) => r.includes('text-align:right')), userBubbleRules.join(' | ').slice(0, 200));
 

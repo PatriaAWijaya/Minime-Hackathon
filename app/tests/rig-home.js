@@ -361,6 +361,21 @@ try {
   check('v105: X folder -> project + node + edge hilang', !dom.window.PROJECTS['pdel'] && !dom.window.GNODES['gxdel1'] && !dom.window.GNODES['gxdel2'] && !dom.window.GEDGES.some((e) => e.f === 'gxdel2'), 'proj=' + !!dom.window.PROJECTS['pdel']);
   check('v105: header folder hilang dari list', !grpDel(), '');
 
+  // 18. v106 (perintah Patria 30 Okt 16:42): rename folder project.
+  dom.window.PROJECTS['pren'] = { name: 'Nama Lama', agents: [], chat: [], kanban: [] };
+  dom.window.renderAgents();
+  await tick(50);
+  const grpRen = () => [...document.querySelectorAll('#agentList .group')].find((el) => el.textContent.includes('Nama Lama') || el.textContent.includes('Nama Baru Uji'));
+  check('v106: tombol rename ada di header folder', !!document.querySelector('#agentList [data-act="proj-rename"][data-pid="pren"]'), '');
+  dom.window.prompt = () => 'Nama Baru Uji';
+  document.querySelector('#agentList [data-act="proj-rename"][data-pid="pren"]').click();
+  await tick(50);
+  check('v106: rename mengubah nama project + header', dom.window.PROJECTS['pren'].name === 'Nama Baru Uji' && !!grpRen() && grpRen().textContent.includes('Nama Baru Uji'), dom.window.PROJECTS['pren'].name);
+  dom.window.prompt = () => null;
+  document.querySelector('#agentList [data-act="proj-rename"][data-pid="pren"]').click();
+  await tick(50);
+  check('v106: rename dibatalkan -> nama tetap', dom.window.PROJECTS['pren'].name === 'Nama Baru Uji', dom.window.PROJECTS['pren'].name);
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-home exception :: ' + (e && e.stack ? e.stack : e));
