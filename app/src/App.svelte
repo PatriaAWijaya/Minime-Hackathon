@@ -576,10 +576,6 @@
       <div class="colhead chat-date-head">
         <div class="chat-date">{t('home.chatdate', lang)}</div>
         <div class="chat-proj" id="chatProj">—</div>
-        <label style="margin-top:8px">{t('home.proj', lang)}
-          <select id="projectSel" onchange={(e) => { switchProject(e.currentTarget.value) }} style="margin-top:4px">
-          </select>
-        </label>
       </div>
       <div class="scroll" id="chatBox"></div>
       <div class="composer">

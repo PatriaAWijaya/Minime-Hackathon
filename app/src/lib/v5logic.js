@@ -401,7 +401,7 @@ export function renderDetail() {
       + '<div class="d-label">' + tr('detail.brain') + '</div><div class="d-rows">'
       + (detailModelOpen ? '<div class="d-row"><span>' + tr('detail.model') + '</span><select class="d-val" data-act="d-model-set">' + detailModelOpts(ag) + '</select></div>' : '<div class="d-row" data-act="d-model-toggle"><span>' + tr('detail.model') + '</span><span class="d-val">' + esc(ag.model || tr('detail.model.default')) + ' ›</span></div>')
       + (detailEffortOpen ? '<div class="d-row"><span>' + tr('detail.reasoning') + '</span><select class="d-val" data-act="d-effort-set">' + detailEffortOpts(ag) + '</select></div>' : '<div class="d-row" data-act="d-effort-toggle"><span>' + tr('detail.reasoning') + '</span><span class="d-val">' + (ag.effort ? esc(ag.effort) + ' ↕' : tr('detail.val.low')) + '</span></div>')
-      + '<div class="d-row" data-act="d-note" data-text="' + esc(tr('detail.note.backup_chain')) + '"><span>' + tr('detail.backup') + '</span><span class="d-val">Meta → Gemini → Ollama ›</span></div></div>'
+      + '</div>'
       + '<div class="d-label">' + tr('detail.knows') + '</div><div class="d-rows">'
       + '<div class="d-row" data-act="d-mem-toggle"><span>' + tr('detail.memories') + '</span><span class="d-val">' + tr('detail.mem.count', {n: memCount}) + ' ›</span></div>'
       + '<div class="d-row" data-act="d-skill-list"><span>' + tr('detail.skills') + '</span><span class="d-val">' + ag.skills.length + ' assigned ›</span></div>'
@@ -2062,7 +2062,7 @@ export function graphSelect(key) { graphSel = GNODES[key] ? key : null; graphSel
 export function graphClosePanel() { graphPopupOpen = false; graphSel = null; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
 function graphOpenPopup(k) { if (!GNODES[k]) return; graphSelect(k); graphPopupOpen = true; renderGraphPopup(); }
 export function renderGraphProjSel() {
-  ["graphProjSel", "projectSel"].forEach(function (id) {
+  ["graphProjSel"].forEach(function (id) {
     var el = document.getElementById(id); if (!el) return;
     el.innerHTML = "";
     var keys = Object.keys(PROJECTS);
