@@ -292,6 +292,47 @@ try {
   check('v113: bubble user sedikit lebih gelap dari #A6EBB1 (header agen tetap hijau itu)', /\.msg\s+\.bubble\s+\.who\s*\{[^}]*#a6ebb1/.test(cssText), '');
   check('v112: CSS ter-build mengatur header nama user dark violet', /\.msg\.user\s+\.bubble\s+\.who\s*\{[^}]*#4c1d95/.test(cssText), '');
 
+
+  // 12. v116: tombol aksi chat gradasi violet-pink -> hijau setelah klik;
+  // link chat (URL telanjang/www/markdown/<a> mentah) bisa dibuka eksternal.
+  check('v116: CSS ter-build memberi .chat-act gradasi', /\.chat-act\{[^}]*linear-gradient/.test(cssText), '');
+  check('v116: CSS ter-build memberi .chat-act.done hijau', /\.chat-act\.done\{[^}]*#8ed694/.test(cssText), '');
+  // Tombol done diverifikasi dengan alur approve segar: residu §10 sudah
+  // dihapus §6 bersama projectnya, jadi kirim ulang pemicu tombol Studio
+  // (pola sama seperti §10: dua ketuk karena draf Script Editor ada).
+  await sendMsg('buatkan naskah video kopi');
+  await waitFor(() => [...document.querySelectorAll('#chatBox button')].some((b) => b.textContent.trim() === 'Buka di Media Studio'), 'tombol studio v116', 120);
+  const btn116 = [...document.querySelectorAll('#chatBox button')].find((b) => b.textContent.trim() === 'Buka di Media Studio');
+  btn116.click();
+  await tick(200);
+  btn116.click();
+  await tick(200);
+  const btn116b = [...document.querySelectorAll('#chatBox button')].find((b) => b.textContent.trim() === 'Buka di Media Studio');
+  check('v116: tombol Studio sukses diklik bertanda done (hijau)', !!btn116b && btn116b.classList.contains('done') && btn116b.classList.contains('chat-act'), btn116b?.className || 'tidak ada');
+  dom.window.renderChat();
+  await tick(100);
+  const btn116c = [...document.querySelectorAll('#chatBox button')].find((b) => b.textContent.trim() === 'Buka di Media Studio');
+  check('v116: tanda done bertahan setelah renderChat ulang', !!btn116c && btn116c.classList.contains('done'), btn116c?.className || 'tidak ada');
+  dom.window.postChat('kreatif', 'Kreatif', '#fff', 'Lihat https://contoh.id/promo, www.toko.id dan [Panduan](https://panduan.id/x).');
+  await tick(100);
+  const links116 = [...document.querySelectorAll('#chatBox a[data-act="chat-link"]')];
+  check('v116: URL telanjang + www + markdown jadi 3 link chat', links116.length === 3, links116.map((a) => a.getAttribute('data-url')).join(' | '));
+  check('v116: data-url benar (koma akhir dibuang, www diberi https)', links116[0]?.getAttribute('data-url') === 'https://contoh.id/promo' && links116[1]?.getAttribute('data-url') === 'https://www.toko.id' && links116[2]?.getAttribute('data-url') === 'https://panduan.id/x', links116.map((a) => a.getAttribute('data-url')).join(' | '));
+  const invBefore116 = log.filter((x) => x === 'invoke:open_external_url').length;
+  links116[0].click();
+  await tick(100);
+  check('v116: klik link chat -> open_external_url dipanggil', log.filter((x) => x === 'invoke:open_external_url').length === invBefore116 + 1, log.slice(-5).join(','));
+  dom.window.postChat('kreatif', 'Kreatif', '#fff', 'coba <a href="https://mentah.id/a">tautan mentah</a> ini');
+  await tick(100);
+  const raw116 = document.querySelector('#chatBox a[href="https://mentah.id/a"]');
+  raw116.click();
+  await tick(100);
+  check('v116: klik <a href> mentah -> dibuka eksternal (bukan navigasi WebView)', log.filter((x) => x === 'invoke:open_external_url').length === invBefore116 + 2, log.slice(-5).join(','));
+  dom.window.postChat('user', 'Patria', '#374151', 'cek https://user.id/a?x=1&y=2 ya');
+  await tick(100);
+  const userLink116 = [...document.querySelectorAll('#chatBox a[data-act="chat-link"]')].find((a) => (a.getAttribute('data-url') || '').includes('user.id'));
+  check('v116: link di bubble user juga aktif (tanpa double-escape &)', userLink116?.getAttribute('data-url') === 'https://user.id/a?x=1&y=2', userLink116?.getAttribute('data-url') || 'tidak ada');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-chat exception :: ' + (e && e.stack ? e.stack : e));

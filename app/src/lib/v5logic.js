@@ -1,4 +1,5 @@
 import { renderNativePlanner, initSocialScheduler, socNextRepeat } from './social.js';
+import { invoke } from '@tauri-apps/api/core';
 
 /* v109 (perintah Patria 30 Okt 19:23): tema — default mengikuti setelan
    desktop user (prefers-color-scheme); user bisa memaksa gelap/terang
@@ -254,9 +255,18 @@ function homeChatWire() {
   var box = document.getElementById("view-home"); if (!box) return; homeChatWired = true;
   box.addEventListener("click", function (e) {
     if (!e.target || !e.target.closest) return;
+    // v116: <a href=http> mentah di bubble (dari output model) — cegah
+    // navigasi WebView keluar app, buka lewat browser luar.
+    var rawA = e.target.closest("a[href]");
+    if (rawA && box.contains(rawA) && /^https?:\/\//.test(rawA.getAttribute("href") || "")) {
+      e.preventDefault();
+      openChatLink(rawA.getAttribute("href"));
+      return;
+    }
     var el = e.target.closest("[data-act]"); if (!el || !box.contains(el)) return;
     var act = el.getAttribute("data-act"), idx = parseInt(el.getAttribute("data-idx") || "0", 10);
     if (act === "chat-approve") { if (window.approveStudio) window.approveStudio(idx); }
+    else if (act === "chat-link") { openChatLink(el.getAttribute("data-url")); }
     else if (act === "wa-cam") waCamShot();
     else if (act === "wa-rec") waRecToggle();
     else if (act === "wa-rm") waRemoveAtt(idx);
@@ -521,6 +531,72 @@ function mainChatGet() {
   return MAINCHAT;
 }
 function mainChatSave() { try { window.localStorage.setItem('minime.mainChat', JSON.stringify(mainChatGet().slice(-500))); } catch (_) {} }
+/* v116 (perintah Patria 30 Okt 21:15): link di chat.
+   Temuan: URL telanjang di teks agen selama ini hanya teks biasa (tidak
+   bisa diklik sama sekali), dan <a href> mentah dari output model akan
+   menavigasi WebView keluar app. linkifyChatHtml membungkus URL menjadi
+   <a data-act="chat-link" data-url="..."> — URL telanjang, www., dan
+   markdown [teks](url); bagian di dalam tag dilewati, dan teks di dalam
+   <a> yang sudah ada tidak dilinkifikasi ulang (anti <a> bersarang).
+   Teks user sudah di-escape sebelum masuk sini sehingga &amp; di-decode
+   dulu agar href tidak double-escape. */
+function linkifyChatHtml(html) {
+  var parts = String(html).split(/(<[^>]*>)/g);
+  var inAnchor = false;
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    if (part.charAt(0) === '<') {
+      if (/^<a[\s>]/.test(part)) inAnchor = true;
+      else if (/^<\/a[\s>]/.test(part)) inAnchor = false;
+      continue;
+    }
+    if (inAnchor) continue;
+    var t = part.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function (m, txt, url) {
+      var raw = url.replace(/&amp;/g, '&');
+      return '<a class="chat-link" data-act="chat-link" data-url="' + esc(raw) + '">' + esc(txt) + '</a>';
+    });
+    var sub = t.split(/(<[^>]*>)/g);
+    for (var j = 0; j < sub.length; j++) {
+      if (sub[j].charAt(0) === '<') continue;
+      sub[j] = sub[j].replace(/(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/g, function (m) {
+        var raw = m.replace(/&amp;/g, '&'), trail = '';
+        while (/[.,;:!?)\]]$/.test(raw)) { trail = raw.slice(-1) + trail; raw = raw.slice(0, -1); }
+        var href = raw.indexOf('www.') === 0 ? 'https://' + raw : raw;
+        return '<a class="chat-link" data-act="chat-link" data-url="' + esc(href) + '">' + esc(raw) + '</a>' + trail;
+      });
+    }
+    parts[i] = sub.join('');
+  }
+  return parts.join('');
+}
+function openChatLink(url) {
+  if (!url || !/^https?:\/\//.test(url)) return;
+  try {
+    var pr = invoke('open_external_url', { url: url });
+    if (pr && pr.catch) pr.catch(function () {});
+  } catch (_) {}
+}
+/* v116: tombol aksi chat yang sudah diklik berubah hijau dan BERTAHAN.
+   Caranya: teks pesan tersimpan dimutasi (class tombol + 'done') lalu
+   disimpan + render ulang — bukan class DOM sesaat yang hilang saat
+   renderChat berikutnya. Dipanggil dari approveStudio di jalur sukses. */
+export function markChatApproveDone(pendingIdx) {
+  try {
+    var btn = document.querySelector('#chatBox [data-act="chat-approve"][data-idx="' + pendingIdx + '"]');
+    if (!btn) return;
+    var msgEl = btn.closest('.msg'); if (!msgEl) return;
+    var mi = parseInt(msgEl.getAttribute('data-idx') || '-1', 10); if (mi < 0) return;
+    var inProj = !!PROJECTS[currentProj];
+    var msgs = inProj ? PROJECTS[currentProj].chat : mainChatGet();
+    var m = msgs[mi]; if (!m || typeof m.text !== 'string') return;
+    var needle = 'class="btn btn-sm chat-act" data-act="chat-approve" data-idx="' + pendingIdx + '"';
+    if (m.text.indexOf(needle) < 0) return;
+    m.text = m.text.replace(needle, 'class="btn btn-sm chat-act done" data-act="chat-approve" data-idx="' + pendingIdx + '"');
+    if (inProj) saveHomeState(); else mainChatSave();
+    renderChat();
+  } catch (_) {}
+}
+
 export function renderChat() {
     var box = document.getElementById("chatBox");
     box.innerHTML = "";
@@ -535,7 +611,7 @@ export function renderChat() {
       var who = esc(String(m.name || ""));
       // N1 v87: hanya pesan user di-escape (input luar tak boleh jadi HTML);
       // pesan agen adalah HTML app sendiri (mis. tombol Buka di Media Studio).
-      var body = m.who === "user" ? esc(m.text) : m.text;
+      var body = m.who === "user" ? linkifyChatHtml(esc(m.text)) : linkifyChatHtml(m.text);
       div.innerHTML = m.curation
         ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + body + '</div></div>'
         : '<div class="body"><div class="bubble"><div class="who">' + who + '</div>' + body + '</div></div>';
@@ -2984,5 +3060,5 @@ export function initV5() {
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
 
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphNewProject, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphNewProject, markChatApproveDone, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }

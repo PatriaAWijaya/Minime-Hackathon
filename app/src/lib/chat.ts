@@ -11,7 +11,7 @@
 // No key -> that provider is skipped by the chain (LiveUnavailableError
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
-import { AGENTS, activateAgent, currentProjectName, ensureProjectForBrief, graphNoteDelegation, hasProject, isAgentDeactivated, libAddReport, mediaTab, postChat, showView } from './v5logic.js';
+import { AGENTS, activateAgent, currentProjectName, ensureProjectForBrief, graphNoteDelegation, hasProject, isAgentDeactivated, libAddReport, markChatApproveDone, mediaTab, postChat, showView } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
@@ -237,7 +237,7 @@ function studioButton(resultText: string, agentKey: string): string {
   const idx = pendingStudios.length - 1;
   return (
     '<br><br>' + esc(tr('chat.studio.note')) +
-    '<br><button class="btn btn-sm" data-act="chat-approve" data-idx="' + idx + '">' + esc(tr('chat.studio.approve')) + '</button>'
+    '<br><button class="btn btn-sm chat-act" data-act="chat-approve" data-idx="' + idx + '">' + esc(tr('chat.studio.approve')) + '</button>'
   );
 }
 
@@ -274,6 +274,9 @@ export function approveStudio(idx?: number): void {
   if (typeof (window as unknown as Record<string, unknown>).seLoadOutput === 'function') {
     ((window as unknown as Record<string, (t: string) => void>).seLoadOutput)(text);
   }
+  // v116: tombol yang sukses diklik berubah hijau dan bertahan (bukan
+  // hanya di DOM sesaat) — ditandai sebelum bubble konfirmasi + pindah.
+  markChatApproveDone(typeof idx === 'number' ? idx : pendingStudios.length - 1);
   if (ag) postChat(agent, ag.name, ag.color, tr('chat.studio.opened'));
   showView('media');
   mediaTab('script');

@@ -554,3 +554,10 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
   background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 42%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 8px 24px rgba(0, 0, 0, 0.30);
 }
+
+/* v116 (perintah Patria 30 Okt 21:15): tombol aksi chat — gradasi
+   violet-pink (var tema, duo-tone sama seperti tombol utama); setelah
+   diklik (class done dari markChatApproveDone) berubah hijau. */
+.chat-act { background: var(--t-accent-grad, linear-gradient(135deg, #9333EA, #D946EF)); border-color: transparent; color: #fff; }
+.chat-act.done { background: #8ED694; border-color: transparent; color: #262626; }
+.msg .bubble a.chat-link { color: var(--t-accent, #9333EA); text-decoration: underline; }
