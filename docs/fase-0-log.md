@@ -2250,3 +2250,12 @@ dokumen lama yang dipakai.
 - i18n: 2 kunci baru proj.rename + proj.rename.prompt (822 -> 824/bahasa, paritas penuh, 0 duplikat).
 - Gerbang: root tsc bersih, 13 rig lolos, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal d6c149f ↔ remote c537f44 (tree identik).
+
+## v107 — dialog native diganti kontrol in-app (30 Okt 2026 ~17:00 WIB, laporan Patria 16:46 "tombol hanya berkedip")
+- Akar: window.confirm/window.prompt tidak menampilkan apa-apa di WebView live Tauri (WKWebView tanpa delegate dialog) sehingga langsung mengembalikan batal — tombol hanya berkedip (state :active) tanpa kelanjutan. Di lab jsdom dialog distub sehingga rig lolos — celah lab-vs-live sekelas pelajaran v91. Total 3 titik dialog native di app, ketiganya diperbaiki.
+- Hapus folder: dua ketuk di header. Ketuk X pertama mempersenjatai tombol ("Yakin hapus?"); ketuk kedua menghapus. Klik lain di list melucuti armed (kecuali klik pada input rename agar fokus tidak hilang); toggle header folder yang sedang di-rename diabaikan agar edit tidak hilang.
+- Rename folder: input inline di header (bukan prompt). Ketuk pensil -> input berisi nama lama + fokus + seleksi; Enter/klik-di-luar menyimpan (pangkas 60, kosong -> nama lama); Esc membatalkan.
+- Approve Studio: dua ketuk pada tombol yang sama bila ada draf terbuka (audit v66 C-M3 tetap dijaga: tidak ada timpa diam-diam). State armed disimpan di dataset tombol, bukan variabel modul — render ulang chat menghapusnya sehingga ketuk berikutnya mempersenjatai ulang.
+- i18n: kunci dialog mati dicabut (proj.del.confirm, proj.rename.prompt); kunci arm baru proj.del.arm + chat.studio.arm (824 -> 824/bahasa, paritas penuh, 0 duplikat). Gaya input + tombol konfirmasi di layout-scroll.css.
+- Gerbang: root tsc bersih, 13 rig lolos (rig-home §17/§18 ditulis ulang untuk dua-ketuk + inline; rig-chat §10 baru untuk Studio dua-ketuk dengan draf; stub tugas Kreatif diubah mengandung kata media), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, cargo fmt/check/check --tests 0 warning/error. Catatan jujur: perilaku dialog live tetap harus dikonfirmasi ketukan Patria sendiri — rig tidak bisa menangkap kelas bug ini.
+- Push kode: lokal 2ea93e3 ↔ remote bc1c51a (tree identik).
