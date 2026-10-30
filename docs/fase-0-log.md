@@ -2201,3 +2201,9 @@ dokumen lama yang dipakai.
 - Perubahan: baris Dari Graph ikut dapat 3 icon yang sama (▶ ⏹ ✕, delegated data-act g-play/g-stop/g-deact, tanpa inline handler; kunci i18n dipakai ulang, tanpa kunci baru). Play: node Graph-only milik agen ditandai jalan (nd.running, persisten via saveGraphState) + badge Bekerja + simulasi alur jalan; selesai simulasi -> tanda jalan di node ikut bersih. Stop: tanda bersih + simulasi berhenti. X: hapus node Graph-only milik agen + edge-nya (node terkunci dipertahankan, aturan v86); baris hilang karena tidak ada lagi node yang mewakilinya. Beda dengan X project: di sini bukan Nonaktif (agen memang belum anggota project manapun). CSS sorot stop diperluas ke g-stop. Cek rig-home §13 yang lama ("baris Graph tanpa tombol") diperbarui ke asersi v99; §16 baru: 5 cek (tombol ada, play, stop, X, node terkunci dipertahankan).
 - Gerbang: tsc 0, svelte-check 0 error, vite build, 13 rig ALL PASSED, gate-test 14/14, scan bersih, cargo fmt+check+check --tests 0 warning, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Push kode: lokal a6e490a4 <-> remote ac44cb80 (tree identik).
+
+## v100 — hapus kotak panduan Belum ada proyek di list (30 Okt 2026 ~15:35 WIB)
+- Sumber: perintah Patria 30 Okt 15:26 + screenshot kotak notice list.
+- Perubahan: renderAgents tidak lagi merender kotak .notice saat nol project (if/else runtuh jadi `html += gh`). Cakupan HANYA notice list: kunci proj.empty SENGAJA dipertahankan karena masih dipakai empty-state Kanban (menghapusnya akan membuat Kanban menampilkan nama kunci mentah). Tanpa perubahan rig (tidak ada rig yang mengasersi notice list).
+- Gerbang: tsc 0, vite build, 13 rig ALL PASSED, gate-test 14/14, scan bersih, cargo fmt+check+check --tests 0 warning, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
+- Push kode: lokal 32bfa454 <-> remote fcb16623 (tree identik).
