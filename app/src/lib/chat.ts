@@ -11,7 +11,7 @@
 // No key -> that provider is skipped by the chain (LiveUnavailableError
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
-import { AGENTS, activateAgent, graphNoteDelegation, hasProject, isAgentDeactivated, mediaTab, postChat, showView } from './v5logic.js';
+import { AGENTS, activateAgent, graphNoteDelegation, isAgentDeactivated, mediaTab, postChat, showView } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
@@ -283,7 +283,6 @@ export async function sendChatReal(): Promise<void> {
   if (!input) return;
   const text = input.value.trim();
   if (!text) return;
-  if (!hasProject()) return;
   postChat('user', 'Patria', '#374151', esc(text));
   input.value = '';
   postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.prime.ack'));

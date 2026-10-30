@@ -191,6 +191,24 @@ try {
   check('CSS ter-build memuat aturan header dalam bubble', cssText.includes('.msg.user .bubble .who') && cssText.includes('.msg .bubble .who'));
   const userBubbleRules = cssText.match(/\.msg\.user \.bubble\{[^}]*\}/g) || [];
   check('isi bubble user rata kanan', userBubbleRules.some((r) => r.includes('text-align:right')), userBubbleRules.join(' | ').slice(0, 200));
+
+  // 6. v101: chat jalan TANPA project (temuan live Patria 30 Okt 15:46).
+  Object.keys(dom.window.PROJECTS).forEach((k) => { delete dom.window.PROJECTS[k]; });
+  store.delete('minime.mainChat');
+  dom.window.renderChat();
+  await tick(50);
+  const ci101 = document.getElementById('chatInput');
+  check('v101: tanpa project input TIDAK disabled', !!ci101 && ci101.disabled === false, 'disabled=' + ci101?.disabled);
+  check('v101: tanpa project label chat = Main chat', (document.getElementById('chatProj')?.textContent || '') === 'Main chat', document.getElementById('chatProj')?.textContent || '');
+  ci101.value = 'Halo utama';
+  dom.window.sendChat();
+  await tick(600);
+  const box101 = document.getElementById('chatBox')?.textContent || '';
+  check('v101: kirim tanpa project -> bubble user + ack Prime tampil', box101.includes('Halo utama') && box101.includes('Baik, saya mengerti'), box101.slice(0, 200));
+  let mc101 = [];
+  try { mc101 = JSON.parse(store.get('minime.mainChat') || '[]'); } catch (_) { mc101 = []; }
+  check('v101: Main chat tersimpan persisten (minime.mainChat)', Array.isArray(mc101) && mc101.some((m) => (m.text || '').includes('Halo utama')), 'n=' + mc101.length);
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-chat exception :: ' + (e && e.stack ? e.stack : e));

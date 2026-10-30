@@ -451,14 +451,29 @@ export function switchProject(pid) {
     renderAgents(); renderChat(); renderKanban(); renderDetail(); renderGraph();
   }
 
+/* v101 (temuan live Patria 30 Okt 15:46: tanpa project, input chat terkunci
+   total — renderChat men-disable input DAN sendChatReal early-return).
+   Main chat kini jalan tanpa project: pesannya disimpan di localStorage
+   'minime.mainChat' (bukan PROJECTS), tampil di kotak chat yang sama, dan
+   tetap bisa delegasi + model call (graphNoteDelegation dan
+   isAgentDeactivated sudah aman tanpa project). Begitu project pertama
+   dibuat, chat beralih ke chat project itu; Main chat tersimpan terpisah. */
+var MAINCHAT = null;
+function mainChatGet() {
+  if (MAINCHAT) return MAINCHAT;
+  try { MAINCHAT = JSON.parse(window.localStorage.getItem('minime.mainChat') || '[]'); } catch (_) { MAINCHAT = []; }
+  if (!Array.isArray(MAINCHAT)) MAINCHAT = [];
+  return MAINCHAT;
+}
+function mainChatSave() { try { window.localStorage.setItem('minime.mainChat', JSON.stringify(mainChatGet().slice(-500))); } catch (_) {} }
 export function renderChat() {
     var box = document.getElementById("chatBox");
     box.innerHTML = "";
     var _cp = PROJECTS[currentProj];
-    var _cpEl = document.getElementById("chatProj"); if (_cpEl) _cpEl.textContent = _cp ? _cp.name : "—";
-    var _ci = document.getElementById("chatInput"); if (_ci) _ci.disabled = !_cp;
-    if (!_cp) return;
-    _cp.chat.forEach(function (m, i) {
+    var _cpEl = document.getElementById("chatProj"); if (_cpEl) _cpEl.textContent = _cp ? _cp.name : "Main chat";
+    var _ci = document.getElementById("chatInput"); if (_ci) _ci.disabled = false;
+    var _msgs = _cp ? _cp.chat : mainChatGet();
+    _msgs.forEach(function (m, i) {
       var div = document.createElement("div");
       div.setAttribute("data-idx", String(i));
       div.className = "msg " + (m.who === "user" ? "user" : (m.curation ? "curation" : (m.who === "prime" ? "prime" : "")));
@@ -498,7 +513,12 @@ export function activateAgent(key) {
   }
 
 export function postChat(who, name, color, text, curation) {
-    if (!PROJECTS[currentProj]) return;
+    if (!PROJECTS[currentProj]) {
+      var _mc = mainChatGet();
+      _mc.push({ who: who, name: name, color: color, text: text, curation: !!curation });
+      if (_mc.length > 500) _mc.splice(0, _mc.length - 500);
+      mainChatSave(); renderChat(); return;
+    }
     PROJECTS[currentProj].chat.push({ who: who, name: name, color: color, text: text, curation: !!curation });
     // v89 (audit m2): cap 500 pesan/proyek — tanpa cap, tiap aksi menulis
     // ulang seluruh riwayat (saveHomeState men-stringify semua chat).
@@ -514,7 +534,6 @@ export function setSendChatImpl(fn) {
   sendChatImpl = fn;
 }
 
-export function hasProject() { return !!PROJECTS[currentProj]; }
 export function sendChat() {
     if (typeof sendChatImpl === "function") return sendChatImpl();
     var input = document.getElementById("chatInput");
