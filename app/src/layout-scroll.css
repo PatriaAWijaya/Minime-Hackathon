@@ -404,4 +404,4 @@ h3 { font-size: 18px; }
 #agentList .agent .iconbtn { width: 28px; height: 28px; padding: 0; border: 1px solid #2a2a2a; border-radius: 6px; background: transparent; color: inherit; font-size: 12px; line-height: 1; cursor: pointer; }
 #agentList .agent .iconbtn:hover { border-color: #EB87B4; }
 #agentList .agent.running { border-color: #A6EBB1; }
-#agentList .agent.running .iconbtn[data-act="a-stop"] { background: #EB87B4; color: #262626; border-color: #EB87B4; }
+#agentList .agent.running .iconbtn[data-act="a-stop"], #agentList .agent.running .iconbtn[data-act="g-stop"] { background: #EB87B4; color: #262626; border-color: #EB87B4; }

@@ -26,6 +26,9 @@ function agentListWire() {
     else if (act === "a-play") agentPlay(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
     else if (act === "a-stop") agentStop(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
     else if (act === "a-deact") agentDeactivate(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
+    else if (act === "g-play") agentGraphPlay(el.getAttribute("data-key") || "");
+    else if (act === "g-stop") agentGraphStop(el.getAttribute("data-key") || "");
+    else if (act === "g-deact") agentGraphDeact(el.getAttribute("data-key") || "");
     else if (act === "toggle-group") toggleGroup(el.getAttribute("data-pid"));
   });
   list.addEventListener("dragstart", function (e) {
@@ -232,9 +235,11 @@ export function renderAgents() {
     graphOnlyAgents().forEach(function (g) {
       var ag = AGENTS[g.key];
       var task = (g.brief || "").split("\n")[0].slice(0, 60) || ag.role;
-      gh += '<div class="agent ' + (selectedAgent === g.key ? 'sel' : '') + '" data-act="sel-agent" data-key="' + g.key + '" draggable="true" data-dragkey="' + g.key + '">'
+      var grunning = graphOnlyNodes(g.key).some(function (k) { return !!GNODES[k].running; });
+      gh += '<div class="agent ' + (selectedAgent === g.key ? 'sel' : '') + (grunning ? ' running' : '') + '" data-act="sel-agent" data-key="' + g.key + '" draggable="true" data-dragkey="' + g.key + '">'
         + (ag.avatar ? '<img class="av av-shape-' + (ag.shape || 'circle') + '" src="' + esc(ag.avatar) + '" style="background:' + ag.color + ';object-fit:cover;padding:0" alt="">' : '<div class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div>')
-        + '<div class="meta"><b>' + esc(ag.name) + '</b> <span class="badge b-ok">' + esc(tr('agent.graph_badge')) + '</span><br><small>' + esc(task) + '</small></div>'
+        + '<div class="meta"><b>' + esc(ag.name) + '</b> <span class="badge b-ok">' + esc(grunning ? tr('agent.working') : tr('agent.graph_badge')) + '</span><br><small>' + esc(task) + '</small></div>'
+        + '<span class="agent-acts"><button class="iconbtn" data-act="g-play" data-key="' + g.key + '" title="' + esc(tr('agent.play')) + '">\u25B6</button><button class="iconbtn" data-act="g-stop" data-key="' + g.key + '" title="' + esc(tr('agent.stop')) + '">\u23F9</button><button class="iconbtn" data-act="g-deact" data-key="' + g.key + '" title="' + esc(tr('agent.deactivate')) + '">\u2715</button></span>'
         + '</div>';
     });
     if (gh) gh = '<div class="group">' + esc(tr('agent.graph_group')) + '</div><div class="gagents">' + gh + '</div>';
@@ -268,6 +273,36 @@ export function agentStop(idx, pid) {
     graphStopSim();
     saveHomeState(); renderAgents(); renderGraph();
   }
+/* v99 (perintah Patria 30 Okt 14:52 + screenshot: app nol project, satu-satunya
+   kartu agen yang terlihat adalah baris Dari Graph — tanpa tombol di v98).
+   Koreksi cakupan: kartu Dari Graph ikut dapat kontrol langsung yang sama.
+   Bedanya dengan agen project: tidak ada objek anggota project — status jalan
+   disimpan di node-nya sendiri (nd.running, persisten via saveGraphState),
+   dan X berarti hapus node Graph-only milik agen itu (bukan Nonaktif, karena
+   memang belum jadi anggota project manapun; node terkunci dipertahankan). */
+function graphOnlyNodes(key) {
+  return Object.keys(GNODES).filter(function (k) { var nd = GNODES[k]; return nd.agent === key && (!nd.proj || !PROJECTS[nd.proj]); });
+}
+function agentGraphPlay(key) {
+  var keys = graphOnlyNodes(key); if (!keys.length || !AGENTS[key]) return;
+  keys.forEach(function (k) { GNODES[k].running = true; });
+  graphSel = keys[0]; renderGraph();
+  saveGraphState(); renderAgents();
+  runGraphSim("manual");
+}
+function agentGraphStop(key) {
+  graphOnlyNodes(key).forEach(function (k) { GNODES[k].running = false; });
+  graphStopSim();
+  saveGraphState(); renderAgents(); renderGraph();
+}
+function agentGraphDeact(key) {
+  var keys = graphOnlyNodes(key).filter(function (k) { return !GNODES[k].locked; });
+  if (!keys.length) return;
+  keys.forEach(function (k) { delete GNODES[k]; });
+  for (var i = GEDGES.length - 1; i >= 0; i--) { if (keys.indexOf(GEDGES[i].f) >= 0 || keys.indexOf(GEDGES[i].t) >= 0) GEDGES.splice(i, 1); }
+  if (graphSel && keys.indexOf(graphSel) >= 0) { graphSel = null; graphPopupOpen = false; }
+  saveGraphState(); renderAgents(); renderGraph(); renderGraphPopup(); renderDetail();
+}
 export function agentDeactivate(idx, pid) {
     var proj = PROJECTS[pid]; if (!proj || !proj.agents[idx]) return;
     var a = proj.agents[idx], key = a.key;
@@ -813,6 +848,8 @@ export function runGraphSim(kind) {
         graphRunning = false;
         graphSimTimer = null;
         Object.keys(PROJECTS).forEach(function (pid) { (PROJECTS[pid].agents || []).forEach(function (a) { a.running = false; }); });
+        Object.keys(GNODES).forEach(function (k) { GNODES[k].running = false; });
+        saveGraphState();
         saveHomeState(); if (document.getElementById("agentList")) renderAgents();
         graphRunsAdd(kind);
         return;

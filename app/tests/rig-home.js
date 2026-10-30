@@ -249,7 +249,7 @@ try {
   await tick(50);
   const graphRow = [...document.querySelectorAll('#agentList .agent')].find((el) => el.textContent.includes('Produk Digital'));
   check('v94: agen Graph tanpa proyek tampil di list', !!graphRow && graphRow.textContent.includes('Brief produk baru'), graphRow?.textContent || '');
-  check('v94: baris Graph tanpa tombol toggle', !!graphRow && !graphRow.querySelector('button'), '');
+  check('v99: baris Graph punya 3 tombol kerja', !!graphRow && !!graphRow.querySelector('[data-act="g-play"]') && !!graphRow.querySelector('[data-act="g-stop"]') && !!graphRow.querySelector('[data-act="g-deact"]'), '');
   graphRow.click();
   await tick(100);
   check('v94: klik baris Graph -> .sel + detail Produk', !!document.querySelector('#agentList .agent.sel') && (document.getElementById('detailBody')?.textContent || '').includes('Produk Digital'), '');
@@ -314,6 +314,30 @@ try {
   row98().querySelector('[data-act="a-deact"]').click();
   await tick(50);
   check('v98: node TERKUNCI dipertahankan saat X (aturan v86), baris tetap hilang', !!dom.window.GNODES[node98] && !row98(), '');
+
+
+  // 16. v99: tombol kerja di kartu Dari Graph (langsung, tanpa project).
+  Object.values(dom.window.PROJECTS).forEach((p) => { p.agents = (p.agents || []).filter((a) => a.key !== 'distribusi'); });
+  dom.window.GNODES['gx4'] = { name: 'Distribusi', sub: 'Distribusi', agent: 'distribusi', brief: 'Brief distribusi uji', proj: null, x: 10, y: 10, w: 150, kind: 'output' };
+  dom.window.renderAgents();
+  await tick(50);
+  const row99 = () => [...document.querySelectorAll('#agentList .agent')].find((el) => el.querySelector('[data-act="g-play"]') && el.textContent.includes('Distribusi'));
+  check('v99: kartu Dari Graph punya 3 tombol kerja', !!row99(), '');
+  row99().querySelector('[data-act="g-play"]').click();
+  await tick(50);
+  check('v99: play Graph -> node running + badge Bekerja', !!dom.window.GNODES['gx4'].running && !!row99() && row99().textContent.includes('Bekerja'), '');
+  row99().querySelector('[data-act="g-stop"]').click();
+  await tick(50);
+  check('v99: stop Graph -> node tak lagi running', !dom.window.GNODES['gx4'].running && !!row99() && !row99().textContent.includes('Bekerja'), '');
+  row99().querySelector('[data-act="g-deact"]').click();
+  await tick(50);
+  check('v99: X Graph -> node + baris hilang', !dom.window.GNODES['gx4'] && !row99(), '');
+  dom.window.GNODES['gx5'] = { name: 'Distribusi', sub: 'Distribusi', agent: 'distribusi', brief: 'Brief distribusi uji', proj: null, x: 10, y: 10, w: 150, kind: 'output', locked: true };
+  dom.window.renderAgents();
+  await tick(50);
+  row99().querySelector('[data-act="g-deact"]').click();
+  await tick(50);
+  check('v99: node Graph TERKUNCI dipertahankan saat X (aturan v86)', !!dom.window.GNODES['gx5'] && !!row99(), '');
 
 } catch (e) {
   // eslint-disable-next-line no-console
