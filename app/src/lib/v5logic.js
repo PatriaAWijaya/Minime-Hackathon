@@ -65,6 +65,23 @@ export function agentDropToProject(pid, key) {
   renderAgents(); renderGraph();
   return true;
 }
+/* v94: agen yang hanya ada di Graph (node ber-agent tanpa project, dan
+   belum jadi anggota project manapun) tetap tampil di list utama, di bawah
+   grup project — bukan hilang diam-diam seperti sebelum v94. Prime
+   dikecualikan (dia Main chat, bukan anggota). */
+function graphOnlyAgents() {
+  var inProj = {};
+  Object.keys(PROJECTS).forEach(function (pid) { (PROJECTS[pid].agents || []).forEach(function (a) { inProj[a.key] = true; }); });
+  var seen = {}, out = [];
+  Object.keys(GNODES).forEach(function (k) {
+    var nd = GNODES[k];
+    if (!nd.agent || nd.agent === "prime" || !AGENTS[nd.agent] || inProj[nd.agent] || seen[nd.agent]) return;
+    if (nd.proj && PROJECTS[nd.proj]) return;
+    seen[nd.agent] = true;
+    out.push({ key: nd.agent, brief: nd.brief || "" });
+  });
+  return out;
+}
 export function renderAgents() {
     agentListWire();
     var html = "", rowNo = -1;
@@ -86,7 +103,18 @@ export function renderAgents() {
       });
       html += '</div>';
     });
-    if (!Object.keys(PROJECTS).length) html = "<div class='notice'>" + tr("proj.empty") + "</div>";
+    var gh = "";
+    graphOnlyAgents().forEach(function (g) {
+      var ag = AGENTS[g.key];
+      var task = (g.brief || "").split("\n")[0].slice(0, 60) || ag.role;
+      gh += '<div class="agent ' + (selectedAgent === g.key ? 'sel' : '') + '" data-act="sel-agent" data-key="' + g.key + '" draggable="true" data-dragkey="' + g.key + '">'
+        + (ag.avatar ? '<img class="av av-shape-' + (ag.shape || 'circle') + '" src="' + esc(ag.avatar) + '" style="background:' + ag.color + ';object-fit:cover;padding:0" alt="">' : '<div class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div>')
+        + '<div class="meta"><b>' + esc(ag.name) + '</b> <span class="badge b-ok">' + esc(tr('agent.graph_badge')) + '</span><br><small>' + esc(task) + '</small></div>'
+        + '</div>';
+    });
+    if (gh) gh = '<div class="group">' + esc(tr('agent.graph_group')) + '</div><div class="gagents">' + gh + '</div>';
+    if (!Object.keys(PROJECTS).length) html = "<div class='notice'>" + tr("proj.empty") + "</div>" + gh;
+    else html += gh;
     document.getElementById("agentList").innerHTML = html;
     renderGraphProjSel();
   }
@@ -266,7 +294,11 @@ export function activateAgent(key) {
     else Object.keys(PROJECTS).forEach(function (p) {
       if (!pid && PROJECTS[p].agents.some(function (a) { return a.key === key; })) pid = p;
     });
-    if (!pid) return;
+    if (!pid) {
+      var inGraph = Object.keys(GNODES).some(function (k) { return GNODES[k].agent === key; });
+      if (inGraph) selectAgent(key, null);
+      return;
+    }
     if (pid === currentProj) { selectAgent(key, pid); return; }
     collapsedGroups[pid] = false;
     try { window.localStorage.setItem('minime.agentGroups', JSON.stringify(collapsedGroups)); } catch (e) {}

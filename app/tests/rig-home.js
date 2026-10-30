@@ -13,6 +13,7 @@
 //  11. Persistensi: DOM baru dengan store yang sama menampilkan agen,
 //      channel buatan di atas (bukti localStorage).
 //  12. v92: picker Aktifkan + DnD + Prime dikecualikan dari project.
+//  13. v94: agen Graph tanpa proyek tampil di list + delegasi + adopsi DnD.
 // Jalankan: npm run rig:home (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -239,6 +240,27 @@ try {
   check('DnD -> node graph agen lain ada', Object.values(dom.window.GNODES).some((n) => n.proj === 'pk2' && n.agent === otherKey), '');
   check('DnD -> Prime DITOLAK', dom.window.agentDropToProject('pk2', 'prime') === false && !dom.window.PROJECTS['pk2'].agents.some((a) => a.key === 'prime'), '');
   check('Prime tidak tampil di list agen', ![...document.querySelectorAll('#agentList .agent')].some((el) => el.textContent.includes('Prime Agent')), '');
+
+  // 13. v94: agen Graph tanpa proyek tampil di list + delegasi + adopsi.
+  Object.values(dom.window.PROJECTS).forEach((p) => { p.agents = (p.agents || []).filter((a) => a.key !== 'produk'); });
+  dom.window.GNODES['gx1'] = { name: 'Produk Digital', sub: 'Produk Digital', agent: 'produk', brief: 'Brief produk baru', proj: null, x: 10, y: 10, w: 150, kind: 'output' };
+  dom.window.renderAgents();
+  await tick(50);
+  const graphRow = [...document.querySelectorAll('#agentList .agent')].find((el) => el.textContent.includes('Produk Digital'));
+  check('v94: agen Graph tanpa proyek tampil di list', !!graphRow && graphRow.textContent.includes('Brief produk baru'), graphRow?.textContent || '');
+  check('v94: baris Graph tanpa tombol toggle', !!graphRow && !graphRow.querySelector('button'), '');
+  graphRow.click();
+  await tick(100);
+  check('v94: klik baris Graph -> .sel + detail Produk', !!document.querySelector('#agentList .agent.sel') && (document.getElementById('detailBody')?.textContent || '').includes('Produk Digital'), '');
+  dom.window.activateAgent('produk');
+  await tick(100);
+  check('v94: delegasi agen Graph-only memilih baris Graph', !!document.querySelector('#agentList .agent.sel'), '');
+  const firstPid = Object.keys(dom.window.PROJECTS)[0];
+  const adopted = dom.window.agentDropToProject(firstPid, 'produk');
+  await tick(50);
+  check('v94: adopsi DnD -> produk masuk project', adopted && (dom.window.PROJECTS[firstPid].agents || []).some((a) => a.key === 'produk'), '');
+  check('v94: adopsi -> grup Graph tak lagi menampilkan produk', ![...document.querySelectorAll('#agentList .agent')].some((el) => el.textContent.includes('Brief produk baru')), '');
+  check('v94: adopsi -> node graph project ada', Object.values(dom.window.GNODES).some((n) => n.proj === firstPid && n.agent === 'produk'), '');
 
 } catch (e) {
   // eslint-disable-next-line no-console
