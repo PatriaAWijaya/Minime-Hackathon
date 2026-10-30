@@ -128,6 +128,13 @@ try {
   [...document.querySelectorAll('#libDetailDlg button')].find((b) => b.textContent.trim() === 'Tutup').click();
   await tick(100);
   check('tombol Tutup menutup dialog', document.getElementById('libDetailDlg')?.style.display === 'none');
+  // v118: pola inline ondblclick MATI di WebView live (v91) — kartu harus
+  // bersih dari inline handler, detail dibuka lewat delegasi di #libGrid.
+  check('v118: kartu tanpa inline ondblclick (pola mati live)', ![...document.querySelectorAll('#libGrid .lib-card')].some((c) => c.hasAttribute('ondblclick')), '');
+  check('v118: kartu membawa tooltip petunjuk klik 2x', (cards()[0]?.getAttribute('title') || '').length > 0, cards()[0]?.getAttribute('title') || '');
+  first.querySelector('button').dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true }));
+  await tick(100);
+  check('v118: klik 2x pada tombol kartu TIDAK membuka detail', document.getElementById('libDetailDlg')?.style.display === 'none', document.getElementById('libDetailDlg')?.style.display || '');
 
   // 4. Media Studio + Revisi dari kartu.
   const added = cards().find((c) => c.textContent.includes('NASKAH-LIB-UJI'));

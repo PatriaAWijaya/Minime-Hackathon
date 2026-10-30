@@ -229,6 +229,17 @@ function libWire() {
     else if (act === "lib-revise") libRevise(idx);
     else if (act === "lib-restore") libRestoreArchived(idx);
   });
+  // v118: dblclick kartu -> detail LEWAT DELEGASI (bukan inline ondblclick).
+  // Pelajaran v91/v97: inline handler di konten innerHTML MATI di WebView
+  // live Tauri padahal jsdom jalan — rig lolos tapi ketukan live gagal.
+  // Tombol di dalam kartu tidak membuka detail (guard button, sama
+  // seperti guard di libDetail).
+  if (grid) grid.addEventListener("dblclick", function (e) {
+    if (!e.target || !e.target.closest) return;
+    if (e.target.closest("button")) return;
+    var card = e.target.closest("[data-lib-detail]"); if (!card || !grid.contains(card)) return;
+    libDetail(parseInt(card.getAttribute("data-lib-detail") || "0", 10));
+  });
   var dd = document.getElementById("libDetailDlg");
   if (dd) dd.addEventListener("click", function (e) {
     if (!e.target || !e.target.closest) return;
@@ -1246,7 +1257,7 @@ export function renderLib() {
       var thumb = item.kind === "image" && item.imageFile
         ? "<img class='lib-thumb' data-lib-idx='" + gi + "' alt=''>"
         : "";
-      cards.push("<div class='lib-card' ondblclick='libDetail(" + gi + ", event)'>"
+      cards.push("<div class='lib-card' data-lib-detail='" + gi + "' title='" + esc(tr('lib.detail.hint')) + "'>"
         + thumb
         + "<div class='lib-title'>" + esc(item.o) + "</div>"
         + "<div class='lib-meta'>" + esc(tr('lib.card.agent')) + ": " + esc(item.a) + " • " + esc(tr('lib.card.project')) + ": " + esc(item.proj || "—") + "</div>"
