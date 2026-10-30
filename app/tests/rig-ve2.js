@@ -189,6 +189,13 @@ try {
   zoomSel.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
   await tick(100);
   check('zoom 200% mengubah lebar timeline', (document.querySelector('#ve2Timeline > div')?.style?.width || '').includes('200%'), document.querySelector('#ve2Timeline > div')?.style?.width);
+
+  // 13. v114: workstation video editor fluid — cap 880px dicabut.
+  const cssLink114 = html.match(/<link[^>]*href="([^"]+\.css)"/);
+  const cssText114 = (cssLink114 ? fs.readFileSync(path.join(distDir, cssLink114[1]), 'utf-8') : '');
+  check('v114: CSS ter-build membuat .ms-video fluid (width 100%, tanpa cap)', cssText114.includes('.ms-video{width:100%;max-width:none}'), '');
+  check('v114: cap 880px tidak ada lagi di CSS ter-build', !cssText114.includes('880px'), '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-ve2 exception :: ' + (e && e.stack ? e.stack : e));
