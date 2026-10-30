@@ -116,7 +116,7 @@ h3 { font-size: 18px; }
 /* Chat: agen kiri (default), user kanan + bubble pink. */
 .msg .body { display: flex; flex-direction: column; align-items: flex-start; }
 .msg.user .body { align-items: flex-end; }
-.msg.user .bubble { background-color: #A6EBB1; color: #262626; text-align: right; }
+.msg.user .bubble { background-color: #8ED694; color: #262626; text-align: right; }
 
 /* Header nama DI DALAM bubble (revisi 28 Okt; v112: bubble user hijau
    pastel, header user dark violet). Agen kiri hijau bold. */
@@ -478,7 +478,7 @@ body { background: var(--t-bg, #0e0e0e); color: var(--t-text, #ececec); }
 .msg .bubble { background: var(--t-glass, #1f1f1f); backdrop-filter: blur(18px) saturate(160%); }
 .msg.prime .bubble { background: var(--t-glass, #1f1f1f); border: none; }
 .msg.curation .bubble { background: var(--t-glass, #1f1f1f); border: 1px dashed var(--t-accent, #FFD1DC); }
-.msg.user .bubble { background-color: #A6EBB1; }
+.msg.user .bubble { background-color: #8ED694; }
 .b-ok { background: var(--t-panel2, #333333); color: var(--t-text, #ececec); }
 .b-wait { background: var(--t-accent, #FFD1DC); color: var(--t-accent-text, #262626); }
 .b-idle { background: var(--t-panel2, #262626); color: var(--t-muted, #d4d4d4); }

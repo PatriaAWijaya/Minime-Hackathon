@@ -288,7 +288,8 @@ try {
 
 
   // 11. v112: bubble user hijau pastel + font hitam + header dark violet.
-  check('v112: CSS ter-build mengatur bubble user hijau pastel + font hitam', /\.msg\.user\s+\.bubble\s*\{[^}]*#a6ebb1[^}]*#262626/.test(cssText), '');
+  check('v112: CSS ter-build mengatur bubble user hijau pastel + font hitam', /\.msg\.user\s+\.bubble\s*\{[^}]*#8ed694[^}]*#262626/.test(cssText), '');
+  check('v113: bubble user sedikit lebih gelap dari #A6EBB1 (header agen tetap hijau itu)', /\.msg\s+\.bubble\s+\.who\s*\{[^}]*#a6ebb1/.test(cssText), '');
   check('v112: CSS ter-build mengatur header nama user dark violet', /\.msg\.user\s+\.bubble\s+\.who\s*\{[^}]*#4c1d95/.test(cssText), '');
 
 } catch (e) {
