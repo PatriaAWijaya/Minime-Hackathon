@@ -430,28 +430,30 @@ h3 { font-size: 18px; }
    sehingga satu blok melayani kedua tema; app.css TIDAK diedit (aturan
    ini menang karena datang sesudahnya dengan spesifisitas setara). */
 [data-theme="dark"] {
-  --t-bg: #150A26; --t-bg-soft: #1D0F38;
-  --t-panel: rgba(46, 24, 84, 0.55); --t-panel2: rgba(38, 20, 70, 0.65);
-  --t-glass: rgba(52, 28, 96, 0.50);
-  --t-border: rgba(167, 139, 250, 0.28); --t-border-strong: rgba(167, 139, 250, 0.45);
-  --t-text: #EDE9FE; --t-muted: #B7A8E0; --t-faint: #8E7CC3;
-  --t-accent: #A78BFA; --t-accent-strong: #8B5CF6; --t-accent-soft: rgba(167, 139, 250, 0.16);
+  --t-bg: #1B0A2E; --t-bg-soft: #241040;
+  --t-panel: rgba(88, 28, 135, 0.45); --t-panel2: rgba(74, 20, 110, 0.60);
+  --t-glass: rgba(108, 40, 150, 0.42);
+  --t-border: rgba(232, 121, 249, 0.30); --t-border-strong: rgba(217, 70, 239, 0.50);
+  --t-text: #FDF4FF; --t-muted: #D8B4FE; --t-faint: #B79CE0;
+  --t-accent: #A855F7; --t-accent2: #E879F9; --t-accent-strong: #9333EA; --t-accent-soft: rgba(217, 70, 239, 0.16);
+  --t-accent-grad: linear-gradient(135deg, #9333EA, #D946EF);
   --t-accent-text: #FFFFFF;
-  --t-canvas-bg: #12081F; --t-dot: rgba(167, 139, 250, 0.35);
-  --t-input-bg: rgba(30, 16, 54, 0.70); --t-hover-bg: rgba(167, 139, 250, 0.14);
+  --t-canvas-bg: #170A26; --t-dot: rgba(232, 121, 249, 0.35);
+  --t-input-bg: rgba(40, 16, 66, 0.70); --t-hover-bg: rgba(217, 70, 239, 0.14);
 }
 [data-theme="light"] {
-  --t-bg: #F6F4FB; --t-bg-soft: #FFFFFF;
-  --t-panel: #FFFFFF; --t-panel2: #F1EDFB;
+  --t-bg: #FBF5FF; --t-bg-soft: #FFFFFF;
+  --t-panel: #FFFFFF; --t-panel2: #F5F0FE;
   --t-glass: rgba(255, 255, 255, 0.72);
-  --t-border: #DDD6FE; --t-border-strong: #C4B5FD;
-  --t-text: #232136; --t-muted: #6B6580; --t-faint: #8E87A3;
-  --t-accent: #7C3AED; --t-accent-strong: #6D28D9; --t-accent-soft: #EDE9FE;
+  --t-border: #E9D5FF; --t-border-strong: #D8B4FE;
+  --t-text: #2E1065; --t-muted: #7E5A9B; --t-faint: #A78BFA;
+  --t-accent: #9333EA; --t-accent2: #D946EF; --t-accent-strong: #9333EA; --t-accent-soft: #F5D0FE;
+  --t-accent-grad: linear-gradient(135deg, #9333EA, #D946EF);
   --t-accent-text: #FFFFFF;
-  --t-canvas-bg: #EFEBFA; --t-dot: rgba(124, 58, 237, 0.22);
-  --t-input-bg: #FFFFFF; --t-hover-bg: #EDE9FE;
+  --t-canvas-bg: #F3E8FF; --t-dot: rgba(217, 70, 239, 0.28);
+  --t-input-bg: #FFFFFF; --t-hover-bg: #F5D0FE;
 }
-[data-theme="dark"] body { background-image: radial-gradient(700px 320px at 15% -5%, rgba(139, 92, 246, 0.30), transparent 60%), radial-gradient(520px 280px at 95% 0%, rgba(217, 119, 242, 0.16), transparent 60%); }
+[data-theme="dark"] body { background-image: radial-gradient(700px 320px at 15% -5%, rgba(147, 51, 234, 0.35), transparent 60%), radial-gradient(520px 280px at 95% 0%, rgba(217, 70, 239, 0.28), transparent 60%); }
 body { background: var(--t-bg, #0e0e0e); color: var(--t-text, #ececec); }
 .banner { background: var(--t-panel2, #1a1a1a); border-bottom-color: var(--t-accent, #FFD1DC); color: var(--t-text, #ececec); }
 .banner b { color: var(--t-accent, #FFD1DC); }
@@ -467,13 +469,13 @@ body { background: var(--t-bg, #0e0e0e); color: var(--t-text, #ececec); }
 .resizer:hover { background: var(--t-accent, #FFD1DC); }
 #chatCol { background: var(--t-panel, #1e1e1e); }
 .group { color: var(--t-muted, #a1a1a1); }
-.agent { background: var(--t-glass, #1e1e1e); border-color: var(--t-border, #2a2a2a); backdrop-filter: blur(14px) saturate(140%); }
+.agent { background: var(--t-glass, #1e1e1e); border-color: var(--t-border, #2a2a2a); backdrop-filter: blur(18px) saturate(160%); }
 .agent:hover { border-color: var(--t-accent, #FFD1DC); }
 .agent.sel { border-color: var(--t-accent, #FFD1DC); background: var(--t-accent-soft, #262626); }
 .agent.curproj { border-left-color: var(--t-accent, #FFD1DC); }
 .agent .meta small, .agent-time, .agent-preview { color: var(--t-muted, #a1a1a1); }
 .agent-plus, .toggle { background: var(--t-panel2, #262626); border-color: var(--t-border, #3a3a3a); color: var(--t-text, #ececec); }
-.msg .bubble { background: var(--t-glass, #1f1f1f); backdrop-filter: blur(14px) saturate(140%); }
+.msg .bubble { background: var(--t-glass, #1f1f1f); backdrop-filter: blur(18px) saturate(160%); }
 .msg.prime .bubble { background: var(--t-glass, #1f1f1f); border: none; }
 .msg.curation .bubble { background: var(--t-glass, #1f1f1f); border: 1px dashed var(--t-accent, #FFD1DC); }
 .msg.user .bubble { background: var(--t-panel2, #2a2a2a); }
@@ -484,16 +486,16 @@ body { background: var(--t-bg, #0e0e0e); color: var(--t-text, #ececec); }
 .composer { border-top-color: var(--t-border, #262626); background: var(--t-panel, #171717); }
 .composer textarea { background: var(--t-input-bg, #262626); border-color: var(--t-border, #3a3a3a); color: var(--t-text, #ececec); }
 .btn { background: var(--t-panel2, #262626); border-color: var(--t-border, #3a3a3a); color: var(--t-text, #ececec); }
-.btn-primary { background: var(--t-accent-strong, #FFD1DC); border-color: var(--t-accent-strong, #FFD1DC); color: var(--t-accent-text, #262626); }
+.btn-primary { background: var(--t-accent-grad, #FFD1DC); border-color: transparent; color: var(--t-accent-text, #262626); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 14px rgba(217, 70, 239, 0.35); }
 .chip { border-color: var(--t-accent, #FFD1DC); background: var(--t-panel2, #262626); color: var(--t-text, #ececec); }
 .notice { background: var(--t-glass, #1f1f1f); border-color: var(--t-accent, #FFD1DC); color: var(--t-text, #ececec); }
 .kcol { background: var(--t-panel, #1f1f1f); }
 .kcol.over { outline-color: var(--t-accent, #FFD1DC); }
 .kcol h4 { color: var(--t-muted, #a1a1a1); }
-.kcard { background: var(--t-glass, #2a2a2a); border-color: var(--t-border, #3a3a3a); backdrop-filter: blur(14px) saturate(140%); }
+.kcard { background: var(--t-glass, #2a2a2a); border-color: var(--t-border, #3a3a3a); backdrop-filter: blur(18px) saturate(160%); }
 .kb-cardfoot { color: var(--t-muted, #a1a1a1); }
 .n8n-canvas { background: var(--t-canvas-bg, #0a0a0a); background-image: radial-gradient(var(--t-dot, rgba(58, 58, 58, 1)) 1px, transparent 1px); border-color: var(--t-border, #262626); }
-.n8n-node { background: var(--t-glass, #1f1f1f); border-color: var(--t-muted, #9ca3af); color: var(--t-text, #ececec); backdrop-filter: blur(14px) saturate(140%); }
+.n8n-node { background: var(--t-glass, #1f1f1f); border-color: var(--t-muted, #9ca3af); color: var(--t-text, #ececec); backdrop-filter: blur(18px) saturate(160%); }
 .n8n-node.prime { border-color: var(--t-accent, #FFD1DC); }
 .n8n-node.exec { box-shadow: 0 0 0 3px var(--t-accent, #FFD1DC); border-color: var(--t-accent, #FFD1DC); }
 .n8n-node .nsub { color: var(--t-muted, #a1a1a1); }
@@ -504,8 +506,8 @@ body { background: var(--t-bg, #0e0e0e); color: var(--t-text, #ececec); }
 table { background: var(--t-panel, #171717); }
 th, td { border-bottom-color: var(--t-border, #262626); }
 .filters button { background: var(--t-panel2, #262626); border-color: var(--t-border, #3a3a3a); color: var(--t-text, #ececec); }
-.filters button.active { background: var(--t-accent-strong, #FFD1DC); border-color: var(--t-accent-strong, #FFD1DC); color: var(--t-accent-text, #262626); }
-.mediacard { background: var(--t-glass, #1f1f1f); border-color: var(--t-border, #2a2a2a); backdrop-filter: blur(14px) saturate(140%); }
+.filters button.active { background: var(--t-accent-grad, #FFD1DC); border-color: transparent; color: var(--t-accent-text, #262626); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.mediacard { background: var(--t-glass, #1f1f1f); border-color: var(--t-border, #2a2a2a); backdrop-filter: blur(18px) saturate(160%); }
 .ph { background: var(--t-panel, #262626); border-color: var(--t-border, #555); color: var(--t-muted, #a1a1a1); }
 .timeline { background: var(--t-bg-soft, #0a0a0a); }
 .track .tlabel { color: var(--t-muted, #d1d5db); }
@@ -527,7 +529,7 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .kb-tabs button { color: var(--t-muted, #a1a1a1); }
 .kb-tabs button.active { color: var(--t-text, #ececec); background: var(--t-panel2, #262626); }
 .addlist { border-color: var(--t-border, #3a3a3a); }
-.add-menu { background: var(--t-glass, #1f1f1f); border-color: var(--t-border, #2a2a2a); backdrop-filter: blur(14px) saturate(140%); }
+.add-menu { background: var(--t-glass, #1f1f1f); border-color: var(--t-border, #2a2a2a); backdrop-filter: blur(18px) saturate(160%); }
 .add-menu button { background: var(--t-panel2, #262626); border-color: var(--t-border, #3a3a3a); color: var(--t-text, #ececec); }
 .agent-searchbox { background: var(--t-panel2, #262626); }
 .profileav { background: var(--t-accent, #FFD1DC); color: var(--t-accent-text, #262626); }
@@ -536,7 +538,7 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .pill-send { background: var(--t-accent-strong, #FFD1DC); }
 .cur-label { color: var(--t-accent, #FFD1DC); }
 .wa-pill { background: var(--t-panel2, #262626); }
-.wa-pop { background: var(--t-glass, #262626); border-color: var(--t-border, #3a3a3a); backdrop-filter: blur(14px) saturate(140%); }
+.wa-pop { background: var(--t-glass, #262626); border-color: var(--t-border, #3a3a3a); backdrop-filter: blur(18px) saturate(160%); }
 .wa-pop button { background: var(--t-panel, #1f1f1f); border-color: var(--t-border, #3a3a3a); color: var(--t-text, #ececec); }
 #chatInput::placeholder { color: var(--t-faint, #737373); }
 .avatar-edit { background: var(--t-bg-soft, #0a0a0a); border-color: var(--t-border, #3a3a3a); color: var(--t-text, #ececec); }
@@ -544,3 +546,11 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .chat-proj { color: var(--t-faint, #737373); }
 .mainchat { border-color: var(--t-border, #2a2a2a); }
 .mainchat:hover { border-color: var(--t-accent, #FFD1DC); }
+
+/* v110: kilau glossy — lapisan cahaya atas + highlight tepi pada semua
+   permukaan kaca (gelap maupun terang; putih di atas kaca ungu memberi
+   kesan basah, bukan sekadar tembus pandang). */
+.agent, .kcard, .n8n-node, .msg .bubble, .mediacard, .gnode, .add-menu, .wa-pop, .todayitem {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 42%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 8px 24px rgba(0, 0, 0, 0.22);
+}

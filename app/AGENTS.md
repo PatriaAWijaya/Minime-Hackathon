@@ -56,8 +56,9 @@ Ollama) → human approval gates → live evaluation harness.
 - Theme (Patria 30 Okt 2026): default follows the desktop
   (`prefers-color-scheme`, resolved by JS to `data-theme` on `<html>`);
   user override System/Dark/Light in Settings (`minime.theme`).
-  Dark = Dark Violet Glass (violet-tinted glass surfaces + blur, violet
-  accent); Light = clean light with the same violet accent. Implemented
+  Dark = Dark Violet Glass (violet + magenta duo-tone, glossy glass:
+  blur + top sheen + edge highlight); Light = clean light with the
+  same duo-tone accent. Implemented
   via `--t-*` variables in `layout-scroll.css`; `app.css` stays verbatim.
   Logo/icon MiniMe used as-is.
 - Navigation: agent list + Detail panel ONLY in the Home window;

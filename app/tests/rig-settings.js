@@ -186,7 +186,8 @@ try {
   check('v109: setTheme system -> tersimpan system (jsdom: system gelap false -> light)', store.get('minime.theme') === 'system' && document.documentElement.getAttribute('data-theme') === 'light', document.documentElement.getAttribute('data-theme') || '');
   const cssLink109 = html.match(/<link[^>]*href="([^"]+\.css)"/);
   const cssText109 = (cssLink109 ? fs.readFileSync(path.join(distDir, cssLink109[1]), 'utf-8') : '').toLowerCase();
-  check('v109: CSS ter-build memuat Dark Violet Glass (data-theme dark + #150a26 + blur)', cssText109.includes('data-theme') && cssText109.includes('#150a26') && cssText109.includes('backdrop-filter'), '');
+  check('v109: CSS ter-build memuat Dark Violet Glass (data-theme dark + blur)', cssText109.includes('data-theme') && cssText109.includes('backdrop-filter'), '');
+  check('v110: CSS ter-build memuat duo violet-magenta + glossy (dasar #1b0a2e + gradien + sheen)', cssText109.includes('#1b0a2e') && cssText109.includes('#d946ef') && cssText109.includes('linear-gradient') && cssText109.includes('inset 0 1px'), '');
 } catch (e) {
   check('rig-settings exception', false, e && e.stack ? e.stack : String(e));
 }
