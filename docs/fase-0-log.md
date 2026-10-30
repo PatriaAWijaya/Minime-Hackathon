@@ -2228,3 +2228,10 @@ dokumen lama yang dipakai.
 - i18n: 6 kunci baru flow.* × 3 bahasa (814 → 820/bahasa, paritas penuh, 0 duplikat). Bersihkan baris projectSel mati di syncProjectUI (sisa v102).
 - Gerbang: root tsc bersih, 13 rig lolos (rig-chat §7 baru: 10 cek Alur 1 — project, nama, anggota, node Graph, bubble, QC, laporan, dokumen Library, list aktif; §6 v101 tetap lolos via stub "bukan brief"), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal be407fe ↔ remote a7a960c (tree identik).
+
+## v104 — delegasi tanpa project tetap muncul di list (Dari Graph) (30 Okt 2026 ~16:30 WIB, aturan Patria 16:16)
+- Sumber: screenshot live Patria 16:13 — brief kopi Surabaya di Main chat didelegasikan ke Kreatif + ack "Siap", tapi list agen tetap kosong dan panel detail tetap Riset. Diagnosis dari storage live: Graph hanya berisi node Prime baru12 (proj null); delegasi tidak meninggalkan node apa pun.
+- Akar: graphNoteDelegation langsung return bila tidak ada project (tanpa node, tanpa sinkronisasi); activateAgent tidak menemukan agen di project mana pun maupun di Graph sehingga return tanpa selectAgent. Rantai gagal diam-diam — hanya bubble kesediaan yang tampil.
+- Perbaikan: graphNoteDelegation tanpa project kini membuat node Graph-only (proj null, tepi dari node Prime bila ada) yang tampil di grup "Dari Graph" pada list agen aktif; bila node sudah ada, hanya brief-nya dilengkapi. Urutan delegasi tunggal dibalik (graphNote dulu, baru activate) supaya activateAgent menemukan agen dan memindahkannya ke panel detail + list — selaras dengan urutan loop fan-out v103. Jalur ber-project tidak berubah.
+- Gerbang: root tsc bersih, 13 rig lolos (rig-chat §8 baru: 4 cek — node Graph-only, grup Dari Graph + Distribusi, panel detail berpindah, bubble kesediaan; §6/§7 tetap lolos), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, cargo fmt/check/check --tests 0 warning/error.
+- Push kode: lokal cda06ee ↔ remote 12dd04d (tree identik).
