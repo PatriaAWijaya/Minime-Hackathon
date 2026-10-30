@@ -30,6 +30,7 @@ function agentListWire() {
     else if (act === "g-stop") agentGraphStop(el.getAttribute("data-key") || "");
     else if (act === "g-deact") agentGraphDeact(el.getAttribute("data-key") || "");
     else if (act === "toggle-group") toggleGroup(el.getAttribute("data-pid"));
+    else if (act === "proj-del") deleteProject(el.getAttribute("data-pid"));
   });
   list.addEventListener("dragstart", function (e) {
     var el = e.target.closest ? e.target.closest("[data-dragkey]") : null;
@@ -215,7 +216,7 @@ export function renderAgents() {
     Object.keys(PROJECTS).forEach(function (pid) {
       var proj = PROJECTS[pid];
       var collapsed = !!collapsedGroups[pid];
-      html += '<div class="group" data-act="toggle-group" data-pid="' + pid + '">' + (collapsed ? '▸' : '▾') + ' ' + esc(proj.name) + (pid === currentProj ? ' • PROYEK AKTIF' : '') + '</div>';
+      html += '<div class="group" data-act="toggle-group" data-pid="' + pid + '">' + (collapsed ? '▸' : '▾') + ' ' + esc(proj.name) + (pid === currentProj ? ' • PROYEK AKTIF' : '') + ' <button class="iconbtn" data-act="proj-del" data-pid="' + pid + '" title="' + esc(tr('proj.del')) + '">✕</button></div>';
       html += '<div class="gagents" data-pid="' + pid + '"' + (collapsed ? ' style="display:none"' : '') + '>';
       proj.agents.forEach(function (a, i) {
         var ag = AGENTS[a.key], off = a.status === "Nonaktif";
@@ -1914,6 +1915,28 @@ export function toggleGroup(pid) {
   collapsedGroups[pid] = !collapsedGroups[pid];
   try { window.localStorage.setItem('minime.agentGroups', JSON.stringify(collapsedGroups)); } catch (e) {}
   renderAgents();
+}
+
+/* v105 (perintah Patria 30 Okt 16:32 "hapus ini"): hapus project dari
+   tombol X di header folder. Konfirmasi native karena penghapusan tidak
+   bisa dibatalkan; chat + node Graph + edge + kartu Kanban project ikut
+   terhapus (node terkunci pun ikut, karena ini perintah hapus project
+   eksplisit, bukan klik hapus node). Dokumen Library dibiarkan sebagai
+   arsip. Folder TIDAK pernah hilang otomatis — hanya lewat tombol ini. */
+export function deleteProject(pid) {
+  var proj = PROJECTS[pid]; if (!proj) return false;
+  if (!window.confirm(tr('proj.del.confirm', { name: proj.name }))) return false;
+  var nodeKeys = Object.keys(GNODES).filter(function (k) { return GNODES[k].proj === pid; });
+  nodeKeys.forEach(function (k) { delete GNODES[k]; });
+  for (var i = GEDGES.length - 1; i >= 0; i--) {
+    if (nodeKeys.indexOf(GEDGES[i].f) !== -1 || nodeKeys.indexOf(GEDGES[i].t) !== -1) GEDGES.splice(i, 1);
+  }
+  delete PROJECTS[pid];
+  if (collapsedGroups[pid] !== undefined) { delete collapsedGroups[pid]; try { window.localStorage.setItem('minime.agentGroups', JSON.stringify(collapsedGroups)); } catch (e) {} }
+  if (currentProj === pid) { var rest = Object.keys(PROJECTS); currentProj = rest.length ? rest[0] : null; }
+  saveHomeState(); saveGraphState();
+  syncProjectUI(currentProj); renderAgents(); renderDetail(); renderChat(); renderKanban(); renderGraph();
+  return true;
 }
 
 function kcols() { return [tr('kcol.0'), tr('kcol.1'), tr('kcol.2'), tr('kcol.3'), tr('kcol.4')]; }

@@ -339,6 +339,28 @@ try {
   await tick(50);
   check('v99: node Graph TERKUNCI dipertahankan saat X (aturan v86)', !!dom.window.GNODES['gx5'] && !!row99(), '');
 
+  // 17. v105 (perintah Patria 30 Okt 16:32): hapus folder project + lipat-buka.
+  dom.window.PROJECTS['pdel'] = { name: 'Hapus Uji', agents: [{ key: 'riset', status: 'Idle', task: 'Tugas hapus' }], chat: [], kanban: [] };
+  dom.window.GNODES['gxdel1'] = { name: 'Riset', sub: 'Riset', agent: 'riset', brief: 'Brief hapus', proj: 'pdel', x: 10, y: 10, w: 150, kind: 'output' };
+  dom.window.GNODES['gxdel2'] = { name: 'Prime Agent', sub: 'Orkestrasi', agent: 'prime', brief: '', proj: 'pdel', x: 30, y: 30, w: 195, kind: 'prime' };
+  dom.window.GEDGES.push({ f: 'gxdel2', t: 'gxdel1', l: '' });
+  dom.window.renderAgents();
+  await tick(50);
+  const grpDel = () => [...document.querySelectorAll('#agentList .group')].find((el) => el.textContent.includes('Hapus Uji'));
+  check('v105: header folder Hapus Uji tampil + tombol X ada', !!grpDel() && !!document.querySelector('#agentList [data-act="proj-del"][data-pid="pdel"]'), '');
+  grpDel().click();
+  await tick(50);
+  const gagentsDel = document.querySelector('#agentList .gagents[data-pid="pdel"]');
+  check('v105: klik header melipat folder (gagents tersembunyi)', !!gagentsDel && gagentsDel.style.display === 'none', gagentsDel ? gagentsDel.style.display : 'tak ada');
+  grpDel().click();
+  await tick(50);
+  check('v105: klik header membuka folder lagi', (() => { const g = document.querySelector('#agentList .gagents[data-pid="pdel"]'); return !!g && g.style.display !== 'none'; })(), '');
+  dom.window.confirm = () => true;
+  document.querySelector('#agentList [data-act="proj-del"][data-pid="pdel"]').click();
+  await tick(50);
+  check('v105: X folder -> project + node + edge hilang', !dom.window.PROJECTS['pdel'] && !dom.window.GNODES['gxdel1'] && !dom.window.GNODES['gxdel2'] && !dom.window.GEDGES.some((e) => e.f === 'gxdel2'), 'proj=' + !!dom.window.PROJECTS['pdel']);
+  check('v105: header folder hilang dari list', !grpDel(), '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-home exception :: ' + (e && e.stack ? e.stack : e));
