@@ -2259,3 +2259,11 @@ dokumen lama yang dipakai.
 - i18n: kunci dialog mati dicabut (proj.del.confirm, proj.rename.prompt); kunci arm baru proj.del.arm + chat.studio.arm (824 -> 824/bahasa, paritas penuh, 0 duplikat). Gaya input + tombol konfirmasi di layout-scroll.css.
 - Gerbang: root tsc bersih, 13 rig lolos (rig-home §17/§18 ditulis ulang untuk dua-ketuk + inline; rig-chat §10 baru untuk Studio dua-ketuk dengan draf; stub tugas Kreatif diubah mengandung kata media), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, cargo fmt/check/check --tests 0 warning/error. Catatan jujur: perilaku dialog live tetap harus dikonfirmasi ketukan Patria sendiri — rig tidak bisa menangkap kelas bug ini.
 - Push kode: lokal 2ea93e3 ↔ remote bc1c51a (tree identik).
+
+## v108 — geser workspace Graph (30 Okt 2026 ~19:20 WIB, perintah Patria 19:06 "tambahkan fitur slide")
+- Drag latar kanvas (bukan node, bukan tombol) menggeser seluruh workspace ke segala arah; pan = translasi piksel pada #graphZoom yang sama dengan zoom (urutan translate lalu scale, jadi jarak geser = jarak layar apa pun zoom-nya); edge dan node bergerak bersama sehingga matematika edge tidak berubah. Kursor grab/grabbing di kanvas.
+- Drag node tetap memindah node saja (diuji rig: pan tidak berubah saat node di-drag); drag tombol + tidak memicu pan; klik yang mengikuti drag ditekan sekali (capture) supaya tidak ikut menyeleksi edge/menutup panel — pola yang sama seperti dragMoved node.
+- Posisi pan tersimpan di graphState (kompatibel mundur: store lama tanpa pan -> 0,0) dan bertahan melewati reload; tombol "Reset tampilan" di header Graph mengembalikan pan 0 + zoom 100%.
+- i18n: kunci baru graph.pan.reset (824 -> 825/bahasa, paritas penuh, 0 duplikat).
+- Gerbang: root tsc bersih, 13 rig lolos (rig-graph §20 baru: drag latar, persistensi, drag node tidak menggeser, reset), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, cargo fmt/check/check --tests 0 warning/error. Insiden proses: append CSS v108 sempat gagal karena skrip i18n abort sebelum mencapai blok CSS — tertangkap dari git status (layout-scroll.css tak muncul) sebelum commit, lalu ditambahkan dan di-build ulang.
+- Push kode: lokal d0f1ff5 ↔ remote 3324828 (tree identik).
