@@ -174,6 +174,19 @@ try {
   const mediaDist = pngSize(fs.readFileSync(path.join(distDir, 'media-icon.png')));
   check('dist kanban-icon = ikon baru 712x678', kanbanDist.w === 712 && kanbanDist.h === 678, JSON.stringify(kanbanDist));
   check('dist media-icon = ikon baru 712x541', mediaDist.w === 712 && mediaDist.h === 541, JSON.stringify(mediaDist));
+
+  // v109: tema — default sistem, paksa gelap/terang, Dark Violet Glass.
+  check('v109: tema default = system', dom.window.getTheme() === 'system', String(dom.window.getTheme()));
+  check('v109: select tema ada di Settings + 3 opsi', !!document.getElementById('themeSel') && document.getElementById('themeSel').querySelectorAll('option').length === 3, document.getElementById('themeSel')?.innerHTML?.slice(0, 120) || '');
+  dom.window.setTheme('dark');
+  check('v109: setTheme dark -> data-theme dark + tersimpan', document.documentElement.getAttribute('data-theme') === 'dark' && store.get('minime.theme') === 'dark', document.documentElement.getAttribute('data-theme') || '');
+  dom.window.setTheme('light');
+  check('v109: setTheme light -> data-theme light', document.documentElement.getAttribute('data-theme') === 'light', document.documentElement.getAttribute('data-theme') || '');
+  dom.window.setTheme('system');
+  check('v109: setTheme system -> tersimpan system (jsdom: system gelap false -> light)', store.get('minime.theme') === 'system' && document.documentElement.getAttribute('data-theme') === 'light', document.documentElement.getAttribute('data-theme') || '');
+  const cssLink109 = html.match(/<link[^>]*href="([^"]+\.css)"/);
+  const cssText109 = (cssLink109 ? fs.readFileSync(path.join(distDir, cssLink109[1]), 'utf-8') : '').toLowerCase();
+  check('v109: CSS ter-build memuat Dark Violet Glass (data-theme dark + #150a26 + blur)', cssText109.includes('data-theme') && cssText109.includes('#150a26') && cssText109.includes('backdrop-filter'), '');
 } catch (e) {
   check('rig-settings exception', false, e && e.stack ? e.stack : String(e));
 }

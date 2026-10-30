@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphPrimeFirst, graphZoomIn, graphZoomOut, graphResetView, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphPrimeFirst, graphZoomIn, graphZoomOut, graphResetView, graphStopSim, getTheme, setTheme, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -17,6 +17,13 @@
   import { invoke } from "@tauri-apps/api/core";
 
   let lang = $state(getLang());
+  let theme = $state(getTheme());
+
+  function applyThemeSel(value: string) {
+    const next = value === 'dark' || value === 'light' ? value : 'system';
+    theme = next;
+    setTheme(next);
+  }
   let imgSpend = $state(readImgSpend());
   let liveCost = $state(readLiveCost());
 
@@ -1020,6 +1027,8 @@
       <div class="scroll">
         <h3>{t('settings.lang', lang)}</h3>
         <p><label>{t('settings.lang', lang)}: <select id="langSel" value={lang} onchange={(e) => { applyLanguage(e.currentTarget.value) }}><option value="id">Bahasa Indonesia</option><option value="en">English</option><option value="zh">中文</option></select></label></p>
+        <h3>{t('settings.theme', lang)}</h3>
+        <p><label>{t('settings.theme', lang)}: <select id="themeSel" value={theme} onchange={(e) => { applyThemeSel(e.currentTarget.value) }}><option value="system">{t('settings.theme.system', lang)}</option><option value="dark">{t('settings.theme.dark', lang)}</option><option value="light">{t('settings.theme.light', lang)}</option></select></label></p>
         <h3>{t('settings.keys', lang)}</h3>
         <div class="key-card"><b>{t('key.gemini', lang)}</b><div class="key-row"><input type="password" id="apiKeyGemini" placeholder={t('key.ph.empty', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnGemini" onclick={() => { connectKey('gemini') }}>{t('key.connect', lang)}</button></div><span id="keyNoteGemini"></span></div>
         <div class="key-card"><b>{t('key.meta', lang)}</b><div class="key-row"><input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnMeta" onclick={() => { connectKey('meta') }}>{t('key.connect', lang)}</button></div><span id="keyNoteMeta"></span></div>
