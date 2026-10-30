@@ -243,8 +243,10 @@ export function renderAgents() {
         + '</div>';
     });
     if (gh) gh = '<div class="group">' + esc(tr('agent.graph_group')) + '</div><div class="gagents">' + gh + '</div>';
-    if (!Object.keys(PROJECTS).length) html = "<div class='notice'>" + tr("proj.empty") + "</div>" + gh;
-    else html += gh;
+    /* v100 (perintah Patria 30 Okt 15:26): kotak panduan "Belum ada proyek"
+       di list dihapus — list kosong cukup kosong; kunci proj.empty tetap
+       dipakai empty-state Kanban, jadi tidak ikut dicabut. */
+    html += gh;
     document.getElementById("agentList").innerHTML = html;
     renderGraphProjSel();
   }
