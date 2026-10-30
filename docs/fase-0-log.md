@@ -2309,3 +2309,11 @@ dokumen lama yang dipakai.
 - Akar: .ms-video (wadah tab Video) dikunci max-width: 880px sejak v81 (model kartu ringkas), sehingga workstation tidak melebar mengikuti window. Cap dicabut -> width: 100%, max-width: none. Preview sudah flex:1 + min-width:0, video width:100%, panel samping fixed (260/240px) + flex-wrap yang sudah ada menangani window sempit.
 - Gerbang: root tsc bersih, 13 rig lolos (rig-ve2 §13 baru: aturan fluid ada + cap 880px hilang dari CSS ter-build), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error.
 - Push kode: lokal ce236f2 ↔ remote a7236a7 (tree identik).
+
+## v115 — header Graph dirapikan (30 Okt 2026 ~21:20 WIB, perintah Patria 21:05)
+- Dihapus total (tombol + fungsi + panel + kunci + CSS): Reset tampilan (graphResetView) dan Riwayat (graphToggleHist/renderGraphHist + panel #graphHist + badge + kunci graph.hist/graph.pan.reset/graph.hist_empty/graph.hist_run + CSS .g-badge/.graph-hist). Rekaman run di storage (minime.graphRuns, cap 50) tetap berjalan tanpa tampilan.
+- Ditambah: Buat Project Baru (graphNewProject, tombol btn-primary di header) — nama otomatis "Project Baru" (+ nomor bila sudah ada), langsung jadi project aktif + node Prime di Graph (sinkron dua arah: folder muncul di list agen); rename lewat pensil di header.
+- Jalankan Simulasi Alur -> ikon ▶ saja (btn-primary, title label penuh), Hentikan -> ikon ⏹ saja (title label penuh). Kunci graph.run/graph.stop dipertahankan sebagai tooltip.
+- i18n 829 -> 827/bahasa (cabut 4, tambah graph.newproj + proj.new, 0 duplikat). Jebakan rig: §12 lama mengklik .btn-primary pertama (kini Buat Project Baru) — diperbaiki ke klik ▶ eksplisit; cek §20 dibuat relatif terhadap state agar tahan terhadap project yang sudah ada.
+- Gerbang: root tsc bersih, 13 rig lolos, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error.
+- Push kode: lokal b45f319 ↔ remote 20c5e20 (tree identik).
