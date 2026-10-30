@@ -174,6 +174,15 @@ try {
   dom2.window.renderKanban();
   await tick(100);
   check('kolom baru bertahan setelah muat ulang', (dom2.window.document.getElementById('kanbanBox')?.textContent || '').includes('List Baru'), '');
+
+  // 3b. v91: Kanban mode Semua project.
+  W.PROJECTS['pk1'] = { name: 'Proyek Kedua', agents: [], chat: [], kanban: [{ t: 'Kartu Proyek Kedua', a: 'Riset', c: 0 }] };
+  W.kbSetProj('all');
+  await tick(100);
+  const kbAllText = document.getElementById('kanbanBox')?.textContent || '';
+  check('mode Semua -> kartu dua project tampil', kbAllText.includes('Kartu Biasa') && kbAllText.includes('Kartu Proyek Kedua'), kbAllText.slice(0, 200));
+  W.kbSetProj('cur');
+  await tick(100);
   W.kbTeamOpen();
   await tick(50);
   const teamBoxes = [...document.querySelectorAll('[data-teamkey]')];

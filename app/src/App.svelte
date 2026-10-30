@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -628,6 +628,9 @@
           <button data-kbtab="table">{t('word.table', lang)}</button>
           <button data-kbtab="list">{t('word.list', lang)}</button>
           <span style="flex:1"></span>
+          <label style="margin:0;font-weight:400;font-size:13px">{t('kb.proj.label', lang)}
+            <select id="kbProjSel" onchange={(e) => { kbSetProj((e.target as HTMLSelectElement).value) }} style="width:auto;margin-left:6px"></select>
+          </label>
           <label style="margin:0;font-weight:400;font-size:13px">{t('home.filter', lang)}
             <select id="kbFilter" onchange={() => { renderKanban() }} style="width:auto;margin-left:6px">
               <option value="">{t('home.allagents', lang)}</option>

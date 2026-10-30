@@ -92,6 +92,22 @@ export function selectAgent(key, pid) {
     saveHomeState();
   }
 
+function detailGraphTasks() {
+  var rows = [];
+  Object.keys(GNODES).forEach(function (k) {
+    var nd = GNODES[k];
+    if (nd.agent !== selectedAgent) return;
+    var pn = (nd.proj && PROJECTS[nd.proj]) ? PROJECTS[nd.proj].name : "—";
+    rows.push("<div class='d-row' onclick=\"detailGoGraph('" + jsEsc(k) + "')\"><span>" + esc(nd.name) + " • " + esc(pn) + "</span><span class='d-val'>" + esc((nd.brief || "").split("\n")[0].slice(0, 40) || "—") + " ›</span></div>");
+  });
+  if (!rows.length) return "";
+  return "<div class='d-label'>" + tr('detail.graph_tasks') + "</div><div class='d-rows'>" + rows.join("") + "</div>";
+}
+export function detailGoGraph(k) {
+  var nd = GNODES[k]; if (!nd) return;
+  if (nd.proj && PROJECTS[nd.proj] && nd.proj !== currentProj) switchProject(nd.proj);
+  showView("graph"); graphOpenPopup(k);
+}
 export function renderDetail() {
     var ag = AGENTS[selectedAgent];
     var ins = ag.instructions || (selectedAgent === "prime" ? "General-purpose assistant" : ag.goal);
@@ -124,6 +140,7 @@ export function renderDetail() {
       + '<div class="d-row" onclick="showView(\'graph\')"><span>' + tr('detail.routines') + '</span><span class="d-val">' + tr('detail.val.configured') + '</span></div>'
       + '<div class="d-row" onclick="showView(\'billing\')"><span>' + tr('detail.usage') + '</span><span class="d-val">' + usageVal + ' ›</span></div>'
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.publish')) + '\')"><span>' + tr('detail.publish') + '</span><span class="d-val">›</span></div></div>'
+      + detailGraphTasks()
       + '<div class="d-label">' + tr('detail.rules') + '</div><div class="d-rows">'
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.permissions')) + '\')"><span>' + tr('detail.permissions') + '</span><span class="d-val">' + tr('detail.val.fullaccess') + '</span></div>'
       + '<div class="d-row" onclick="detailNote(\'' + jsEsc(tr('detail.note.folders')) + '\')"><span>' + tr('detail.folders') + '</span><span class="d-val">' + tr('detail.val.allfiles') + '</span></div>'
@@ -159,7 +176,7 @@ export function switchProject(pid) {
     var _pa = PROJECTS[pid].agents || [];
     if (_pa.length && !_pa.some(function (a) { return a.key === selectedAgent; })) selectedAgent = _pa[0].key; saveHomeState();
     syncProjectUI(pid);
-    renderAgents(); renderChat(); renderKanban(); renderDetail();
+    renderAgents(); renderChat(); renderKanban(); renderDetail(); renderGraph();
   }
 
 export function renderChat() {
@@ -274,29 +291,51 @@ export function renderKanban() {
     var teamAvs = document.getElementById("kbTeamAvs"), teamNote = document.getElementById("kbTeamNote");
     if (teamAvs) teamAvs.innerHTML = kbTeam().map(function (k, idx) { var a2 = AGENTS[k]; return a2 ? "<div class='av' style='width:28px;height:28px;font-size:12px;background:" + a2.color + (idx > 0 ? ";margin-left:-8px" : "") + "'>" + esc(a2.name.charAt(0)) + "</div>" : ""; }).join("");
     if (teamNote) teamNote.textContent = kbTeam().map(function (k) { return AGENTS[k] ? AGENTS[k].name : ""; }).filter(Boolean).join(", ");
-    if (!PROJECTS[currentProj]) { document.getElementById("kanbanTitle").textContent = "—"; var _kbw = document.getElementById("kanbanBox"); if (_kbw) _kbw.innerHTML = "<div class='notice'>" + tr("proj.empty") + "</div>"; return; }
-    document.getElementById("kanbanTitle").textContent = PROJECTS[currentProj].name;
+    if (kbProjView === "all") { if (teamAvs) teamAvs.innerHTML = ""; if (teamNote) teamNote.textContent = ""; }
+    var kbGroups = [];
+    if (kbProjView === "all") kbGroups = Object.keys(PROJECTS);
+    else if (kbProjView && PROJECTS[kbProjView]) kbGroups = [kbProjView];
+    else if (currentProj && PROJECTS[currentProj]) kbGroups = [currentProj];
+    if (!kbGroups.length) { document.getElementById("kanbanTitle").textContent = "—"; var _kbw = document.getElementById("kanbanBox"); if (_kbw) _kbw.innerHTML = "<div class='notice'>" + tr("proj.empty") + "</div>"; return; }
+    document.getElementById("kanbanTitle").textContent = kbProjView === "all" ? tr("kb.proj.all") : PROJECTS[kbGroups[0]].name;
     var wrap = document.getElementById("kanbanBox");
-    var cards = PROJECTS[currentProj].kanban || [];
+    kbGroups.forEach(function (pid) { if (!PROJECTS[pid].kanban) PROJECTS[pid].kanban = []; });
+    (function () { var ks = document.getElementById("kbProjSel"); if (!ks) return; ks.innerHTML = "<option value=\"cur\">" + esc(tr('kb.proj.cur')) + "</option><option value=\"all\">" + esc(tr('kb.proj.all')) + "</option>" + Object.keys(PROJECTS).map(function (pid) { return "<option value=\"" + esc(pid) + "\">" + esc(PROJECTS[pid].name) + "</option>"; }).join(""); ks.value = kbProjView; })();
     (function () { var kf = document.getElementById("kbFilter"); if (!kf) return; var cur = kf.value; kf.innerHTML = "<option value=\"\">" + tr('home.allagents') + "</option>" + Object.keys(AGENTS).map(function (k) { return "<option>" + esc(AGENTS[k].name) + "</option>"; }).join(""); if (cur) kf.value = cur; })();
     var filter = document.getElementById("kbFilter") ? document.getElementById("kbFilter").value : "";
     function vis(card) { return !filter || card.a === filter; }
+    function kbOpenCall(pid, i) { return pid === currentProj ? "kbOpen(" + i + ")" : "kbOpenPid('" + jsEsc(pid) + "', " + i + ")"; }
     if (kanbanTab === "table") {
-      var rows = cards.map(function (card, i) { return { card: card, i: i }; }).filter(function (x) { return vis(x.card); }).map(function (x) {
-        return "<tr onclick='kbOpen(" + x.i + ")' style='cursor:pointer'><td><b>" + esc(x.card.t) + "</b></td><td>" + esc(x.card.a) + "</td><td>" + colName(x.card.c) + "</td><td>💬 " + cardComments(x.card) + "</td></tr>";
-      }).join("");
+      var rows = "";
+      kbGroups.forEach(function (gpid) {
+        var gc = PROJECTS[gpid].kanban || [];
+        if (kbProjView === "all") rows += "<tr><td colspan='4'><b>" + esc(PROJECTS[gpid].name) + "</b></td></tr>";
+        rows += gc.map(function (card, i) { return { card: card, i: i }; }).filter(function (x) { return vis(x.card); }).map(function (x) {
+          return "<tr onclick='" + kbOpenCall(gpid, x.i) + "' style='cursor:pointer'><td><b>" + esc(x.card.t) + "</b></td><td>" + esc(x.card.a) + "</td><td>" + colName(x.card.c) + "</td><td>💬 " + cardComments(x.card) + "</td></tr>";
+        }).join("");
+      });
       wrap.innerHTML = "<table><tr><th>Tugas</th><th>Agen</th><th>Status</th><th>Komentar</th></tr>" + rows + "</table>";
       return;
     }
     if (kanbanTab === "list") {
-      wrap.innerHTML = cards.map(function (card, i) { return { card: card, i: i }; }).filter(function (x) { return vis(x.card); }).map(function (x) {
-        return "<div class='todayitem' onclick='kbOpen(" + x.i + ")' style='cursor:pointer'><b>" + esc(x.card.t) + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + esc(x.card.a) + " • " + colName(x.card.c) + " • 💬 " + cardComments(x.card) + "</small></div>";
-      }).join("") || "<p>Tidak ada tugas untuk filter ini.</p>";
+      var listHtml = "";
+      kbGroups.forEach(function (gpid) {
+        var gc = PROJECTS[gpid].kanban || [];
+        if (kbProjView === "all") listHtml += "<div class='kb-projhead'>" + esc(PROJECTS[gpid].name) + "</div>";
+        listHtml += gc.map(function (card, i) { return { card: card, i: i }; }).filter(function (x) { return vis(x.card); }).map(function (x) {
+          return "<div class='todayitem' onclick='" + kbOpenCall(gpid, x.i) + "' style='cursor:pointer'><b>" + esc(x.card.t) + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + esc(x.card.a) + " • " + colName(x.card.c) + " • 💬 " + cardComments(x.card) + "</small></div>";
+        }).join("");
+      });
+      wrap.innerHTML = listHtml || "<p>Tidak ada tugas untuk filter ini.</p>";
       return;
     }
     var totalCols = kcols().length + extraCols.length;
-    var board = document.createElement("div"); board.className = "kanban";
-    for (var ci = 0; ci < totalCols; ci++) {
+    wrap.innerHTML = "";
+    kbGroups.forEach(function (gpid) {
+      var cards = PROJECTS[gpid].kanban || [];
+      if (kbProjView === "all") { var ph = document.createElement("div"); ph.className = "kb-projhead"; ph.textContent = PROJECTS[gpid].name; wrap.appendChild(ph); }
+      var board = document.createElement("div"); board.className = "kanban";
+      for (var ci = 0; ci < totalCols; ci++) {
       (function (ci) {
         var div = document.createElement("div"); div.className = "kcol";
         var count = cards.filter(function (c) { return c.c === ci && vis(c); }).length;
@@ -305,7 +344,8 @@ export function renderKanban() {
         div.addEventListener("dragleave", function () { div.classList.remove("over"); });
         div.addEventListener("drop", function (e) {
           e.preventDefault(); div.classList.remove("over");
-          if (dragCard !== null) { cards[dragCard].c = ci; dragCard = null; renderKanban(); }
+          if (dragCard !== null && dragPid === gpid) { cards[dragCard].c = ci; }
+          dragCard = null; dragPid = null; renderKanban();
         });
         cards.forEach(function (card, i) {
           if (card.c !== ci || !vis(card)) return;
@@ -313,9 +353,9 @@ export function renderKanban() {
           var k = document.createElement("div"); k.className = "kcard"; k.draggable = true;
           k.innerHTML = "<div class='accent' style='background:" + colColor(ci) + "'></div><b>" + esc(card.t) + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + esc(card.a) + "</small>"
             + "<div class='kb-cardfoot'><span>💬 " + cardComments(card) + "</span><span class='av' style='width:26px;height:26px;font-size:12px;background:" + ag.color + "'>" + esc(ag.name.charAt(0)) + "</span></div>";
-          k.addEventListener("dragstart", function () { dragCard = i; });
+          k.addEventListener("dragstart", function () { dragCard = i; dragPid = gpid; });
           k.addEventListener("mousedown", function (e) { kbDownPos = { x: e.clientX, y: e.clientY }; });
-          k.addEventListener("click", function (e) { if (kbDownPos && Math.abs(e.clientX - kbDownPos.x) + Math.abs(e.clientY - kbDownPos.y) > 5) return; kbOpen(i); });
+          k.addEventListener("click", function (e) { if (kbDownPos && Math.abs(e.clientX - kbDownPos.x) + Math.abs(e.clientY - kbDownPos.y) > 5) return; if (gpid === currentProj) kbOpen(i); else kbOpenPid(gpid, i); });
           if (ci < totalCols - 1) {
             var b = document.createElement("button"); b.className = "btn btn-sm"; b.textContent = tr('kanban.advance');
             b.addEventListener("click", function (e) { e.stopPropagation(); card.c = ci + 1; renderKanban(); });
@@ -329,11 +369,12 @@ export function renderKanban() {
         div.appendChild(add);
         board.appendChild(div);
       })(ci);
-    }
+      }
+      wrap.appendChild(board);
+    });
     var addList = document.createElement("div"); addList.className = "addlist";
     addList.innerHTML = "<button class='btn' onclick='addKanbanList()'>＋ Add another list</button>";
-    board.appendChild(addList);
-    wrap.innerHTML = ""; wrap.appendChild(board);
+    wrap.appendChild(addList);
   }
 
 export function addKanbanList() {
@@ -369,18 +410,20 @@ function graphHealth(k) {
   if (nd.kind === "trigger") { var t = graphTrigOf(nd); if (t.type === "schedule" && !t.active) return "bad"; }
   for (var i = 0; i < GEDGES.length; i++) {
     var e = GEDGES[i];
-    if ((e.f === k || e.t === k) && GNODES[e.f] && GNODES[e.t]) return "ok";
+    if ((e.f === k || e.t === k) && GNODES[e.f] && GNODES[e.t] && graphVisible(e.f) && graphVisible(e.t)) return "ok";
   }
   return "bad";
 }
+function graphVisible(k) { var nd = GNODES[k]; return !nd || !nd.proj || nd.proj === currentProj; }
+function graphVisibleKeys() { return Object.keys(GNODES).filter(function (k) { return graphVisible(k); }); }
 export function renderGraph() {
     var ep = document.getElementById("graphEmptyPlus");
-    if (ep) ep.style.display = Object.keys(GNODES).length ? "none" : "flex";
+    if (ep) ep.style.display = graphVisibleKeys().length ? "none" : "flex";
     var wrap = document.getElementById("graphNodes");
     wrap.innerHTML = "";
-    var firstKey = Object.keys(GNODES)[0];
+    var firstKey = graphVisibleKeys()[0];
     renderGraphProjSel();
-    Object.keys(GNODES).forEach(function (k) {
+    graphVisibleKeys().forEach(function (k) {
       var nd = GNODES[k];
       var el = document.createElement("div");
       el.className = "n8n-node " + nd.kind + " " + graphHealth(k) + (k === graphSel ? " sel" : "") + (nd.locked ? " locked" : "");
@@ -511,12 +554,12 @@ function createNode(template, opts) {
   if (opts.edgeFrom && GNODES[opts.edgeFrom]) GEDGES.push({ f: opts.edgeFrom, t: nk, l: "" });
   saveGraphState();
   graphSelect(nk);
-  showNotice("graphNotice", opts.edgeFrom && GNODES[opts.edgeFrom] ? "Simulasi: node baru ditambahkan setelah " + GNODES[opts.edgeFrom].name + " (tampilan saja)." : tr("graph.node_added"));
+  if (!opts.quiet) showNotice("graphNotice", opts.edgeFrom && GNODES[opts.edgeFrom] ? "Simulasi: node baru ditambahkan setelah " + GNODES[opts.edgeFrom].name + " (tampilan saja)." : tr("graph.node_added"));
   return nk;
 }
 export function addNodeAfter(key) {
   var src = GNODES[key]; if (!src) return null;
-  return createNode({ sub: "simulasi", icon: "＋", x: Math.min(90, src.x + 14), y: src.y, w: 150, kind: "output", desc: "Node baru dari tombol ＋ (simulasi) — di aplikasi sungguhan, node ini bisa diisi agen/tool lain." }, { edgeFrom: key });
+  return createNode({ sub: "simulasi", icon: "＋", x: Math.min(90, src.x + 14), y: src.y, w: 150, kind: "output", desc: "Node baru dari tombol ＋ (simulasi) — di aplikasi sungguhan, node ini bisa diisi agen/tool lain.", proj: src.proj || currentProj }, { edgeFrom: key });
 }
 
 function showNotice(id, msg) { var n = document.getElementById(id); if (n) { n.style.display = "block"; n.textContent = msg; } }
@@ -1500,7 +1543,7 @@ export function toggleGroup(pid) {
 function kcols() { return [tr('kcol.0'), tr('kcol.1'), tr('kcol.2'), tr('kcol.3'), tr('kcol.4')]; }
 
 /* ---------- Kanban (drag & drop) ---------- */
-var dragCard = null;
+var dragCard = null, dragPid = null;
 
 var kanbanTab = "kanban", extraCols = [];
 
@@ -1733,6 +1776,11 @@ export function renderGraphPopup() {
     }
     html += "<button class='g-run' data-act='grun'>" + tr("graph.run_now") + "</button>";
   }
+  html += "<div class='g-row'><label>" + tr("graph.agent") + "</label><select class='g-input' data-act='gagent'" + dis + ">";
+  html += optionHtml("", tr("graph.agent_none"), !nd.agent);
+  Object.keys(AGENTS).forEach(function (k) { html += optionHtml(k, AGENTS[k].name, nd.agent === k); });
+  html += "</select></div>";
+  html += "<div class='g-row'><label>" + tr("graph.brief") + "</label><textarea class='g-input' data-act='gbrief'" + dis + ">" + esc(nd.brief || "") + "</textarea></div>";
   html += "<div class='g-actions'><button class='btn' data-act='gdup'>" + tr("graph.dup") + "</button><button class='btn' data-act='glock'>" + (nd.locked ? tr("graph.unlock") : tr("graph.lock")) + "</button><button class='btn' data-act='gdel'" + dis + ">" + tr("graph.del") + "</button></div>";
   p.innerHTML = html;
 }
@@ -1750,6 +1798,8 @@ function graphPopupDispatch(act, el) {
     case "gclose": graphClosePanel(); break;
     case "grename": graphRename(el.value); break;
     case "gredesc": graphRedesc(el.value); break;
+    case "gagent": graphSetAgent(el.value); break;
+    case "gbrief": graphSetBrief(el.value); break;
     case "gbranch": graphSetBranch(el.getAttribute("data-side"), el.value); break;
     case "gtrig": graphSetTrig(el.getAttribute("data-field"), el.value); break;
     case "gtrignum": graphSetTrigNum(el.getAttribute("data-field"), el.value); break;
@@ -1779,7 +1829,7 @@ function graphPopupWire() {
     var el = e.target.closest ? e.target.closest("[data-act]") : null;
     if (!el || !card.contains(el)) return;
     var a = el.getAttribute("data-act");
-    if (a === "grename" || a === "gredesc") graphPopupDispatch(a, el);
+    if (a === "grename" || a === "gredesc" || a === "gbrief") graphPopupDispatch(a, el);
   });
   card.addEventListener("change", function (e) {
     var el = e.target.closest ? e.target.closest("[data-act]") : null;
@@ -1792,6 +1842,19 @@ function graphPopupSaved() { var el = document.getElementById("graphPopupSaved")
 function graphPopupTitle(nd) { var el = document.getElementById("graphPopupTitle"); if (el) el.textContent = (nd.icon || "") + " " + nd.name + (nd.locked ? " 🔒" : ""); }
 export function graphRename(v) { var nd = graphSelNode(); if (!nd || nd.locked) return; nd.name = v; saveGraphState(); var nl = document.querySelector('[data-nkey="' + graphSel + '"] .nname'); if (nl) nl.textContent = v; graphPopupTitle(nd); graphPopupSaved(); }
 export function graphRedesc(v) { var nd = graphSelNode(); if (!nd || nd.locked) return; nd.desc = v; saveGraphState(); graphPopupSaved(); }
+export function graphSetAgent(v) {
+  var nd = graphSelNode(); if (!nd || nd.locked) return;
+  nd.agent = v || "";
+  if (v && AGENTS[v] && nd.kind !== "trigger") nd.sub = AGENTS[v].name;
+  saveGraphState();
+  if (v) graphSyncAgent(v, currentProj, nd.brief);
+  renderGraph(); renderAgents(); renderDetail(); graphPopupSaved();
+}
+export function graphSetBrief(v) {
+  var nd = graphSelNode(); if (!nd || nd.locked) return;
+  nd.brief = v; saveGraphState(); graphPopupSaved();
+  if (nd.agent) graphSyncAgent(nd.agent, currentProj, v);
+}
 export function graphSetBranch(side, v) { var nd = graphSelNode(); if (!nd || nd.locked) return; if (side === "T") nd.branchT = v; else nd.branchF = v; saveGraphState(); renderGraph(); renderGraphPopup(); }
 function graphTrigSync(nd) { var t = graphTrigOf(nd); nd.sub = graphTrigSummary(t); }
 export function graphSetTrig(field, v) { var nd = graphSelNode(); if (!nd || nd.kind !== "trigger" || nd.locked) return; graphTrigOf(nd)[field] = v; graphTrigSync(nd); saveGraphState(); renderGraph(); renderGraphPopup(); }
@@ -1841,15 +1904,53 @@ export function graphDeleteNode() {
 export function graphPrimeFirst() {
   // v90 (perintah Patria 30 Okt 09:23): kanvas kosong -> tombol + tengah
   // memanggil Prime sebagai tugas pertama (tengah kanvas, x/y persen).
-  if (Object.keys(GNODES).length) return;
-  createNode({ name: "Prime Agent", sub: "Orkestrasi & kurasi", icon: "\uD83E\uDD16", x: 45, y: 45, w: 195, kind: "prime", desc: "Agen utama: memecah arahan, memanggil agen, dan mengkurasi semua hasil sebelum final." }, {});
+  // v91: node + langsung terikat agen prime + project aktif.
+  if (graphVisibleKeys().length) return;
+  createNode({ name: "Prime Agent", sub: "Orkestrasi & kurasi", icon: "\uD83E\uDD16", x: 45, y: 45, w: 195, kind: "prime", desc: "Agen utama: memecah arahan, memanggil agen, dan mengkurasi semua hasil sebelum final.", agent: "prime", proj: currentProj }, {});
+  if (currentProj) graphSyncAgent("prime", currentProj, "");
+}
+/* v91 (perintah Patria 30 Okt 12:38): dua arah Graph <-> menu utama.
+   - Popup node: pilih agen + brief tugas -> agen itu AKTIF di project
+     (ditambah bila belum ada, diaktifkan lagi bila Nonaktif) dan tugasnya
+     tampil di list agen + panel detail.
+   - Delegasi chat: Prime mendelegasikan -> node agen dibuat di graph
+     project itu, dirangkai dari node Prime (bintang, bukan rantai palsu:
+     tiap agen digantung langsung di Prime). Brief diisi dari pesan user
+     hanya bila masih kosong (editan popup menang). */
+function graphSyncAgent(agentKey, pid, brief) {
+  var proj = PROJECTS[pid]; if (!proj || !AGENTS[agentKey]) return;
+  if (!proj.agents) proj.agents = [];
+  var ex = null;
+  proj.agents.forEach(function (a) { if (a.key === agentKey) ex = a; });
+  var t = brief ? String(brief).split("\n")[0].slice(0, 60) : "";
+  if (!ex) proj.agents.push({ key: agentKey, status: "Idle", task: t || "—" });
+  else { if (ex.status === "Nonaktif") ex.status = "Idle"; if (t) ex.task = t; }
+  saveHomeState();
+}
+export function graphNoteDelegation(agentKey, briefText) {
+  var pid = currentProj; if (!pid || !PROJECTS[pid] || !AGENTS[agentKey]) return;
+  var chain = Object.keys(GNODES).filter(function (k) { return GNODES[k].proj === pid && GNODES[k].agent; });
+  var primeKey = null, aKey = null;
+  chain.forEach(function (k) { if (GNODES[k].agent === "prime") primeKey = k; if (GNODES[k].agent === agentKey) aKey = k; });
+  if (!primeKey) {
+    primeKey = createNode({ name: "Prime Agent", sub: "Orkestrasi & kurasi", icon: "\uD83E\uDD16", x: 10, y: 32, w: 195, kind: "prime", desc: "Agen utama: memecah arahan, memanggil agen, dan mengkurasi semua hasil sebelum final.", agent: "prime", proj: pid, brief: briefText || "" }, { quiet: true });
+  } else if (briefText && !GNODES[primeKey].brief) { GNODES[primeKey].brief = briefText; saveGraphState(); }
+  if (agentKey !== "prime") {
+    if (!aKey) {
+      var n = Object.keys(GNODES).filter(function (k) { return GNODES[k].proj === pid && GNODES[k].agent; }).length;
+      var nx = n < 4 ? 10 + 22 * n : 10 + 22 * (n - 4), ny = n < 4 ? 32 : 60;
+      aKey = createNode({ name: AGENTS[agentKey].name, sub: AGENTS[agentKey].role || "", icon: AGENTS[agentKey].name.charAt(0), x: Math.min(88, nx), y: ny, w: 170, kind: "output", desc: "", agent: agentKey, proj: pid, brief: briefText || "" }, { edgeFrom: primeKey, quiet: true });
+    } else if (briefText && !GNODES[aKey].brief) { GNODES[aKey].brief = briefText; saveGraphState(); }
+  }
+  graphSyncAgent(agentKey, pid, briefText);
+  graphSyncAgent("prime", pid, briefText);
 }
 export function graphAddNode() {
   if (graphSel && GNODES[graphSel]) { addNodeAfter(graphSel); return; }
   var keys = Object.keys(GNODES);
   var last = keys.length ? keys[keys.length - 1] : null;
   var src = last ? GNODES[last] : null;
-  createNode({ sub: "simulasi", icon: "＋", x: src ? Math.min(90, src.x + 14) : 45, y: src ? src.y : 45, w: 150, kind: "output", desc: "Node baru dari toolbar + Add node." }, last ? { edgeFrom: last } : {});
+  createNode({ sub: "simulasi", icon: "＋", x: src ? Math.min(90, src.x + 14) : 45, y: src ? src.y : 45, w: 150, kind: "output", desc: "Node baru dari toolbar + Add node.", proj: currentProj }, last ? { edgeFrom: last } : {});
 }
 
 function graphRunsGet() { try { return JSON.parse(localStorage.getItem("minime.graphRuns") || "[]"); } catch (_) { return []; } }
@@ -1908,7 +2009,7 @@ export function graphFullscreen() { var el = document.getElementById("graphBox")
 /* ---------- Audit menu v78: chat, detail, search, kanban, graph, settings ---------- */
 var waAttachments = [], waCamStream = null, waRec = null, waRecChunks = [], waAttErr = "";
 var detailModelOpen = false, detailEffortOpen = false, detailMemOpen = false, detailFilesOpen = false;
-var kbDlgIdx = null, kbDlgMode = null, kbDelAsk = false, kbDownPos = null;
+var kbDlgIdx = null, kbDlgMode = null, kbDelAsk = false, kbDownPos = null, kbDlgPid = null, kbProjView = "cur";
 var graphSelEdge = null, graphEdgeDelAsk = false, graphSimTimer = null;
 
 function waNoteEl() { return document.getElementById("waNote"); }
@@ -2054,10 +2155,12 @@ export function searchJump(i) {
   if (el) { el.classList.add("hl"); try { el.scrollIntoView({ block: "center" }); } catch (_) {} }
 }
 
-function kbCards() { return PROJECTS[currentProj] ? (PROJECTS[currentProj].kanban || []) : []; }
+function kbCards() { var pid = kbDlgPid || currentProj; return PROJECTS[pid] ? (PROJECTS[pid].kanban || []) : []; }
 function kbTeam() { var p = PROJECTS[currentProj]; if (!p) return []; if (!p.team) p.team = p.agents.map(function (a) { return a.key; }); return p.team; }
-export function kbOpen(i) { kbDlgIdx = i; kbDlgMode = "card"; kbDelAsk = false; kbRenderDlg(); }
-export function kbClose() { kbDlgIdx = null; kbDlgMode = null; kbDelAsk = false; kbRenderDlg(); }
+export function kbOpen(i) { kbDlgPid = currentProj; kbDlgIdx = i; kbDlgMode = "card"; kbDelAsk = false; kbRenderDlg(); }
+export function kbOpenPid(pid, i) { kbDlgPid = pid; kbDlgIdx = i; kbDlgMode = "card"; kbDelAsk = false; kbRenderDlg(); }
+export function kbSetProj(v) { kbProjView = v; renderKanban(); }
+export function kbClose() { kbDlgIdx = null; kbDlgMode = null; kbDelAsk = false; kbDlgPid = null; kbRenderDlg(); }
 export function kbRenderDlg() {
   var box = document.getElementById("kbDlg"); if (!box) return;
   if (!kbDlgMode) { box.style.display = "none"; box.innerHTML = ""; return; }
@@ -2075,7 +2178,7 @@ export function kbRenderDlg() {
   if (!card) { kbClose(); return; }
   var agOpts = "";
   var seen = {};
-  (PROJECTS[currentProj] ? (PROJECTS[currentProj].agents || []) : []).forEach(function (a) { if (AGENTS[a.key]) { seen[a.key] = true; agOpts += optionHtml(AGENTS[a.key].name, AGENTS[a.key].name, card.a === AGENTS[a.key].name); } });
+  (PROJECTS[kbDlgPid || currentProj] ? (PROJECTS[kbDlgPid || currentProj].agents || []) : []).forEach(function (a) { if (AGENTS[a.key]) { seen[a.key] = true; agOpts += optionHtml(AGENTS[a.key].name, AGENTS[a.key].name, card.a === AGENTS[a.key].name); } });
   if (!seen[agentKeyByName(card.a)]) agOpts += optionHtml(card.a, card.a, true);
   var colOpts = "";
   var total = kcols().length + extraCols.length;
@@ -2307,5 +2410,5 @@ export function initV5() {
   waInputChanged();
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, detailGoGraph, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }

@@ -383,6 +383,43 @@ try {
   await tick(50);
   check('drag mouseup -> node tetap ada', !!document.querySelector('[data-nkey="prime"]'), '');
 
+  // 19. v91: popup agen+brief + filter per-project + delegasi -> node.
+  const firstNode19 = document.querySelector('.n8n-node');
+  const key19 = firstNode19?.getAttribute('data-nkey');
+  // dblclick asli selalu didahului mousedown (yang me-reset dragMoved sisa S17).
+  firstNode19.dispatchEvent(new dom.window.MouseEvent('mousedown', { bubbles: true }));
+  firstNode19.dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true }));
+  await tick(100);
+  check('popup node punya pilih agen + brief', !!document.querySelector('#graphPopupCard select[data-act="gagent"]') && !!document.querySelector('#graphPopupCard textarea[data-act="gbrief"]'), document.getElementById('graphPopupCard')?.innerHTML?.slice(0, 200) || '');
+  const sel19 = document.querySelector('#graphPopupCard select[data-act="gagent"]');
+  sel19.value = 'riset';
+  sel19.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  await tick(50);
+  const br19 = document.querySelector('#graphPopupCard textarea[data-act="gbrief"]');
+  br19.value = 'Brief uji popup';
+  br19.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  check('pilih agen + brief tersimpan di node', dom.window.GNODES[key19].agent === 'riset' && dom.window.GNODES[key19].brief === 'Brief uji popup', JSON.stringify({ a: dom.window.GNODES[key19].agent, b: dom.window.GNODES[key19].brief }));
+  Object.keys(dom.window.GNODES).forEach((k) => delete dom.window.GNODES[k]);
+  dom.window.GEDGES.length = 0;
+  dom.window.PROJECTS['p1'] = { name: 'P1', agents: [], chat: [], kanban: [] };
+  dom.window.switchProject('p1');
+  await tick(100);
+  check('project baru -> kanvas kosong + tombol + tampil', document.querySelectorAll('.n8n-node').length === 0 && document.getElementById('graphEmptyPlus')?.style.display === 'flex', 'nodes=' + document.querySelectorAll('.n8n-node').length);
+  document.getElementById('graphEmptyPlus').click();
+  await tick(100);
+  const primeP1 = Object.values(dom.window.GNODES).find((n) => n.proj === 'p1' && n.agent === 'prime');
+  check('klik + di project -> node Prime project itu', !!primeP1, Object.keys(dom.window.GNODES).join(','));
+  dom.window.graphNoteDelegation('riset', 'Brief delegasi uji');
+  await tick(100);
+  const risKey = Object.keys(dom.window.GNODES).find((k) => dom.window.GNODES[k].proj === 'p1' && dom.window.GNODES[k].agent === 'riset');
+  const risP1 = risKey ? dom.window.GNODES[risKey] : null;
+  check('delegasi -> node agen + edge dari Prime + brief', !!risP1 && risP1.brief === 'Brief delegasi uji' && dom.window.GEDGES.some((e) => e.t === risKey && dom.window.GNODES[e.f]?.agent === 'prime'), JSON.stringify(risP1 || null));
+  check('delegasi -> agen aktif di project', dom.window.PROJECTS['p1'].agents.some((a) => a.key === 'riset' && a.status !== 'Nonaktif'), JSON.stringify(dom.window.PROJECTS['p1'].agents));
+  dom.window.selectAgent('riset', 'p1');
+  await tick(100);
+  check('detail agen menampilkan tugas Graph', (document.getElementById('detailBody')?.textContent || '').includes('Brief delegasi uji'), (document.getElementById('detailBody')?.textContent || '').slice(0, 200));
+
   // 18. v90: toolbar bawah hilang + kanvas kosong -> tombol + tengah memanggil Prime.
   check('toolbar bawah Graph tidak ada', !document.querySelector('.graph-toolbar'), document.querySelector('.graph-toolbar')?.outerHTML?.slice(0, 100) || '');
   Object.keys(dom.window.GNODES).forEach((k) => delete dom.window.GNODES[k]);
