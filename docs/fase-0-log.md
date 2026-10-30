@@ -2293,3 +2293,9 @@ dokumen lama yang dipakai.
 - Duo-tone dipertahankan tapi pekat: gradien tombol #9333EA -> #D946EF menjadi #6D28D9 -> #A21CAF; kilau glossy dipertahankan (blur 18px tetap) tapi lebih redup (sheen 14% -> 8%, highlight tepi 0.18 -> 0.10) agar gelap tidak silau.
 - Gerbang: root tsc bersih, 13 rig lolos (rig-settings cek v111 ganti token dasar), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error.
 - Push kode: lokal 2bc32a5 ↔ remote f70b830 (tree identik).
+
+## v112 — bubble chat user hijau pastel (30 Okt 2026 ~19:55 WIB, perintah Patria 19:42)
+- Bubble user: hijau pastel #A6EBB1 (token hijau app), font hitam #262626 (konvensi teks di atas permukaan aksen), header nama dark violet #4C1D95. Berlaku di kedua tema (warna semantik).
+- Temuan saat implementasi: sudah ada 3 aturan bubble user yang saling menutupi (pink lama #EB87B4 di baris atas, var panel2 tema di blok tema) — ketiganya diselaraskan ke hijau pastel, bukan ditambah aturan keempat; background-color dipakai (bukan shorthand) supaya sheen glossy v110 tidak terhapus. Header agen tetap hijau #A6EBB1 (aturan lebih spesifik untuk user menang).
+- Gerbang: root tsc bersih, 13 rig lolos (rig-chat §11 baru 2 cek), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap, cargo 0 warning/error.
+- Push kode: lokal 6dbf3b1 ↔ remote 7a20eee (tree identik).
