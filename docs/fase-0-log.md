@@ -2207,3 +2207,9 @@ dokumen lama yang dipakai.
 - Perubahan: renderAgents tidak lagi merender kotak .notice saat nol project (if/else runtuh jadi `html += gh`). Cakupan HANYA notice list: kunci proj.empty SENGAJA dipertahankan karena masih dipakai empty-state Kanban (menghapusnya akan membuat Kanban menampilkan nama kunci mentah). Tanpa perubahan rig (tidak ada rig yang mengasersi notice list).
 - Gerbang: tsc 0, vite build, 13 rig ALL PASSED, gate-test 14/14, scan bersih, cargo fmt+check+check --tests 0 warning, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Push kode: lokal 32bfa454 <-> remote fcb16623 (tree identik).
+
+## v101 — Main chat jalan tanpa project (30 Okt 2026 ~15:55 WIB)
+- Sumber: temuan live Patria 30 Okt 15:46 (tidak bisa input chat di menu utama, app nol project).
+- Akar: dua pengunci — renderChat men-disable chatInput bila PROJECTS[currentProj] kosong, dan sendChatReal early-return bila !hasProject(). Perbaikan: Main chat kini punya store sendiri localStorage 'minime.mainChat' (cap 500 sama, persisten); renderChat merendernya + input selalu aktif + label "Main chat" bila tanpa project; postChat menulis ke sana bila tanpa project; guard hasProject di sendChatReal dihapus (delegasi + model call tetap jalan; graphNoteDelegation dan isAgentDeactivated sudah aman tanpa project; hasProject sendiri dihapus karena jadi dead code). Begitu project pertama dibuat, chat beralih ke chat project itu. Batasan jujur: Search masih per-project (Main chat belum terindeks pencarian).
+- Gerbang: tsc 0, vite build, 13 rig ALL PASSED (rig-chat §6 baru: input aktif + label Main chat + kirim + persistensi), gate-test 14/14, scan bersih, cargo fmt+check+check --tests 0 warning, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
+- Push kode: lokal 58fca13f <-> remote 6af3ce2a (tree identik).
