@@ -256,7 +256,15 @@ export function approveStudio(idx?: number): void {
     const raw = window.localStorage.getItem('minime.scriptEditor');
     const o = raw ? JSON.parse(raw) : null;
     if (o && typeof o.output === 'string' && o.output.trim()) {
-      if (!window.confirm(tr('chat.studio.overwrite'))) return;
+      // v107: dialog native mati di WebView live (tombol hanya berkedip)
+      // — ganti dua ketuk pada tombol yang sama. State armed disimpan di
+      // elemen (dataset), bukan variabel modul: render ulang chat akan
+      // menghapusnya sehingga ketuk berikutnya mempersenjatai ulang.
+      const btn = document.querySelector('#chatBox [data-act="chat-approve"][data-idx="' + idx + '"]') as HTMLElement | null;
+      if (!btn || btn.dataset.armed !== '1') {
+        if (btn) { btn.dataset.armed = '1'; btn.textContent = tr('chat.studio.arm'); }
+        return;
+      }
     }
   } catch {
     // State tak terbaca: lanjut seperti biasa.

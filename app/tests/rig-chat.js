@@ -49,7 +49,7 @@ async function fetchStub(url, opts) {
   // QC mengembalikan verdict; sisanya hasil kerja agen.
   let content = 'NASKAH-UJI: Hook kopi susu, isi 5W1H, CTA order via chat.';
   if (body.includes('Bagi brief')) {
-    content = (body.includes('Halo utama') || body.includes('jadwal posting')) ? '[]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat carousel kopi susu"}]';
+    content = (body.includes('Halo utama') || body.includes('jadwal posting')) ? '[]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat naskah video kopi susu"}]';
   } else if (body.includes('QC hasil kerja agen')) {
     content = 'QC: riset LOLOS, kreatif LOLOS. Semua hasil siap dipakai.';
   }
@@ -204,6 +204,19 @@ try {
   const msgBubbleRules = cssText.match(/\.msg\s+\.bubble\s*\{[^}]*\}/g) || [];
   check('v106: CSS bubble chat memakai overflow-wrap', msgBubbleRules.some((r) => r.includes('overflow-wrap')), msgBubbleRules.join(' | ').slice(0, 300));
   check('v106: CSS chatBox menyembunyikan luapan horizontal', /#chatbox\s*\{[^}]*overflow-x\s*:\s*hidden/.test(cssText), '');
+
+  // 10. v107: approve Studio dengan draf terbuka memakai dua ketuk
+  // (dialog native mati di WebView live — diganti arm di tombol).
+  store.set('minime.scriptEditor', JSON.stringify({ output: 'DRAF LAMA UJI' }));
+  await sendMsg('buatkan naskah video kopi');
+  await waitFor(() => [...document.querySelectorAll('#chatBox button')].some((b) => b.textContent.trim() === 'Buka di Media Studio'), 'tombol studio v107', 120);
+  const btn107 = [...document.querySelectorAll('#chatBox button')].find((b) => b.textContent.trim() === 'Buka di Media Studio');
+  btn107.click();
+  await tick(200);
+  check('v107: ketuk pertama Studio dengan draf -> tombol berubah jadi konfirmasi, belum pindah', btn107.textContent.includes('Yakin timpa') && !document.getElementById('view-media')?.classList.contains('active'), btn107.textContent);
+  btn107.click();
+  await tick(200);
+  check('v107: ketuk kedua Studio -> pindah Media + output termuat', !!document.getElementById('view-media')?.classList.contains('active') && (document.getElementById('se-output')?.value || '').includes('NASKAH-UJI'), document.getElementById('se-output')?.value || '');
   const userBubbleRules = cssText.match(/\.msg\.user \.bubble\{[^}]*\}/g) || [];
   check('isi bubble user rata kanan', userBubbleRules.some((r) => r.includes('text-align:right')), userBubbleRules.join(' | ').slice(0, 200));
 

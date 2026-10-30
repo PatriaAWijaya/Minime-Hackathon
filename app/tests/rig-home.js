@@ -339,7 +339,8 @@ try {
   await tick(50);
   check('v99: node Graph TERKUNCI dipertahankan saat X (aturan v86)', !!dom.window.GNODES['gx5'] && !!row99(), '');
 
-  // 17. v105 (perintah Patria 30 Okt 16:32): hapus folder project + lipat-buka.
+  // 17. v105 + v107: hapus folder project dua-ketuk (dialog native mati
+  // di WebView live — diganti tombol "Yakin?" di header).
   dom.window.PROJECTS['pdel'] = { name: 'Hapus Uji', agents: [{ key: 'riset', status: 'Idle', task: 'Tugas hapus' }], chat: [], kanban: [] };
   dom.window.GNODES['gxdel1'] = { name: 'Riset', sub: 'Riset', agent: 'riset', brief: 'Brief hapus', proj: 'pdel', x: 10, y: 10, w: 150, kind: 'output' };
   dom.window.GNODES['gxdel2'] = { name: 'Prime Agent', sub: 'Orkestrasi', agent: 'prime', brief: '', proj: 'pdel', x: 30, y: 30, w: 195, kind: 'prime' };
@@ -355,26 +356,35 @@ try {
   grpDel().click();
   await tick(50);
   check('v105: klik header membuka folder lagi', (() => { const g = document.querySelector('#agentList .gagents[data-pid="pdel"]'); return !!g && g.style.display !== 'none'; })(), '');
-  dom.window.confirm = () => true;
   document.querySelector('#agentList [data-act="proj-del"][data-pid="pdel"]').click();
   await tick(50);
-  check('v105: X folder -> project + node + edge hilang', !dom.window.PROJECTS['pdel'] && !dom.window.GNODES['gxdel1'] && !dom.window.GNODES['gxdel2'] && !dom.window.GEDGES.some((e) => e.f === 'gxdel2'), 'proj=' + !!dom.window.PROJECTS['pdel']);
+  check('v107: ketuk X pertama -> tombol berubah jadi Yakin, project belum hilang', !!document.querySelector('#agentList [data-act="proj-del-confirm"][data-pid="pdel"]') && !!dom.window.PROJECTS['pdel'], '');
+  document.querySelector('#agentList [data-act="proj-del-confirm"][data-pid="pdel"]').click();
+  await tick(50);
+  check('v107: ketuk Yakin -> project + node + edge hilang', !dom.window.PROJECTS['pdel'] && !dom.window.GNODES['gxdel1'] && !dom.window.GNODES['gxdel2'] && !dom.window.GEDGES.some((e) => e.f === 'gxdel2'), 'proj=' + !!dom.window.PROJECTS['pdel']);
   check('v105: header folder hilang dari list', !grpDel(), '');
 
-  // 18. v106 (perintah Patria 30 Okt 16:42): rename folder project.
+  // 18. v106 + v107: rename folder inline (prompt native mati di WebView).
   dom.window.PROJECTS['pren'] = { name: 'Nama Lama', agents: [], chat: [], kanban: [] };
   dom.window.renderAgents();
   await tick(50);
-  const grpRen = () => [...document.querySelectorAll('#agentList .group')].find((el) => el.textContent.includes('Nama Lama') || el.textContent.includes('Nama Baru Uji'));
   check('v106: tombol rename ada di header folder', !!document.querySelector('#agentList [data-act="proj-rename"][data-pid="pren"]'), '');
-  dom.window.prompt = () => 'Nama Baru Uji';
   document.querySelector('#agentList [data-act="proj-rename"][data-pid="pren"]').click();
   await tick(50);
-  check('v106: rename mengubah nama project + header', dom.window.PROJECTS['pren'].name === 'Nama Baru Uji' && !!grpRen() && grpRen().textContent.includes('Nama Baru Uji'), dom.window.PROJECTS['pren'].name);
-  dom.window.prompt = () => null;
+  const inpRen = document.querySelector('#agentList [data-act="proj-rename-input"][data-pid="pren"]');
+  check('v107: ketuk pensil -> input rename muncul berisi nama lama', !!inpRen && inpRen.value === 'Nama Lama', inpRen ? inpRen.value : 'tak ada');
+  inpRen.value = 'Nama Baru Uji';
+  inpRen.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  await tick(50);
+  const grpRen = () => [...document.querySelectorAll('#agentList .group')].find((el) => el.textContent.includes('Nama Baru Uji'));
+  check('v107: Enter menyimpan nama baru + header berubah', dom.window.PROJECTS['pren'].name === 'Nama Baru Uji' && !!grpRen(), dom.window.PROJECTS['pren'].name);
   document.querySelector('#agentList [data-act="proj-rename"][data-pid="pren"]').click();
   await tick(50);
-  check('v106: rename dibatalkan -> nama tetap', dom.window.PROJECTS['pren'].name === 'Nama Baru Uji', dom.window.PROJECTS['pren'].name);
+  const inpRen2 = document.querySelector('#agentList [data-act="proj-rename-input"][data-pid="pren"]');
+  inpRen2.value = 'Batal Uji';
+  inpRen2.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await tick(50);
+  check('v107: Esc membatalkan rename -> nama tetap', dom.window.PROJECTS['pren'].name === 'Nama Baru Uji', dom.window.PROJECTS['pren'].name);
 
 } catch (e) {
   // eslint-disable-next-line no-console

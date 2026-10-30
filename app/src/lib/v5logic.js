@@ -22,6 +22,10 @@ function agentListWire() {
     var el = e.target.closest ? e.target.closest("[data-act]") : null;
     if (!el || !list.contains(el)) return;
     var act = el.getAttribute("data-act");
+    /* v107: klik apa pun selain tombol hapus melucuti state armed (tombol
+       "Yakin?" kembali jadi X pada render berikutnya); klik pada input
+       rename tidak me-render ulang agar fokus mengetik tidak hilang. */
+    if (act !== "proj-del-confirm" && deleteArmedPid && act !== "proj-del") { deleteArmedPid = null; if (act !== "proj-rename-input") renderAgents(); }
     if (act === "sel-agent") selectAgent(el.getAttribute("data-key"), el.getAttribute("data-pid"));
     else if (act === "a-play") agentPlay(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
     else if (act === "a-stop") agentStop(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
@@ -31,7 +35,21 @@ function agentListWire() {
     else if (act === "g-deact") agentGraphDeact(el.getAttribute("data-key") || "");
     else if (act === "toggle-group") toggleGroup(el.getAttribute("data-pid"));
     else if (act === "proj-rename") renameProject(el.getAttribute("data-pid"));
-    else if (act === "proj-del") deleteProject(el.getAttribute("data-pid"));
+    else if (act === "proj-del") askProjectDelete(el.getAttribute("data-pid"));
+    else if (act === "proj-del-confirm") deleteProject(el.getAttribute("data-pid"));
+    else if (act === "proj-rename-input") { /* klik pada input: fokus saja */ }
+  });
+  list.addEventListener("keydown", function (e) {
+    var el = e.target.closest ? e.target.closest("[data-act]") : null;
+    if (!el || !list.contains(el) || el.getAttribute("data-act") !== "proj-rename-input") return;
+    var pid = el.getAttribute("data-pid");
+    if (e.key === "Enter") { e.preventDefault(); commitRename(pid); }
+    else if (e.key === "Escape") { cancelRename(); }
+  });
+  list.addEventListener("focusout", function (e) {
+    var el = e.target.closest ? e.target.closest("[data-act]") : null;
+    if (!el || !list.contains(el) || el.getAttribute("data-act") !== "proj-rename-input") return;
+    commitRename(el.getAttribute("data-pid"));
   });
   list.addEventListener("dragstart", function (e) {
     var el = e.target.closest ? e.target.closest("[data-dragkey]") : null;
@@ -217,7 +235,10 @@ export function renderAgents() {
     Object.keys(PROJECTS).forEach(function (pid) {
       var proj = PROJECTS[pid];
       var collapsed = !!collapsedGroups[pid];
-      html += '<div class="group" data-act="toggle-group" data-pid="' + pid + '">' + (collapsed ? '▸' : '▾') + ' ' + esc(proj.name) + (pid === currentProj ? ' • PROYEK AKTIF' : '') + ' <button class="iconbtn" data-act="proj-rename" data-pid="' + pid + '" title="' + esc(tr('proj.rename')) + '">✎</button><button class="iconbtn" data-act="proj-del" data-pid="' + pid + '" title="' + esc(tr('proj.del')) + '">✕</button></div>';
+      var isRenaming = renamingPid === pid;
+      var isArmed = deleteArmedPid === pid;
+      var headName = isRenaming ? '<input data-act="proj-rename-input" data-pid="' + pid + '" value="' + esc(proj.name) + '">' : esc(proj.name);
+      html += '<div class="group" data-act="toggle-group" data-pid="' + pid + '">' + (collapsed ? '▸' : '▾') + ' ' + headName + (pid === currentProj ? ' • PROYEK AKTIF' : '') + ' <button class="iconbtn" data-act="proj-rename" data-pid="' + pid + '" title="' + esc(tr('proj.rename')) + '">✎</button>' + (isArmed ? '<button class="iconbtn" data-act="proj-del-confirm" data-pid="' + pid + '">' + esc(tr('proj.del.arm')) + '</button>' : '<button class="iconbtn" data-act="proj-del" data-pid="' + pid + '" title="' + esc(tr('proj.del')) + '">✕</button>') + '</div>';
       html += '<div class="gagents" data-pid="' + pid + '"' + (collapsed ? ' style="display:none"' : '') + '>';
       proj.agents.forEach(function (a, i) {
         var ag = AGENTS[a.key], off = a.status === "Nonaktif";
@@ -1912,21 +1933,34 @@ var currentProj = null, selectedAgent = "prime";
    terbuka. renderAgents() menggambar ulang seluruh list tiap ada
    perubahan, jadi statusnya tinggal di variabel ini, bukan di DOM. */
 var collapsedGroups = (function () { try { return JSON.parse(window.localStorage.getItem('minime.agentGroups') || '{}'); } catch (e) { return {}; } })();
+/* v107: state kontrol in-app pengganti dialog native (window.confirm /
+   window.prompt mati di WebView live — tombol hanya berkedip). */
+var deleteArmedPid = null;
+var renamingPid = null;
 export function toggleGroup(pid) {
+  if (pid === renamingPid) return;
   collapsedGroups[pid] = !collapsedGroups[pid];
   try { window.localStorage.setItem('minime.agentGroups', JSON.stringify(collapsedGroups)); } catch (e) {}
   renderAgents();
 }
 
-/* v105 (perintah Patria 30 Okt 16:32 "hapus ini"): hapus project dari
-   tombol X di header folder. Konfirmasi native karena penghapusan tidak
-   bisa dibatalkan; chat + node Graph + edge + kartu Kanban project ikut
-   terhapus (node terkunci pun ikut, karena ini perintah hapus project
-   eksplisit, bukan klik hapus node). Dokumen Library dibiarkan sebagai
-   arsip. Folder TIDAK pernah hilang otomatis — hanya lewat tombol ini. */
+/* v105 (perintah Patria 30 Okt 16:32 "hapus ini") + v107 (16:46: tombol
+   hanya berkedip — dialog native mati di WebView live): hapus project
+   memakai dua ketuk di header. Ketuk X pertama mempersenjatai tombol
+   ("Yakin?"); ketuk kedua menghapus. Chat + node Graph + edge + kartu
+   Kanban project ikut terhapus (node terkunci pun ikut, karena ini
+   perintah hapus project eksplisit, bukan klik hapus node). Dokumen
+   Library dibiarkan sebagai arsip. Folder TIDAK pernah hilang otomatis
+   — hanya lewat tombol ini. */
+export function askProjectDelete(pid) {
+  if (!PROJECTS[pid]) return false;
+  deleteArmedPid = pid;
+  renderAgents();
+  return true;
+}
 export function deleteProject(pid) {
-  var proj = PROJECTS[pid]; if (!proj) return false;
-  if (!window.confirm(tr('proj.del.confirm', { name: proj.name }))) return false;
+  if (deleteArmedPid !== pid || !PROJECTS[pid]) { deleteArmedPid = null; renderAgents(); return false; }
+  deleteArmedPid = null;
   var nodeKeys = Object.keys(GNODES).filter(function (k) { return GNODES[k].proj === pid; });
   nodeKeys.forEach(function (k) { delete GNODES[k]; });
   for (var i = GEDGES.length - 1; i >= 0; i--) {
@@ -1940,22 +1974,33 @@ export function deleteProject(pid) {
   return true;
 }
 
-/* v106 (perintah Patria 30 Okt 16:42): ubah nama folder project dari
-   tombol pensil di header. Nama kosong/batal -> nama lama dipertahankan;
-   nama dipangkas 60 karakter (konsisten dengan nama otomatis v103).
-   Dokumen Library lama menyimpan nama project saat dibuat — tidak ikut
-   berubah (arsip). */
+/* v106 (perintah Patria 30 Okt 16:42) + v107 (16:46: prompt native mati
+   di WebView live): rename folder memakai input inline di header.
+   Enter/klik-di-luar menyimpan, Esc membatalkan; kosong -> nama lama
+   dipertahankan; nama dipangkas 60 karakter (konsisten dengan nama
+   otomatis v103). Dokumen Library lama tidak ikut berubah (arsip). */
 export function renameProject(pid) {
-  var proj = PROJECTS[pid]; if (!proj) return false;
-  var name = window.prompt(tr('proj.rename.prompt'), proj.name);
-  if (name === null) return false;
-  name = name.trim().slice(0, 60);
-  if (!name) return false;
-  proj.name = name;
-  saveHomeState();
+  if (!PROJECTS[pid]) return false;
+  if (renamingPid === pid) { renamingPid = null; renderAgents(); return true; }
+  renamingPid = pid;
+  renderAgents();
+  var inp = document.querySelector('#agentList [data-act="proj-rename-input"][data-pid="' + pid + '"]');
+  if (inp) { inp.focus(); inp.select(); }
+  return true;
+}
+function commitRename(pid) {
+  if (renamingPid !== pid) return false;
+  var inp = document.querySelector('#agentList [data-act="proj-rename-input"][data-pid="' + pid + '"]');
+  var proj = PROJECTS[pid];
+  renamingPid = null;
+  if (inp && proj) {
+    var name = inp.value.trim().slice(0, 60);
+    if (name) { proj.name = name; saveHomeState(); }
+  }
   syncProjectUI(currentProj); renderAgents(); renderDetail(); renderChat(); renderKanban(); renderGraph();
   return true;
 }
+function cancelRename() { if (renamingPid === null) return; renamingPid = null; renderAgents(); }
 
 function kcols() { return [tr('kcol.0'), tr('kcol.1'), tr('kcol.2'), tr('kcol.3'), tr('kcol.4')]; }
 
