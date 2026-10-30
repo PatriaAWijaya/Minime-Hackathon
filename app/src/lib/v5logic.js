@@ -374,6 +374,8 @@ function graphHealth(k) {
   return "bad";
 }
 export function renderGraph() {
+    var ep = document.getElementById("graphEmptyPlus");
+    if (ep) ep.style.display = Object.keys(GNODES).length ? "none" : "flex";
     var wrap = document.getElementById("graphNodes");
     wrap.innerHTML = "";
     var firstKey = Object.keys(GNODES)[0];
@@ -547,6 +549,8 @@ export function runGraphSim(kind) {
    lagi simulasi. libSave/libUse simulasi lama DIHAPUS (tidak ada
    pemakai lain); diganti aksi recall nyata: Media Studio + Chat. */
 var LIB_LS = "minime.library.added";
+var LIB_ARC_LS = "minime.library.archived";
+var libView = "active";
 /* Audit v66 L-M2: data Library korup/gagal simpan tidak boleh hilang
    diam-diam. Korup -> mentah dicadangkan + bendera peringatan;
    gagal simpan -> bendera peringatan + operasi dibatalkan (rollback). */
@@ -658,9 +662,86 @@ export function libSetFilter(dim, value) {
   renderLib();
 }
 
+function loadLibArchived() {
+  try {
+    var raw = window.localStorage.getItem(LIB_ARC_LS);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter(function (x) { return x && typeof x.o === "string"; }) : [];
+  } catch (_) {
+    try { window.localStorage.setItem(LIB_ARC_LS + ".corrupt", window.localStorage.getItem(LIB_ARC_LS) || ""); } catch (_) {}
+    return [];
+  }
+}
+/* v90 (perintah Patria 30 Okt 09:17: Library berbatas 3 bulan, selebihnya
+   DIARSIPKAN — bukan dihapus — ke storage user): batas = 3 bulan kalender
+   lalu (hari dijepit ke akhir bulan target). Banding string ISO valid
+   karena format YYYY-MM-DD berpadding. Item tanpa addedAt tak bisa
+   dibuktikan usianya -> tidak diarsipkan. */
+function libArchiveCutoff() {
+  var n = new Date();
+  var y = n.getFullYear(), m = n.getMonth() - 3;
+  while (m < 0) { m += 12; y--; }
+  var last = new Date(y, m + 1, 0).getDate();
+  return dateISO(new Date(y, m, Math.min(n.getDate(), last)));
+}
+function libArchiveSweep() {
+  var cutoff = libArchiveCutoff();
+  var keep = [], moved = [];
+  LIB_ADDED.forEach(function (it) {
+    if (it.addedAt && it.addedAt < cutoff) {
+      var c = {}; Object.keys(it).forEach(function (k) { c[k] = it[k]; });
+      c.archivedAt = libTodayISO(); moved.push(c);
+    } else keep.push(it);
+  });
+  if (!moved.length) return 0;
+  var arc = loadLibArchived();
+  var have = {};
+  arc.forEach(function (it) { have[(it.o || "") + "|" + (it.addedAt || "") + "|" + (it.kind || "")] = true; });
+  var fresh = moved.filter(function (it) { return !have[(it.o || "") + "|" + (it.addedAt || "") + "|" + (it.kind || "")]; });
+  // Simpan arsip dulu; bila gagal, batal total (tidak ada data hilang).
+  try { window.localStorage.setItem(LIB_ARC_LS, JSON.stringify(arc.concat(fresh))); }
+  catch (_) { libSaveError = true; return 0; }
+  LIB_ADDED = keep;
+  saveLibAdded(); // bila ini gagal, sweep berikut melewati item ganda via dedupe di atas
+  return moved.length;
+}
+export function libToggleView() {
+  libView = libView === "archived" ? "active" : "archived";
+  renderLib();
+}
+export function libRestoreArchived(ai) {
+  var arc = loadLibArchived();
+  var it = arc[ai]; if (!it) return;
+  var c = {}; Object.keys(it).forEach(function (k) { if (k !== "archivedAt") c[k] = it[k]; });
+  c.addedAt = libTodayISO(); // tanggal baru — kalau tidak, sweep berikut langsung mengarsipkannya lagi
+  LIB_ADDED.push(c);
+  if (!saveLibAdded()) { LIB_ADDED.pop(); return; } // aktif gagal simpan -> batal, arsip utuh
+  arc.splice(ai, 1);
+  try { window.localStorage.setItem(LIB_ARC_LS, JSON.stringify(arc)); }
+  catch (_) { LIB_ADDED.pop(); saveLibAdded(); libSaveError = true; return; } // rollback terbaik (duplikat lebih baik daripada hilang)
+  renderLib();
+}
 export function renderLib() {
     var grid = document.getElementById("libGrid");
     if (!grid) return;
+    libArchiveSweep();
+    var arcBtn = document.getElementById("libArchiveBtn");
+    var arc = loadLibArchived();
+    if (arcBtn) arcBtn.textContent = libView === "archived" ? tr('lib.view.active') : tr('lib.view.archive') + " (" + arc.length + ")";
+    if (libView === "archived") {
+      // Tampilan arsip terpisah: filter lain diabaikan; tanpa thumbnail (indeks beda).
+      var acards = arc.map(function (item, ai) {
+        return "<div class='lib-card'>"
+          + "<div class='lib-title'>" + esc(item.o) + "</div>"
+          + "<div class='lib-meta'>" + esc(tr('lib.card.agent')) + ": " + esc(item.a) + " • " + esc(tr('lib.card.project')) + ": " + esc(item.proj || "—") + "</div>"
+          + "<div class='lib-meta'>" + esc(tr('lib.card.type')) + ": " + esc(libKindLabel(libKindOf(item))) + " • " + esc(tr('lib.card.date')) + ": " + esc(libDateLabel(item)) + " • " + esc(tr('lib.view.archive')) + ": " + esc(item.archivedAt || "—") + "</div>"
+          + "<div class='lib-actions'><button class='btn btn-sm' onclick='libRestoreArchived(" + ai + ")'>" + esc(tr('lib.btn.restore')) + "</button></div></div>";
+      });
+      grid.innerHTML = acards.join("") || "<div class='se-note'>" + esc(tr('lib.archive_empty')) + "</div>";
+      var cntA = document.getElementById("libFilterCount");
+      if (cntA) cntA.textContent = tr('lib.count', { n: arc.length, total: arc.length });
+      return;
+    }
     var all = libAll();
     var agents = [];
     var projs = [];
@@ -1705,6 +1786,12 @@ export function graphConfirmDelete() {
   saveGraphState(); renderGraph(); renderGraphPopup();
   showNotice("graphNotice", tr("graph.node_deleted"));
 }
+export function graphPrimeFirst() {
+  // v90 (perintah Patria 30 Okt 09:23): kanvas kosong -> tombol + tengah
+  // memanggil Prime sebagai tugas pertama (tengah kanvas, x/y persen).
+  if (Object.keys(GNODES).length) return;
+  createNode({ name: "Prime Agent", sub: "Orkestrasi & kurasi", icon: "\uD83E\uDD16", x: 45, y: 45, w: 195, kind: "prime", desc: "Agen utama: memecah arahan, memanggil agen, dan mengkurasi semua hasil sebelum final." }, {});
+}
 export function graphAddNode() {
   if (graphSel && GNODES[graphSel]) { addNodeAfter(graphSel); return; }
   var keys = Object.keys(GNODES);
@@ -2098,6 +2185,7 @@ function runCleanGraphV88() {
 export function initV5() {
   runCleanV84();
   runCleanGraphV88();
+  libArchiveSweep();
   // Penjadwal native (v61): timer antrean mulai sekali saat app hidup.
   initSocialScheduler();
   // v77: penjadwal trigger Graph (hanya selama app terbuka).
@@ -2167,5 +2255,5 @@ export function initV5() {
   waInputChanged();
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, nsConfirm, plusNewAgent, plusNewChannel, plusNewSection, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphAskDelete, graphCancelDelete, graphConfirmDelete, graphAddNode, graphPrimeFirst, graphToggleHist, renderGraphHist, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleAgent, toggleGroup, toggleSkillList, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbClose, kbRenderDlg, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }

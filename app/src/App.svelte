@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphAddNode, graphZoomIn, graphZoomOut, graphFullscreen, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, viewBack, viewForward, waAttach, waInputChanged, waMic, waToggleAttach, graphToggleHist, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -651,14 +651,9 @@
       <div class="scroll">
         <div id="graphHist" class="graph-hist" style="display:none"></div>
         <div class="graph-wrap">
-          <div class="n8n-canvas" id="graphBox"><div id="graphZoom"><svg id="graphEdges"></svg><div id="graphNodes"></div></div></div>
+          <div class="n8n-canvas" id="graphBox"><div id="graphZoom"><svg id="graphEdges"></svg><div id="graphNodes"></div></div><button id="graphEmptyPlus" class="graph-empty-plus" onclick={() => { graphPrimeFirst() }}>+</button></div>
         </div>
         <div id="graphPopup" class="g-popup" style="display:none" onclick={(e) => { if (e.target === e.currentTarget) graphClosePanel(); }}><div class="g-popup-card" id="graphPopupCard"></div></div>
-        <div class="graph-toolbar">
-          <button class="btn" onclick={() => { graphFullscreen() }}>{t('graph.fullscreen', lang)}</button>
-          <button class="btn btn-primary" onclick={() => { graphAddNode() }}>{t('graph.add_node', lang)}</button>
-          <span class="g-legend"><i class="g-dot ok"></i>{t('graph.legend.ok', lang)} <i class="g-dot bad"></i>{t('graph.legend.bad', lang)}</span>
-        </div>
         <div class="notice" id="graphNotice" style="display:none"></div>
       </div>
     </div>
@@ -689,6 +684,7 @@
           <select id="libFilterProj" onchange={(e) => libSetFilter('proj', (e.target as HTMLSelectElement).value)}></select>
         </label>
         <span id="libFilterCount"></span>
+        <button id="libArchiveBtn" class="btn btn-sm" onclick={() => { libToggleView() }}>{t('lib.view.archive', lang)}</button>
       </div>
       <div class="scroll">
         <div id="libGrid"></div>

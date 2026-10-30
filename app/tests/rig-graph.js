@@ -401,6 +401,19 @@ try {
   await tick(50);
   check('drag mouseup -> node tetap ada', !!document.querySelector('[data-nkey="prime"]'), '');
 
+  // 18. v90: toolbar bawah hilang + kanvas kosong -> tombol + tengah memanggil Prime.
+  check('toolbar bawah Graph tidak ada', !document.querySelector('.graph-toolbar'), document.querySelector('.graph-toolbar')?.outerHTML?.slice(0, 100) || '');
+  Object.keys(dom.window.GNODES).forEach((k) => delete dom.window.GNODES[k]);
+  dom.window.GEDGES.length = 0;
+  dom.window.renderGraph();
+  await tick(50);
+  check('kanvas kosong -> tombol + tengah tampil', document.getElementById('graphEmptyPlus')?.style.display === 'flex', document.getElementById('graphEmptyPlus')?.style.display || 'hilang');
+  document.getElementById('graphEmptyPlus').click();
+  await tick(100);
+  const primeFirst = Object.values(dom.window.GNODES).find((n) => n.kind === 'prime');
+  check('klik + -> node Prime pertama dibuat di tengah', !!primeFirst && primeFirst.x === 45 && primeFirst.y === 45, JSON.stringify(primeFirst || null));
+  check('setelah + diklik -> tombol + hilang', document.getElementById('graphEmptyPlus')?.style.display === 'none', document.getElementById('graphEmptyPlus')?.style.display || '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-graph exception :: ' + (e && e.stack ? e.stack : e));

@@ -164,6 +164,57 @@ try {
   dom.window.renderLib();
   await tick(100);
   check('render ulang tetap 0 kartu', cards().length === 0, 'cards=' + cards().length);
+
+  // 7. v90: arsip 3 bulan — item lama pindah ke arsip, baru + tanpa tanggal bertahan.
+  const isoD = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const nowD = new Date();
+  const oldD = isoD(new Date(nowD.getFullYear(), nowD.getMonth() - 4, Math.min(nowD.getDate(), 28)));
+  const newD = isoD(new Date(nowD.getFullYear(), nowD.getMonth(), nowD.getDate() - 10));
+  const store2 = new Map();
+  // Profil pasca-v84: flag sudah ada agar runCleanV84 tidak mereset seed.
+  store2.set('minime.cleaned-v84', '1');
+  store2.set('minime.library.added', JSON.stringify([
+    { o: 'Lama', a: 'Kreatif', s: 'Disetujui', badge: 'b-ok', kind: 'script', content: 'lama', proj: '', addedAt: oldD },
+    { o: 'Baru', a: 'Kreatif', s: 'Draf', badge: 'b-idle', kind: 'script', content: 'baru', proj: '', addedAt: newD },
+    { o: 'Tanpa Tanggal', a: 'Kreatif', s: 'Draf', badge: 'b-idle', kind: 'script', content: 'nodate', proj: '' },
+  ]));
+  const dom2 = new JSDOM(html, {
+    url: 'file://' + distDir + '/index.html',
+    resources: 'usable',
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    beforeParse(window) {
+      window.__TAURI_INTERNALS__ = { invoke: invokeStub };
+      window.fetch = async () => ({ ok: true, status: 200, headers: { get: () => '' }, json: async () => ({}), text: async () => '' });
+      window.URL.createObjectURL = () => 'blob:lib-test';
+      const ls = {
+        getItem: (k) => (store2.has(k) ? store2.get(k) : null),
+        setItem: (k, v) => store2.set(k, String(v)),
+        removeItem: (k) => store2.delete(k),
+        clear: () => store2.clear(),
+      };
+      Object.defineProperty(window, 'localStorage', { value: ls });
+    },
+  });
+  await waitFor(() => typeof dom2.window.showView === 'function', 'mount showView dom2', 120);
+  dom2.window.showView('library');
+  dom2.window.renderLib();
+  await tick(100);
+  const grid2 = () => dom2.window.document.getElementById('libGrid')?.textContent || '';
+  check('arsip 3 bulan -> grid hanya item baru + tanpa tanggal', grid2().includes('Baru') && grid2().includes('Tanpa Tanggal') && !grid2().includes('Lama'), grid2().slice(0, 200));
+  const arc2 = JSON.parse(store2.get('minime.library.archived') || '[]');
+  check('item lama masuk arsip + bertanda archivedAt', arc2.some((it) => it.o === 'Lama') && !!arc2.find((it) => it.o === 'Lama').archivedAt, JSON.stringify(arc2.map((it) => it.o)));
+  dom2.window.document.getElementById('libArchiveBtn').click();
+  await tick(100);
+  check('tombol Arsip -> grid menampilkan item lama', grid2().includes('Lama'), grid2().slice(0, 200));
+  const restoreBtn = [...dom2.window.document.querySelectorAll('#libGrid button')].find((b) => b.textContent.trim() === 'Pulihkan');
+  restoreBtn.click();
+  await tick(100);
+  const back2 = JSON.parse(store2.get('minime.library.added') || '[]');
+  check('pulihkan -> item kembali aktif + addedAt hari ini', back2.some((it) => it.o === 'Lama' && it.addedAt === isoD(nowD)) && !JSON.parse(store2.get('minime.library.archived') || '[]').some((it) => it.o === 'Lama'), JSON.stringify(back2.map((it) => it.o + ':' + it.addedAt)));
+  dom2.window.document.getElementById('libArchiveBtn').click();
+  await tick(100);
+  check('kembali ke Aktif -> grid menampilkan item pulihan', grid2().includes('Lama') && grid2().includes('Baru'), grid2().slice(0, 200));
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));
   failures++;
