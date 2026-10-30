@@ -2243,3 +2243,10 @@ dokumen lama yang dipakai.
 - i18n: 2 kunci baru proj.del + proj.del.confirm (820 -> 822/bahasa, paritas penuh, 0 duplikat).
 - Gerbang: root tsc bersih, 13 rig lolos (rig-home §17 baru: 5 cek — header + tombol X, lipat, buka lagi, hapus bersih-bersih, header hilang), gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal 112040c ↔ remote b4b9eff (tree identik).
+
+## v106 — text wrapping chat + rename folder project (30 Okt 2026 ~16:50 WIB, perintah Patria 16:39 + 16:42)
+- Wrapping (16:39 "jangan sampai ada text yang keluar dari area"): bubble chat tidak punya pemenggal kata — token panjang tanpa spasi (URL, nama konstanta seperti PackageManager.COMPONENT_ENABLED_STATE_DISABLED) meluber melewati max-width bubble. Perbaikan di layout-scroll.css (app.css TIDAK diedit — salinan verbatim prototype): .msg .bubble overflow-wrap:anywhere + word-break:break-word, .msg .body min-width:0, #chatBox overflow-x:hidden sebagai jaring pengaman. Terbukti lewat rig-chat §9 (2 cek CSS ter-build).
+- Rename folder (16:42 "Project Folder bisa dihapus, dan di rename"): tombol pensil (data-act proj-rename) di header folder, di samping tombol X v105. Klik -> prompt native berisi nama lama -> nama baru dipangkas 60 karakter (konsisten dengan nama otomatis v103); batal/kosong -> nama lama dipertahankan. Perubahan merambat ke header list, dropdown Graph, judul chat, dan dropdown Kanban (renderAgents/renderGraphProjSel/renderChat/renderKanban); dokumen Library lama tidak ikut berubah (arsip, menyimpan nama saat dibuat). Terbukti lewat rig-home §18 (3 cek: tombol ada, rename jalan, batal -> tetap).
+- i18n: 2 kunci baru proj.rename + proj.rename.prompt (822 -> 824/bahasa, paritas penuh, 0 duplikat).
+- Gerbang: root tsc bersih, 13 rig lolos, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, cargo fmt/check/check --tests 0 warning/error.
+- Push kode: lokal d6c149f ↔ remote c537f44 (tree identik).
