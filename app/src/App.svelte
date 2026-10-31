@@ -603,7 +603,6 @@
         </div>
         <div class="notice" id="waNote" style="display:none;margin-top:0"></div>
       </div>
-      <div id="chatMsgDelDlg" style="display:none"></div>
     </div>
     <div class="view" id="view-newagent">
       <div class="scroll" id="newAgentBody"></div>

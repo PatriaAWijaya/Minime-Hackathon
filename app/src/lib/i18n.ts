@@ -679,10 +679,6 @@ const ID: Dict = {
   'chat.msg.unstar': 'Batalkan Star',
   'chat.msg.copy': 'Salin',
   'chat.msg.delete': 'Hapus',
-  'chat.msg.del.title': 'Hapus pesan?',
-  'chat.msg.del.text': 'Pesan ini akan dihapus dari chat.',
-  'chat.msg.del.yes': 'Hapus',
-  'chat.msg.del.no': 'Batalkan',
   'chat.msg.replying': 'Membalas {name}',
   'chat.msg.pinned': 'Disematkan',
   // v138: creative brief — pintu peruntukan + cabang Artikel.
@@ -1637,10 +1633,6 @@ const EN: Dict = {
   'chat.msg.unstar': 'Unstar',
   'chat.msg.copy': 'Copy',
   'chat.msg.delete': 'Delete',
-  'chat.msg.del.title': 'Delete message?',
-  'chat.msg.del.text': 'This message will be removed from the chat.',
-  'chat.msg.del.yes': 'Delete',
-  'chat.msg.del.no': 'Cancel',
   'chat.msg.replying': 'Replying to {name}',
   'chat.msg.pinned': 'Pinned',
   // v138: creative brief — purpose gate + Article branch.
@@ -2595,10 +2587,6 @@ const ZH: Dict = {
   'chat.msg.unstar': '取消星标',
   'chat.msg.copy': '复制',
   'chat.msg.delete': '删除',
-  'chat.msg.del.title': '删除消息？',
-  'chat.msg.del.text': '此消息将从聊天中删除。',
-  'chat.msg.del.yes': '删除',
-  'chat.msg.del.no': '取消',
   'chat.msg.replying': '回复{name}',
   'chat.msg.pinned': '置顶',
   // v138: creative brief — 用途确认 + 文章分支。

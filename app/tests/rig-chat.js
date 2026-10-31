@@ -480,26 +480,16 @@ try {
   await tick(100);
   msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
   check('v131: emoji agen tampil kiri bawah bubble user', msg131.classList.contains('user') && (msg131.querySelector('.msg-reacts')?.textContent || '').includes('❤️'), msg131.querySelector('.msg-reacts')?.textContent || 'tidak ada');
-  // (g) Delete: Batalkan -> tetap; Hapus -> hilang.
+  // (g) Delete langsung (v141, perintah Patria 31 Okt 20:15): tanpa dialog
+  // konfirmasi — klik Hapus di menu langsung menghilangkan pesan.
   const countBefore131 = document.querySelectorAll('#chatBox .msg').length;
   msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
   msg131.querySelector('.msg-vbtn').click();
   await tick(100);
   [...msg131.querySelector('.msg-menu').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hapus').click();
   await tick(100);
-  const dlg131 = document.getElementById('chatMsgDelDlg');
-  check('v131: Delete membuka dialog konfirmasi', dlg131 && dlg131.style.display === 'block', dlg131?.style.display || 'tidak ada');
-  [...dlg131.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Batalkan').click();
-  await tick(100);
-  check('v131: Batalkan dialog mempertahankan pesan', document.querySelectorAll('#chatBox .msg').length === countBefore131, String(document.querySelectorAll('#chatBox .msg').length));
-  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
-  msg131.querySelector('.msg-vbtn').click();
-  await tick(100);
-  [...msg131.querySelector('.msg-menu').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hapus').click();
-  await tick(100);
-  [...document.getElementById('chatMsgDelDlg').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hapus').click();
-  await tick(100);
-  check('v131: Hapus di dialog menghilangkan pesan', document.querySelectorAll('#chatBox .msg').length === countBefore131 - 1, String(document.querySelectorAll('#chatBox .msg').length));
+  check('v141: Hapus di menu langsung menghilangkan pesan (tanpa dialog)', document.querySelectorAll('#chatBox .msg').length === countBefore131 - 1, String(document.querySelectorAll('#chatBox .msg').length));
+  check('v141: tidak ada lagi dialog hapus pesan', !document.getElementById('chatMsgDelDlg'));
   // (h) Star + klik pin -> sorot pesan.
   dom.window.postChat('riset', 'Riset', '#fff', 'Pesan pin goto uji');
   await tick(100);

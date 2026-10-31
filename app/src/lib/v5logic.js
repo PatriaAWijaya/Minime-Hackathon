@@ -296,9 +296,7 @@ function homeChatWire() {
     else if (act === "msg-menu-reply") { replyToMsg(el); }
     else if (act === "msg-menu-star") { toggleStarMsg(el); }
     else if (act === "msg-menu-copy") { copyMsg(el); }
-    else if (act === "msg-menu-del") { askDelMsg(el); }
-    else if (act === "msg-del-yes") { doDelMsg(); }
-    else if (act === "msg-del-no") { closeDelMsgDlg(); }
+    else if (act === "msg-menu-del") { doDelMsg(el); }
     else if (act === "pin-goto") { gotoMsg(el); }
     else if (act === "pin-unstar") { unstarFromPin(el); }
     else if (act === "reply-cancel") { clearReplyTarget(); }
@@ -762,7 +760,6 @@ function renderChatMarkdown(html) {
    Pesan lama tetap kompatibel: reactions/starred/replyTo opsional. */
 var REACT_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '🙏', '👏'];
 var replyTarget = null;
-var pendingDelMsgIdx = -1;
 var chatKeepScroll = false; // v137: renderChat berikutnya mempertahankan posisi scroll (aksi bubble, bukan pesan baru).
 function chatMsgsAndSave() {
   if (PROJECTS[currentProj]) return { msgs: PROJECTS[currentProj].chat, save: saveHomeState };
@@ -955,33 +952,15 @@ function copyFallback(t) {
     ta.remove();
   } catch (_) {}
 }
-function askDelMsg(el) {
+// v141 (perintah Patria 31 Okt 20:15): hapus pesan chat LANGSUNG tanpa
+// dialog konfirmasi — klik Hapus di menu langsung menghilangkan pesan.
+function doDelMsg(el) {
   var idx = msgIdxOf(el);
   if (idx < 0) return;
-  pendingDelMsgIdx = idx;
   closeChatPopups();
-  var dlg = document.getElementById('chatMsgDelDlg');
-  if (!dlg) return;
-  dlg.innerHTML = "<div class='lib-dialog-backdrop' data-act='msg-del-no'></div><div class='lib-dialog-card'>"
-    + "<div class='lib-title'>" + tr('chat.msg.del.title') + "</div>"
-    + "<div class='lib-detail-pre'>" + tr('chat.msg.del.text') + "</div>"
-    + "<div class='lib-actions'>"
-    + "<button class='btn btn-sm' data-act='msg-del-no'>" + tr('chat.msg.del.no') + "</button>"
-    + "<button class='btn btn-sm' data-act='msg-del-yes'>" + tr('chat.msg.del.yes') + "</button>"
-    + "</div></div>";
-  dlg.style.display = 'block';
-}
-function closeDelMsgDlg() {
-  var dlg = document.getElementById('chatMsgDelDlg');
-  if (dlg) { dlg.style.display = 'none'; dlg.innerHTML = ''; }
-  pendingDelMsgIdx = -1;
-}
-function doDelMsg() {
-  if (pendingDelMsgIdx < 0) { closeDelMsgDlg(); return; }
   var st = chatMsgsAndSave();
-  if (st.msgs[pendingDelMsgIdx]) st.msgs.splice(pendingDelMsgIdx, 1);
+  if (st.msgs[idx]) st.msgs.splice(idx, 1);
   st.save();
-  closeDelMsgDlg();
   chatKeepScroll = true; renderChat();
 }
 function gotoMsg(el) {
