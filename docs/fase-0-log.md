@@ -2505,3 +2505,18 @@ dokumen lama yang dipakai.
 - Rig: rig-chat §21 (talking head end-to-end + handoff Image/Voice/Video + Library), §22 (promosional: tujuan → storyboard approve → tanpa VO → mix + Library), §23 (berseri 2 part: approve per part → VO → mix + Library part 1+2); stub rig dibedakan per jenis call (TH/PROMO/SERI/P1/P2/MIX) supaya simpan Library tidak dedup.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal 06e7485 ↔ remote df8106b (tree identik).
+
+## v140 — alur brief kreatif: cabang Sosmed terpandu (31 Okt 2026 ~20:15 WIB, penutup spec brief Kreatif)
+- Platform ditanyakan dulu (Threads / Instagram / LinkedIn / Facebook). Bila platform sudah disebut di jawaban purpose, langsung ke format (Threads langsung generate). LinkedIn dan Facebook mengikuti pola Instagram, sesuai perintah Patria 19:33.
+- Threads: script disesuaikan 500 karakter; bila tidak muat, dibagi beberapa bagian @ maks 500 karakter (rakus per kalimat, potong per kata bila satu kalimat melebihi batas), tiap bagian bernomor urut, tersimpan di Library sebagai satu thread.
+- Instagram/LinkedIn/Facebook: jenis postingan (Image / Carousel / Reels) → tujuan (Promosional / Awareness / Leads Generator) → pendekatan dari riset (Image: Infografis / Humor / Motivasi; Carousel tambah Listicle; pendekatan boleh ketik bebas sebagai arahan) → posting 1 per 1 atau bulk.
+- Image single: caption + rancangan isi image (Title, Subtitle, Body, header, footer, logo, elemen visual lain) → brief Image Editor terisi otomatis + tombol Buka Image Editor + tersimpan di Library.
+- Carousel single: caption + konten carousel 6–10 slide → jalur yang sama.
+- Bulk: N rencana (maks 30 tab; lebih dari itu dipotong ke 30 dengan catatan jujur) → tab-tab baru di Image Editor, satu tab per image/carousel; tiap tab brief-nya bisa disunting bebas, ganti tab menyimpan suntingan tab lama; tersimpan di Library.
+- Reels: rencana seperti proses pembuatan video (script + shot plan + caption + hashtag), durasi 30–60 detik, rasio 9:16 → tombol Buka Video Editor + tersimpan di Library; render tetap dilakukan user di Video Editor.
+- Image Editor: state bulk (persist localStorage minime.imageFlow) + strip tab #img-bulk-tabs + bridge window.imgSetBulk; imgSetBrief tunggal menghapus mode bulk; tombol tutup bulk (✕) mengembalikan mode tunggal.
+- i18n: 952 kunci/bahasa (927 + 25 cb.*), 0 duplikat, 3 seksi identik (dicek skrip).
+- Rig: rig-chat §24 (Threads: teks 674 karakter → 2 bagian 460+213, tersimpan di Library), §25 (IG Image single + handoff), §26 (IG Carousel bulk 3 tab + ganti tab mengganti brief aktif), §27 (LinkedIn Reels + handoff Video Editor); stub dibedakan per jenis call (BULK-IMAGE/CAROUSEL, IMAGE/CAROUSEL/REELS-PLAN, 500 karakter).
+- Pelajaran rig (dicatat agar tak terulang): waitFor tombol handoff harus berbasis judul Library yang unik (tombol cb-open-image/video lama dari §21 lolos instan dan membuat cek jalan sebelum generasi selesai, lalu pesan berikutnya tertelan sebagai jawaban alur yang masih aktif); brief rig harus memuat kata kunci delegasi (carousel bukan keyword — §26 sempat timeout di purpose karena itu).
+- Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
+- Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
