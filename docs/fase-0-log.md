@@ -2520,3 +2520,12 @@ dokumen lama yang dipakai.
 - Pelajaran rig (dicatat agar tak terulang): waitFor tombol handoff harus berbasis judul Library yang unik (tombol cb-open-image/video lama dari §21 lolos instan dan membuat cek jalan sebelum generasi selesai, lalu pesan berikutnya tertelan sebagai jawaban alur yang masih aktif); brief rig harus memuat kata kunci delegasi (carousel bukan keyword — §26 sempat timeout di purpose karena itu).
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
+
+## v141 — hapus pesan chat langsung tanpa dialog konfirmasi (31 Okt 2026 ~20:21 WIB, perintah Patria 20:15 atas screenshot dialog 'Hapus pesan?' di Main chat)
+- Popup konfirmasi penghapusan chat dihilangkan: klik Hapus di menu bubble langsung menghilangkan pesan (tutup popup, splice, simpan, render ulang dengan posisi scroll dipertahankan) — tanpa dialog perantara.
+- Dihapus total (nol sisa mati): fungsi askDelMsg + closeDelMsgDlg + state pendingDelMsgIdx + kasus wire msg-del-yes/msg-del-no + wadah #chatMsgDelDlg di App.svelte + 4 kunci i18n dialog per bahasa (chat.msg.del.title/text/yes/no); label menu 'chat.msg.delete' tetap.
+- i18n: 948 kunci/bahasa (952 − 4), 0 duplikat, 3 seksi identik (dicek skrip).
+- Rig: rig-chat §15(g) ditulis ulang — klik Hapus → pesan langsung hilang, elemen dialog tidak ada lagi (sebelumnya: dialog → Batalkan mempertahankan / Hapus menghilangkan).
+- Cakupan: HANYA hapus pesan chat. Konfirmasi hapus folder project (dua ketuk, v105/v107/v125) dan dialog hapus Library tidak diubah.
+- Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
+- Push kode: lokal 7a6d6fa ↔ remote 2bf9eda (tree identik).
