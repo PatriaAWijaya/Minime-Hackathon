@@ -2460,3 +2460,10 @@ dokumen lama yang dipakai.
 - view.settings.title kehilangan akhiran di 3 bahasa (kunci tetap identik, nilai disesuaikan per bahasa): ID 'Settings — Pengaturan Aplikasi' -> 'Settings'; EN 'Settings — App Settings' -> 'Settings'; ZH '设置 — 应用设置' -> '设置'. Hanya judul header halaman Settings (App.svelte); nav.settings tidak diubah. Hitungan kunci tetap 854.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal d558bd4 ↔ remote 97f872c (tree identik).
+
+## v135 — menu dropdown chat background solid + teks putih (31 Okt 2026 ~14:46 WIB, perintah Patria 14:41 "dropdown menu di chat user jangan dibuat transparan, pake saja background solid dengan teks putih")
+- Penyebab: .msg-menu memakai var(--t-panel2) yang di tema gelap adalah rgba transparan 0.65; di atas bubble user hijau (#8ED694) teks menu tenggelam dan tak terbaca (bukti screenshot Patria 14:40, menu V bubble user).
+- Perbaikan (blok v135 di layout-scroll.css, berlaku di kedua tema): .msg-menu background solid #2E1650 + color #fff; tombol menu color #fff. Hover tetap kilau putih tipis di atas dasar solid. Picker emoji tidak diubah (bukan menu teks).
+- Rig: rig-chat §17 (2 cek): aturan .msg-menu terakhir di bundle CSS memuat background solid #2e1650 dan color #fff.
+- Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
+- Push kode: lokal ce9d4d1 ↔ remote 56a09bc (tree identik).
