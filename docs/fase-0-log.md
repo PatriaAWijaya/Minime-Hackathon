@@ -2398,3 +2398,10 @@ dokumen lama yang dipakai.
 - Rig: rig-script baru — Simpan -> class done, Gunakan -> class done, button teks computed border-radius 10px, klik button statis -> btn-done.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal 986f4fa ↔ remote 2d6ee8f (tree identik).
+
+## v127 — icon status node Graph diperkecil 22px -> 14px (31 Okt 2026 ~12:00 WIB, perintah Patria 11:51 + screenshot node Prime)
+- Temuan: screenshot Patria adalah node Graph Prime (avatar robot + tombol "Run now" = kunci graph.run_now, bukan kartu list/detail). Icon status node (.nstatus) masih 22px dari v124 — v125 hanya mengecilkan icon LIST ke 14px, node tidak ikut. Pada zoom Graph di atas 1x, 22px itu tampil makin besar.
+- Perbaikan: .nstatus 22px -> 14px (layout-scroll.css), disamakan dengan icon list — satu ukuran icon status di semua permukaan. Posisi tetap (kanan atas node).
+- Rig: rig-graph §22 tambah cek computed 14x14 pada img.nstatus node agen.
+- Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
+- Push kode: lokal 7ae5423 ↔ remote 13495ca (tree identik).
