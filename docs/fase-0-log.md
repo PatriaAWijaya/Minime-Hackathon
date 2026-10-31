@@ -2474,3 +2474,10 @@ dokumen lama yang dipakai.
 - Rig: rig-chat §18 (3 cek): bubble pemilik menu ber-class menu-open, aturan menu-open ber-z-index 40, menutup menu menghapus class.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal 3ee1a7e ↔ remote a7128eb (tree identik).
+
+## v137 — aksi bubble tidak melempar pembaca ke akhir chat (31 Okt 2026 ~14:58 WIB, perintah Patria 14:51 "pada saat saya memberikan emoji, saya akan dilempar ke akhir chat")
+- Penyebab: renderChat selalu menutup dengan scrollTop = scrollHeight, sehingga tiap render ulang (termasuk usai memilih emoji) menarik tampilan ke akhir chat, padahal bubble yang direaksi bisa jauh di atas dan sedang dibaca ulang.
+- Perbaikan: flag modul chatKeepScroll. renderChat menangkap posisi scroll sebelum rebuild; bila flag menyala, posisi dipulihkan, bila tidak, tetap gulir ke bawah seperti biasa. Flag dinyalakan oleh aksi bubble yang me-render ulang tanpa pesan baru: pickReaction, removeReaction, toggleStarMsg, unstarFromPin, doDelMsg. Pesan baru, ganti proyek, dan kirim pesan tidak berubah (tetap ke bawah).
+- Rig: rig-chat §19 (3 cek, scrollTop/scrollHeight di-spy karena jsdom tanpa layout): reaksi mempertahankan posisi, reaksi tetap tercatat, renderChat biasa tetap gulir ke bawah.
+- Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
+- Push kode: lokal 0570170 ↔ remote 0774dfe (tree identik).
