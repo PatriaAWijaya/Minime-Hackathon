@@ -358,10 +358,10 @@ try {
   check('v105: klik header membuka folder lagi', (() => { const g = document.querySelector('#agentList .gagents[data-pid="pdel"]'); return !!g && g.style.display !== 'none'; })(), '');
   document.querySelector('#agentList [data-act="proj-del"][data-pid="pdel"]').click();
   await tick(50);
-  check('v107: ketuk X pertama -> tombol berubah jadi Yakin, project belum hilang', !!document.querySelector('#agentList [data-act="proj-del-confirm"][data-pid="pdel"]') && !!dom.window.PROJECTS['pdel'], '');
+  check('v107: ketuk X pertama -> tombol konfirmasi muncul, project belum hilang', !!document.querySelector('#agentList [data-act="proj-del-confirm"][data-pid="pdel"]') && !!dom.window.PROJECTS['pdel'], '');
   document.querySelector('#agentList [data-act="proj-del-confirm"][data-pid="pdel"]').click();
   await tick(50);
-  check('v107: ketuk Yakin -> project + node + edge hilang', !dom.window.PROJECTS['pdel'] && !dom.window.GNODES['gxdel1'] && !dom.window.GNODES['gxdel2'] && !dom.window.GEDGES.some((e) => e.f === 'gxdel2'), 'proj=' + !!dom.window.PROJECTS['pdel']);
+  check('v107: ketuk konfirmasi -> project + node + edge hilang', !dom.window.PROJECTS['pdel'] && !dom.window.GNODES['gxdel1'] && !dom.window.GNODES['gxdel2'] && !dom.window.GEDGES.some((e) => e.f === 'gxdel2'), 'proj=' + !!dom.window.PROJECTS['pdel']);
   check('v105: header folder hilang dari list', !grpDel(), '');
 
   // 18. v106 + v107: rename folder inline (prompt native mati di WebView).
@@ -418,6 +418,27 @@ try {
   confDot.click();
   await tick(50);
   check('v124: ketuk X kedua dari posisi baru -> project hilang', !dom.window.PROJECTS['pdot2'], '');
+
+
+  // 20. v125: icon status list di kanan atas kartu, diperkecil.
+  const cs125 = iconDot() ? dom.window.getComputedStyle(iconDot()) : null;
+  check('v125: icon status list kanan atas + 14px', !!cs125 && cs125.position === 'absolute' && cs125.width === '14px' && cs125.height === '14px', cs125 ? cs125.position + '|' + cs125.width + '|' + cs125.height : '');
+
+
+  // 21. v125: armed hapus bertahan melewati klik lain (anti "tidak bisa dihapus").
+  dom.window.PROJECTS['parm'] = { name: 'Armed Uji', agents: [], chat: [], kanban: [] };
+  dom.window.renderAgents();
+  await tick(50);
+  document.querySelector('#agentList [data-act="proj-del"][data-pid="parm"]').click();
+  await tick(50);
+  check('v125: ketuk X -> armed', !!document.querySelector('#agentList [data-act="proj-del-confirm"][data-pid="parm"]'), '');
+  const firstHead21 = document.querySelector('#agentList .group[data-act="toggle-group"]');
+  if (firstHead21) firstHead21.click();
+  await tick(50);
+  check('v125: klik lain TIDAK melucuti armed', !!document.querySelector('#agentList [data-act="proj-del-confirm"][data-pid="parm"]'), '');
+  document.querySelector('#agentList [data-act="proj-del-confirm"][data-pid="parm"]').click();
+  await tick(50);
+  check('v125: ketuk konfirmasi setelah klik lain -> project hilang', !dom.window.PROJECTS['parm'], '');
 
 } catch (e) {
   // eslint-disable-next-line no-console

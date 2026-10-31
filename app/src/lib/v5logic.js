@@ -56,10 +56,13 @@ function agentListWire() {
     var el = e.target.closest ? e.target.closest("[data-act]") : null;
     if (!el || !list.contains(el)) return;
     var act = el.getAttribute("data-act");
-    /* v107: klik apa pun selain tombol hapus melucuti state armed (tombol
-       "Yakin?" kembali jadi X pada render berikutnya); klik pada input
-       rename tidak me-render ulang agar fokus mengetik tidak hilang. */
-    if (act !== "proj-del-confirm" && deleteArmedPid && act !== "proj-del") { deleteArmedPid = null; if (act !== "proj-rename-input") renderAgents(); }
+    /* v125: state armed TIDAK dilucuti klik lain. Aturan v107 dulu melucuti
+       armed pada klik apa pun — di live itu terasa seperti "folder tidak
+       bisa dihapus": ketuk X (armed) lalu ketuk lain (mis. header/project
+       lain) diam-diam membatalkan, sehingga ketuk X berikutnya hanya
+       me-arm ulang. Kini armed bertahan sampai ketuk konfirmasi (hapus)
+       atau ketuk X project lain (pindah armed). Reload membersihkan armed
+       karena state ini in-memory. */
     if (act === "sel-agent") selectAgent(el.getAttribute("data-key"), el.getAttribute("data-pid"));
     else if (act === "a-play") agentPlay(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
     else if (act === "a-stop") agentStop(parseInt(el.getAttribute("data-idx"), 10), el.getAttribute("data-pid"));
