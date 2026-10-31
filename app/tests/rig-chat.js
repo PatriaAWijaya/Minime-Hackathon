@@ -538,6 +538,25 @@ try {
   firstMsg136.querySelector('.msg-vbtn').click();
   await tick(100);
   check('v136: menu ditutup menghapus class menu-open', !firstMsg136.classList.contains('menu-open') && !firstMsg136.querySelector('.msg-menu'), firstMsg136.className);
+  // §19 v137: aksi bubble mempertahankan posisi scroll (jsdom tanpa layout:
+  // scrollTop/scrollHeight di-spy lewat defineProperty pada #chatBox yang sama).
+  const box137 = document.getElementById('chatBox');
+  let top137 = 0;
+  Object.defineProperty(box137, 'scrollTop', { get: () => top137, set: (v) => { top137 = v; }, configurable: true });
+  Object.defineProperty(box137, 'scrollHeight', { get: () => 1000, configurable: true });
+  Object.defineProperty(box137, 'clientHeight', { get: () => 200, configurable: true });
+  top137 = 123;
+  const firstMsg137 = document.querySelector('#chatBox .msg');
+  firstMsg137.querySelector('.msg-reactbtn').click();
+  await tick(100);
+  [...firstMsg137.querySelector('.msg-picker').querySelectorAll('button')].find((b) => b.textContent.trim() === '👍').click();
+  await tick(100);
+  check('v137: reaksi mempertahankan posisi scroll', top137 === 123, String(top137));
+  check('v137: reaksi tetap tercatat', (document.querySelector('#chatBox .msg').querySelector('.msg-reacts')?.textContent || '').includes('👍'), document.querySelector('#chatBox .msg').querySelector('.msg-reacts')?.textContent || 'tidak ada');
+  top137 = 77;
+  dom.window.renderChat();
+  check('v137: renderChat biasa tetap gulir ke bawah', top137 === 1000, String(top137));
+
 
 
 } catch (e) {

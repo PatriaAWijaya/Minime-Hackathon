@@ -759,6 +759,7 @@ function renderChatMarkdown(html) {
 var REACT_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '🙏', '👏'];
 var replyTarget = null;
 var pendingDelMsgIdx = -1;
+var chatKeepScroll = false; // v137: renderChat berikutnya mempertahankan posisi scroll (aksi bubble, bukan pesan baru).
 function chatMsgsAndSave() {
   if (PROJECTS[currentProj]) return { msgs: PROJECTS[currentProj].chat, save: saveHomeState };
   return { msgs: mainChatGet(), save: mainChatSave };
@@ -904,7 +905,7 @@ function pickReaction(el) {
   var at = -1;
   for (var i = 0; i < m.reactions.length; i++) if (m.reactions[i].e === emoji) at = i;
   if (at >= 0) m.reactions.splice(at, 1); else m.reactions.push({ e: emoji, by: by });
-  st.save(); renderChat();
+  chatKeepScroll = true; st.save(); renderChat();
 }
 function removeReaction(el) {
   var st = chatMsgsAndSave();
@@ -912,7 +913,7 @@ function removeReaction(el) {
   if (!m || !m.reactions) return;
   var emoji = el.getAttribute('data-emoji') || '';
   m.reactions = m.reactions.filter(function (x) { return x.e !== emoji; });
-  st.save(); renderChat();
+  chatKeepScroll = true; st.save(); renderChat();
 }
 function replyToMsg(el) {
   var st = chatMsgsAndSave();
@@ -926,7 +927,7 @@ function toggleStarMsg(el) {
   var m = st.msgs[msgIdxOf(el)];
   if (!m) return;
   m.starred = !m.starred;
-  st.save(); renderChat();
+  chatKeepScroll = true; st.save(); renderChat();
 }
 function copyMsg(el) {
   var st = chatMsgsAndSave();
@@ -977,7 +978,7 @@ function doDelMsg() {
   if (st.msgs[pendingDelMsgIdx]) st.msgs.splice(pendingDelMsgIdx, 1);
   st.save();
   closeDelMsgDlg();
-  renderChat();
+  chatKeepScroll = true; renderChat();
 }
 function gotoMsg(el) {
   var idx = parseInt(el.getAttribute('data-idx') || '-1', 10);
@@ -991,10 +992,13 @@ function unstarFromPin(el) {
   var idx = parseInt(el.getAttribute('data-idx') || '-1', 10);
   var st = chatMsgsAndSave();
   if (st.msgs[idx]) st.msgs[idx].starred = false;
-  st.save(); renderChat();
+  chatKeepScroll = true; st.save(); renderChat();
 }
 export function renderChat() {
     var box = document.getElementById("chatBox");
+    // v137: aksi bubble (reaksi/star/hapus) tidak boleh melempar pembaca ke akhir chat.
+    var keepScroll = chatKeepScroll; chatKeepScroll = false;
+    var prevTop = box.scrollTop;
     box.innerHTML = "";
     var _cp = PROJECTS[currentProj];
     var _cpEl = document.getElementById("chatProj"); if (_cpEl) _cpEl.textContent = _cp ? _cp.name : "Main chat";
@@ -1033,7 +1037,7 @@ export function renderChat() {
         : '<div class="body"><div class="bubble">' + vbtn + inner + rbtn + '</div></div>';
       box.appendChild(div);
     });
-    box.scrollTop = box.scrollHeight;
+    if (keepScroll) box.scrollTop = prevTop; else box.scrollTop = box.scrollHeight;
   }
 
 /* Orkestrasi chat: agen penerima tugas otomatis AKTIF di list —
