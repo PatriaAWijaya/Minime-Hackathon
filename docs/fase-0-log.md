@@ -2405,3 +2405,9 @@ dokumen lama yang dipakai.
 - Rig: rig-graph §22 tambah cek computed 14x14 pada img.nstatus node agen.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal 7ae5423 ↔ remote 13495ca (tree identik).
+
+## v128 — icon status node Graph diperkecil 50% ke 7px (31 Okt 2026 ~12:10 WIB, perintah Patria 12:01 "masih terlalu besar kecilkan 50%")
+- Perbaikan: .nstatus 14px (v127) -> 7px (layout-scroll.css), tepat setengahnya. Icon list TIDAK diubah (perintah hanya menyebut node Graph).
+- Rig: rig-graph §22 diperbarui — cek computed 7x7 pada img.nstatus node agen.
+- Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
+- Push kode: lokal 2676475 ↔ remote ae6a9b9 (tree identik).
