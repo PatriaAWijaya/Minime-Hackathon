@@ -584,8 +584,10 @@
         <div class="chat-date">{t('home.chatdate', lang)}</div>
         <div class="chat-proj" id="chatProj">—</div>
       </div>
+      <div id="pinnedBar" style="display:none"></div>
       <div class="scroll" id="chatBox"></div>
       <div class="composer">
+        <div id="replyBar" style="display:none"><span id="replyBarText"></span><button class="reply-x" data-act="reply-cancel">✕</button></div>
         <div class="wa-pop" id="attachMenu">
           <button onclick={() => { waAttach('Gambar') }}>{t('composer.attach.img', lang)}</button>
           <button onclick={() => { waAttach('Dokumen') }}>{t('composer.attach.doc', lang)}</button>
@@ -601,6 +603,7 @@
         </div>
         <div class="notice" id="waNote" style="display:none;margin-top:0"></div>
       </div>
+      <div id="chatMsgDelDlg" style="display:none"></div>
     </div>
     <div class="view" id="view-newagent">
       <div class="scroll" id="newAgentBody"></div>

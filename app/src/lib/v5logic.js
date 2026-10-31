@@ -284,6 +284,27 @@ function homeChatWire() {
     else if (act === "wa-cam") waCamShot();
     else if (act === "wa-rec") waRecToggle();
     else if (act === "wa-rm") waRemoveAtt(idx);
+    else if (act === "msg-v") { toggleMsgMenu(el); }
+    else if (act === "msg-react") { toggleMsgPicker(el); }
+    else if (act === "msg-react-pick") { pickReaction(el); }
+    else if (act === "msg-react-chip") { removeReaction(el); }
+    else if (act === "msg-menu-reply") { replyToMsg(el); }
+    else if (act === "msg-menu-star") { toggleStarMsg(el); }
+    else if (act === "msg-menu-copy") { copyMsg(el); }
+    else if (act === "msg-menu-del") { askDelMsg(el); }
+    else if (act === "msg-del-yes") { doDelMsg(); }
+    else if (act === "msg-del-no") { closeDelMsgDlg(); }
+    else if (act === "pin-goto") { gotoMsg(el); }
+    else if (act === "pin-unstar") { unstarFromPin(el); }
+    else if (act === "reply-cancel") { clearReplyTarget(); }
+  });
+  // v131: klik di luar menu/picker chat menutupnya. Klik pada tombol V/react
+  // diabaikan (klik itu baru saja membuka popup lewat handler box di atas,
+  // yang jalan lebih dulu dalam propagasi yang sama).
+  document.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    if (e.target.closest(".msg-menu") || e.target.closest(".msg-picker") || e.target.closest('[data-act="msg-v"]') || e.target.closest('[data-act="msg-react"]')) return;
+    closeChatPopups();
   });
 }
 /* v124 (perintah Patria 31 Okt 10:10): status agen = icon, bukan tulisan.
@@ -585,6 +606,8 @@ function syncProjectUI(pid) {
 export function switchProject(pid) {
     if (!PROJECTS[pid]) return;
     currentProj = pid;
+    // v131: reply tertunda milik chat lama tidak boleh terbawa ke chat baru.
+    clearReplyTarget(); closeChatPopups();
     var _pa = PROJECTS[pid].agents || [];
     if (_pa.length && !_pa.some(function (a) { return a.key === selectedAgent; })) selectedAgent = _pa[0].key; saveHomeState();
     syncProjectUI(pid);
@@ -729,6 +752,197 @@ function renderChatMarkdown(html) {
   }
   return parts.join('');
 }
+/* v131 (perintah Patria 31 Okt 14:14): aksi per-bubble chat — tombol V
+   (menu Reply/Star/Copy/Delete), tombol react (emoji), pinned bar, reply.
+   Pesan lama tetap kompatibel: reactions/starred/replyTo opsional. */
+var REACT_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '🙏', '👏'];
+var replyTarget = null;
+var pendingDelMsgIdx = -1;
+function chatMsgsAndSave() {
+  if (PROJECTS[currentProj]) return { msgs: PROJECTS[currentProj].chat, save: saveHomeState };
+  return { msgs: mainChatGet(), save: mainChatSave };
+}
+function msgIdxOf(el) {
+  var row = el.closest ? el.closest('.msg') : null;
+  return row ? parseInt(row.getAttribute('data-idx') || '-1', 10) : -1;
+}
+/* Teks pesan polos untuk Copy/snippet: buang tag HTML app (tombol studio),
+   decode entitas (pesan tersimpan ter-escape), buang footer "— via ..." . */
+function msgPlainText(text) {
+  var t = String(text || '').replace(/<[^>]*>/g, '');
+  t = t.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+  var via = tr('chat.footer.via').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  var mi = t.search(new RegExp('\\s—\\s' + via + '\\s+\\S+\\s+\\S+\\s·\\s\\d+ms'));
+  if (mi >= 0) t = t.slice(0, mi);
+  return t.replace(/\s+/g, ' ').trim();
+}
+function msgSnippet(text) { return msgPlainText(text).slice(0, 60); }
+function msgReactsHtml(m) {
+  var r = m.reactions || [];
+  if (!r.length) return '';
+  return '<div class="msg-reacts">' + r.map(function (x) {
+    return '<button class="msg-react-chip" data-act="msg-react-chip" data-emoji="' + esc(x.e) + '">' + esc(x.e) + '</button>';
+  }).join('') + '</div>';
+}
+function msgReplyQuoteHtml(m) {
+  if (!m.replyTo) return '';
+  return '<div class="reply-quote"><div class="rq-name">' + esc(m.replyTo.name || '') + '</div><div class="rq-text">' + esc(m.replyTo.snippet || '') + '</div></div>';
+}
+function closeChatPopups() {
+  document.querySelectorAll('.msg-menu, .msg-picker').forEach(function (el) { el.remove(); });
+}
+export function getReplyTarget() { return replyTarget; }
+export function setReplyTarget(t) {
+  replyTarget = t;
+  var bar = document.getElementById('replyBar');
+  var txt = document.getElementById('replyBarText');
+  if (bar && txt) {
+    txt.textContent = tr('chat.msg.replying', { name: t.name }) + ': ' + t.snippet;
+    bar.style.display = 'flex';
+  }
+  var inp = document.getElementById('chatInput');
+  if (inp) inp.focus();
+}
+export function clearReplyTarget() {
+  replyTarget = null;
+  var bar = document.getElementById('replyBar');
+  if (bar) bar.style.display = 'none';
+}
+function toggleMsgMenu(btn) {
+  var bubble = btn.closest('.bubble'); if (!bubble) return;
+  var had = !!bubble.querySelector('.msg-menu');
+  closeChatPopups();
+  if (had) return;
+  var st = chatMsgsAndSave();
+  var m = st.msgs[msgIdxOf(btn)];
+  if (!m) return;
+  var menu = document.createElement('div');
+  menu.className = 'msg-menu';
+  menu.innerHTML = '<button data-act="msg-menu-reply">' + tr('chat.msg.reply') + '</button>'
+    + '<button data-act="msg-menu-star">' + (m.starred ? tr('chat.msg.unstar') : tr('chat.msg.star')) + '</button>'
+    + '<button data-act="msg-menu-copy">' + tr('chat.msg.copy') + '</button>'
+    + '<button data-act="msg-menu-del">' + tr('chat.msg.delete') + '</button>';
+  bubble.appendChild(menu);
+}
+function toggleMsgPicker(btn) {
+  var bubble = btn.closest('.bubble'); if (!bubble) return;
+  var had = !!bubble.querySelector('.msg-picker');
+  closeChatPopups();
+  if (had) return;
+  var st = chatMsgsAndSave();
+  var m = st.msgs[msgIdxOf(btn)];
+  if (!m) return;
+  var active = (m.reactions || []).map(function (x) { return x.e; });
+  var pk = document.createElement('div');
+  pk.className = 'msg-picker';
+  pk.innerHTML = REACT_EMOJIS.map(function (e) {
+    return '<button data-act="msg-react-pick" data-emoji="' + e + '" class="' + (active.indexOf(e) >= 0 ? 'on' : '') + '">' + e + '</button>';
+  }).join('');
+  bubble.appendChild(pk);
+}
+function pickReaction(el) {
+  var row = el.closest('.msg'); if (!row) return;
+  var st = chatMsgsAndSave();
+  var m = st.msgs[msgIdxOf(el)];
+  if (!m) return;
+  var emoji = el.getAttribute('data-emoji') || '';
+  if (!emoji) return;
+  /* Atribusi mengikuti pemilik bubble yang direaksi: reaksi pada bubble
+     agen = dari user; reaksi pada bubble user = dari agen (pasangan chat). */
+  var by = row.classList.contains('user') ? 'agent' : 'user';
+  m.reactions = m.reactions || [];
+  var at = -1;
+  for (var i = 0; i < m.reactions.length; i++) if (m.reactions[i].e === emoji) at = i;
+  if (at >= 0) m.reactions.splice(at, 1); else m.reactions.push({ e: emoji, by: by });
+  st.save(); renderChat();
+}
+function removeReaction(el) {
+  var st = chatMsgsAndSave();
+  var m = st.msgs[msgIdxOf(el)];
+  if (!m || !m.reactions) return;
+  var emoji = el.getAttribute('data-emoji') || '';
+  m.reactions = m.reactions.filter(function (x) { return x.e !== emoji; });
+  st.save(); renderChat();
+}
+function replyToMsg(el) {
+  var st = chatMsgsAndSave();
+  var m = st.msgs[msgIdxOf(el)];
+  if (!m) return;
+  closeChatPopups();
+  setReplyTarget({ name: String(m.name || ''), snippet: msgSnippet(m.text) });
+}
+function toggleStarMsg(el) {
+  var st = chatMsgsAndSave();
+  var m = st.msgs[msgIdxOf(el)];
+  if (!m) return;
+  m.starred = !m.starred;
+  st.save(); renderChat();
+}
+function copyMsg(el) {
+  var st = chatMsgsAndSave();
+  var m = st.msgs[msgIdxOf(el)];
+  closeChatPopups();
+  if (!m) return;
+  var t = msgPlainText(m.text);
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      var pr = navigator.clipboard.writeText(t);
+      if (pr && pr.catch) pr.catch(function () { copyFallback(t); });
+    } else copyFallback(t);
+  } catch (_) { copyFallback(t); }
+}
+function copyFallback(t) {
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    if (document.execCommand) document.execCommand('copy');
+    ta.remove();
+  } catch (_) {}
+}
+function askDelMsg(el) {
+  var idx = msgIdxOf(el);
+  if (idx < 0) return;
+  pendingDelMsgIdx = idx;
+  closeChatPopups();
+  var dlg = document.getElementById('chatMsgDelDlg');
+  if (!dlg) return;
+  dlg.innerHTML = "<div class='lib-dialog-backdrop' data-act='msg-del-no'></div><div class='lib-dialog-card'>"
+    + "<div class='lib-title'>" + tr('chat.msg.del.title') + "</div>"
+    + "<div class='lib-detail-pre'>" + tr('chat.msg.del.text') + "</div>"
+    + "<div class='lib-actions'>"
+    + "<button class='btn btn-sm' data-act='msg-del-no'>" + tr('chat.msg.del.no') + "</button>"
+    + "<button class='btn btn-sm' data-act='msg-del-yes'>" + tr('chat.msg.del.yes') + "</button>"
+    + "</div></div>";
+  dlg.style.display = 'block';
+}
+function closeDelMsgDlg() {
+  var dlg = document.getElementById('chatMsgDelDlg');
+  if (dlg) { dlg.style.display = 'none'; dlg.innerHTML = ''; }
+  pendingDelMsgIdx = -1;
+}
+function doDelMsg() {
+  if (pendingDelMsgIdx < 0) { closeDelMsgDlg(); return; }
+  var st = chatMsgsAndSave();
+  if (st.msgs[pendingDelMsgIdx]) st.msgs.splice(pendingDelMsgIdx, 1);
+  st.save();
+  closeDelMsgDlg();
+  renderChat();
+}
+function gotoMsg(el) {
+  var idx = parseInt(el.getAttribute('data-idx') || '-1', 10);
+  var row = document.querySelector('#chatBox .msg[data-idx="' + idx + '"]');
+  if (!row) return;
+  try { row.scrollIntoView({ block: 'center' }); } catch (_) {}
+  row.classList.add('flash');
+  setTimeout(function () { row.classList.remove('flash'); }, 1500);
+}
+function unstarFromPin(el) {
+  var idx = parseInt(el.getAttribute('data-idx') || '-1', 10);
+  var st = chatMsgsAndSave();
+  if (st.msgs[idx]) st.msgs[idx].starred = false;
+  st.save(); renderChat();
+}
 export function renderChat() {
     var box = document.getElementById("chatBox");
     box.innerHTML = "";
@@ -736,6 +950,18 @@ export function renderChat() {
     var _cpEl = document.getElementById("chatProj"); if (_cpEl) _cpEl.textContent = _cp ? _cp.name : "Main chat";
     var _ci = document.getElementById("chatInput"); if (_ci) _ci.disabled = false;
     var _msgs = _cp ? _cp.chat : mainChatGet();
+    // v131: pinned bar — pesan Star di chat aktif tampil di atas window chat.
+    var _pin = document.getElementById("pinnedBar");
+    if (_pin) {
+      var starred = [];
+      _msgs.forEach(function (m, i) { if (m.starred) starred.push({ i: i, m: m }); });
+      if (starred.length) {
+        _pin.style.display = 'block';
+        _pin.innerHTML = '<div class="pin-label">' + tr('chat.msg.pinned') + '</div>' + starred.map(function (s) {
+          return '<div class="pin-item" data-act="pin-goto" data-idx="' + s.i + '"><span class="pin-who">' + esc(String(s.m.name || '')) + '</span><span class="pin-snip">' + esc(msgSnippet(s.m.text)) + '</span><button class="pin-x" data-act="pin-unstar" data-idx="' + s.i + '">✕</button></div>';
+        }).join('');
+      } else { _pin.style.display = 'none'; _pin.innerHTML = ''; }
+    }
     _msgs.forEach(function (m, i) {
       var div = document.createElement("div");
       div.setAttribute("data-idx", String(i));
@@ -746,9 +972,13 @@ export function renderChat() {
       // v130: pesan agen/Prime lewat render markdown dulu (pesan lama ikut
       // rapi karena render terjadi tiap tampil); pesan user tetap literal.
       var body = m.who === "user" ? linkifyChatHtml(esc(m.text)) : linkifyChatHtml(renderChatMarkdown(m.text));
+      // v131: tombol V (menu) + tombol react + chip reaksi + kutipan reply.
+      var vbtn = '<button class="msg-vbtn" data-act="msg-v" data-idx="' + i + '">▾</button>';
+      var rbtn = '<button class="msg-reactbtn" data-act="msg-react" data-idx="' + i + '">☺</button>';
+      var inner = '<div class="who">' + who + '</div>' + msgReplyQuoteHtml(m) + body + msgReactsHtml(m);
       div.innerHTML = m.curation
-        ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + body + '</div></div>'
-        : '<div class="body"><div class="bubble"><div class="who">' + who + '</div>' + body + '</div></div>';
+        ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + vbtn + inner + rbtn + '</div></div>'
+        : '<div class="body"><div class="bubble">' + vbtn + inner + rbtn + '</div></div>';
       box.appendChild(div);
     });
     box.scrollTop = box.scrollHeight;
@@ -777,14 +1007,18 @@ export function activateAgent(key) {
     renderAgents();
   }
 
-export function postChat(who, name, color, text, curation) {
+export function postChat(who, name, color, text, curation, extra) {
     if (!PROJECTS[currentProj]) {
       var _mc = mainChatGet();
-      _mc.push({ who: who, name: name, color: color, text: text, curation: !!curation });
+      var _mm = { who: who, name: name, color: color, text: text, curation: !!curation };
+      if (extra) Object.assign(_mm, extra);
+      _mc.push(_mm);
       if (_mc.length > 500) _mc.splice(0, _mc.length - 500);
       mainChatSave(); renderChat(); return;
     }
-    PROJECTS[currentProj].chat.push({ who: who, name: name, color: color, text: text, curation: !!curation });
+    var _pm = { who: who, name: name, color: color, text: text, curation: !!curation };
+    if (extra) Object.assign(_pm, extra);
+    PROJECTS[currentProj].chat.push(_pm);
     // v89 (audit m2): cap 500 pesan/proyek — tanpa cap, tiap aksi menulis
     // ulang seluruh riwayat (saveHomeState men-stringify semua chat).
     var _c = PROJECTS[currentProj].chat;

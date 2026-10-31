@@ -11,7 +11,7 @@
 // No key -> that provider is skipped by the chain (LiveUnavailableError
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
-import { AGENTS, activateAgent, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView } from './v5logic.js';
+import { AGENTS, activateAgent, clearReplyTarget, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, getReplyTarget, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
@@ -358,7 +358,10 @@ export async function sendChatReal(): Promise<void> {
   const flow2Raw = (!flow1 && !hasExplicitDelegate) ? await splitBriefTasks(router, cfg, text) : [];
   const flow2Tasks = flow2Raw.filter((t) => currentProjectMemberKeys().includes(t.agent));
   if (flow1 && flow1Tasks.length > 0) ensureProjectForBrief(text);
-  postChat('user', 'Patria', '#374151', esc(text));
+  // v131: pesan user membawa kutipan reply bila mode Reply aktif.
+  const rt = getReplyTarget();
+  postChat('user', 'Patria', '#374151', esc(text), undefined, rt ? { replyTo: rt } : undefined);
+  clearReplyTarget();
   input.value = '';
   postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.prime.ack'));
   // v103 (Alur 1): brief tervalidasi — fan-out ke masing-masing agen.

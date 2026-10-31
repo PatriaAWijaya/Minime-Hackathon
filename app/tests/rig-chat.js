@@ -79,6 +79,7 @@ const dom = new JSDOM(html, {
       clear: () => store.clear(),
     };
     Object.defineProperty(window, 'localStorage', { value: ls });
+    try { Object.defineProperty(window.navigator, 'clipboard', { value: { writeText: async (t) => { globalThis.__copied131 = t; } }, configurable: true }); } catch (_) {}
   },
 });
 
@@ -383,6 +384,111 @@ try {
   check('v130: system prompt agen memuat STANDAR LAPORAN', bodies.some((b) => b.includes('STANDAR LAPORAN') && b.includes('Judul')), bodies.map((b) => b.slice(0, 100)).join(' | '));
   const rep130 = [...document.querySelectorAll('#chatBox .msg.curation .bubble')].pop()?.innerHTML || '';
   check('v130: laporan kompilasi Prime berheader (## -> h3)', rep130.includes('<h3>'), rep130.slice(0, 300));
+
+  // 15. v131: tombol V + menu, react, Star/pin, Reply, Copy, Delete.
+  // (a) Menu V pada bubble agen berisi 4 aksi.
+  dom.window.postChat('riset', 'Riset', '#fff', 'Laporan uji V131');
+  await tick(100);
+  let msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  msg131.querySelector('.msg-vbtn').click();
+  await tick(100);
+  let menu131 = msg131.querySelector('.msg-menu');
+  check('v131: menu V agen berisi Reply/Star/Copy/Delete', !!menu131 && ['Balas', 'Star', 'Salin', 'Hapus'].every((w) => (menu131.textContent || '').includes(w)), menu131?.textContent || 'tidak ada');
+  // (b) Star -> pinned bar; Unstar -> hilang.
+  [...menu131.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Star').click();
+  await tick(100);
+  const pin131 = document.getElementById('pinnedBar');
+  check('v131: Star menampilkan pinned bar di atas chat', pin131 && pin131.style.display === 'block' && (pin131.textContent || '').includes('Laporan uji V131'), pin131?.textContent || 'tidak ada');
+  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  msg131.querySelector('.msg-vbtn').click();
+  await tick(100);
+  menu131 = msg131.querySelector('.msg-menu');
+  check('v131: pesan Star menampilkan Unstar', !!menu131 && (menu131.textContent || '').includes('Batalkan Star'), menu131?.textContent || 'tidak ada');
+  [...menu131.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Batalkan Star').click();
+  await tick(100);
+  check('v131: Unstar menyembunyikan pinned bar', document.getElementById('pinnedBar').style.display === 'none', document.getElementById('pinnedBar').style.display);
+  // (c) Reply -> bar + kutipan pada pesan terkirim.
+  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  msg131.querySelector('.msg-vbtn').click();
+  await tick(100);
+  [...msg131.querySelector('.msg-menu').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Balas').click();
+  await tick(100);
+  const rb131 = document.getElementById('replyBar');
+  check('v131: Reply menampilkan bar balasan', rb131 && rb131.style.display === 'flex' && (rb131.textContent || '').includes('Riset') && (rb131.textContent || '').includes('Laporan uji V131'), rb131?.textContent || 'tidak ada');
+  await sendMsg('balasan uji v131');
+  await waitFor(() => {
+    const u = [...document.querySelectorAll('#chatBox .msg.user')].pop();
+    return u && u.querySelector('.reply-quote') && u.querySelector('.reply-quote').textContent.includes('Laporan uji V131');
+  }, 'quote v131', 120);
+  const user131 = [...document.querySelectorAll('#chatBox .msg.user')].pop();
+  check('v131: pesan terkirim membawa kutipan reply', !!(user131?.querySelector('.reply-quote')?.textContent || '').includes('Laporan uji V131'), user131?.querySelector('.reply-quote')?.textContent || 'tidak ada');
+  check('v131: bar balasan hilang setelah kirim', document.getElementById('replyBar').style.display === 'none', document.getElementById('replyBar').style.display);
+  // (d) Copy menyalin teks polos tanpa footer.
+  dom.window.postChat('riset', 'Riset', '#fff', 'Laporan salin — via meta muse-spark-1.3 · 123ms');
+  await tick(100);
+  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  msg131.querySelector('.msg-vbtn').click();
+  await tick(100);
+  [...msg131.querySelector('.msg-menu').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Salin').click();
+  await tick(100);
+  check('v131: Copy menyalin teks tanpa footer via', globalThis.__copied131 === 'Laporan salin', String(globalThis.__copied131));
+  // (e) React pada bubble agen -> chip kiri bawah; klik chip -> hilang.
+  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  msg131.querySelector('.msg-reactbtn').click();
+  await tick(100);
+  const pk131 = msg131.querySelector('.msg-picker');
+  check('v131: picker emoji muncul di bubble agen', !!pk131 && pk131.querySelectorAll('button').length === 8, pk131 ? String(pk131.querySelectorAll('button').length) : 'tidak ada');
+  [...pk131.querySelectorAll('button')].find((b) => b.textContent.trim() === '👍').click();
+  await tick(100);
+  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  check('v131: emoji user tampil kiri bawah bubble agen', !!(msg131.querySelector('.msg-reacts')?.textContent || '').includes('👍'), msg131.querySelector('.msg-reacts')?.textContent || 'tidak ada');
+  msg131.querySelector('.msg-react-chip').click();
+  await tick(100);
+  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  check('v131: klik chip menghapus reaksi', !msg131.querySelector('.msg-react-chip'), msg131.querySelector('.msg-reacts')?.textContent || 'tidak ada');
+  // (f) React pada bubble user = emoji agen di kiri bawah bubble user.
+  dom.window.postChat('user', 'Patria', '#374151', 'pesan user uji reaksi');
+  await tick(100);
+  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  msg131.querySelector('.msg-reactbtn').click();
+  await tick(100);
+  [...msg131.querySelector('.msg-picker').querySelectorAll('button')].find((b) => b.textContent.trim() === '❤️').click();
+  await tick(100);
+  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  check('v131: emoji agen tampil kiri bawah bubble user', msg131.classList.contains('user') && (msg131.querySelector('.msg-reacts')?.textContent || '').includes('❤️'), msg131.querySelector('.msg-reacts')?.textContent || 'tidak ada');
+  // (g) Delete: Batalkan -> tetap; Hapus -> hilang.
+  const countBefore131 = document.querySelectorAll('#chatBox .msg').length;
+  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  msg131.querySelector('.msg-vbtn').click();
+  await tick(100);
+  [...msg131.querySelector('.msg-menu').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hapus').click();
+  await tick(100);
+  const dlg131 = document.getElementById('chatMsgDelDlg');
+  check('v131: Delete membuka dialog konfirmasi', dlg131 && dlg131.style.display === 'block', dlg131?.style.display || 'tidak ada');
+  [...dlg131.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Batalkan').click();
+  await tick(100);
+  check('v131: Batalkan dialog mempertahankan pesan', document.querySelectorAll('#chatBox .msg').length === countBefore131, String(document.querySelectorAll('#chatBox .msg').length));
+  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  msg131.querySelector('.msg-vbtn').click();
+  await tick(100);
+  [...msg131.querySelector('.msg-menu').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hapus').click();
+  await tick(100);
+  [...document.getElementById('chatMsgDelDlg').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hapus').click();
+  await tick(100);
+  check('v131: Hapus di dialog menghilangkan pesan', document.querySelectorAll('#chatBox .msg').length === countBefore131 - 1, String(document.querySelectorAll('#chatBox .msg').length));
+  // (h) Star + klik pin -> sorot pesan.
+  dom.window.postChat('riset', 'Riset', '#fff', 'Pesan pin goto uji');
+  await tick(100);
+  msg131 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  msg131.querySelector('.msg-vbtn').click();
+  await tick(100);
+  [...msg131.querySelector('.msg-menu').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Star').click();
+  await tick(100);
+  const pinItem131 = document.querySelector('#pinnedBar .pin-item');
+  pinItem131.click();
+  await tick(100);
+  const flash131 = [...document.querySelectorAll('#chatBox .msg')].find((m) => (m.textContent || '').includes('Pesan pin goto uji'));
+  check('v131: klik pin menyorot pesan', !!flash131 && flash131.classList.contains('flash'), flash131?.className || 'tidak ada');
 
 } catch (e) {
   // eslint-disable-next-line no-console
