@@ -2521,6 +2521,14 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v142 — LIVE (perintah Patria 31 Okt 20:33: perbaiki angka nyangkut di form chat)
+- Bug: angka di samping kolom chat (jumlah karakter draf, `waInputChanged`) nyangkut di angka draf terakhir walau kolom sudah kosong — dilaporkan Patria 31 Okt 20:29 (angka "31" di samping kolom kosong).
+- Akar: `sendChatReal` mengosongkan input SETELAH await model call (split brief), sementara refresh wrapper `sendChat` sudah jalan sinkron saat tombol kirim ditekan — angka lama tak pernah diperbarui.
+- Perbaikan: `waInputChanged()` dipanggil tepat setelah tiap `input.value = ''` di `sendChatReal` (2 situs: cabang jawaban alur brief + jalur utama; semua jalur kirim bermuara di sana). Import ditambahkan ke `chat.ts`.
+- Rig-chat §28 (2 cek): angka = panjang draf saat mengetik; angka hilang setelah pesan terkirim.
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan bersih kecuali false positive kb-ask-del, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal 23263e0 ↔ remote 7d96942 (tree identik).
+
 ## v141 — hapus pesan chat langsung tanpa dialog konfirmasi (31 Okt 2026 ~20:21 WIB, perintah Patria 20:15 atas screenshot dialog 'Hapus pesan?' di Main chat)
 - Popup konfirmasi penghapusan chat dihilangkan: klik Hapus di menu bubble langsung menghilangkan pesan (tutup popup, splice, simpan, render ulang dengan posisi scroll dipertahankan) — tanpa dialog perantara.
 - Dihapus total (nol sisa mati): fungsi askDelMsg + closeDelMsgDlg + state pendingDelMsgIdx + kasus wire msg-del-yes/msg-del-no + wadah #chatMsgDelDlg di App.svelte + 4 kunci i18n dialog per bahasa (chat.msg.del.title/text/yes/no); label menu 'chat.msg.delete' tetap.
