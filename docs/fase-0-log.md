@@ -2521,6 +2521,13 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v144 — LIVE (perintah Patria 31 Okt 20:50: angka di input chat kembali muncul, perbaiki)
+- Klarifikasi: di screenshot 20:50 angka "169" BUKAN bug nyangkut v142 — kolom memang berisi draf 169 karakter, jadi penghitungnya benar. Karena Patria tetap minta diperbaiki setelah angka itu muncul lagi, vonis yang dieksekusi: penghitung karakter DIHAPUS TOTAL, bukan diperbaiki nilainya.
+- Yang dicabut sampai akar (nol sisa mati): elemen `<span id="chatCount">` + handler oninput di App.svelte, fungsi `waInputChanged` + pemanggilan wrapper/init + entri bridge di v5logic.js, impor + 2 pemanggilan v142 di chat.ts (perbaikan v142 kini usang), aturan CSS `.chat-count`. Grep source: nol referensi tersisa.
+- Rig: §28 rig-chat + §1 rig-audit ditulis ulang menjadi cek ketiadaan elemen (mengetik maupun setelah kirim).
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan bersih kecuali false positive kb-ask-del, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal 477f164 ↔ remote e7b1e32 (tree identik).
+
 ## v143 — LIVE (perintah Patria 31 Okt 20:37: opsi rekomendasi harus mendahulukan pendalaman, bukan versi usaha lain)
 - Keluhan: hasil konsep visual (feed Instagram 9-grid Kopi Senja) diberi tombol rekomendasi "Buatkan versi fashion / kuliner" — pivot ke usaha lain, bukan pendalaman hasil itu.
 - Akar: tombol rekomendasi dipilih model lewat baris ►RECOMMEND dari REPORT_FORMAT_INSTRUCTION; aturan lama tidak memprioritaskan pendalaman.
