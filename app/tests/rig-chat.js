@@ -527,6 +527,18 @@ try {
   await tick(100);
   const many132 = [...document.querySelectorAll('#chatBox .msg')].pop();
   check('v132: opsi dibatasi maksimal 5 tombol', many132.querySelectorAll('.rec-btn').length === 5, String(many132.querySelectorAll('.rec-btn').length));
+  // §18 v136: bubble pemilik menu naik di atas bubble berikutnya.
+  const firstMsg136 = document.querySelector('#chatBox .msg');
+  firstMsg136.querySelector('.msg-vbtn').click();
+  await tick(100);
+  check('v136: bubble pemilik menu mendapat class menu-open', firstMsg136.classList.contains('menu-open') && !!firstMsg136.querySelector('.msg-menu'), firstMsg136.className);
+  const openRules136 = [...css135.matchAll(/\.msg\.menu-open\{([^}]*)\}/g)].map((m) => m[1]);
+  const lastOpen136 = openRules136[openRules136.length - 1] || '';
+  check('v136: aturan menu-open menaikkan z-index', /z-index:\s*40/i.test(lastOpen136), lastOpen136.slice(0, 120));
+  firstMsg136.querySelector('.msg-vbtn').click();
+  await tick(100);
+  check('v136: menu ditutup menghapus class menu-open', !firstMsg136.classList.contains('menu-open') && !firstMsg136.querySelector('.msg-menu'), firstMsg136.className);
+
 
 } catch (e) {
   // eslint-disable-next-line no-console

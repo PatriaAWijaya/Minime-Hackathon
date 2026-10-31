@@ -656,3 +656,6 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 /* v135: menu dropdown chat — background solid + teks putih, bukan kaca transparan (di atas bubble user hijau, menu lama tak terbaca). */
 .msg-menu { background: #2E1650; color: #fff; }
 .msg-menu button { color: #fff; }
+
+/* v136: bubble yang menunya terbuka naik di atas bubble berikutnya. Sebab: .bubble memakai backdrop-filter sehingga tiap bubble adalah stacking context sendiri — menu di dalamnya (z-index 30) tak pernah bisa menang atas sibling berikutnya tanpa menaikkan bubble pemiliknya. */
+.msg.menu-open { position: relative; z-index: 40; }

@@ -791,6 +791,7 @@ function msgReplyQuoteHtml(m) {
 }
 function closeChatPopups() {
   document.querySelectorAll('.msg-menu, .msg-picker').forEach(function (el) { el.remove(); });
+  document.querySelectorAll('.msg.menu-open').forEach(function (el) { el.classList.remove('menu-open'); });
 }
 /* v132 (perintah Patria 31 Okt 14:23): rekomendasi agen jadi tombol di
    window chat. Model menulis tawaran dalam SATU baris marker di akhir
@@ -871,6 +872,7 @@ function toggleMsgMenu(btn) {
     + '<button data-act="msg-menu-copy">' + tr('chat.msg.copy') + '</button>'
     + '<button data-act="msg-menu-del">' + tr('chat.msg.delete') + '</button>';
   bubble.appendChild(menu);
+  var msgEl = btn.closest('.msg'); if (msgEl) msgEl.classList.add('menu-open');
 }
 function toggleMsgPicker(btn) {
   var bubble = btn.closest('.bubble'); if (!bubble) return;
