@@ -514,6 +514,15 @@ try {
   const userRec132 = [...document.querySelectorAll('#chatBox .msg')].pop();
   check('v132: bubble user tidak diubah jadi tombol', !userRec132.querySelector('.rec-btn'), userRec132.textContent.slice(0, 100));
   // (d) Lebih dari 5 opsi dibatasi 5.
+  // §17 v135: menu dropdown chat background solid + teks putih.
+  const cssFiles135 = fs.readdirSync(path.join(distDir, 'assets')).filter((f) => f.endsWith('.css'));
+  let css135 = '';
+  for (const f of cssFiles135) css135 += fs.readFileSync(path.join(distDir, 'assets', f), 'utf-8');
+  const menuRules135 = [...css135.matchAll(/\.msg-menu\{([^}]*)\}/g)].map((m) => m[1]);
+  const lastMenu135 = menuRules135[menuRules135.length - 1] || '';
+  check('v135: menu dropdown background solid (bukan var/rgba)', /background:#2e1650/i.test(lastMenu135), lastMenu135.slice(0, 160));
+  check('v135: menu dropdown teks putih', /(^|;)color:#fff/i.test(lastMenu135), lastMenu135.slice(0, 160));
+
   dom.window.postChat('riset', 'Riset', '#fff', 'Opsi banyak.\n►RECOMMEND: Satu | Dua | Tiga | Empat | Lima | Enam');
   await tick(100);
   const many132 = [...document.querySelectorAll('#chatBox .msg')].pop();

@@ -652,3 +652,7 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .chat-act { background: var(--t-accent-grad, linear-gradient(135deg, #9333EA, #D946EF)); border-color: transparent; color: #fff; }
 .chat-act.done { background: #8ED694; border-color: transparent; color: #262626; }
 .msg .bubble a.chat-link { color: var(--t-accent, #9333EA); text-decoration: underline; }
+
+/* v135: menu dropdown chat — background solid + teks putih, bukan kaca transparan (di atas bubble user hijau, menu lama tak terbaca). */
+.msg-menu { background: #2E1650; color: #fff; }
+.msg-menu button { color: #fff; }
