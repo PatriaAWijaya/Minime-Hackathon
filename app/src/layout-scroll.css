@@ -505,6 +505,11 @@ h3 { font-size: 18px; }
 #replyBar .reply-x { background: none; border: none; color: inherit; cursor: pointer; opacity: 0.7; padding: 2px 4px; flex-shrink: 0; }
 .msg.flash .bubble { outline: 2px solid #EB87B4; outline-offset: 1px; }
 
+/* v132 (perintah Patria 31 Okt 14:23): tombol rekomendasi agen di window chat. */
+.msg-recs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; text-align: left; }
+.rec-btn { background: var(--t-accent-grad, linear-gradient(135deg, #9333EA, #D946EF)); color: #fff; border: none; border-radius: 10px; padding: 7px 12px; font-size: 13px; cursor: pointer; line-height: 1.4; text-align: left; }
+.rec-btn.done { background: #8ED694; color: #262626; }
+
 /* v108: kursor geser workspace Graph. */
 #graphBox { cursor: grab; }
 #graphBox.graph-panning, #graphBox.graph-panning .n8n-node { cursor: grabbing; }

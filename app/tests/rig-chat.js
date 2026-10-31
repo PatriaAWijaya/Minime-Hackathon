@@ -490,6 +490,35 @@ try {
   const flash131 = [...document.querySelectorAll('#chatBox .msg')].find((m) => (m.textContent || '').includes('Pesan pin goto uji'));
   check('v131: klik pin menyorot pesan', !!flash131 && flash131.classList.contains('flash'), flash131?.className || 'tidak ada');
 
+  // 16. v132: tombol rekomendasi agen di window chat.
+  // (a) Marker diubah jadi tombol (bisa lebih dari satu), marker tak tampil.
+  dom.window.postChat('riset', 'Riset', '#fff', 'Hasil riset selesai.\n►RECOMMEND: Buat naskah | Riset harga | Jadwal posting');
+  await tick(100);
+  let rec132 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  const btns132 = rec132.querySelectorAll('.rec-btn');
+  check('v132: 3 rekomendasi jadi 3 tombol', btns132.length === 3, String(btns132.length));
+  check('v132: marker tidak tampil sebagai teks', !(rec132.textContent || '').includes('RECOMMEND'), rec132.textContent.slice(0, 200));
+  check('v132: tombol awal belum hijau (tanpa done)', ![...btns132].some((b) => b.classList.contains('done')), [...btns132].map((b) => b.className).join(','));
+  // (b) Klik tombol -> hijau + terkirim sebagai pesan user.
+  btns132[0].click();
+  await waitFor(() => {
+    const u = [...document.querySelectorAll('#chatBox .msg.user')].pop();
+    return u && (u.textContent || '').includes('Buat naskah');
+  }, 'rec kirim v132', 120);
+  await tick(300);
+  rec132 = [...document.querySelectorAll('#chatBox .msg')].find((m) => (m.textContent || '').includes('Hasil riset selesai.'));
+  check('v132: tombol dipilih berubah hijau', !!rec132 && !!rec132.querySelector('.rec-btn.done') && rec132.querySelector('.rec-btn.done').textContent.trim() === 'Buat naskah', rec132?.querySelector('.msg-recs')?.textContent || 'tidak ada');
+  // (c) Bubble user dengan marker TIDAK jadi tombol.
+  dom.window.postChat('user', 'Patria', '#374151', '►RECOMMEND: A | B');
+  await tick(100);
+  const userRec132 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  check('v132: bubble user tidak diubah jadi tombol', !userRec132.querySelector('.rec-btn'), userRec132.textContent.slice(0, 100));
+  // (d) Lebih dari 5 opsi dibatasi 5.
+  dom.window.postChat('riset', 'Riset', '#fff', 'Opsi banyak.\n►RECOMMEND: Satu | Dua | Tiga | Empat | Lima | Enam');
+  await tick(100);
+  const many132 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  check('v132: opsi dibatasi maksimal 5 tombol', many132.querySelectorAll('.rec-btn').length === 5, String(many132.querySelectorAll('.rec-btn').length));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-chat exception :: ' + (e && e.stack ? e.stack : e));

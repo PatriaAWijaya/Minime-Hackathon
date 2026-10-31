@@ -284,6 +284,7 @@ function homeChatWire() {
     else if (act === "wa-cam") waCamShot();
     else if (act === "wa-rec") waRecToggle();
     else if (act === "wa-rm") waRemoveAtt(idx);
+    else if (act === "msg-rec") { pickRecommendation(el); }
     else if (act === "msg-v") { toggleMsgMenu(el); }
     else if (act === "msg-react") { toggleMsgPicker(el); }
     else if (act === "msg-react-pick") { pickReaction(el); }
@@ -791,6 +792,53 @@ function msgReplyQuoteHtml(m) {
 function closeChatPopups() {
   document.querySelectorAll('.msg-menu, .msg-picker').forEach(function (el) { el.remove(); });
 }
+/* v132 (perintah Patria 31 Okt 14:23): rekomendasi agen jadi tombol di
+   window chat. Model menulis tawaran dalam SATU baris marker di akhir
+   jawaban (lihat REPORT_FORMAT_INSTRUCTION): ►RECOMMEND: opsi | opsi.
+   Render mengekstrak opsi dari teks tersimpan (footer sudah dibuang lewat
+   msgPlainText agar opsi terakhir tidak tercemar footer), menghapus baris
+   marker dari tampilan, dan merender tombol. Klik tombol = pilih tawaran:
+   tombol jadi hijau (pickedRec tersimpan) + opsi terkirim sebagai pesan user.
+   Mengabaikan tombol dan mengetik sendiri selalu bisa (tombol tetap tak
+   terpilih). Hanya bubble agen/Prime; bubble user tidak diproses. */
+function extractRecommendations(text) {
+  var raw = String(text || '');
+  var at = raw.indexOf('►');
+  if (at < 0) return { options: [], cleaned: raw };
+  var seg = raw.slice(at);
+  if (!/^►\s*RECOMMEND\s*:/.test(seg)) return { options: [], cleaned: raw };
+  var plain = msgPlainText(raw);
+  var pm = /►\s*RECOMMEND\s*:\s*([^\n]*)/.exec(plain);
+  var opts = [];
+  if (pm) opts = pm[1].split('|').map(function (x) { return x.trim(); }).filter(function (x) { return x.length > 0; }).slice(0, 5);
+  if (!opts.length) return { options: [], cleaned: raw };
+  var end = raw.indexOf('\n', at);
+  if (end < 0) {
+    var lt = raw.indexOf('<', at);
+    end = lt >= 0 ? lt : raw.length;
+  }
+  return { options: opts, cleaned: raw.slice(0, at) + raw.slice(end) };
+}
+function msgRecsHtml(m, options) {
+  if (!options.length) return '';
+  return '<div class="msg-recs">' + options.map(function (opt, i) {
+    return '<button class="rec-btn' + (m.pickedRec === i ? ' done' : '') + '" data-act="msg-rec" data-opt="' + i + '">' + esc(opt) + '</button>';
+  }).join('') + '</div>';
+}
+function pickRecommendation(el) {
+  var st = chatMsgsAndSave();
+  var m = st.msgs[msgIdxOf(el)];
+  if (!m) return;
+  var opt = parseInt(el.getAttribute('data-opt') || '-1', 10);
+  var rec = extractRecommendations(m.text);
+  if (opt < 0 || opt >= rec.options.length) return;
+  m.pickedRec = opt;
+  st.save();
+  clearReplyTarget();
+  var inp = document.getElementById('chatInput');
+  if (inp) inp.value = rec.options[opt];
+  if (typeof sendChat === 'function') sendChat();
+}
 export function getReplyTarget() { return replyTarget; }
 export function setReplyTarget(t) {
   replyTarget = t;
@@ -971,11 +1019,13 @@ export function renderChat() {
       // pesan agen adalah HTML app sendiri (mis. tombol Buka di Media Studio).
       // v130: pesan agen/Prime lewat render markdown dulu (pesan lama ikut
       // rapi karena render terjadi tiap tampil); pesan user tetap literal.
-      var body = m.who === "user" ? linkifyChatHtml(esc(m.text)) : linkifyChatHtml(renderChatMarkdown(m.text));
+      // v132: rekomendasi agen diekstrak dulu (marker dihapus dari tampilan).
+      var rec = m.who === "user" ? { options: [], cleaned: m.text } : extractRecommendations(m.text);
+      var body = m.who === "user" ? linkifyChatHtml(esc(m.text)) : linkifyChatHtml(renderChatMarkdown(rec.cleaned));
       // v131: tombol V (menu) + tombol react + chip reaksi + kutipan reply.
       var vbtn = '<button class="msg-vbtn" data-act="msg-v" data-idx="' + i + '">▾</button>';
       var rbtn = '<button class="msg-reactbtn" data-act="msg-react" data-idx="' + i + '">☺</button>';
-      var inner = '<div class="who">' + who + '</div>' + msgReplyQuoteHtml(m) + body + msgReactsHtml(m);
+      var inner = '<div class="who">' + who + '</div>' + msgReplyQuoteHtml(m) + body + msgRecsHtml(m, rec.options) + msgReactsHtml(m);
       div.innerHTML = m.curation
         ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + vbtn + inner + rbtn + '</div></div>'
         : '<div class="body"><div class="bubble">' + vbtn + inner + rbtn + '</div></div>';
