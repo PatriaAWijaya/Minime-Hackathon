@@ -24,6 +24,10 @@ use std::time::{Duration, Instant};
 /// di tiap aplikasi provider harus cocok persis dengan ini.
 pub const OAUTH_PORT: u16 = 4317;
 
+/// Batas tunggu callback OAuth — 10 menit, supaya pace normal pengguna
+/// (buka dialog, baca, klik Lanjutkan) tidak membunuh percobaan.
+pub const OAUTH_TIMEOUT_SECS: u64 = 600;
+
 fn pct_decode(s: &str) -> String {
     let bytes = s.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
@@ -66,7 +70,7 @@ fn query_value(query: &str, key: &str) -> Option<String> {
     None
 }
 
-/// Tunggu SATU callback OAuth di 127.0.0.1:4317 (maks 180 detik).
+/// Tunggu SATU callback OAuth di 127.0.0.1:4317 (maks 600 detik).
 /// Mengembalikan JSON {"code": "...", "state": "..."} atau Err.
 /// Dipanggil frontend BERSAMAAN dengan membuka URL OAuth di browser:
 /// promise invoke ini menggantung sampai callback tiba.
@@ -82,8 +86,8 @@ pub fn social_oauth_listen() -> Result<String, String> {
         .and_then(|l| l.set_nonblocking(true).ok().map(|_| l));
     let start = Instant::now();
     loop {
-        if start.elapsed() > Duration::from_secs(180) {
-            return Err("Waktu tunggu login habis (180 detik)".into());
+        if start.elapsed() > Duration::from_secs(OAUTH_TIMEOUT_SECS) {
+            return Err(format!("Waktu tunggu login habis ({OAUTH_TIMEOUT_SECS} detik)").into());
         }
         let mut accepted = None;
         match listener4.accept() {
