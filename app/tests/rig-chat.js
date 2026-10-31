@@ -719,6 +719,24 @@ try {
   await sendMsg('halo tes angka chat');
   await waitFor(() => bodyText().includes('halo tes angka chat'), 'cb144 user bubble');
   check('v144: tetap tidak ada penghitung setelah kirim', !document.getElementById('chatCount'));
+  // §29 v145: pilih opsi pendalaman Media Studio -> otomatis pindah ke Media Studio (perintah Patria 31 Okt 21:07).
+  dom.window.postChat('kreatif', 'Kreatif', '#fff', 'Hasil ini bisa saya lanjutkan di Media Studio.\n►RECOMMEND: Eksekusi video di Video Editor | Buat caption + hashtag');
+  await tick(100);
+  let rec145 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  let btns145 = rec145.querySelectorAll('.rec-btn');
+  check('v145: 2 rekomendasi jadi 2 tombol', btns145.length === 2, String(btns145.length));
+  btns145[0].click();
+  await tick(100);
+  check('v145: pilih Video Editor -> pindah ke view Media Studio', !!document.getElementById('view-media')?.classList.contains('active'));
+  check('v145: tab Video aktif', document.getElementById('ms-tab-video')?.style.display === 'block', document.getElementById('ms-tab-video')?.style.display || 'tidak ada');
+  dom.window.showView('home');
+  await tick(50);
+  dom.window.postChat('kreatif', 'Kreatif', '#fff', 'Opsi lain.\n►RECOMMEND: Buat caption + hashtag');
+  await tick(100);
+  let rec145b = [...document.querySelectorAll('#chatBox .msg')].pop();
+  rec145b.querySelector('.rec-btn').click();
+  await waitFor(() => [...document.querySelectorAll('#chatBox .msg.user')].some((m) => (m.textContent || '').includes('Buat caption + hashtag')), 'rec145b terkirim');
+  check('v145: opsi non-studio tidak memindahkan view', !!document.getElementById('view-home')?.classList.contains('active') && !document.getElementById('view-media')?.classList.contains('active'));
 
 
 

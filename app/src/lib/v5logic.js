@@ -841,6 +841,22 @@ function pickRecommendation(el) {
   var inp = document.getElementById('chatInput');
   if (inp) inp.value = rec.options[opt];
   if (typeof sendChat === 'function') sendChat();
+  // v145: opsi yang memilih pendalaman di Media Studio langsung mengarahkan
+  // ke sana — user tidak perlu membukanya manual (perintah Patria 31 Okt 21:07).
+  recStudioNav(rec.options[opt]);
+}
+// v145: pemetaan nama destinasi di teks opsi -> tab Media Studio.
+// Hanya opsi yang menyebut editor/Media Studio secara eksplisit yang
+// bernavigasi; opsi pendalaman umum (naskah, caption, hook) tetap di chat.
+function recStudioNav(text) {
+  var low = (text || '').toLowerCase();
+  var tab = null;
+  if (low.indexOf('video editor') !== -1 || low.indexOf('editor video') !== -1) tab = 'video';
+  else if (low.indexOf('image editor') !== -1 || low.indexOf('editor gambar') !== -1) tab = 'image';
+  else if (low.indexOf('voice editor') !== -1 || low.indexOf('editor suara') !== -1) tab = 'voice';
+  else if (low.indexOf('script editor') !== -1 || low.indexOf('editor naskah') !== -1) tab = 'script';
+  if (tab) { showView('media'); mediaTab(tab); return; }
+  if (low.indexOf('media studio') !== -1) showView('media');
 }
 export function getReplyTarget() { return replyTarget; }
 export function setReplyTarget(t) {
