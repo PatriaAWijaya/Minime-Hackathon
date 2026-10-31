@@ -38,6 +38,9 @@ interface SeState {
   output: string;
   outputMeta: string;
   note: string;
+  copied: boolean;
+  saved: boolean;
+  used: boolean;
 }
 
 const LS = 'minime.scriptEditor';
@@ -78,6 +81,9 @@ const DEFAULTS: SeState = {
   output: '',
   outputMeta: '',
   note: '',
+  copied: false,
+  saved: false,
+  used: false,
 };
 
 let state: SeState = { ...DEFAULTS };
@@ -141,7 +147,7 @@ function wField(id: string, key: string, value: string): string {
 
 function outputBlock(): string {
   if (!state.output && !state.note) return '';
-  return `<div class="se-group">${state.output ? `<h4>${esc(tr('se.output.title'))}</h4><textarea id="se-output" rows="10" class="se-field">${esc(state.output)}</textarea>${state.outputMeta ? `<div class="se-note">${esc(state.outputMeta)}</div>` : ''}<button id="se-copy" class="se-btn2">${esc(tr('se.output.copy'))}</button> <button id="se-save" class="se-btn2">${esc(tr('se.btn.save'))}</button> <button id="se-use" class="se-btn2">${esc(tr('se.btn.use'))}</button>` : ''}${state.note ? `<div id="se-note" class="se-note">${esc(state.note)}</div>` : ''}</div>`;
+  return `<div class="se-group">${state.output ? `<h4>${esc(tr('se.output.title'))}</h4><textarea id="se-output" rows="10" class="se-field">${esc(state.output)}</textarea>${state.outputMeta ? `<div class="se-note">${esc(state.outputMeta)}</div>` : ''}<button id="se-copy" class="se-btn2${state.copied ? ' done' : ''}">${esc(tr('se.output.copy'))}</button> <button id="se-save" class="se-btn2${state.saved ? ' done' : ''}">${esc(tr('se.btn.save'))}</button> <button id="se-use" class="se-btn2${state.used ? ' done' : ''}">${esc(tr('se.btn.use'))}</button>` : ''}${state.note ? `<div id="se-note" class="se-note">${esc(state.note)}</div>` : ''}</div>`;
 }
 
 function titleFor(st: SeState): string {
@@ -154,12 +160,15 @@ function titleFor(st: SeState): string {
 function seSave(): void {
   const r = libAddScript(titleFor(state), state.output);
   state.note = tr(r.saveFailed ? 'lib.err.save' : (r.added ? 'se.note.saved' : 'se.note.already'));
+  state.saved = true;
+  saveState();
   renderSeMain();
 }
 
 function seUse(): void {
   libAddScript(titleFor(state), state.output);
   state.note = tr('se.note.used');
+  state.used = true;
   saveState();
   renderSeMain();
   // Audit v66 (overlap M1): 'Gunakan' benar-benar memakai naskah —
@@ -273,6 +282,7 @@ function renderSeMain(): void {
   bind('se-output', 'input', (el) => {
     // Edit langsung di output: tanpa re-render (karet teks aman).
     state.output = el.value;
+    state.copied = state.saved = state.used = false;
     saveState();
   });
   const gen = document.getElementById('se-generate');
@@ -287,6 +297,8 @@ function renderSeMain(): void {
       try {
         await navigator.clipboard.writeText(state.output);
         state.note = tr('se.output.copied');
+        state.copied = true;
+        saveState();
       } catch {
         // clipboard tidak tersedia: hasil tetap tampil, bisa diseleksi manual
       }
@@ -360,6 +372,7 @@ async function seGenerate(): Promise<void> {
     const r = await router.callWithFallback(buildScriptPrompt(state), 'trace-script-' + Date.now());
     recordLiveCost(r);
     state.output = r.text;
+    state.copied = state.saved = state.used = false;
     state.outputMeta =
       tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
       (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '');
@@ -391,6 +404,7 @@ export function initScriptEditor(): void {
   // import balik (menghindari siklus script-editor <-> v5logic).
   (window as unknown as Record<string, unknown>).seLoadOutput = (text: string) => {
     state.output = text;
+    state.copied = state.saved = state.used = false;
     state.note = tr('se.note.loaded');
     saveState();
     renderSeMain();

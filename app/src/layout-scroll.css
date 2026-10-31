@@ -425,6 +425,21 @@ h3 { font-size: 18px; }
 #agentList .agent { position: relative; }
 #agentList .agent .meta { padding-right: 20px; }
 #agentList .agent .status-icon { position: absolute; top: 8px; right: 8px; width: 14px; height: 14px; }
+
+/* v126 (perintah Patria 31 Okt 10:39): semua button TEKS — rounded rectangle
+   + violet-pink bila belum diklik, hijau bila sudah diklik/aktif. Yang
+   TIDAK diubah: icon (proj-act tetap polos per perintah 10:13, iconbtn,
+   nodebar, pill, rail, soc-add/del) + chip + menu popup tanpa class. */
+.btn, .btn-primary, .se-btn, .se-btn2, .filters button, [data-kbtab], button[id^="ms-tabbtn-"], button[id^="cp-tabbtn-"] {
+  border-radius: 10px;
+  background: var(--t-accent-grad, linear-gradient(135deg, #9333EA, #D946EF));
+  border-color: transparent;
+  color: #fff;
+}
+.btn:disabled, .se-btn:disabled, .se-btn2:disabled { opacity: .6; cursor: default; }
+.btn-done, .btn-connected, .se-btn2.done, .filters button.active, [data-kbtab].active, button[id^="ms-tabbtn-"].active, button[id^="cp-tabbtn-"].active {
+  background: #8ED694; border-color: transparent; color: #262626;
+}
 #agentList .proj-dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
 #agentList .proj-dot-active { background: #22c55e; }
 #agentList .proj-dot-inactive { background: #ef4444; }

@@ -329,8 +329,23 @@ export function setAgentPhase(key, phase) {
   });
   renderAgents(); renderGraph();
 }
+/* v126: penanda generik "sudah diklik" untuk button teks statis (.btn).
+   Button hasil innerHTML (list/kartu/chat) ikut re-render sehingga tandanya
+   hilang — untuk itu hijau persistent hanya di jalur state (chat-act.done,
+   se-btn2.done, btn-connected, tab .active). Dikecualikan: chat-act (punya
+   alur done sendiri), disabled, dan popup Planner (.soc-pop — tombol
+   Hubungkan yang gagal tidak boleh hijau). */
+var btnDoneWired = false;
+function btnDoneWire() {
+  if (btnDoneWired) return; btnDoneWired = true;
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button.btn') : null;
+    if (!b || b.disabled || b.classList.contains('chat-act') || b.closest('.soc-pop')) return;
+    b.classList.add('btn-done');
+  });
+}
 export function renderAgents() {
-    agentListWire(); detailWire(); searchWire(); kanbanWire(); libWire(); homeChatWire();
+    agentListWire(); btnDoneWire(); detailWire(); searchWire(); kanbanWire(); libWire(); homeChatWire();
     var html = "", rowNo = -1;
     Object.keys(PROJECTS).forEach(function (pid) {
       var proj = PROJECTS[pid];

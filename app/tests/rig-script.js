@@ -184,12 +184,22 @@ try {
   [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Simpan ke Library').click();
   await tick(100);
   check('simpan ulang tidak menduplikasi', rows() === 1, 'rows=' + rows());
+  const saveBtn126 = [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Simpan ke Library');
+  check('v126: Simpan sudah diklik -> hijau (class done)', !!saveBtn126 && saveBtn126.classList.contains('done'), saveBtn126?.className || '');
 
   // Gunakan -> tetap 1 baris (dedup) + pindah ke editor berikutnya (Image).
   [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Gunakan').click();
   await tick(150);
   check('gunakan tidak menduplikasi Library', rows() === 1, 'rows=' + rows());
   check('gunakan beralih ke Image Editor', document.getElementById('ms-tab-image')?.style.display !== 'none', document.getElementById('ms-tab-image')?.style.display || '');
+  const useBtn126 = [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Gunakan');
+  check('v126: Gunakan sudah diklik -> hijau (class done)', !!useBtn126 && useBtn126.classList.contains('done'), useBtn126?.className || '');
+  const zoomBtn126 = document.querySelector('#view-graph .btn');
+  const cs126 = zoomBtn126 ? dom.window.getComputedStyle(zoomBtn126) : null;
+  check('v126: button teks rounded rectangle 10px', !!cs126 && cs126.borderRadius === '10px', cs126 ? cs126.borderRadius : '');
+  if (zoomBtn126) zoomBtn126.click();
+  await tick(100);
+  check('v126: button teks statis sudah diklik -> penanda btn-done', !!zoomBtn126 && zoomBtn126.classList.contains('btn-done'), zoomBtn126?.className || '');
 
   // Recall Library -> Media Studio: muat isi ke output Script Editor.
   const addedRow = [...document.querySelectorAll('#libGrid .lib-card')].pop();
