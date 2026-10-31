@@ -12,7 +12,7 @@
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { AGENTS, activateAgent, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView } from './v5logic.js';
-import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
+import { getLang, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
 
@@ -320,10 +320,14 @@ async function splitBriefTasks(router: ModelRouter, cfg: ReturnType<typeof defau
 
 // v103 (Alur 1): laporan lengkap mentah (tanpa escape — pengirim meng-escape
 // saat posting bubble; salinan Library menyimpan teks mentah yang sama).
+/* v130: laporan kompilasi Prime mengikuti standar laporan yang sama —
+   Judul, Subjudul (brief), Header bernomor per agen, dan bagian QC. */
 function composeFlowReport(name: string, brief: string, results: { name: string; task: string; text: string }[], qc: string, doneText?: string, titleText?: string): string {
   const lines = [(titleText || tr('flow.report.title')) + ' — ' + name, '', tr('flow.report.brief') + ': ' + brief, ''];
-  for (const r of results) lines.push('- ' + r.name + ' (' + r.task + '): ' + r.text, '');
-  lines.push(tr('flow.report.qc') + ': ' + qc, '', doneText || tr('flow.report.done'));
+  results.forEach((r, i) => {
+    lines.push('## ' + (i + 1) + '. ' + r.name, '', r.task, '', r.text, '');
+  });
+  lines.push('## ' + tr('flow.report.qc'), '', qc, '', doneText || tr('flow.report.done'));
   return lines.join('\n');
 }
 
@@ -370,7 +374,7 @@ export async function sendChatReal(): Promise<void> {
         activateAgent(t.agent);
         postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
         setAgentPhase(t.agent, 'starting');
-        cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').';
+        cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
         const trace = 'trace-flow1-' + t.agent + '-' + Date.now();
         let resultText: string;
         try {
@@ -423,7 +427,7 @@ export async function sendChatReal(): Promise<void> {
       activateAgent(t.agent);
       postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
       setAgentPhase(t.agent, 'starting');
-      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').';
+      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
       const trace = 'trace-flow2-' + t.agent + '-' + Date.now();
       let resultText: string;
       try {
@@ -465,7 +469,7 @@ export async function sendChatReal(): Promise<void> {
   let delegate = delegateFor(text);
   if (delegate && isAgentDeactivated(delegate)) delegate = null;
   if (!delegate) {
-    cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()];
+    cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
     const trace = 'trace-chat-' + Date.now();
     try {
       const r = await router.callWithFallback(text, trace);
@@ -490,7 +494,7 @@ export async function sendChatReal(): Promise<void> {
   activateAgent(delegate);
   postChat(delegate, ag.name, ag.color, tr('chat.delegate.agentack'));
   setAgentPhase(delegate, 'starting');
-  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').';
+  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
   const trace = 'trace-chat-' + delegate + '-' + Date.now();
   try {
     setAgentPhase(delegate, 'busy');

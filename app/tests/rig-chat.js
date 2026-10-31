@@ -23,6 +23,7 @@ if (!modMatch) throw new Error('script module dist tidak ditemukan');
 html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch[1]}"></script></body>`);
 
 const log = [];
+const bodies = [];
 const store = new Map();
 
 function makeResp({ ok = true, status = 200, jsonData = null } = {}) {
@@ -44,6 +45,7 @@ async function fetchStub(url, opts) {
   log.push('fetch:' + String(url));
   let body = '';
   try { body = typeof opts?.body === 'string' ? opts.body : JSON.stringify(opts?.body || ''); } catch (_) { body = ''; }
+  bodies.push(body);
   // v103: stub model per jenis call — split brief (Bagi brief) mengembalikan
   // tugas JSON; sapaan 'Halo utama' dinilai bukan brief (array kosong);
   // QC mengembalikan verdict; sisanya hasil kerja agen.
@@ -354,6 +356,33 @@ try {
   let libAfter117 = [];
   try { libAfter117 = JSON.parse(store.get('minime.library.added') || '[]'); } catch (_) { libAfter117 = []; }
   check('v117: TIDAK menambah dokumen Library', libAfter117.length === libBefore117.length, libBefore117.length + ' -> ' + libAfter117.length);
+
+  // 14. v130: standar laporan untuk SEMUA chat, lama maupun baru.
+  // (a) Pesan LAMA (tersimpan gaya lama: teks ter-escape + markdown mentah)
+  // ikut rapi saat render ulang — tanpa migrasi data.
+  dom.window.postChat('riset', 'Riset', '#fff', '### Tren Kopi Surabaya\n\n**Harga** naik &amp; pasar tumbuh.\n\n- Kopi susu\n- Manual brew\n\n1. Pagi\n2. Sore');
+  await tick(100);
+  const old130 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  const oldHtml130 = old130?.querySelector('.bubble')?.innerHTML || '';
+  check('v130: pesan lama dirender rapi (header + bold + list, tanpa marker mentah)', !!old130 && oldHtml130.includes('<h4>') && oldHtml130.includes('<strong>Harga</strong>') && oldHtml130.includes('<ul>') && oldHtml130.includes('<ol>') && !oldHtml130.includes('**') && !oldHtml130.includes('###'), oldHtml130.slice(0, 300));
+  check('v130: pesan lama tanpa double-escape (& tampil sekali)', (old130?.querySelector('.bubble')?.textContent || '').includes('naik & pasar') && !oldHtml130.includes('&amp;amp;'), oldHtml130.slice(0, 200));
+  // (b) Pesan user TIDAK disentuh markdown (tetap literal).
+  dom.window.postChat('user', 'Patria', '#374151', '**bukan tebal** dan ### bukan header');
+  await tick(100);
+  const user130 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  const userHtml130 = user130?.querySelector('.bubble')?.innerHTML || '';
+  check('v130: bubble user tetap literal (tanpa render markdown)', userHtml130.includes('**bukan tebal**') && userHtml130.includes('### bukan header') && !userHtml130.includes('<strong>'), userHtml130.slice(0, 200));
+  // (c) Prompt agen baru memuat standar laporan + laporan kompilasi berheader.
+  // Pesan dipilih tanpa kata kunci delegasi (riset/strategi/kreatif/...) agar
+  // lewat fan-out (bukan delegasi tunggal) sehingga ada bubble KURASI.
+  bodies.length = 0;
+  const curBefore130 = document.querySelectorAll('#chatBox .msg.curation').length;
+  await sendMsg('Buat laporan kopi susu gula aren Surabaya');
+  await waitFor(() => document.querySelectorAll('#chatBox .msg.curation').length > curBefore130, 'laporan v130', 120);
+  await tick(500);
+  check('v130: system prompt agen memuat STANDAR LAPORAN', bodies.some((b) => b.includes('STANDAR LAPORAN') && b.includes('Judul')), bodies.map((b) => b.slice(0, 100)).join(' | '));
+  const rep130 = [...document.querySelectorAll('#chatBox .msg.curation .bubble')].pop()?.innerHTML || '';
+  check('v130: laporan kompilasi Prime berheader (## -> h3)', rep130.includes('<h3>'), rep130.slice(0, 300));
 
 } catch (e) {
   // eslint-disable-next-line no-console

@@ -2599,6 +2599,18 @@ export const MODEL_LANG_INSTRUCTION: Record<Lang, string> = {
   zh: '请始终用中文回答。',
 };
 
+/** Standar penulisan laporan untuk semua agen chat (v130, perintah Patria
+ * 31 Okt 13:54 + 13:55 "semua chat, lama maupun baru"). Disisipkan ke
+ * system prompt jalur chat saja (bukan Script Editor/Batch — naskah dan
+ * caption bukan laporan). Blok ini bersyarat ("saat jawabanmu berupa
+ * laporan") sehingga obrolan singkat tetap natural. Bukan entri Dict —
+ * tidak mengubah hitungan 843 kunci i18n. */
+export const REPORT_FORMAT_INSTRUCTION: Record<Lang, string> = {
+  id: ' STANDAR LAPORAN — Saat jawabanmu berupa laporan atau hasil kerja (bukan obrolan singkat), patuhi struktur ini: (1) Judul: satu baris judul utama di awal. (2) Subjudul: satu baris konteks (topik/proyek) tepat di bawah judul. (3) Header tiap bagian: pisahkan tiap bagian dengan header (##) bernomor, satu topik per bagian. (4) Body: paragraf pendek, satu gagasan per paragraf, tanpa pengulangan kata atau kalimat yang sama. (5) Poin dan numbering: daftar tak berurutan memakai bullet (-), daftar berurutan atau peringkat memakai numbering (1. 2. 3.). (6) Pemisah antarbagian harus jelas (baris kosong, tanpa menumpuk semua isi dalam satu paragraf panjang). Tulis dengan rapi dan mudah dipahami.',
+  en: ' REPORT STANDARD — When your answer is a report or work result (not short chat), follow this structure: (1) Title: one main title line at the start. (2) Subtitle: one context line (topic/project) right under the title. (3) Section headers: separate each section with a numbered header (##), one topic per section. (4) Body: short paragraphs, one idea per paragraph, no repeated words or sentences. (5) Points and numbering: unordered lists use bullets (-), ordered lists or rankings use numbering (1. 2. 3.). (6) Section separation must be clear (blank lines, never cram everything into one long paragraph). Write neatly and easy to understand.',
+  zh: ' 报告标准 — 当你的回答是报告或工作成果（而非简短闲聊）时，遵守以下结构：(1) 标题：开头一行主标题。(2) 副标题：标题正下方一行背景信息（主题/项目）。(3) 章节标题：每节用带编号的标题（##）分隔，每节一个主题。(4) 正文：段落简短，每段一个观点，不重复词语或句子。(5) 要点与编号：无序列表用圆点（-），有序列表或排名用编号（1. 2. 3.）。(6) 章节分隔必须清晰（空行分隔，切勿把全部内容挤进一个长段落）。书写工整、易于理解。',
+};
+
 function fill(template: string, vars?: Record<string, string | number>): string {
   if (!vars) return template;
   let out = template;

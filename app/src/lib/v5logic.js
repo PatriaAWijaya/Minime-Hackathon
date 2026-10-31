@@ -672,6 +672,63 @@ export function markChatApproveDone(pendingIdx) {
   } catch (_) {}
 }
 
+/* v130 (perintah Patria 31 Okt 13:54 + 13:55 "semua chat, lama maupun baru"):
+   bubble agen/Prime dirender sebagai markdown ringan — judul, header
+   bagian, poin, dan numbering tampil sebagai struktur, bukan mentahan
+   markdown (** dan ###) seperti di screenshot laporan kopi. Diterapkan di renderChat
+   (saat tampil), BUKAN saat simpan: pesan lama otomatis ikut rapi tanpa
+   migrasi data; pesan user TIDAK disentuh (tetap teks literal). Hanya
+   segmen teks yang diproses; isi tag (<button> studio, <a>) dilewati. */
+function renderChatMarkdown(html) {
+  var parts = String(html).split(/(<[^>]*>)/g);
+  var skip = 0;
+  function inline(t) {
+    return t
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+      .replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  }
+  function mdLines(seg) {
+    var lines = seg.split('\n');
+    var out = [];
+    var i = 0;
+    while (i < lines.length) {
+      var line = lines[i];
+      var m;
+      if (/^\s*$/.test(line)) { i++; continue; }
+      if ((m = /^(#{1,3})\s+(.*)$/.exec(line))) {
+        var lv = m[1].length === 1 ? 'h2' : (m[1].length === 2 ? 'h3' : 'h4');
+        out.push('<' + lv + '>' + inline(m[2]) + '</' + lv + '>'); i++; continue;
+      }
+      if (/^(-{3,}|_{3,}|\*{3,})\s*$/.test(line)) { out.push('<hr>'); i++; continue; }
+      if (/^[-*•]\s+/.test(line)) {
+        var items = [];
+        while (i < lines.length && /^[-*•]\s+/.test(lines[i])) { items.push('<li>' + inline(lines[i].replace(/^[-*•]\s+/, '')) + '</li>'); i++; }
+        out.push('<ul>' + items.join('') + '</ul>'); continue;
+      }
+      if (/^\d+[.)]\s+/.test(lines[i])) {
+        var items2 = [];
+        while (i < lines.length && /^\d+[.)]\s+/.test(lines[i])) { items2.push('<li>' + inline(lines[i].replace(/^\d+[.)]\s+/, '')) + '</li>'); i++; }
+        out.push('<ol>' + items2.join('') + '</ol>'); continue;
+      }
+      var buf = [];
+      while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^(#{1,3})\s+/.test(lines[i]) && !/^(-{3,}|_{3,}|\*{3,})\s*$/.test(lines[i]) && !/^[-*•]\s+/.test(lines[i]) && !/^\d+[.)]\s+/.test(lines[i])) { buf.push(lines[i]); i++; }
+      if (buf.length) out.push('<p>' + buf.map(inline).join('<br>') + '</p>');
+    }
+    return out.join('');
+  }
+  for (var k = 0; k < parts.length; k++) {
+    var part = parts[k];
+    if (part.charAt(0) === '<') {
+      if (/^<(a|button)[\s>]/.test(part)) skip++;
+      else if (/^<\/(a|button)[\s>]/.test(part)) skip = Math.max(0, skip - 1);
+      continue;
+    }
+    if (skip > 0) continue;
+    parts[k] = mdLines(part);
+  }
+  return parts.join('');
+}
 export function renderChat() {
     var box = document.getElementById("chatBox");
     box.innerHTML = "";
@@ -686,7 +743,9 @@ export function renderChat() {
       var who = esc(String(m.name || ""));
       // N1 v87: hanya pesan user di-escape (input luar tak boleh jadi HTML);
       // pesan agen adalah HTML app sendiri (mis. tombol Buka di Media Studio).
-      var body = m.who === "user" ? linkifyChatHtml(esc(m.text)) : linkifyChatHtml(m.text);
+      // v130: pesan agen/Prime lewat render markdown dulu (pesan lama ikut
+      // rapi karena render terjadi tiap tampil); pesan user tetap literal.
+      var body = m.who === "user" ? linkifyChatHtml(esc(m.text)) : linkifyChatHtml(renderChatMarkdown(m.text));
       div.innerHTML = m.curation
         ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + body + '</div></div>'
         : '<div class="body"><div class="bubble"><div class="who">' + who + '</div>' + body + '</div></div>';
