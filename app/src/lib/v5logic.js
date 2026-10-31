@@ -285,6 +285,7 @@ function homeChatWire() {
     else if (act === "wa-rec") waRecToggle();
     else if (act === "wa-rm") waRemoveAtt(idx);
     else if (act === "msg-rec") { pickRecommendation(el); }
+    else if (act === "cb-open-artikel") { showView("media"); mediaTab("script"); }
     else if (act === "msg-v") { toggleMsgMenu(el); }
     else if (act === "msg-react") { toggleMsgPicker(el); }
     else if (act === "msg-react-pick") { pickReaction(el); }

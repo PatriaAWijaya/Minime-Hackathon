@@ -556,6 +556,31 @@ try {
   top137 = 77;
   dom.window.renderChat();
   check('v137: renderChat biasa tetap gulir ke bawah', top137 === 1000, String(top137));
+  // §20 v138: alur brief kreatif — pintu peruntukan + cabang Artikel.
+  // Brief 'halo...' memaksa split stub mengembalikan [] sehingga jalur
+  // delegasi tunggal ke Kreatif yang terpicu (deterministik).
+  const recBtn = (msg, label) => [...msg.querySelectorAll('.msg-recs .rec-btn')].find((b) => b.textContent.trim() === label);
+  const lastMsg = () => [...document.querySelectorAll('#chatBox .msg')].pop();
+  await sendMsg('halo Kreatif, buatkan artikel tentang kopi');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'cb purpose question');
+  check('v138: Kreatif menanyakan peruntukan dulu', !!(lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), lastMsg()?.textContent.slice(0, 120) || 'tidak ada');
+  recBtn(lastMsg(), 'Artikel Blog').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('model storytelling apa?'), 'cb story question');
+  check('v138: cabang Artikel menanyakan model storytelling', !!(lastMsg()?.textContent || '').includes('model storytelling apa?'), lastMsg()?.textContent.slice(0, 120) || 'tidak ada');
+  recBtn(lastMsg(), 'AIDA').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('sudut pandang'), 'cb pov question');
+  recBtn(lastMsg(), 'Orang pertama').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Gaya bahasanya'), 'cb style question');
+  recBtn(lastMsg(), 'Santai').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jumlah kalimat'), 'cb sentences question');
+  recBtn(lastMsg(), 'Sedang').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Segmen audiens'), 'cb audience question');
+  recBtn(lastMsg(), 'Umum').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('sudah tampil di Script Editor'), 'cb article done');
+  check('v138: artikel selesai + tombol Buka di Script Editor', !!document.querySelector('#chatBox [data-act="cb-open-artikel"]'), lastMsg()?.textContent.slice(0, 120) || 'tidak ada');
+  const se138 = JSON.parse(store.get('minime.scriptEditor') || '{}');
+  check('v138: artikel tampil di Script Editor bagian Artikel', se138.menu === 'artikel' && (se138.output || '').includes('NASKAH-UJI'), 'menu=' + se138.menu + ' output=' + String(se138.output || '').slice(0, 60));
+
 
 
 

@@ -402,6 +402,19 @@ export function initScriptEditor(): void {
   // Jembatan untuk recall Library (v5logic.libMedia): muat isi ke
   // output Script Editor yang bisa diedit. Satu fungsi window, bukan
   // import balik (menghindari siklus script-editor <-> v5logic).
+  // v138: jembatan brief kreatif — set menu Artikel + isi dari chat
+  // (pola yang sama dengan seLoadOutput: window, bukan import balik).
+  (window as unknown as Record<string, unknown>).seSetArtikel = (topic: string, audience: string, output: string) => {
+    state.menu = 'artikel';
+    state.topic = topic;
+    state.audience = audience;
+    state.output = output;
+    state.outputMeta = '';
+    state.note = '';
+    state.copied = false; state.saved = false; state.used = false;
+    saveState();
+    renderSeMain();
+  };
   (window as unknown as Record<string, unknown>).seLoadOutput = (text: string) => {
     state.output = text;
     state.copied = state.saved = state.used = false;

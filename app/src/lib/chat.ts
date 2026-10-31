@@ -15,6 +15,7 @@ import { AGENTS, activateAgent, clearReplyTarget, currentProjectMemberKeys, curr
 import { getLang, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
+import { cbAnswer, cbIsActive, cbIsFlowEntry, cbStart } from './creative-brief.js';
 
 const GEMINI_KEY_LS = 'minime.geminiKey';
 const META_KEY_LS = 'minime.metaKey';
@@ -336,6 +337,16 @@ export async function sendChatReal(): Promise<void> {
   if (!input) return;
   const text = input.value.trim();
   if (!text) return;
+  // v138: alur brief kreatif aktif — pesan ini adalah jawaban langkah,
+  // bukan brief baru (lewati split fan-out; bubble user tetap diposting).
+  if (cbIsActive()) {
+    const rt0 = getReplyTarget();
+    postChat('user', 'Patria', '#374151', esc(text), undefined, rt0 ? { replyTo: rt0 } : undefined);
+    clearReplyTarget();
+    input.value = '';
+    await cbAnswer(text);
+    return;
+  }
   const keys = readKeys();
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
@@ -364,6 +375,18 @@ export async function sendChatReal(): Promise<void> {
   clearReplyTarget();
   input.value = '';
   postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.prime.ack'));
+  // v138: split kreatif-tunggal Alur 1 masuk alur brief interaktif
+  // (bukan fan-out): seremoni delegasi tetap (pengumuman + node + aktif).
+  if (flow1 && flow1Tasks.length === 1 && flow1Tasks[0].agent === 'kreatif' && cbIsFlowEntry(text)) {
+    const t1 = flow1Tasks[0];
+    const ag1 = (AGENTS as Record<string, { name: string; color: string; role: string }>)[t1.agent];
+    postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.delegate.announce', { agent: esc(ag1.name), task: esc(taskShort(t1.task)) }));
+    graphNoteDelegation(t1.agent, t1.task);
+    activateAgent(t1.agent);
+    postChat(t1.agent, ag1.name, ag1.color, tr('chat.delegate.agentack'));
+    cbStart(text);
+    return;
+  }
   // v103 (Alur 1): brief tervalidasi — fan-out ke masing-masing agen.
   if (flow1 && flow1Tasks.length > 0) {
     postChat('prime', 'Prime Agent', '#EB87B4', tr('flow.project.created', { name: currentProjectName() }));
@@ -421,6 +444,17 @@ export async function sendChatReal(): Promise<void> {
   // Graph (tanpa mengubah keanggotaan), ack agen sebagai laporan progres,
   // model call, lalu QC + laporan progres Prime ke user. TANPA membuat
   // project baru dan TANPA dokumen Library (project tetap berjalan).
+  // v138: split kreatif-tunggal Alur 2 masuk alur brief interaktif.
+  if (flow2Tasks.length === 1 && flow2Tasks[0].agent === 'kreatif' && cbIsFlowEntry(text)) {
+    const t2 = flow2Tasks[0];
+    const ag2 = (AGENTS as Record<string, { name: string; color: string; role: string }>)[t2.agent];
+    postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.delegate.announce', { agent: esc(ag2.name), task: esc(taskShort(t2.task)) }));
+    graphNoteDelegationForMember(t2.agent, t2.task);
+    activateAgent(t2.agent);
+    postChat(t2.agent, ag2.name, ag2.color, tr('chat.delegate.agentack'));
+    cbStart(text);
+    return;
+  }
   if (flow2Tasks.length > 0) {
     const results: { name: string; task: string; text: string }[] = [];
     for (const t of flow2Tasks) {
@@ -496,6 +530,13 @@ export async function sendChatReal(): Promise<void> {
   graphNoteDelegation(delegate, text);
   activateAgent(delegate);
   postChat(delegate, ag.name, ag.color, tr('chat.delegate.agentack'));
+  // v138: delegasi eksplisit ke Kreatif dengan brief kreatif masuk alur
+  // brief interaktif (bukan model call sekali jalan).
+  if (delegate === 'kreatif' && cbIsFlowEntry(text)) {
+    setAgentPhase(delegate, null);
+    cbStart(text);
+    return;
+  }
   setAgentPhase(delegate, 'starting');
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
   const trace = 'trace-chat-' + delegate + '-' + Date.now();
