@@ -2467,3 +2467,10 @@ dokumen lama yang dipakai.
 - Rig: rig-chat §17 (2 cek): aturan .msg-menu terakhir di bundle CSS memuat background solid #2e1650 dan color #fff.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal ce9d4d1 ↔ remote 56a09bc (tree identik).
+
+## v136 — menu dropdown tidak tertutup bubble berikutnya (31 Okt 2026 ~14:53 WIB, perintah Patria 14:48 "dropdown menu tertutup bubble chat, perbaiki")
+- Penyebab: .bubble memakai backdrop-filter sehingga tiap bubble adalah stacking context sendiri; menu di dalamnya (z-index 30) tak pernah bisa menang atas sibling berikutnya yang ter-render sesudahnya (bukti screenshot Patria 14:47: menu bubble Riset tertutup bubble user di bawahnya).
+- Perbaikan: bubble yang menunya terbuka mendapat class menu-open (position relative + z-index 40) lewat toggleMsgMenu; closeChatPopups menghapus class itu (juga saat menu ditutup ulang, aksi lain, dan ganti proyek). Picker emoji tidak diubah (tumbuh ke atas, menutupi bubble sebelumnya yang memang ter-render di bawahnya).
+- Rig: rig-chat §18 (3 cek): bubble pemilik menu ber-class menu-open, aturan menu-open ber-z-index 40, menutup menu menghapus class.
+- Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
+- Push kode: lokal 3ee1a7e ↔ remote a7128eb (tree identik).
