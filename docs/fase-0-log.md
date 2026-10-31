@@ -2521,6 +2521,15 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v143 — LIVE (perintah Patria 31 Okt 20:37: opsi rekomendasi harus mendahulukan pendalaman, bukan versi usaha lain)
+- Keluhan: hasil konsep visual (feed Instagram 9-grid Kopi Senja) diberi tombol rekomendasi "Buatkan versi fashion / kuliner" — pivot ke usaha lain, bukan pendalaman hasil itu.
+- Akar: tombol rekomendasi dipilih model lewat baris ►RECOMMEND dari REPORT_FORMAT_INSTRUCTION; aturan lama tidak memprioritaskan pendalaman.
+- Perbaikan: kalimat baru di standar laporan (ID/EN/ZH): opsi rekomendasi harus mendahulukan pendalaman hasil ini — perbaiki, perinci, atau eksekusi di Media Studio (konsep visual: buat/perhalus di Image Editor, video di Video Editor) — dan JANGAN menawarkan versi untuk jenis usaha atau industri lain kecuali user yang memintanya.
+- i18n: tetap 948 kunci/bahasa, 0 duplikat (edit nilai string, tanpa kunci baru). Aturan terbukti ikut ter-build (grep dist = 1).
+- Batas jujur: kepatuhan model atas instruksi baru tidak bisa dibuktikan rig (stub rig mengembalikan teks tetap) — bukti nyatanya adalah hasil konsep visual berikutnya di app live; bila model masih menawarkan pivot usaha lain, laporkan dan aturan diperketat lagi.
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan bersih kecuali false positive kb-ask-del, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal 2aee29e ↔ remote 303afb1 (tree identik).
+
 ## v142 — LIVE (perintah Patria 31 Okt 20:33: perbaiki angka nyangkut di form chat)
 - Bug: angka di samping kolom chat (jumlah karakter draf, `waInputChanged`) nyangkut di angka draf terakhir walau kolom sudah kosong — dilaporkan Patria 31 Okt 20:29 (angka "31" di samping kolom kosong).
 - Akar: `sendChatReal` mengosongkan input SETELAH await model call (split brief), sementara refresh wrapper `sendChat` sudah jalan sinkron saat tombol kirim ditekan — angka lama tak pernah diperbarui.
