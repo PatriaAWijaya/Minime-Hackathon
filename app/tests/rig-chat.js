@@ -54,6 +54,18 @@ async function fetchStub(url, opts) {
     content = (body.includes('Halo utama') || body.includes('jadwal posting') || body.includes('halo') || body.includes('brief produk digital')) ? '[]' : (body.includes('Alur 2') ? '[{"agent":"riset","task":"Riset pasar Alur 2"},{"agent":"strategi","task":"Strategi Alur 2"},{"agent":"kreatif","task":"Buat naskah Alur 2"}]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat naskah video kopi susu"}]');
   } else if (body.includes('QC hasil kerja agen')) {
     content = 'QC: riset LOLOS, kreatif LOLOS. Semua hasil siap dipakai.';
+  } else if (body.includes('PART 1')) {
+    content = 'NASKAH-SERI-P1-UJI';
+  } else if (body.includes('PART 2')) {
+    content = 'NASKAH-SERI-P2-UJI';
+  } else if (body.includes('mixing')) {
+    content = 'NASKAH-MIX-UJI';
+  } else if (body.includes('berseri')) {
+    content = 'NASKAH-SERI-UJI';
+  } else if (body.includes('promosional')) {
+    content = 'NASKAH-PROMO-UJI';
+  } else if (body.includes('talking head')) {
+    content = 'NASKAH-TH-UJI';
   }
   return makeResp({
     jsonData: {
@@ -580,6 +592,59 @@ try {
   check('v138: artikel selesai + tombol Buka di Script Editor', !!document.querySelector('#chatBox [data-act="cb-open-artikel"]'), lastMsg()?.textContent.slice(0, 120) || 'tidak ada');
   const se138 = JSON.parse(store.get('minime.scriptEditor') || '{}');
   check('v138: artikel tampil di Script Editor bagian Artikel', se138.menu === 'artikel' && (se138.output || '').includes('NASKAH-UJI'), 'menu=' + se138.menu + ' output=' + String(se138.output || '').slice(0, 60));
+  // §21 v139: Movie — talking head end-to-end (karakter, suara, set).
+  await sendMsg('halo Kreatif, buatkan video talking head kopi');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'cb139 purpose');
+  recBtn(lastMsg(), 'Script Movie').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis movienya apa?'), 'cb139 movtype');
+  recBtn(lastMsg(), 'Talking Head').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Character sheet-nya dibuat dari apa?'), 'cb139 th char');
+  recBtn(lastMsg(), 'Generate karakter baru').click();
+  await waitFor(() => !!document.querySelector('#chatBox [data-act="cb-open-image"]'), 'cb139 image handoff');
+  check('v139: talking head mengarahkan ke Image Editor', !!document.querySelector('#chatBox [data-act="cb-open-image"]'));
+  await sendMsg('sudah, karakter jadi');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Karakter suaranya clone atau generate baru?'), 'cb139 th voice');
+  recBtn(lastMsg(), 'Clone suara').click();
+  await waitFor(() => !!document.querySelector('#chatBox [data-act="cb-open-voice"]'), 'cb139 voice handoff');
+  await sendMsg('sudah, suara jadi');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Background ruangannya'), 'cb139 th set');
+  recBtn(lastMsg(), 'Studio minimalis').click();
+  await waitFor(() => !!document.querySelector('#chatBox [data-act="cb-open-video"]'), 'cb139 video handoff');
+  check('v139: talking head selesai + tombol Video Editor', !!document.querySelector('#chatBox [data-act="cb-open-video"]'));
+  const lib139 = JSON.parse(store.get('minime.library.added') || '[]');
+  check('v139: rencana talking head tersimpan di Library', lib139.some((x) => (x.o || '').includes('Talking Head')), JSON.stringify(lib139.map((x) => x.o)));
+  // §22 v139: Movie — promosional (tujuan, storyboard approve, tanpa VO, mix).
+  await sendMsg('halo Kreatif, buatkan video promosi kopi');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'cb139p purpose');
+  recBtn(lastMsg(), 'Script Movie').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis movienya apa?'), 'cb139p movtype');
+  recBtn(lastMsg(), 'Video Promosional').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Apa tujuan video promosional ini?'), 'cb139p goal');
+  recBtn(lastMsg(), 'Awareness').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Setujui untuk disimpan di Library?'), 'cb139p board approve');
+  recBtn(lastMsg(), 'Setuju, simpan').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Perlu voice over?'), 'cb139p vo');
+  recBtn(lastMsg(), 'Tidak perlu').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('tersimpan di Library'), 'cb139p mix done');
+  const lib139p = JSON.parse(store.get('minime.library.added') || '[]');
+  check('v139: storyboard + rencana promosional tersimpan di Library', lib139p.some((x) => (x.o || '').startsWith('Storyboard:')) && lib139p.some((x) => (x.o || '').includes('Video Promosional:')), JSON.stringify(lib139p.map((x) => x.o)));
+  // §23 v139: Movie — berseri 2 part (part per part, approve, ekor VO+mix).
+  await sendMsg('halo Kreatif, buatkan video berseri kopi');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'cb139s purpose');
+  recBtn(lastMsg(), 'Script Movie').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis movienya apa?'), 'cb139s movtype');
+  recBtn(lastMsg(), 'Video Berseri').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dibuat berapa part?'), 'cb139s parts');
+  await sendMsg('2');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Setujui untuk disimpan di Library?'), 'cb139s board1 approve');
+  recBtn(lastMsg(), 'Setuju, simpan').click();
+  await waitFor(() => bodyText().includes('NASKAH-SERI-P2-UJI'), 'cb139s board2');
+  recBtn(lastMsg(), 'Setuju, simpan').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Perlu voice over?'), 'cb139s vo');
+  recBtn(lastMsg(), 'Tidak perlu').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('tersimpan di Library'), 'cb139s mix done');
+  const lib139s = JSON.parse(store.get('minime.library.added') || '[]');
+  check('v139: storyboard part 1 + part 2 berseri tersimpan di Library', lib139s.some((x) => (x.o || '').includes('Storyboard Part 1:')) && lib139s.some((x) => (x.o || '').includes('Storyboard Part 2:')), JSON.stringify(lib139s.map((x) => x.o)));
 
 
 
