@@ -2521,6 +2521,14 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v145 — LIVE (perintah Patria 31 Okt 21:07: pilih pendalaman di Media Studio harus otomatis diarahkan, tanpa buka manual)
+- Keluhan: Patria mengklik rekomendasi "Eksekusi video di Video Editor" — Prime mendelegasikan ke Kreatif, tapi app tetap di chat; user harus membuka Media Studio sendiri.
+- Perbaikan: `pickRecommendation` kini memanggil `recStudioNav(teks opsi)` setelah mengirim opsi. Opsi yang menyebut destinasi eksplisit langsung bernavigasi: "Video Editor" -> tab Video, "Image Editor" -> tab Image, "Voice Editor" -> tab Voice, "Script Editor" -> tab Script, "Media Studio" generik -> view Media Studio tanpa ganti tab. Navigasi sinkron saat klik; pekerjaan agen tetap berjalan di latar dan chat tetap bisa dibuka kembali.
+- Batas cakupan: hanya opsi yang menyebut editor/Media Studio secara eksplisit yang bernavigasi. Opsi pendalaman umum tanpa destinasi ("Buat naskah 30 detik", "Buat caption + hashtag", "Buat varian hook") tetap berjalan di chat.
+- Rig: rig-chat §29 (4 cek: tombol terbentuk, pilih Video Editor -> view Media Studio + tab Video aktif, opsi non-studio tidak memindahkan view).
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan bersih kecuali false positive kb-ask-del, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal 79d0bc7 ↔ remote 2c33c1c (tree identik).
+
 ## v144 — LIVE (perintah Patria 31 Okt 20:50: angka di input chat kembali muncul, perbaiki)
 - Klarifikasi: di screenshot 20:50 angka "169" BUKAN bug nyangkut v142 — kolom memang berisi draf 169 karakter, jadi penghitungnya benar. Karena Patria tetap minta diperbaiki setelah angka itu muncul lagi, vonis yang dieksekusi: penghitung karakter DIHAPUS TOTAL, bukan diperbaiki nilainya.
 - Yang dicabut sampai akar (nol sisa mati): elemen `<span id="chatCount">` + handler oninput di App.svelte, fungsi `waInputChanged` + pemanggilan wrapper/init + entri bridge di v5logic.js, impor + 2 pemanggilan v142 di chat.ts (perbaikan v142 kini usang), aturan CSS `.chat-count`. Grep source: nol referensi tersisa.
