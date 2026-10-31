@@ -352,7 +352,7 @@ try {
   await tick(100);
   document.getElementById('socWizNext').click();
   await tick(100);
-  check('wizard langkah 2: URI loopback + tombol salin', (document.getElementById('socWizUri')?.value || '') === 'http://127.0.0.1:4317/callback' && !!document.getElementById('socWizCopy'), document.getElementById('socWizUri')?.value);
+  check('wizard langkah 2: URI loopback + tombol salin', (document.getElementById('socWizUri')?.value || '') === 'http://localhost:4317/callback' && !!document.getElementById('socWizCopy'), document.getElementById('socWizUri')?.value);
   document.getElementById('socWizCopy').click();
   await tick(100);
   check('wizard: salin -> nota Tersalin', (document.getElementById('socWizNote')?.textContent || '').includes('Tersalin'), document.getElementById('socWizNote')?.textContent);

@@ -15,7 +15,7 @@ import { esc } from './esc.js';
 
 var SOC_LS = 'minime.social';
 var QUEUE_LS = 'minime.socialQueue';
-var OAUTH_REDIRECT = 'http://127.0.0.1:4317/callback';
+var OAUTH_REDIRECT = 'http://localhost:4317/callback';
 
 // Urutan sesuai perintah Patria. facebook (profil) TIDAK BISA autopost
 // via API (Meta menghapusnya) — ditampilkan apa adanya, bukan tombol
