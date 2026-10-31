@@ -279,7 +279,7 @@ fn curl_api_h(
         no_crlf(ct, "content-type")?;
     }
     let mut cfg_text = String::new();
-    cfg_text.push_str("silent = true\n");
+    cfg_text.push_str("silent\n");
     cfg_text.push_str(&format!("url = \"{url}\"\n"));
     cfg_text.push_str(&format!("request = \"{method}\"\n"));
     cfg_text.push_str(&format!("output = \"{}\"\n", body_path.to_string_lossy()));
@@ -503,7 +503,7 @@ fn curl_form_basic(
     no_crlf(&cred, "kredensial")?;
     no_crlf(url, "URL")?;
     let cfg_text = format!(
-        "silent = true\nurl = \"{url}\"\nrequest = \"POST\"\noutput = \"{}\"\nwrite-out = \"%{{http_code}}\"\nheader = \"Authorization: Basic {cred}\"\nheader = \"Content-Type: application/x-www-form-urlencoded\"\ndata-binary = \"@{}\"\n",
+        "silent\nurl = \"{url}\"\nrequest = \"POST\"\noutput = \"{}\"\nwrite-out = \"%{{http_code}}\"\nheader = \"Authorization: Basic {cred}\"\nheader = \"Content-Type: application/x-www-form-urlencoded\"\ndata-binary = \"@{}\"\n",
         body_path.to_string_lossy(),
         dp.to_string_lossy()
     );
@@ -641,7 +641,7 @@ fn curl_multipart(
     let cfg = dir.join(format!("minime-mp-{stamp}.cfg"));
     let body_path = dir.join(format!("minime-mp-{stamp}.body"));
     let mut cfg_text = String::new();
-    cfg_text.push_str("silent = true\n");
+    cfg_text.push_str("silent\n");
     cfg_text.push_str(&format!("url = \"{url}\"\n"));
     cfg_text.push_str("request = \"POST\"\n");
     cfg_text.push_str(&format!("output = \"{}\"\n", body_path.to_string_lossy()));
@@ -1214,7 +1214,7 @@ fn curl_post_capture_headers(
     no_crlf(url, "URL")?;
     no_crlf(token, "token")?;
     let mut cfg_text = String::new();
-    cfg_text.push_str("silent = true\n");
+    cfg_text.push_str("silent\n");
     cfg_text.push_str(&format!("url = \"{url}\"\n"));
     cfg_text.push_str("request = \"POST\"\n");
     cfg_text.push_str(&format!("output = \"{}\"\n", body_path.to_string_lossy()));
@@ -1289,7 +1289,7 @@ fn curl_put_chunk(
     no_crlf(token, "token")?;
     no_crlf(content_range, "range")?;
     let mut cfg_text = String::new();
-    cfg_text.push_str("silent = true\n");
+    cfg_text.push_str("silent\n");
     cfg_text.push_str(&format!("url = \"{url}\"\n"));
     cfg_text.push_str("request = \"PUT\"\n");
     cfg_text.push_str(&format!("output = \"{}\"\n", body_path.to_string_lossy()));
