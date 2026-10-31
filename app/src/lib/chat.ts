@@ -11,7 +11,7 @@
 // No key -> that provider is skipped by the chain (LiveUnavailableError
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
-import { AGENTS, activateAgent, clearReplyTarget, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, getReplyTarget, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView } from './v5logic.js';
+import { AGENTS, activateAgent, clearReplyTarget, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, getReplyTarget, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView, waInputChanged } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
@@ -344,6 +344,9 @@ export async function sendChatReal(): Promise<void> {
     postChat('user', 'Patria', '#374151', esc(text), undefined, rt0 ? { replyTo: rt0 } : undefined);
     clearReplyTarget();
     input.value = '';
+    // v142: refresh angka karakter di sini — clear ini terjadi setelah
+    // await di jalur utama, saat refresh wrapper sendChat sudah lewat.
+    waInputChanged();
     await cbAnswer(text);
     return;
   }
@@ -374,6 +377,8 @@ export async function sendChatReal(): Promise<void> {
   postChat('user', 'Patria', '#374151', esc(text), undefined, rt ? { replyTo: rt } : undefined);
   clearReplyTarget();
   input.value = '';
+  // v142: refresh angka karakter di sini (alasan sama seperti di atas).
+  waInputChanged();
   postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.prime.ack'));
   // v138: split kreatif-tunggal Alur 1 masuk alur brief interaktif
   // (bukan fan-out): seremoni delegasi tetap (pengumuman + node + aktif).
