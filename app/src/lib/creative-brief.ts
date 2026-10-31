@@ -31,7 +31,8 @@ type CbStep = 'purpose' | 'art-story' | 'art-pov' | 'art-style' | 'art-sentences
   | 'mov-type'
   | 'th-char' | 'th-char-return' | 'th-voice' | 'th-voice-return' | 'th-set'
   | 'promo-goal' | 'promo-board-ok' | 'promo-board-rev' | 'promo-vo' | 'promo-voice-type' | 'promo-voice-return'
-  | 'ser-parts' | 'ser-board' | 'ser-board-rev';
+  | 'ser-parts' | 'ser-board' | 'ser-board-rev'
+  | 'soc-platform' | 'soc-format' | 'soc-purpose' | 'soc-approach-img' | 'soc-approach-car' | 'soc-count' | 'soc-bulk-n';
 
 type CbMode = 'th' | 'promo' | 'ser';
 
@@ -58,7 +59,8 @@ function loadState(): CbState | null {
     const steps: CbStep[] = ['purpose', 'art-story', 'art-pov', 'art-style', 'art-sentences', 'art-audience',
       'mov-type', 'th-char', 'th-char-return', 'th-voice', 'th-voice-return', 'th-set',
       'promo-goal', 'promo-board-ok', 'promo-board-rev', 'promo-vo', 'promo-voice-type', 'promo-voice-return',
-      'ser-parts', 'ser-board', 'ser-board-rev'];
+      'ser-parts', 'ser-board', 'ser-board-rev',
+      'soc-platform', 'soc-format', 'soc-purpose', 'soc-approach-img', 'soc-approach-car', 'soc-count', 'soc-bulk-n'];
     if (!steps.includes(o.step as CbStep)) return null;
     return { brief: o.brief, step: o.step as CbStep, answers: o.answers || {}, attempts: o.attempts || 0, platform: o.platform, mode: o.mode, script: o.script, board: o.board, partsTotal: o.partsTotal, partIndex: o.partIndex, longScript: o.longScript };
   } catch {
@@ -178,6 +180,34 @@ function askStep(st: CbState, prefix = ''): void {
       break;
     case 'ser-parts':
       q = tr('cb.q.ser.parts');
+      opts = [];
+      break;
+    case 'soc-platform':
+      q = tr('cb.q.soc.platform');
+      opts = [tr('cb.opt.plat.threads'), tr('cb.opt.plat.instagram'), tr('cb.opt.plat.linkedin'), tr('cb.opt.plat.facebook')];
+      break;
+    case 'soc-format':
+      q = tr('cb.q.soc.format');
+      opts = [tr('cb.opt.fmt.image'), tr('cb.opt.fmt.carousel'), tr('cb.opt.fmt.reels')];
+      break;
+    case 'soc-purpose':
+      q = tr('cb.q.soc.purpose');
+      opts = [tr('cb.opt.soc.promo'), tr('cb.opt.soc.awareness'), tr('cb.opt.soc.leads')];
+      break;
+    case 'soc-approach-img':
+      q = tr('cb.q.soc.approach');
+      opts = [tr('cb.opt.appr.info'), tr('cb.opt.appr.humor'), tr('cb.opt.appr.motiv')];
+      break;
+    case 'soc-approach-car':
+      q = tr('cb.q.soc.approach');
+      opts = [tr('cb.opt.appr.info'), tr('cb.opt.appr.list'), tr('cb.opt.appr.humor'), tr('cb.opt.appr.motiv')];
+      break;
+    case 'soc-count':
+      q = tr('cb.q.soc.count');
+      opts = [tr('cb.opt.count.single'), tr('cb.opt.count.bulk')];
+      break;
+    case 'soc-bulk-n':
+      q = tr('cb.q.soc.bulkn');
       opts = [];
       break;
     default:
@@ -512,6 +542,184 @@ async function cbSerNextBoard(st: CbState): Promise<void> {
   setAgentPhase('kreatif', null);
 }
 
+// v140: cabang Sosmed terpandu.
+function matchPlatform(reply: string): string | null {
+  const r = normReply(reply);
+  if (r.includes('threads') || r.includes('thread')) return 'threads';
+  if (r.includes('instagram')) return 'instagram';
+  if (r.includes('linkedin')) return 'linkedin';
+  if (r.includes('facebook')) return 'facebook';
+  return null;
+}
+
+function matchSocFormat(reply: string): 'image' | 'carousel' | 'reels' | null {
+  const r = normReply(reply);
+  if (r.includes('carousel')) return 'carousel';
+  if (r.includes('reels')) return 'reels';
+  if (r.includes('image') || r.includes('gambar')) return 'image';
+  return null;
+}
+
+function matchSocPurpose(reply: string): string | null {
+  const r = normReply(reply);
+  if (r.includes('leads')) return tr('cb.opt.soc.leads');
+  if (r.includes('awareness')) return tr('cb.opt.soc.awareness');
+  if (r.includes('promosional') || r.includes('promo')) return tr('cb.opt.soc.promo');
+  return null;
+}
+
+function matchSocCount(reply: string): 'single' | 'bulk' | null {
+  const r = ' ' + normReply(reply) + ' ';
+  if (r.includes(' bulk ')) return 'bulk';
+  if (r.includes(' satu ') || r.includes(' single ')) return 'single';
+  return null;
+}
+
+// Bagi teks Threads menjadi bagian-bagian @ maks 500 karakter: rakus per
+// kalimat dulu; kalimat yang sendirian melebihi batas dipotong per kata.
+function splitThreads(text: string, max = 500): string[] {
+  const parts: string[] = [];
+  const sentences = text.split(/(?<=[.!?])\s+/).filter((x) => x.trim());
+  let cur = '';
+  const pushCur = () => { if (cur) parts.push(cur); cur = ''; };
+  for (const sen of sentences) {
+    if ((cur ? cur + ' ' + sen : sen).length <= max) { cur = cur ? cur + ' ' + sen : sen; continue; }
+    pushCur();
+    if (sen.length <= max) { cur = sen; continue; }
+    let wcur = '';
+    for (const w of sen.split(/\s+/)) {
+      if ((wcur ? wcur + ' ' + w : w).length <= max) { wcur = wcur ? wcur + ' ' + w : w; continue; }
+      if (wcur) parts.push(wcur);
+      wcur = w.length <= max ? w : w.slice(0, max);
+    }
+    cur = wcur;
+  }
+  pushCur();
+  return parts.length ? parts : [text];
+}
+
+function setBulkBriefs(briefs: string[]): void {
+  try {
+    const w = window as unknown as Record<string, unknown>;
+    if (typeof w.imgSetBulk === 'function') {
+      (w.imgSetBulk as (b: string[]) => void)(briefs);
+      return;
+    }
+  } catch { /* jatuh ke brief tunggal */ }
+  if (briefs[0]) setImageBrief(briefs[0]);
+}
+
+function parseBulkPlans(text: string, kind: 'IMAGE' | 'CAROUSEL'): string[] {
+  const parts = text.split(new RegExp('^=== ' + kind + ' \\d+ ===$', 'm')).map((x) => x.trim()).filter(Boolean);
+  return parts.length ? parts : [text];
+}
+
+// Threads: script disesuaikan 500 karakter; bila tidak muat, dibagi
+// beberapa bagian @ maks 500 karakter (nomor urut di depan tiap bagian).
+async function cbGenerateThreads(st: CbState): Promise<void> {
+  setAgentPhase('kreatif', 'busy');
+  try {
+    const t = await genText(
+      'Buat script Threads dari brief berikut. Script harus muat dalam 500 karakter; bila tidak muat, tulis versi lengkapnya saja (pemotongan dilakukan sesudahnya).\nBrief: ' + st.brief,
+      'trace-cb-threads-' + Date.now());
+    const ag = kreatif();
+    if (t.text.length <= 500) {
+      postChat('kreatif', ag.name, ag.color, esc(t.text) + t.footer);
+      saveLib('Threads: ' + topicOf(st), t.text);
+    } else {
+      const parts = splitThreads(t.text);
+      parts.forEach((p, i) => postChat('kreatif', ag.name, ag.color, esc('(' + (i + 1) + '/' + parts.length + ') ' + p) + (i === parts.length - 1 ? t.footer : '')));
+      saveLib('Threads: ' + topicOf(st), parts.join('\n\n---\n\n'));
+    }
+    postKreatif(tr('cb.soc.threads.done'));
+  } catch (e) { postGenError(e); }
+  setAgentPhase('kreatif', null);
+  clearState();
+}
+
+// Image: tujuan -> pendekatan (dari riset) -> script -> caption + rancangan
+// isi image (Title, Subtitle, Body, header, footer, logo, elemen visual).
+// Bulk: N rencana jadi N tab Image Editor (maks 30).
+async function cbGenerateImagePlan(st: CbState, bulk: boolean, count: number): Promise<void> {
+  const a = st.answers;
+  const platform = st.platform || '-';
+  setAgentPhase('kreatif', 'busy');
+  try {
+    const ag = kreatif();
+    if (!bulk) {
+      const t = await genText(
+        'Buat caption + rancangan image untuk postingan sosmed (IMAGE-PLAN).\nBrief: ' + st.brief + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
+        '\nKeluarkan: caption lengkap + rancangan isi image (Title, Subtitle, Body, header, footer, logo, elemen visual lain).',
+        'trace-cb-img-' + Date.now());
+      postChat('kreatif', ag.name, ag.color, esc(t.text) + t.footer);
+      setImageBrief(t.text);
+      saveLib('Image: ' + topicOf(st), t.text);
+    } else {
+      const t = await genText(
+        'Buat ' + count + ' rencana image untuk postingan sosmed bulk (BULK-IMAGE-PLAN). Pisahkan tiap rencana dengan baris === IMAGE n === (n = nomor urut).\nBrief: ' + st.brief + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
+        '\nTiap rencana berisi: caption + rancangan isi image (Title, Subtitle, Body, header, footer, logo, elemen visual lain).',
+        'trace-cb-img-bulk-' + Date.now());
+      const plans = parseBulkPlans(t.text, 'IMAGE').slice(0, 30);
+      setBulkBriefs(plans);
+      postChat('kreatif', ag.name, ag.color, esc(plans.join('\n\n---\n\n')) + t.footer);
+      saveLib('Bulk Image: ' + topicOf(st), plans.join('\n\n---\n\n'));
+    }
+    postKreatif(tr('cb.soc.done') + openButton('cb-open-image', 'cb.open.image'));
+  } catch (e) { postGenError(e); }
+  setAgentPhase('kreatif', null);
+  clearState();
+}
+
+// Carousel: sama seperti Image, beda pendekatan (tambah Listicle) dan
+// script jadi caption sekaligus konten carousel 6-10 slide.
+async function cbGenerateCarousel(st: CbState, bulk: boolean, count: number): Promise<void> {
+  const a = st.answers;
+  const platform = st.platform || '-';
+  setAgentPhase('kreatif', 'busy');
+  try {
+    const ag = kreatif();
+    if (!bulk) {
+      const t = await genText(
+        'Buat caption + konten carousel untuk postingan sosmed (CAROUSEL-PLAN).\nBrief: ' + st.brief + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
+        '\nKeluarkan: caption lengkap + konten carousel 6-10 slide (tiap slide: judul + isi singkat).',
+        'trace-cb-car-' + Date.now());
+      postChat('kreatif', ag.name, ag.color, esc(t.text) + t.footer);
+      setImageBrief(t.text);
+      saveLib('Carousel: ' + topicOf(st), t.text);
+    } else {
+      const t = await genText(
+        'Buat ' + count + ' konten carousel untuk postingan sosmed bulk (BULK-CAROUSEL-PLAN). Pisahkan tiap carousel dengan baris === CAROUSEL n === (n = nomor urut).\nBrief: ' + st.brief + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
+        '\nTiap carousel berisi: caption + konten 6-10 slide (tiap slide: judul + isi singkat).',
+        'trace-cb-car-bulk-' + Date.now());
+      const plans = parseBulkPlans(t.text, 'CAROUSEL').slice(0, 30);
+      setBulkBriefs(plans);
+      postChat('kreatif', ag.name, ag.color, esc(plans.join('\n\n---\n\n')) + t.footer);
+      saveLib('Bulk Carousel: ' + topicOf(st), plans.join('\n\n---\n\n'));
+    }
+    postKreatif(tr('cb.soc.done') + openButton('cb-open-image', 'cb.open.image'));
+  } catch (e) { postGenError(e); }
+  setAgentPhase('kreatif', null);
+  clearState();
+}
+
+// Reels: seperti proses pembuatan video, durasi 30-60 detik, rasio 9:16;
+// rencana disiapkan di chat, render dilakukan user di Video Editor.
+async function cbGenerateReels(st: CbState): Promise<void> {
+  setAgentPhase('kreatif', 'busy');
+  try {
+    const t = await genText(
+      'Buat rencana reels untuk postingan sosmed (REELS-PLAN), seperti proses pembuatan video: script + shot plan + caption + hashtag.\nBrief: ' + st.brief + '\nPlatform: ' + (st.platform || '-') +
+      '\nDurasi 30-60 detik, rasio 9:16.',
+      'trace-cb-reels-' + Date.now());
+    const ag = kreatif();
+    postChat('kreatif', ag.name, ag.color, esc(t.text) + t.footer);
+    saveLib('Reels: ' + topicOf(st), t.text);
+    postKreatif(tr('cb.mov.done') + openButton('cb-open-video', 'cb.open.video'));
+  } catch (e) { postGenError(e); }
+  setAgentPhase('kreatif', null);
+  clearState();
+}
+
 export async function cbAnswer(text: string): Promise<void> {
   const st = loadState();
   if (!st) return;
@@ -537,10 +745,17 @@ export async function cbAnswer(text: string): Promise<void> {
       askStep(st);
       return;
     }
-    // v140 menyusul untuk Sosmed terpandu — sementara generate langsung.
-    const label = tr('cb.opt.social');
+    // Sosmed terpandu (v140): platform dulu (atau langsung format bila
+    // platform sudah disebut di jawaban purpose; Threads langsung generate).
     if (m.platform) st.platform = m.platform;
-    await cbDirectGenerate(st, label);
+    if (m.platform === 'threads') {
+      await cbGenerateThreads(st);
+      return;
+    }
+    st.step = m.platform ? 'soc-format' : 'soc-platform';
+    st.attempts = 0;
+    saveState(st);
+    askStep(st);
     return;
   }
   if (st.step === 'mov-type') {
@@ -724,6 +939,94 @@ export async function cbAnswer(text: string): Promise<void> {
     }
     case 'ser-board-rev': {
       await cbRegenBoard(st, reply);
+      return;
+    }
+    // Cabang Sosmed (v140).
+    case 'soc-platform': {
+      const p = matchPlatform(reply);
+      if (!p) {
+        unmatchedOption(st);
+        return;
+      }
+      st.platform = p;
+      if (p === 'threads') {
+        await cbGenerateThreads(st);
+        return;
+      }
+      st.step = 'soc-format';
+      st.attempts = 0;
+      saveState(st);
+      askStep(st);
+      return;
+    }
+    case 'soc-format': {
+      const f = matchSocFormat(reply);
+      if (!f) {
+        unmatchedOption(st);
+        return;
+      }
+      st.answers['soc-format'] = f;
+      if (f === 'reels') {
+        await cbGenerateReels(st);
+        return;
+      }
+      st.step = 'soc-purpose';
+      st.attempts = 0;
+      saveState(st);
+      askStep(st);
+      return;
+    }
+    case 'soc-purpose': {
+      const p = matchSocPurpose(reply);
+      if (!p) {
+        unmatchedOption(st);
+        return;
+      }
+      st.answers['soc-purpose'] = p;
+      st.step = st.answers['soc-format'] === 'carousel' ? 'soc-approach-car' : 'soc-approach-img';
+      st.attempts = 0;
+      saveState(st);
+      askStep(st);
+      return;
+    }
+    case 'soc-approach-img':
+    case 'soc-approach-car': {
+      // Pendekatan = arahan kreatif: tombol adalah saran, ketik bebas
+      // diterima sebagai arahan apa adanya (seperti th-set di v139).
+      st.answers['soc-approach'] = reply;
+      st.step = 'soc-count';
+      st.attempts = 0;
+      saveState(st);
+      askStep(st);
+      return;
+    }
+    case 'soc-count': {
+      const c = matchSocCount(reply);
+      if (!c) {
+        unmatchedOption(st);
+        return;
+      }
+      if (c === 'single') {
+        if (st.answers['soc-format'] === 'carousel') await cbGenerateCarousel(st, false, 1);
+        else await cbGenerateImagePlan(st, false, 1);
+        return;
+      }
+      st.step = 'soc-bulk-n';
+      st.attempts = 0;
+      saveState(st);
+      askStep(st);
+      return;
+    }
+    case 'soc-bulk-n': {
+      const n = parseInt(reply.replace(/[^0-9]/g, ''), 10);
+      if (!n || n < 1) {
+        unmatchedOption(st);
+        return;
+      }
+      const count = n > 30 ? 30 : n;
+      if (n > 30) postKreatif(tr('cb.soc.bulkcap'));
+      if (st.answers['soc-format'] === 'carousel') await cbGenerateCarousel(st, true, count);
+      else await cbGenerateImagePlan(st, true, count);
       return;
     }
     default:

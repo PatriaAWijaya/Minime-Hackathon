@@ -659,3 +659,10 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 
 /* v136: bubble yang menunya terbuka naik di atas bubble berikutnya. Sebab: .bubble memakai backdrop-filter sehingga tiap bubble adalah stacking context sendiri — menu di dalamnya (z-index 30) tak pernah bisa menang atas sibling berikutnya tanpa menaikkan bubble pemiliknya. */
 .msg.menu-open { position: relative; z-index: 40; }
+
+/* v140: tab bulk Image Editor — satu tab per image/carousel hasil bulk (maks 30); tiap tab brief-nya bisa disunting bebas sebelum generate. */
+.img-bulk-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.img-bulk-tabs:empty { display: none; }
+.img-tab { min-width: 32px; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--t-border, #E9D5FF); background: var(--t-panel2, #F5F0FE); color: var(--t-text, #2E1065); cursor: pointer; }
+.img-tab.active { background: var(--t-accent-grad, linear-gradient(135deg, #9333EA, #D946EF)); color: #fff; border-color: transparent; }
+.img-tab-x { min-width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent; color: var(--t-muted, #A89AC2); cursor: pointer; }

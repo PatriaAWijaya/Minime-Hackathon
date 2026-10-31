@@ -33,8 +33,8 @@ import { esc } from './esc.js';
 
 const FLOW_LS = 'minime.imageFlow';
 
-type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number };
-const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1 };
+type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number };
+const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0 };
 let state: FlowState = { ...DEFAULTS };
 
 
@@ -58,12 +58,16 @@ function loadState(): void {
     const raw = window.localStorage.getItem(FLOW_LS);
     const o = raw ? JSON.parse(raw) : null;
     if (o && typeof o === 'object') {
+      const bulk = Array.isArray(o.bulk) ? o.bulk.filter((b: unknown) => typeof b === 'string' && b.trim()).slice(0, 30) : [];
+      const bulkActive = bulk.length && Number.isInteger(o.bulkActive) && (o.bulkActive as number) >= 0 && (o.bulkActive as number) < bulk.length ? (o.bulkActive as number) : 0;
       state = {
-        brief: typeof o.brief === 'string' ? o.brief : '',
+        brief: bulk.length ? bulk[bulkActive] : (typeof o.brief === 'string' ? o.brief : ''),
         ratio: typeof o.ratio === 'string' && RATIO_SIZE[o.ratio] ? o.ratio : '1:1',
         style: typeof o.style === 'string' && STYLES.includes(o.style) ? o.style : 'product photography',
         textfree: o.textfree !== false,
         n: [1, 2, 4].includes(o.n) ? o.n : 1,
+        bulk: bulk.length ? bulk : null,
+        bulkActive,
       };
     }
   } catch { state = { ...DEFAULTS }; }
@@ -212,23 +216,61 @@ function bind<T extends HTMLElement>(id: string, ev: string, fn: (e: T) => void)
   if (e) e.addEventListener(ev, () => fn(e as T));
 }
 
+/** Strip tab bulk (v140, alur brief Sosmed): satu tab per image/carousel
+ *  hasil bulk (maks 30). Tiap tab menyimpan brief-nya sendiri; berpindah
+ *  tab menyimpan suntingan tab lama dulu, jadi tiap image bisa disunting
+ *  bebas sebelum di-generate. Generate memakai brief tab aktif (state.brief). */
+function renderBulkTabs(): void {
+  const box = el('img-bulk-tabs');
+  if (!box) return;
+  const bulk = state.bulk;
+  if (!bulk || !bulk.length) { box.innerHTML = ''; return; }
+  box.innerHTML = bulk.map((_, i) => `<button class="img-tab${i === state.bulkActive ? ' active' : ''}" data-idx="${i}">${i + 1}</button>`).join('') + `<button class="img-tab-x" title="Tutup bulk">\u2715</button>`;
+  box.querySelectorAll('.img-tab').forEach((b) => {
+    b.addEventListener('click', () => {
+      const idx = Number((b as HTMLElement).dataset.idx);
+      if (!Number.isInteger(idx) || idx === state.bulkActive || !state.bulk) return;
+      state.bulk[state.bulkActive] = state.brief;
+      state.bulkActive = idx;
+      state.brief = state.bulk[idx];
+      saveState(); syncForm(); renderPreview(); renderBulkTabs();
+    });
+  });
+  const x = box.querySelector('.img-tab-x');
+  if (x) x.addEventListener('click', () => { state.bulk = null; state.bulkActive = 0; saveState(); renderBulkTabs(); });
+}
+
+/** Isi tab bulk dari luar (dipakai alur brief Sosmed bulk, v140). */
+export function imgSetBulk(briefs: string[]): void {
+  const list = briefs.filter((b) => typeof b === 'string' && b.trim()).slice(0, 30);
+  if (!list.length) return;
+  state.bulk = list;
+  state.bulkActive = 0;
+  state.brief = list[0];
+  saveState(); syncForm(); renderPreview(); renderBulkTabs();
+}
+
 /** Set brief Image dari luar (dipakai seUse Script Editor — audit v66
  *  M1 overlap: tombol 'Gunakan' harus benar-benar memakai naskah,
  *  bukan hanya pindah tab dan menunggu klik 'Muat Naskah' kedua). */
 export function imgSetBrief(text: string): void {
   state.brief = text;
+  state.bulk = null;
+  state.bulkActive = 0;
   saveState();
   syncForm();
   renderPreview();
+  renderBulkTabs();
 }
 
 export function initImageFlow(): void {
   loadState();
   syncForm();
   renderPreview();
+  renderBulkTabs();
   renderCost();
   void renderGallery();
-  bind<HTMLTextAreaElement>('img-brief', 'input', (e) => { state.brief = e.value; saveState(); renderPreview(); });
+  bind<HTMLTextAreaElement>('img-brief', 'input', (e) => { state.brief = e.value; if (state.bulk) state.bulk[state.bulkActive] = e.value; saveState(); renderPreview(); });
   bind<HTMLSelectElement>('img-ratio', 'change', (e) => { state.ratio = e.value; saveState(); });
   bind<HTMLSelectElement>('img-style', 'change', (e) => { state.style = e.value; saveState(); renderPreview(); });
   bind<HTMLInputElement>('img-textfree', 'change', (e) => { state.textfree = e.checked; saveState(); renderPreview(); });
@@ -258,6 +300,7 @@ export function initImageFlow(): void {
   (window as unknown as Record<string, unknown>).imgDropThumb = (file: string) => { thumbCache.delete(file); };
   (window as unknown as Record<string, unknown>).imgRefreshUI = imgRefreshUI;
   (window as unknown as Record<string, unknown>).imgSetBrief = imgSetBrief;
+  (window as unknown as Record<string, unknown>).imgSetBulk = imgSetBulk;
   (window as unknown as Record<string, unknown>).imgLoadSaved = async (item: { content?: string; imageFile?: string; o: string }) => {
     if (item.content) { state.brief = item.content; saveState(); syncForm(); renderPreview(); }
     const box = el('img-loaded');

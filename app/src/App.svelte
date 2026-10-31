@@ -730,6 +730,7 @@
           <div id="brand-main"></div>
           </div>
           <div class="img-main">
+          <div id="img-bulk-tabs"></div>
           <div class="se-group"><label>{t('img.brief', lang)}<textarea id="img-brief" rows="4" class="se-field" placeholder={t('img.brief.ph', lang)}></textarea></label></div>
           <div class="se-group"><label>{t('img.ratio', lang)}<select id="img-ratio" class="se-field">
             <option value="1:1">1:1</option><option value="4:5">4:5</option><option value="9:16">9:16</option><option value="16:9">16:9</option><option value="3:4">3:4</option><option value="3:2">3:2</option><option value="2:3">2:3</option>

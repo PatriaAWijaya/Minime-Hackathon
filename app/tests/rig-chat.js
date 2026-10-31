@@ -66,6 +66,18 @@ async function fetchStub(url, opts) {
     content = 'NASKAH-PROMO-UJI';
   } else if (body.includes('talking head')) {
     content = 'NASKAH-TH-UJI';
+  } else if (body.includes('BULK-IMAGE-PLAN')) {
+    content = '=== IMAGE 1 ===\nRencana image satu: caption kopi pagi.\n=== IMAGE 2 ===\nRencana image dua: caption kopi sore.\n=== IMAGE 3 ===\nRencana image tiga: caption kopi malam.';
+  } else if (body.includes('BULK-CAROUSEL-PLAN')) {
+    content = '=== CAROUSEL 1 ===\nCarousel satu: 6 slide kopi.\n=== CAROUSEL 2 ===\nCarousel dua: 6 slide kopi.\n=== CAROUSEL 3 ===\nCarousel tiga: 6 slide kopi.';
+  } else if (body.includes('IMAGE-PLAN')) {
+    content = 'NASKAH-IMG-UJI: caption + rancangan image kopi.';
+  } else if (body.includes('CAROUSEL-PLAN')) {
+    content = 'NASKAH-CAR-UJI: caption + carousel 6 slide kopi.';
+  } else if (body.includes('REELS-PLAN')) {
+    content = 'NASKAH-REELS-UJI: rencana reels 30-60 detik 9:16 kopi.';
+  } else if (body.includes('500 karakter')) {
+    content = 'Kopi susu gula aren ini creamy banget, manisnya pas dari gula aren asli, dan aromanya langsung bikin pengin nyobain satu gelas lagi. Satu gelas cukup untuk memulai hari, apalagi diminum selagi hangat ditemani roti bakar di pagi yang masih sepi. Racikan susunya lembut, gulanya tidak bikin enek, dan aftertaste kopinya bersih tanpa rasa pahit yang mengganggu. Cocok buat yang baru mulai suka kopi, juga buat penikmat lama yang cari rasa manis legit tanpa ribet. Order sekarang selagi promo berjalan, stok gula aren asli terbatas dan tiap gelas dibuat fresh begitu pesanan masuk. Jangan sampai kehabisan, karena racikan ini cuma tersedia selama persediaan gula aren masih ada.';
   }
   return makeResp({
     jsonData: {
@@ -645,6 +657,70 @@ try {
   await waitFor(() => (lastMsg()?.textContent || '').includes('tersimpan di Library'), 'cb139s mix done');
   const lib139s = JSON.parse(store.get('minime.library.added') || '[]');
   check('v139: storyboard part 1 + part 2 berseri tersimpan di Library', lib139s.some((x) => (x.o || '').includes('Storyboard Part 1:')) && lib139s.some((x) => (x.o || '').includes('Storyboard Part 2:')), JSON.stringify(lib139s.map((x) => x.o)));
+  // §24 v140: Sosmed — Threads (script >500 karakter dibagi per bagian).
+  await sendMsg('halo Kreatif, buatkan konten threads kopi');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'cb140 purpose');
+  recBtn(lastMsg(), 'Konten Sosial Media').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Platform sosmednya yang mana?'), 'cb140 platform');
+  recBtn(lastMsg(), 'Threads').click();
+  await waitFor(() => JSON.parse(store.get('minime.library.added') || '[]').some((x) => (x.o || '').startsWith('Threads:')), 'cb140 threads lib');
+  check('v140: Threads dibagi per bagian @ maks 500 karakter', bodyText().includes('(1/') && bodyText().includes('(2/'));
+  const lib140t = JSON.parse(store.get('minime.library.added') || '[]');
+  check('v140: thread tersimpan di Library', lib140t.some((x) => (x.o || '').startsWith('Threads:')), JSON.stringify(lib140t.map((x) => x.o)));
+  // §25 v140: Sosmed — Instagram Image satu per satu (tujuan + pendekatan + handoff Image Editor).
+  await sendMsg('halo Kreatif, buatkan konten instagram kopi');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'cb140s purpose');
+  recBtn(lastMsg(), 'Konten Sosial Media').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Platform sosmednya yang mana?'), 'cb140s platform');
+  recBtn(lastMsg(), 'Instagram').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis postingannya apa?'), 'cb140s format');
+  recBtn(lastMsg(), 'Image').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Tujuannya apa?'), 'cb140s purpose2');
+  recBtn(lastMsg(), 'Promosional').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Pendekatannya mau yang mana?'), 'cb140s approach');
+  recBtn(lastMsg(), 'Infografis').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Posting 1 per 1 atau bulk'), 'cb140s count');
+  recBtn(lastMsg(), 'Satu per satu').click();
+  await waitFor(() => JSON.parse(store.get('minime.library.added') || '[]').some((x) => (x.o || '').startsWith('Image:')), 'cb140s image lib');
+  check('v140: image single mengarahkan ke Image Editor', !!document.querySelector('#chatBox [data-act="cb-open-image"]'));
+  const lib140i = JSON.parse(store.get('minime.library.added') || '[]');
+  check('v140: image single tersimpan di Library', lib140i.some((x) => (x.o || '').startsWith('Image:')), JSON.stringify(lib140i.map((x) => x.o)));
+  // §26 v140: Sosmed — Instagram Carousel bulk 3 tab (ganti tab mengganti brief aktif).
+  await sendMsg('halo Kreatif, buatkan konten carousel instagram kopi');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'cb140c purpose');
+  recBtn(lastMsg(), 'Konten Sosial Media').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Platform sosmednya yang mana?'), 'cb140c platform');
+  recBtn(lastMsg(), 'Instagram').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis postingannya apa?'), 'cb140c format');
+  recBtn(lastMsg(), 'Carousel').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Tujuannya apa?'), 'cb140c purpose2');
+  recBtn(lastMsg(), 'Promosional').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Pendekatannya mau yang mana?'), 'cb140c approach');
+  recBtn(lastMsg(), 'Listicle').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Posting 1 per 1 atau bulk'), 'cb140c count');
+  recBtn(lastMsg(), 'Bulk').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Bulk untuk berapa postingan?'), 'cb140c bulkn');
+  await sendMsg('3');
+  await waitFor(() => JSON.parse(store.get('minime.library.added') || '[]').some((x) => (x.o || '').startsWith('Bulk Carousel:')), 'cb140c carousel lib');
+  const tabs140 = document.querySelectorAll('#img-bulk-tabs .img-tab');
+  check('v140: bulk carousel membuat 3 tab Image Editor', tabs140.length === 3, 'tabs=' + tabs140.length);
+  tabs140[1].click();
+  const brief140 = document.getElementById('img-brief')?.value || '';
+  check('v140: ganti tab bulk mengganti brief aktif', brief140.includes('Carousel dua'), brief140.slice(0, 80));
+  const lib140c = JSON.parse(store.get('minime.library.added') || '[]');
+  check('v140: bulk carousel tersimpan di Library', lib140c.some((x) => (x.o || '').startsWith('Bulk Carousel:')), JSON.stringify(lib140c.map((x) => x.o)));
+  // §27 v140: Sosmed — LinkedIn Reels (platform lain ikut pola Instagram + handoff Video Editor).
+  await sendMsg('halo Kreatif, buatkan reels linkedin kopi');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'cb140r purpose');
+  recBtn(lastMsg(), 'Konten Sosial Media').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Platform sosmednya yang mana?'), 'cb140r platform');
+  recBtn(lastMsg(), 'LinkedIn').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis postingannya apa?'), 'cb140r format');
+  recBtn(lastMsg(), 'Reels').click();
+  await waitFor(() => JSON.parse(store.get('minime.library.added') || '[]').some((x) => (x.o || '').startsWith('Reels:')), 'cb140r reels lib');
+  check('v140: reels mengarahkan ke Video Editor', !!document.querySelector('#chatBox [data-act="cb-open-video"]'));
+  const lib140r = JSON.parse(store.get('minime.library.added') || '[]');
+  check('v140: reels tersimpan di Library', lib140r.some((x) => (x.o || '').startsWith('Reels:')), JSON.stringify(lib140r.map((x) => x.o)));
 
 
 
