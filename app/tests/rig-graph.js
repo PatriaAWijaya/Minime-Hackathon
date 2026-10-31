@@ -529,7 +529,7 @@ try {
   const iconSt = () => nodeSt() ? nodeSt().querySelector('img.nstatus') : null;
   check('v124: node agen idle -> icon kotak', !!iconSt() && (iconSt().getAttribute('src') || '').includes('status-idle'), '');
   const csSt = () => iconSt() ? dom.window.getComputedStyle(iconSt()) : null;
-  check('v127: icon status node diperkecil 14px (sama dengan list)', !!csSt() && csSt().width === '14px' && csSt().height === '14px', csSt() ? csSt().width + 'x' + csSt().height : '');
+  check('v128: icon status node diperkecil 50% ke 7px', !!csSt() && csSt().width === '7px' && csSt().height === '7px', csSt() ? csSt().width + 'x' + csSt().height : '');
   dom.window.GNODES['gxstatus'].running = true;
   dom.window.renderGraph();
   await tick(50);
