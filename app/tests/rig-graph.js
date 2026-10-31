@@ -208,11 +208,11 @@ try {
   check('semua node punya avatar + nama/job', [...document.querySelectorAll('.n8n-node')].every((el) => el.querySelector('.nrow .nava') && el.querySelector('.nrow .nname') && el.querySelector('.nrow .nsub')), '');
   check('sub-node lingkaran ikut seragam (punya .nava)', !!document.querySelector('[data-nkey="model"] .nava'), '');
   check('semua node sehat (outline hijau) saat terhubung', [...document.querySelectorAll('.n8n-node')].every((el) => el.classList.contains('ok')) && !document.querySelector('.n8n-node.bad'), [...document.querySelectorAll('.n8n-node')].map((el) => el.getAttribute('data-nkey') + ':' + [...el.classList].join('.')).join(' '));
-  check('wrap Graph hanya berisi kanvas (tanpa panel fixed)', document.querySelector('.graph-wrap').children.length === 1, document.querySelector('.graph-wrap').children.length);
-  check('topbar punya dropdown proyek', !!document.getElementById('graphProjSel'), '');
-  check('dropdown kosong saat nol proyek (placeholder)', [...document.getElementById('graphProjSel').options].map((o) => o.value).join(',') === '', [...document.getElementById('graphProjSel').options].map((o) => o.value).join(','));
+  check('wrap Graph berisi kanvas; runbar mengambang di dalam kanvas (v129)', document.querySelector('.graph-wrap').children.length === 1 && !!document.querySelector('.graph-wrap > #graphBox') && !!document.querySelector('#graphBox > .graph-runbar'), document.querySelector('.graph-wrap').children.length);
+  check('topbar punya dropdown proyek custom (v129)', !!document.getElementById('graphProjDd') && !!document.getElementById('graphProjBtn') && !!document.getElementById('graphProjList'), '');
+  check('dropdown kosong saat nol proyek (placeholder —)', (document.getElementById('graphProjBtn')?.textContent || '').includes('—') && !!document.querySelector('#graphProjList .graph-dd-empty'), document.getElementById('graphProjBtn')?.textContent || '');
   check('zoom label pindah ke topbar', !!document.querySelector('.graph-head-btns #graphZoomLabel'), '');
-  check('topbar punya tombol Hentikan (v115: ikon ⏹ + tooltip Hentikan)', [...document.querySelectorAll('.graph-head-btns button')].some((b) => b.textContent.trim() === '⏹' && b.title.includes('Hentikan')), '');
+  check('runbar mengambang punya tombol Hentikan (v129: ikon ⏹ + tooltip Hentikan, di kanan atas kanvas)', [...document.querySelectorAll('.graph-runbar button')].some((b) => b.textContent.trim() === '⏹' && b.title.includes('Hentikan')) && !!document.querySelector('#graphBox > .graph-runbar'), '');
   document.querySelector('[data-nkey="prime"]').click();
   await tick(100);
   check('klik node tidak membuka popup', popup().style.display === 'none', popup().style.display);
@@ -237,9 +237,9 @@ try {
   [...panel().querySelectorAll('button')].find((b) => b.textContent === 'Hapus').click();
   await tick(100);
   check('hapus gate (v92, satu langkah) -> dist + revisi jadi yatim (pink)', document.querySelector('[data-nkey="dist"]').classList.contains('bad') && document.querySelector('[data-nkey="revisi"]').classList.contains('bad'), '');
-  [...document.querySelectorAll('.graph-head-btns button')].find((b) => b.textContent.trim() === '▶').click();
+  [...document.querySelectorAll('.graph-runbar button')].find((b) => b.textContent.trim() === '▶').click();
   await tick(150);
-  [...document.querySelectorAll('.graph-head-btns button')].find((b) => b.textContent.trim() === '⏹').click();
+  [...document.querySelectorAll('.graph-runbar button')].find((b) => b.textContent.trim() === '⏹').click();
   await tick(100);
   check('play lalu stop di topbar -> tanpa .exec', !document.querySelector('.n8n-node.exec'), '');
 
@@ -268,9 +268,10 @@ try {
   dom.window.renderGraph();
   await tick(100);
   const base13b = nodes13().length;
-  check('dropdown berisi proyek baru', [...document.getElementById('graphProjSel').options].map((o) => o.value).join(',') === 'proyek-uji', [...document.getElementById('graphProjSel').options].map((o) => o.value).join(','));
-  document.getElementById('graphProjSel').value = 'proyek-uji';
-  document.getElementById('graphProjSel').dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  check('dropdown berisi proyek baru', [...document.querySelectorAll('#graphProjList [data-act="graph-dd-sel"]')].map((el) => el.getAttribute('data-pid')).join(',') === 'proyek-uji', [...document.querySelectorAll('#graphProjList [data-act="graph-dd-sel"]')].map((el) => el.getAttribute('data-pid')).join(','));
+  document.getElementById('graphProjBtn').click();
+  await tick(50);
+  [...document.querySelectorAll('#graphProjList [data-act="graph-dd-sel"]')].find((el) => el.getAttribute('data-pid') === 'proyek-uji').click();
   await tick(100);
   check('ganti proyek via dropdown -> chatProj proyek baru', (document.getElementById('chatProj')?.textContent || '') === 'Proyek Uji', document.getElementById('chatProj')?.textContent);
   dbl13(document.querySelector('[data-nkey="model"]'));
@@ -475,7 +476,7 @@ try {
   [...document.querySelectorAll('#view-graph button')].find((b) => b.textContent.trim() === 'Buat Project Baru').click();
   await tick(100);
   const pid21 = Object.keys(dom.window.PROJECTS).find((k) => !pids21a.has(k));
-  check('v117: Buat Project Baru dari Graph -> folder di list + dropdown', !!pid21 && [...document.querySelectorAll('#agentList .group')].some((el) => el.textContent.includes(dom.window.PROJECTS[pid21].name)) && [...document.getElementById('graphProjSel').options].some((o) => o.value === pid21), pid21 || '');
+  check('v117: Buat Project Baru dari Graph -> folder di list + dropdown', !!pid21 && [...document.querySelectorAll('#agentList .group')].some((el) => el.textContent.includes(dom.window.PROJECTS[pid21].name)) && [...document.querySelectorAll('#graphProjList [data-act="graph-dd-sel"]')].some((el) => el.getAttribute('data-pid') === pid21), pid21 || '');
   check('v117: project baru punya node Prime', Object.values(dom.window.GNODES).some((nd) => nd.proj === pid21 && nd.agent === 'prime'), '');
   const nodesBefore21 = new Set(Object.keys(dom.window.GNODES));
   dom.window.graphAddNode();
@@ -540,6 +541,36 @@ try {
   check('v124: node agen fase busy -> icon lingkaran', !!iconSt() && (iconSt().getAttribute('src') || '').includes('status-busy'), '');
   const plainSt = () => document.querySelector('[data-nkey="gxplain"]');
   check('v124: node non-agen tanpa icon status', !!plainSt() && !plainSt().querySelector('img.nstatus'), '');
+
+  // 23. v129: dropdown custom + X per project + dialog konfirmasi hapus.
+  dom.window.showView('graph');
+  dom.window.PROJECTS['pdd1'] = { name: 'Hapus Uji', agents: [], chat: [], kanban: [] };
+  dom.window.PROJECTS['pdd2'] = { name: 'Tetap Uji', agents: [], chat: [], kanban: [] };
+  dom.window.GNODES['gxdel'] = { name: 'Riset', sub: 'Riset', agent: 'riset', x: 10, y: 10, w: 170, kind: 'output', proj: 'pdd1' };
+  dom.window.renderAgents();
+  await tick(100);
+  const ddRow = (pid) => document.querySelector('#graphProjList [data-act="graph-dd-sel"][data-pid="' + pid + '"]');
+  const ddX = (pid) => document.querySelector('#graphProjList [data-act="graph-dd-del"][data-pid="' + pid + '"]');
+  const dlg129 = () => document.getElementById('graphProjDelDlg');
+  check('v129: tiap baris dropdown punya X di ujung kanan', !!ddRow('pdd1') && !!ddX('pdd1') && !!ddX('pdd2'), '');
+  check('v129: dropdown sejajar Buat Project Baru (satu baris header)', !!document.querySelector('.graph-head-btns #graphProjDd') && [...document.querySelectorAll('.graph-head-btns button')].some((b) => b.textContent.trim() === 'Buat Project Baru'), '');
+  check('v129: Play/Stop di kanan atas workspace (runbar dalam kanvas)', !!document.querySelector('#graphBox > .graph-runbar') && [...document.querySelectorAll('.graph-runbar button')].map((b) => b.textContent.trim()).join('') === '▶⏹', '');
+  document.getElementById('graphProjBtn').click();
+  await tick(50);
+  ddX('pdd1').click();
+  await tick(100);
+  check('v129: X membuka popup teks persis + Hapus/Batalkan', dlg129().style.display === 'block' && (dlg129().textContent || '').includes('Yakin menghapus project Ini? Setelah dihapus, project tidak bisa dipulihkan') && [...dlg129().querySelectorAll('button')].map((b) => b.textContent.trim()).join('/') === 'Hapus/Batalkan', dlg129().textContent || '');
+  [...dlg129().querySelectorAll('button')].find((b) => b.textContent.trim() === 'Batalkan').click();
+  await tick(100);
+  check('v129: Batalkan -> dialog tutup, project tetap ada', dlg129().style.display === 'none' && !!dom.window.PROJECTS['pdd1'], '');
+  document.getElementById('graphProjBtn').click();
+  await tick(50);
+  ddX('pdd1').click();
+  await tick(100);
+  [...dlg129().querySelectorAll('button')].find((b) => b.textContent.trim() === 'Hapus').click();
+  await tick(100);
+  check('v129: Hapus -> project hilang permanen dari Graph + list', !dom.window.PROJECTS['pdd1'] && !dom.window.GNODES['gxdel'] && ![...document.querySelectorAll('#agentList .group')].some((el) => el.textContent.includes('Hapus Uji')), '');
+  check('v129: project lain tidak ikut terhapus', !!dom.window.PROJECTS['pdd2'], '');
 
 } catch (e) {
   // eslint-disable-next-line no-console

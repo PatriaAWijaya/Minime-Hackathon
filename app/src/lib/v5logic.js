@@ -2351,16 +2351,86 @@ function updateDragEdges() {
 export function graphSelect(key) { graphSel = GNODES[key] ? key : null; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
 export function graphClosePanel() { graphPopupOpen = false; graphSel = null; graphSelEdge = null; graphEdgeDelAsk = false; renderGraph(); renderGraphPopup(); }
 function graphOpenPopup(k) { if (!GNODES[k]) return; graphSelect(k); graphPopupOpen = true; renderGraphPopup(); }
-export function renderGraphProjSel() {
-  ["graphProjSel"].forEach(function (id) {
-    var el = document.getElementById(id); if (!el) return;
-    el.innerHTML = "";
-    var keys = Object.keys(PROJECTS);
-    if (!keys.length) { var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "—"; o0.selected = true; el.appendChild(o0); return; }
-    keys.forEach(function (pid) {
-      var o = document.createElement("option"); o.value = pid; o.textContent = PROJECTS[pid].name; if (pid === currentProj) o.selected = true; el.appendChild(o);
-    });
+/* v129 (perintah Patria 31 Okt 13:18): dropdown project Graph diganti dari
+   <select> native menjadi dropdown custom — <select> TIDAK bisa menampung
+   tombol X per option. Dropdown custom: tombol nama project + daftar baris
+   (nama + X di ujung kanan). X membuka dialog konfirmasi in-app (bukan
+   window.confirm — mati di WebView live); Hapus memakai jalur deleteProject
+   yang sama dengan hapus folder di list (project + node/edge Graph + kartu
+   Kanban ikut hilang; dokumen Library dibiarkan sebagai arsip). */
+var graphDdOpen = false;
+var graphPendingDelPid = null;
+var graphDdWired = false;
+function graphProjDdWire() {
+  if (graphDdWired) return;
+  var dd = document.getElementById("graphProjDd");
+  if (!dd) return;
+  graphDdWired = true;
+  dd.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !dd.contains(el)) return;
+    var act = el.getAttribute("data-act"), pid = el.getAttribute("data-pid");
+    if (act === "graph-dd-toggle") { graphDdOpen = !graphDdOpen; renderGraphProjSel(); }
+    else if (act === "graph-dd-sel" && pid) { graphDdOpen = false; switchProject(pid); }
+    else if (act === "graph-dd-del" && pid) { graphDdOpen = false; renderGraphProjSel(); graphProjDelAsk(pid); }
   });
+  document.addEventListener("click", function (e) {
+    if (!graphDdOpen) return;
+    if (e.target && e.target.closest && e.target.closest("#graphProjDd")) return;
+    graphDdOpen = false; renderGraphProjSel();
+  });
+  var dlg = document.getElementById("graphProjDelDlg");
+  if (dlg) dlg.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !dlg.contains(el)) return;
+    var act = el.getAttribute("data-act");
+    if (act === "graph-projdel-cancel") graphProjDelClose();
+    else if (act === "graph-projdel-confirm") graphProjDelDo();
+  });
+}
+export function graphProjDelAsk(pid) {
+  if (!PROJECTS[pid]) return false;
+  graphPendingDelPid = pid;
+  var dlg = document.getElementById("graphProjDelDlg"); if (!dlg) return false;
+  dlg.innerHTML = "<div class='lib-dialog-backdrop' data-act='graph-projdel-cancel'></div><div class='lib-dialog-card'>"
+    + "<div class='lib-title'>" + esc(PROJECTS[pid].name) + "</div>"
+    + "<div class='lib-detail-pre'>" + esc(tr('graph.projdel.text')) + "</div>"
+    + "<div class='lib-actions'>"
+    + "<button class='btn btn-sm' data-act='graph-projdel-confirm'>" + esc(tr('graph.projdel.yes')) + "</button>"
+    + "<button class='btn btn-sm' data-act='graph-projdel-cancel'>" + esc(tr('graph.projdel.no')) + "</button>"
+    + "</div></div>";
+  dlg.style.display = "block";
+  return true;
+}
+export function graphProjDelClose() {
+  var dlg = document.getElementById("graphProjDelDlg");
+  if (dlg) { dlg.innerHTML = ""; dlg.style.display = "none"; }
+  graphPendingDelPid = null;
+}
+function graphProjDelDo() {
+  var pid = graphPendingDelPid;
+  graphProjDelClose();
+  if (!pid || !PROJECTS[pid]) return;
+  deleteArmedPid = pid;
+  deleteProject(pid);
+}
+export function renderGraphProjSel() {
+  graphProjDdWire();
+  var btn = document.getElementById("graphProjBtn");
+  var list = document.getElementById("graphProjList");
+  if (!btn || !list) return;
+  var keys = Object.keys(PROJECTS);
+  btn.textContent = (currentProj && PROJECTS[currentProj] ? PROJECTS[currentProj].name : "—") + " ▾";
+  if (!keys.length) {
+    list.innerHTML = "<div class='graph-dd-row graph-dd-empty'>—</div>";
+  } else {
+    list.innerHTML = keys.map(function (pid) {
+      return "<div class='graph-dd-row" + (pid === currentProj ? " sel" : "") + "' data-act='graph-dd-sel' data-pid='" + esc(pid) + "'>"
+        + "<span class='graph-dd-name'>" + esc(PROJECTS[pid].name) + "</span>"
+        + "<button class='graph-dd-x' data-act='graph-dd-del' data-pid='" + esc(pid) + "'>✕</button></div>";
+    }).join("");
+  }
+  list.style.display = graphDdOpen ? "block" : "none";
 }
 function graphSelNode() { return graphSel && GNODES[graphSel] ? GNODES[graphSel] : null; }
 

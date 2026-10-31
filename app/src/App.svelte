@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, switchProject, toggleAddMenu, waAttach, waInputChanged, waMic, waToggleAttach, graphNewProject, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, getTheme, setTheme, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, toggleAddMenu, waAttach, waInputChanged, waMic, waToggleAttach, graphNewProject, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, getTheme, setTheme, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -643,19 +643,24 @@
     <div class="view" id="view-graph">
       <div class="colhead"><h2>{t('view.graph.title', lang)}</h2>
       <div class="graph-head-btns">
-        <select id="graphProjSel" onchange={(e) => { switchProject((e.target as HTMLSelectElement).value); }}></select>
         <button class="btn" onclick={() => { graphZoomOut() }}>−</button>
         <span id="graphZoomLabel">100%</span>
         <button class="btn" onclick={() => { graphZoomIn() }}>+</button>
+        <div class="graph-proj-dd" id="graphProjDd">
+          <button class="btn" id="graphProjBtn" data-act="graph-dd-toggle">— ▾</button>
+          <div class="graph-dd-list" id="graphProjList" style="display:none"></div>
+        </div>
         <button class="btn btn-primary" onclick={() => { graphNewProject() }}>{t('graph.newproj', lang)}</button>
-        <button class="btn btn-primary" title={t('graph.run', lang)} onclick={() => { runGraphSim() }}>▶</button>
-        <button class="btn" title={t('graph.stop', lang)} onclick={() => { graphStopSim() }}>⏹</button>
       </div></div>
       <div class="scroll">
         <div class="graph-wrap">
-          <div class="n8n-canvas" id="graphBox"><div id="graphZoom"><svg id="graphEdges"></svg><div id="graphNodes"></div></div><button id="graphEmptyPlus" class="graph-empty-plus" onclick={() => { graphPrimeFirst() }}>+</button></div>
+          <div class="n8n-canvas" id="graphBox"><div class="graph-runbar">
+            <button class="btn btn-primary" title={t('graph.run', lang)} onclick={(e) => { e.stopPropagation(); runGraphSim(); }}>▶</button>
+            <button class="btn" title={t('graph.stop', lang)} onclick={(e) => { e.stopPropagation(); graphStopSim(); }}>⏹</button>
+          </div><div id="graphZoom"><svg id="graphEdges"></svg><div id="graphNodes"></div></div><button id="graphEmptyPlus" class="graph-empty-plus" onclick={() => { graphPrimeFirst() }}>+</button></div>
         </div>
         <div id="graphPopup" class="g-popup" style="display:none" onclick={(e) => { if (e.target === e.currentTarget) graphClosePanel(); }}><div class="g-popup-card" id="graphPopupCard"></div></div>
+        <div id="graphProjDelDlg" style="display:none"></div>
       </div>
     </div>
     <div class="view" id="view-library">
