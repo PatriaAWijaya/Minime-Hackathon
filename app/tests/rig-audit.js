@@ -83,12 +83,12 @@ try {
   document.getElementById('ncCreateBtn').click();
   await tick(100);
 
-  // 1. Penghitung karakter chat.
+  // 1. Penghitung karakter chat DIHAPUS (v144): mengetik tidak lagi memunculkan angka.
   const chatInput = document.getElementById('chatInput');
   chatInput.value = 'halo';
   chatInput.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   await tick(50);
-  check('chat counter: halo -> 4', document.getElementById('chatCount')?.textContent === '4', document.getElementById('chatCount')?.textContent);
+  check('v144: tidak ada elemen penghitung karakter', !document.getElementById('chatCount'));
 
   // 1b. Lampiran Gambar: picker -> chip -> ikut terkirim -> chip hilang.
   W.waAttach('Gambar');

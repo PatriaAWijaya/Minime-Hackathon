@@ -711,14 +711,14 @@ try {
   check('v140: reels mengarahkan ke Video Editor', !!document.querySelector('#chatBox [data-act="cb-open-video"]'));
   const lib140r = JSON.parse(store.get('minime.library.added') || '[]');
   check('v140: reels tersimpan di Library', lib140r.some((x) => (x.o || '').startsWith('Reels:')), JSON.stringify(lib140r.map((x) => x.o)));
-  // §28 v142: angka karakter tidak nyangkut setelah kirim (bug Patria 31 Okt 20:29).
-  const inp142 = document.getElementById('chatInput');
-  inp142.value = 'halo tes angka chat';
-  inp142.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
-  check('v142: angka = panjang draf saat mengetik', document.getElementById('chatCount')?.textContent === '19', document.getElementById('chatCount')?.textContent || 'kosong');
+  // §28 v144: penghitung karakter DIHAPUS TOTAL (perintah Patria 31 Okt 20:50) — tidak ada lagi angka di samping kolom chat.
+  const inp144 = document.getElementById('chatInput');
+  inp144.value = 'halo tes angka chat';
+  inp144.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  check('v144: tidak ada elemen penghitung saat mengetik', !document.getElementById('chatCount'));
   await sendMsg('halo tes angka chat');
-  await waitFor(() => bodyText().includes('halo tes angka chat'), 'cb142 user bubble');
-  check('v142: angka hilang setelah pesan terkirim', document.getElementById('chatCount')?.textContent === '', JSON.stringify(document.getElementById('chatCount')?.textContent));
+  await waitFor(() => bodyText().includes('halo tes angka chat'), 'cb144 user bubble');
+  check('v144: tetap tidak ada penghitung setelah kirim', !document.getElementById('chatCount'));
 
 
 
