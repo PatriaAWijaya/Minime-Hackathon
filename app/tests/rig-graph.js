@@ -518,6 +518,27 @@ try {
   const dgText21 = document.querySelector('#agentList .gagents:not([data-pid])')?.textContent || '';
   check('v117: agen Graph-only tampil di grup Dari Graph (bukan anggota project)', dgText21.includes('Media'), dgText21.slice(0, 150));
 
+
+  // 22. v124: icon status pada node Graph (hanya node agen).
+  dom.window.showView('graph');
+  dom.window.GNODES['gxstatus'] = { name: 'Riset', sub: 'Riset', agent: 'riset', x: 10, y: 10, w: 170, kind: 'output' };
+  dom.window.GNODES['gxplain'] = { name: 'Simpul Biasa', sub: 'Bukan agen', x: 40, y: 40, w: 170, kind: 'output' };
+  dom.window.renderGraph();
+  await tick(50);
+  const nodeSt = () => document.querySelector('[data-nkey="gxstatus"]');
+  const iconSt = () => nodeSt() ? nodeSt().querySelector('img.nstatus') : null;
+  check('v124: node agen idle -> icon kotak', !!iconSt() && (iconSt().getAttribute('src') || '').includes('status-idle'), '');
+  dom.window.GNODES['gxstatus'].running = true;
+  dom.window.renderGraph();
+  await tick(50);
+  check('v124: node agen running -> icon segitiga', !!iconSt() && (iconSt().getAttribute('src') || '').includes('status-start'), '');
+  dom.window.GNODES['gxstatus'].phase = 'busy';
+  dom.window.renderGraph();
+  await tick(50);
+  check('v124: node agen fase busy -> icon lingkaran', !!iconSt() && (iconSt().getAttribute('src') || '').includes('status-busy'), '');
+  const plainSt = () => document.querySelector('[data-nkey="gxplain"]');
+  check('v124: node non-agen tanpa icon status', !!plainSt() && !plainSt().querySelector('img.nstatus'), '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-graph exception :: ' + (e && e.stack ? e.stack : e));

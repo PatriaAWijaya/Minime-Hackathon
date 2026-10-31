@@ -11,7 +11,7 @@
 // No key -> that provider is skipped by the chain (LiveUnavailableError
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
-import { AGENTS, activateAgent, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, libAddReport, markChatApproveDone, mediaTab, postChat, showView } from './v5logic.js';
+import { AGENTS, activateAgent, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
@@ -369,10 +369,12 @@ export async function sendChatReal(): Promise<void> {
         graphNoteDelegation(t.agent, t.task);
         activateAgent(t.agent);
         postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
+        setAgentPhase(t.agent, 'starting');
         cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').';
         const trace = 'trace-flow1-' + t.agent + '-' + Date.now();
         let resultText: string;
         try {
+          setAgentPhase(t.agent, 'busy');
           const r = await router.callWithFallback(t.task, trace);
           recordLiveCost(r);
           const footer =
@@ -387,6 +389,7 @@ export async function sendChatReal(): Promise<void> {
           resultText = tr('chat.error') + msg;
           postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
         }
+        setAgentPhase(t.agent, null);
         results.push({ name: ag.name, task: t.task, text: resultText });
       }
       let qcText: string;
@@ -419,10 +422,12 @@ export async function sendChatReal(): Promise<void> {
       graphNoteDelegationForMember(t.agent, t.task);
       activateAgent(t.agent);
       postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
+      setAgentPhase(t.agent, 'starting');
       cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').';
       const trace = 'trace-flow2-' + t.agent + '-' + Date.now();
       let resultText: string;
       try {
+        setAgentPhase(t.agent, 'busy');
         const r = await router.callWithFallback(t.task, trace);
         recordLiveCost(r);
         const footer =
@@ -437,6 +442,7 @@ export async function sendChatReal(): Promise<void> {
         resultText = tr('chat.error') + msg;
         postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
       }
+      setAgentPhase(t.agent, null);
       results.push({ name: ag.name, task: t.task, text: resultText });
     }
     let qcText: string;
@@ -483,9 +489,11 @@ export async function sendChatReal(): Promise<void> {
   graphNoteDelegation(delegate, text);
   activateAgent(delegate);
   postChat(delegate, ag.name, ag.color, tr('chat.delegate.agentack'));
+  setAgentPhase(delegate, 'starting');
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').';
   const trace = 'trace-chat-' + delegate + '-' + Date.now();
   try {
+    setAgentPhase(delegate, 'busy');
     const r = await router.callWithFallback(text, trace);
     recordLiveCost(r);
     const footer =
@@ -499,4 +507,5 @@ export async function sendChatReal(): Promise<void> {
     const msg = e instanceof Error ? e.message : String(e);
     postChat(delegate, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
   }
+  setAgentPhase(delegate, null);
 }

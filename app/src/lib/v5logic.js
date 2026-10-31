@@ -283,6 +283,49 @@ function homeChatWire() {
     else if (act === "wa-rm") waRemoveAtt(idx);
   });
 }
+/* v124 (perintah Patria 31 Okt 10:10): status agen = icon, bukan tulisan.
+   segitiga = mulai menerima pekerjaan (Play / baru menerima tugas),
+   lingkaran = sibuk (model call berjalan), kotak = idle. Urutan: fase
+   'busy' menang atas 'starting'/running; tanpa fase & tanpa running = idle. */
+function agentStatusIconFor(a) {
+  if (a && a.phase === 'busy') return { src: './status-busy.png', title: tr('agent.status_busy') };
+  if (a && (a.phase === 'starting' || a.running)) return { src: './status-start.png', title: tr('agent.status_starting') };
+  return { src: './status-idle.png', title: tr('agent.status_idle') };
+}
+function graphOnlyStatusIcon(key) {
+  var nodes = graphOnlyNodes(key);
+  if (nodes.some(function (k) { return GNODES[k].phase === 'busy'; })) return { src: './status-busy.png', title: tr('agent.status_busy') };
+  if (nodes.some(function (k) { return GNODES[k].phase === 'starting' || GNODES[k].running; })) return { src: './status-start.png', title: tr('agent.status_starting') };
+  return { src: './status-idle.png', title: tr('agent.status_idle') };
+}
+function nodeStatusIcon(nd) {
+  if (!nd || !nd.agent) return null;
+  if (nd.phase === 'busy') return { src: './status-busy.png', title: tr('agent.status_busy') };
+  if (nd.phase === 'starting') return { src: './status-start.png', title: tr('agent.status_starting') };
+  if (nd.proj && PROJECTS[nd.proj]) {
+    var m = null;
+    (PROJECTS[nd.proj].agents || []).forEach(function (a) { if (a.key === nd.agent) m = a; });
+    if (m) return agentStatusIconFor(m);
+  }
+  if (nd.running) return { src: './status-start.png', title: tr('agent.status_starting') };
+  return { src: './status-idle.png', title: tr('agent.status_idle') };
+}
+/* v124: set fase status agen (dipakai chat.ts). phase null = hapus fase.
+   Anggota project diutamakan; bila agen hanya ada sebagai node Graph-only,
+   fase menempel di node-nya. Fase TIDAK disimpan permanen: loadHomeState /
+   loadGraphState menghapusnya supaya tidak basi sesudah reload. */
+export function setAgentPhase(key, phase) {
+  var done = false;
+  Object.keys(PROJECTS).forEach(function (pid) {
+    (PROJECTS[pid].agents || []).forEach(function (a) {
+      if (a.key === key && a.status !== 'Nonaktif') { if (phase) a.phase = phase; else delete a.phase; done = true; }
+    });
+  });
+  if (!done) Object.keys(GNODES).forEach(function (k) {
+    if (GNODES[k].agent === key && !GNODES[k].proj) { if (phase) GNODES[k].phase = phase; else delete GNODES[k].phase; }
+  });
+  renderAgents(); renderGraph();
+}
 export function renderAgents() {
     agentListWire(); detailWire(); searchWire(); kanbanWire(); libWire(); homeChatWire();
     var html = "", rowNo = -1;
@@ -292,20 +335,21 @@ export function renderAgents() {
       var isRenaming = renamingPid === pid;
       var isArmed = deleteArmedPid === pid;
       var headName = isRenaming ? '<input data-act="proj-rename-input" data-pid="' + pid + '" value="' + esc(proj.name) + '">' : esc(proj.name);
-      html += '<div class="group" data-act="toggle-group" data-pid="' + pid + '">' + (collapsed ? '▸' : '▾') + ' ' + headName + (pid === currentProj ? ' • PROYEK AKTIF' : '') + ' <button class="iconbtn" data-act="proj-rename" data-pid="' + pid + '" title="' + esc(tr('proj.rename')) + '">✎</button>' + (isArmed ? '<button class="iconbtn" data-act="proj-del-confirm" data-pid="' + pid + '">' + esc(tr('proj.del.arm')) + '</button>' : '<button class="iconbtn" data-act="proj-del" data-pid="' + pid + '" title="' + esc(tr('proj.del')) + '">✕</button>') + '</div>';
+      html += '<div class="group" data-act="toggle-group" data-pid="' + pid + '">' + (collapsed ? '▸' : '▾') + ' <span class="proj-dot ' + (pid === currentProj ? 'proj-dot-active' : 'proj-dot-inactive') + '"></span> ' + headName + (pid === currentProj ? ' • PROYEK AKTIF' : '') + '</div>';
       html += '<div class="gagents" data-pid="' + pid + '"' + (collapsed ? ' style="display:none"' : '') + '>';
       proj.agents.forEach(function (a, i) {
         var ag = AGENTS[a.key], off = a.status === "Nonaktif";
         rowNo++;
         if (a.key === "prime" || off) return;
-        var badgeTxt = a.running ? tr('agent.working') : a.status;
+        var stIcon = agentStatusIconFor(a);
         var times = ["2:32 PM", "1:47 PM", "12:05 PM", "11:20 AM", "10:02 AM", "9:15 AM", "8:40 AM", "7:55 AM"];
         html += '<div class="agent ' + (selectedAgent === a.key && pid === currentProj ? 'sel' : '') + (a.running ? ' running' : '') + (pid === currentProj ? ' curproj' : '') + '" data-act="sel-agent" data-key="' + a.key + '" data-pid="' + pid + '" draggable="true" data-dragkey="' + a.key + '">'
           + (ag.avatar ? '<img class="av av-shape-' + (ag.shape || 'circle') + '" src="' + esc(ag.avatar) + '" style="background:' + ag.color + ';object-fit:cover;padding:0" alt="">' : '<div class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div>')
-          + '<div class="meta"><b>' + esc(ag.name) + '</b> <span class="badge b-ok">' + esc(badgeTxt) + '</span><br><small>' + esc(a.task) + '</small></div>'
+          + '<div class="meta"><b>' + esc(ag.name) + '</b> <img class="status-icon" src="' + stIcon.src + '" title="' + esc(stIcon.title) + '" alt=""><br><small>' + esc(a.task) + '</small></div>'
           + '<span class="agent-acts"><button class="iconbtn" data-act="a-play" data-idx="' + i + '" data-pid="' + pid + '" title="' + esc(tr('agent.play')) + '">\u25B6</button><button class="iconbtn" data-act="a-stop" data-idx="' + i + '" data-pid="' + pid + '" title="' + esc(tr('agent.stop')) + '">\u23F9</button><button class="iconbtn" data-act="a-deact" data-idx="' + i + '" data-pid="' + pid + '" title="' + esc(tr('agent.deactivate')) + '">\u2715</button></span>'
           + '</div>';
       });
+      html += '<div class="proj-acts"><button class="proj-act" data-act="proj-rename" data-pid="' + pid + '" title="' + esc(tr('proj.rename')) + '">✎</button>' + (isArmed ? '<button class="proj-act armed" data-act="proj-del-confirm" data-pid="' + pid + '" title="' + esc(tr('proj.del.arm')) + '">✕</button>' : '<button class="proj-act" data-act="proj-del" data-pid="' + pid + '" title="' + esc(tr('proj.del')) + '">✕</button>') + '</div>';
       html += '</div>';
     });
     var gh = "";
@@ -313,9 +357,10 @@ export function renderAgents() {
       var ag = AGENTS[g.key];
       var task = (g.brief || "").split("\n")[0].slice(0, 60) || ag.role;
       var grunning = graphOnlyNodes(g.key).some(function (k) { return !!GNODES[k].running; });
+      var gstIcon = graphOnlyStatusIcon(g.key);
       gh += '<div class="agent ' + (selectedAgent === g.key ? 'sel' : '') + (grunning ? ' running' : '') + '" data-act="sel-agent" data-key="' + g.key + '" draggable="true" data-dragkey="' + g.key + '">'
         + (ag.avatar ? '<img class="av av-shape-' + (ag.shape || 'circle') + '" src="' + esc(ag.avatar) + '" style="background:' + ag.color + ';object-fit:cover;padding:0" alt="">' : '<div class="av av-shape-' + (ag.shape || 'circle') + '" style="background:' + ag.color + '">' + esc(ag.name.charAt(0)) + '</div>')
-        + '<div class="meta"><b>' + esc(ag.name) + '</b> <span class="badge b-ok">' + esc(grunning ? tr('agent.working') : tr('agent.graph_badge')) + '</span><br><small>' + esc(task) + '</small></div>'
+        + '<div class="meta"><b>' + esc(ag.name) + '</b> <img class="status-icon" src="' + gstIcon.src + '" title="' + esc(gstIcon.title) + '" alt=""><br><small>' + esc(task) + '</small></div>'
         + '<span class="agent-acts"><button class="iconbtn" data-act="g-play" data-key="' + g.key + '" title="' + esc(tr('agent.play')) + '">\u25B6</button><button class="iconbtn" data-act="g-stop" data-key="' + g.key + '" title="' + esc(tr('agent.stop')) + '">\u23F9</button><button class="iconbtn" data-act="g-deact" data-key="' + g.key + '" title="' + esc(tr('agent.deactivate')) + '">\u2715</button></span>'
         + '</div>';
     });
@@ -340,7 +385,7 @@ export function renderAgents() {
 export function agentPlay(idx, pid) {
     var proj = PROJECTS[pid]; if (!proj || !proj.agents[idx]) return;
     var a = proj.agents[idx]; if (a.status === "Nonaktif") return;
-    a.running = true;
+    a.running = true; a.phase = 'starting';
     var nodeKey = graphEnsureAgentNode(a.key, pid);
     if (nodeKey) { graphSel = nodeKey; renderGraph(); }
     saveHomeState(); saveGraphState(); renderAgents();
@@ -348,7 +393,7 @@ export function agentPlay(idx, pid) {
   }
 export function agentStop(idx, pid) {
     var proj = PROJECTS[pid]; if (!proj || !proj.agents[idx]) return;
-    proj.agents[idx].running = false;
+    proj.agents[idx].running = false; delete proj.agents[idx].phase;
     graphStopSim();
     saveHomeState(); renderAgents(); renderGraph();
   }
@@ -385,7 +430,7 @@ function agentGraphDeact(key) {
 export function agentDeactivate(idx, pid) {
     var proj = PROJECTS[pid]; if (!proj || !proj.agents[idx]) return;
     var a = proj.agents[idx], key = a.key;
-    a.status = "Nonaktif"; a.running = false;
+    a.status = "Nonaktif"; a.running = false; delete a.phase;
     var removed = [];
     Object.keys(GNODES).forEach(function (k) { var nd = GNODES[k]; if (nd.agent === key && nd.proj === pid && !nd.locked) removed.push(k); });
     removed.forEach(function (k) { delete GNODES[k]; });
@@ -417,6 +462,7 @@ export function loadHomeState() {
     Object.keys(projects).forEach(function (k) {
       var pr = projects[k] || {};
       projects[k] = { name: pr.name || k, agents: Array.isArray(pr.agents) ? pr.agents.filter(function (a) { return a && agents[a.key]; }) : [], chat: Array.isArray(pr.chat) ? pr.chat : [], kanban: Array.isArray(pr.kanban) ? pr.kanban : [] };
+      projects[k].agents.forEach(function (a) { delete a.phase; });
     });
     AGENTS = agents; PROJECTS = projects;
     if (PROJECTS[st.currentProj]) currentProj = st.currentProj;
@@ -870,6 +916,10 @@ export function renderGraph() {
       el.style.top = nd.y + "%";
       el.style.width = (nd.kind === "trigger" ? Math.max(nd.w || 0, 240) : (nd.w || 170)) + "px";
       el.innerHTML = "<div class='nrow'><div class='nava'>" + esc(nd.icon || "") + "</div><div class='ntxt'><div class='nname'>" + esc(nd.name) + (nd.locked ? " \uD83D\uDD12" : "") + "</div><div class='nsub'>" + esc(nd.sub || "") + "</div></div></div>";
+      if (nd.agent) {
+        var nst = nodeStatusIcon(nd);
+        if (nst) { var simg = document.createElement('img'); simg.className = 'nstatus'; simg.src = nst.src; simg.title = nst.title; simg.alt = ''; el.appendChild(simg); }
+      }
       if (k === firstKey) {
         if (nd.kind === "trigger") {
           var tt = graphTrigOf(nd);
@@ -1011,8 +1061,8 @@ export function runGraphSim(kind) {
       if (i >= seq.length) {
         graphRunning = false;
         graphSimTimer = null;
-        Object.keys(PROJECTS).forEach(function (pid) { (PROJECTS[pid].agents || []).forEach(function (a) { a.running = false; }); });
-        Object.keys(GNODES).forEach(function (k) { GNODES[k].running = false; });
+        Object.keys(PROJECTS).forEach(function (pid) { (PROJECTS[pid].agents || []).forEach(function (a) { a.running = false; delete a.phase; }); });
+        Object.keys(GNODES).forEach(function (k) { GNODES[k].running = false; delete GNODES[k].phase; });
         saveGraphState();
         saveHomeState(); if (document.getElementById("agentList")) renderAgents();
         graphRunsAdd(kind);
@@ -2252,6 +2302,7 @@ export function loadGraphState() {
     Object.keys(s.nodes).forEach(function (k) { var nd = s.nodes[k]; if (!nd || typeof nd.name !== "string" || typeof nd.kind !== "string" || typeof nd.x !== "number" || typeof nd.y !== "number") ok = false; });
     if (!ok) throw new Error("bad node");
     GNODES = s.nodes; GEDGES = s.edges; nodeCounter = s.counter || 0;
+    Object.keys(GNODES).forEach(function (k) { delete GNODES[k].phase; });
     if (s.pan && typeof s.pan.x === "number" && typeof s.pan.y === "number") { graphPanX = s.pan.x; graphPanY = s.pan.y; }
     Object.keys(GNODES).forEach(function (k) { if (GNODES[k].kind === "trigger") { GNODES[k].trig = graphTrigFill(GNODES[k].trig); GNODES[k].sub = graphTrigSummary(GNODES[k].trig); } });
     return true;
@@ -3099,5 +3150,5 @@ export function initV5() {
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
 
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphNoteDelegationForMember, currentProjectMemberKeys, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphNewProject, markChatApproveDone, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphNoteDelegationForMember, currentProjectMemberKeys, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphNewProject, markChatApproveDone, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, setAgentPhase, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waInputChanged, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }

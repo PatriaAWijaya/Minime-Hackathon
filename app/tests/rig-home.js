@@ -296,10 +296,10 @@ try {
   row98().querySelector('[data-act="a-play"]').click();
   await tick(50);
   const ag98 = (dom.window.PROJECTS[pid98].agents || []).find((a) => a.key === 'riset');
-  check('v98: play -> Bekerja + node Graph ada', !!ag98 && ag98.running === true && !!row98() && row98().textContent.includes('Bekerja') && Object.values(dom.window.GNODES).some((n) => n.proj === pid98 && n.agent === 'riset'), '');
+  check('v98: play -> icon segitiga + node Graph ada', !!ag98 && ag98.running === true && !!row98() && !!row98().querySelector('img.status-icon') && (row98().querySelector('img.status-icon').getAttribute('src') || '').includes('status-start') && Object.values(dom.window.GNODES).some((n) => n.proj === pid98 && n.agent === 'riset'), '');
   row98().querySelector('[data-act="a-stop"]').click();
   await tick(50);
-  check('v98: stop -> kembali Idle + simulasi berhenti', !!ag98 && ag98.running === false && !!row98() && row98().textContent.includes('Idle') && dom.window.graphRunning !== true, '');
+  check('v98: stop -> icon kotak + simulasi berhenti', !!ag98 && ag98.running === false && !!row98() && !!row98().querySelector('img.status-icon') && (row98().querySelector('img.status-icon').getAttribute('src') || '').includes('status-idle') && dom.window.graphRunning !== true, '');
   row98().querySelector('[data-act="a-deact"]').click();
   await tick(50);
   check('v98: X -> status Nonaktif + baris hilang dari list', !!ag98 && ag98.status === 'Nonaktif' && !row98(), '');
@@ -325,10 +325,10 @@ try {
   check('v99: kartu Dari Graph punya 3 tombol kerja', !!row99(), '');
   row99().querySelector('[data-act="g-play"]').click();
   await tick(50);
-  check('v99: play Graph -> node running + badge Bekerja', !!dom.window.GNODES['gx4'].running && !!row99() && row99().textContent.includes('Bekerja'), '');
+  check('v99: play Graph -> node running + icon segitiga', !!dom.window.GNODES['gx4'].running && !!row99() && !!row99().querySelector('img.status-icon') && (row99().querySelector('img.status-icon').getAttribute('src') || '').includes('status-start'), '');
   row99().querySelector('[data-act="g-stop"]').click();
   await tick(50);
-  check('v99: stop Graph -> node tak lagi running', !dom.window.GNODES['gx4'].running && !!row99() && !row99().textContent.includes('Bekerja'), '');
+  check('v99: stop Graph -> node tak lagi running + icon kotak', !dom.window.GNODES['gx4'].running && !!row99() && !!row99().querySelector('img.status-icon') && (row99().querySelector('img.status-icon').getAttribute('src') || '').includes('status-idle'), '');
   row99().querySelector('[data-act="g-deact"]').click();
   await tick(50);
   check('v99: X Graph -> node + baris hilang', !dom.window.GNODES['gx4'] && !row99(), '');
@@ -385,6 +385,39 @@ try {
   inpRen2.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   await tick(50);
   check('v107: Esc membatalkan rename -> nama tetap', dom.window.PROJECTS['pren'].name === 'Nama Baru Uji', dom.window.PROJECTS['pren'].name);
+
+
+  // 19. v124: icon status agen + dot folder + tombol project polos kanan bawah.
+  dom.window.PROJECTS['pdot1'] = { name: 'Dot Aktif', agents: [{ key: 'riset', status: 'Idle', task: 'Tugas dot' }], chat: [], kanban: [] };
+  dom.window.PROJECTS['pdot2'] = { name: 'Dot Nonaktif', agents: [{ key: 'strategi', status: 'Idle', task: 'Tugas dot 2' }], chat: [], kanban: [] };
+  dom.window.switchProject('pdot1');
+  dom.window.renderAgents();
+  await tick(50);
+  const headDot = (pid) => document.querySelector('#agentList .group[data-pid="' + pid + '"]');
+  const gagentsDot = (pid) => document.querySelector('#agentList .gagents[data-pid="' + pid + '"]');
+  const rowDot = (pid) => [...document.querySelectorAll('#agentList .agent')].find((el) => el.getAttribute('data-pid') === pid);
+  check('v124: folder aktif dot hijau besar, nonaktif dot merah', !!headDot('pdot1') && !!headDot('pdot1').querySelector('.proj-dot-active') && !!headDot('pdot2') && !!headDot('pdot2').querySelector('.proj-dot-inactive'), '');
+  check('v124: header folder tanpa tombol rename/hapus', !!headDot('pdot1') && !headDot('pdot1').querySelector('[data-act="proj-rename"]') && !headDot('pdot1').querySelector('[data-act="proj-del"]'), '');
+  const actsDot = () => gagentsDot('pdot1') ? gagentsDot('pdot1').lastElementChild : null;
+  check('v124: tombol rename/hapus polos di kanan bawah project', !!actsDot() && actsDot().classList.contains('proj-acts') && !!actsDot().querySelector('[data-act="proj-rename"].proj-act') && !!actsDot().querySelector('[data-act="proj-del"].proj-act') && !actsDot().querySelector('.iconbtn'), '');
+  const iconDot = () => rowDot('pdot1') ? rowDot('pdot1').querySelector('img.status-icon') : null;
+  check('v124: agen idle -> icon kotak, tanpa tulisan Idle', !!iconDot() && (iconDot().getAttribute('src') || '').includes('status-idle') && !rowDot('pdot1').textContent.includes('Idle'), '');
+  dom.window.setAgentPhase('riset', 'starting');
+  await tick(50);
+  check('v124: fase starting -> icon segitiga', !!iconDot() && (iconDot().getAttribute('src') || '').includes('status-start'), '');
+  dom.window.setAgentPhase('riset', 'busy');
+  await tick(50);
+  check('v124: fase busy -> icon lingkaran', !!iconDot() && (iconDot().getAttribute('src') || '').includes('status-busy'), '');
+  dom.window.setAgentPhase('riset', null);
+  await tick(50);
+  check('v124: fase hapus -> kembali icon kotak', !!iconDot() && (iconDot().getAttribute('src') || '').includes('status-idle'), '');
+  document.querySelector('#agentList [data-act="proj-del"][data-pid="pdot2"]').click();
+  await tick(50);
+  const confDot = document.querySelector('#agentList [data-act="proj-del-confirm"][data-pid="pdot2"]');
+  check('v124: ketuk X pertama -> konfirmasi tetap icon X saja (tanpa teks)', !!confDot && confDot.textContent.trim() === '✕' && confDot.classList.contains('proj-act'), confDot ? confDot.textContent : '');
+  confDot.click();
+  await tick(50);
+  check('v124: ketuk X kedua dari posisi baru -> project hilang', !dom.window.PROJECTS['pdot2'], '');
 
 } catch (e) {
   // eslint-disable-next-line no-console
