@@ -2455,3 +2455,8 @@ dokumen lama yang dipakai.
 - settings.keys kehilangan parenthetical di 3 bahasa (ID/EN/ZH, nilai disesuaikan per bahasa, kunci tetap identik): ID 'Kunci API (B3 — disimpan lokal di perangkat ini saja)' -> 'Kunci API'; EN -> 'API keys'; ZH -> 'API 密钥'. Hanya judul seksi Settings; tidak ada perubahan fungsi. Hitungan kunci tetap 854.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal 634b6af ↔ remote b1c45a7 (tree identik).
+
+## v134 — hapus akhiran judul Settings (31 Okt 2026 ~14:40 WIB, perintah Patria 14:35 "ini hapus '— Pengaturan Aplikasi'")
+- view.settings.title kehilangan akhiran di 3 bahasa (kunci tetap identik, nilai disesuaikan per bahasa): ID 'Settings — Pengaturan Aplikasi' -> 'Settings'; EN 'Settings — App Settings' -> 'Settings'; ZH '设置 — 应用设置' -> '设置'. Hanya judul header halaman Settings (App.svelte); nav.settings tidak diubah. Hitungan kunci tetap 854.
+- Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
+- Push kode: lokal d558bd4 ↔ remote 97f872c (tree identik).
