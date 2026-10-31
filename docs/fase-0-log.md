@@ -2450,3 +2450,8 @@ dokumen lama yang dipakai.
 - Rig: rig-chat §16 (6 cek): 3 opsi jadi 3 tombol, marker tak tampil, awal tanpa done, klik -> hijau + terkirim sebagai pesan user, bubble user tak jadi tombol, opsi dibatasi 5.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal e0fef6b ↔ remote df6c9e7 (tree identik).
+
+## v133 — hapus catatan B3 dari label Kunci API (31 Okt 2026 ~14:40 WIB, perintah Patria 14:29 "Hapus ini")
+- settings.keys kehilangan parenthetical di 3 bahasa (ID/EN/ZH, nilai disesuaikan per bahasa, kunci tetap identik): ID 'Kunci API (B3 — disimpan lokal di perangkat ini saja)' -> 'Kunci API'; EN -> 'API keys'; ZH -> 'API 密钥'. Hanya judul seksi Settings; tidak ada perubahan fungsi. Hitungan kunci tetap 854.
+- Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
+- Push kode: lokal 634b6af ↔ remote b1c45a7 (tree identik).
