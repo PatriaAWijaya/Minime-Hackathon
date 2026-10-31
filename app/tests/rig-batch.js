@@ -353,12 +353,14 @@ try {
   document.getElementById('socWizNext').click();
   await tick(100);
   check('wizard langkah 2: URI loopback + tombol salin', (document.getElementById('socWizUri')?.value || '') === 'http://localhost:4317/callback' && !!document.getElementById('socWizCopy'), document.getElementById('socWizUri')?.value);
+  check('wizard langkah 2: nota localhost (Meta menolak 127.0.0.1)', (document.querySelector('.soc-pop')?.textContent || '').includes('127.0.0.1'), '');
   document.getElementById('socWizCopy').click();
   await tick(100);
   check('wizard: salin -> nota Tersalin', (document.getElementById('socWizNote')?.textContent || '').includes('Tersalin'), document.getElementById('socWizNote')?.textContent);
   document.getElementById('socWizNext').click();
   await tick(100);
   check('wizard langkah 3: petunjuk tempel URI Meta', (document.querySelector('.soc-pop')?.textContent || '').includes('Facebook Login'), '');
+  check('wizard langkah 3: nota localhost ikut tampil', (document.querySelector('.soc-pop')?.textContent || '').includes('127.0.0.1'), '');
   document.getElementById('socWizNext').click();
   await tick(100);
   check('wizard langkah 4: form ID + Secret', !!document.getElementById('socPopId') && !!document.getElementById('socPopConn'), '');

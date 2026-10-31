@@ -72,61 +72,77 @@ fn query_value(query: &str, key: &str) -> Option<String> {
 /// promise invoke ini menggantung sampai callback tiba.
 #[tauri::command]
 pub fn social_oauth_listen() -> Result<String, String> {
-    let listener = TcpListener::bind(("127.0.0.1", OAUTH_PORT))
+    let listener4 = TcpListener::bind(("127.0.0.1", OAUTH_PORT))
         .map_err(|e| format!("Port {OAUTH_PORT} tidak bisa dipakai: {e}"))?;
-    listener.set_nonblocking(true).map_err(|e| e.to_string())?;
+    listener4.set_nonblocking(true).map_err(|e| e.to_string())?;
+    // Dual-stack: Chrome di macOS mencoba ::1 lebih dulu untuk "localhost".
+    // Tanpa listener IPv6, callback ditolak walau listener IPv4 hidup penuh.
+    let listener6 = TcpListener::bind(("::1", OAUTH_PORT))
+        .ok()
+        .and_then(|l| l.set_nonblocking(true).ok().map(|_| l));
     let start = Instant::now();
     loop {
         if start.elapsed() > Duration::from_secs(180) {
             return Err("Waktu tunggu login habis (180 detik)".into());
         }
-        match listener.accept() {
-            Ok((mut stream, _)) => {
-                let _ = stream.set_read_timeout(Some(Duration::from_secs(10)));
-                let mut buf = Vec::new();
-                let mut chunk = [0u8; 4096];
-                loop {
-                    match stream.read(&mut chunk) {
-                        Ok(0) => break,
-                        Ok(n) => {
-                            buf.extend_from_slice(&chunk[..n]);
-                            if buf.len() > 8192 || buf.windows(4).any(|w| w == b"\r\n\r\n") {
-                                break;
-                            }
-                        }
-                        Err(_) => break,
-                    }
+        let mut accepted = None;
+        match listener4.accept() {
+            Ok((stream, _)) => accepted = Some(stream),
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
+            Err(e) => return Err(e.to_string()),
+        }
+        if accepted.is_none() {
+            if let Some(l6) = listener6.as_ref() {
+                match l6.accept() {
+                    Ok((stream, _)) => accepted = Some(stream),
+                    Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
+                    Err(e) => return Err(e.to_string()),
                 }
-                let text = String::from_utf8_lossy(&buf).to_string();
-                let target = text
-                    .lines()
-                    .next()
-                    .unwrap_or("")
-                    .split_whitespace()
-                    .nth(1)
-                    .unwrap_or("")
-                    .to_string();
-                let query = target.splitn(2, '?').nth(1).unwrap_or("").to_string();
-                let page = "<html><body style=\"font-family:sans-serif;text-align:center;padding-top:40px\"><h2>Login selesai</h2><p>Kembali ke MiniMe. Tab ini bisa ditutup.</p></body></html>";
-                let resp = format!(
+            }
+        }
+        if let Some(mut stream) = accepted {
+            let _ = stream.set_read_timeout(Some(Duration::from_secs(10)));
+            let mut buf = Vec::new();
+            let mut chunk = [0u8; 4096];
+            loop {
+                match stream.read(&mut chunk) {
+                    Ok(0) => break,
+                    Ok(n) => {
+                        buf.extend_from_slice(&chunk[..n]);
+                        if buf.len() > 8192 || buf.windows(4).any(|w| w == b"\r\n\r\n") {
+                            break;
+                        }
+                    }
+                    Err(_) => break,
+                }
+            }
+            let text = String::from_utf8_lossy(&buf).to_string();
+            let target = text
+                .lines()
+                .next()
+                .unwrap_or("")
+                .split_whitespace()
+                .nth(1)
+                .unwrap_or("")
+                .to_string();
+            let query = target.splitn(2, '?').nth(1).unwrap_or("").to_string();
+            let page = "<html><body style=\"font-family:sans-serif;text-align:center;padding-top:40px\"><h2>Login selesai</h2><p>Kembali ke MiniMe. Tab ini bisa ditutup.</p></body></html>";
+            let resp = format!(
                     "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
                     page.len(),
                     page
                 );
-                let _ = stream.write_all(resp.as_bytes());
-                if let Some(err) = query_value(&query, "error") {
-                    return Err(format!("Login ditolak provider: {err}"));
-                }
-                let code = query_value(&query, "code")
-                    .ok_or("Callback tanpa code — periksa redirect URI di aplikasi provider")?;
-                let state = query_value(&query, "state").unwrap_or_default();
-                let out = serde_json::json!({ "code": code, "state": state });
-                return Ok(out.to_string());
+            let _ = stream.write_all(resp.as_bytes());
+            if let Some(err) = query_value(&query, "error") {
+                return Err(format!("Login ditolak provider: {err}"));
             }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(200));
-            }
-            Err(e) => return Err(e.to_string()),
+            let code = query_value(&query, "code")
+                .ok_or("Callback tanpa code — periksa redirect URI di aplikasi provider")?;
+            let state = query_value(&query, "state").unwrap_or_default();
+            let out = serde_json::json!({ "code": code, "state": state });
+            return Ok(out.to_string());
+        } else {
+            std::thread::sleep(Duration::from_millis(200));
         }
     }
 }

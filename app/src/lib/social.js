@@ -317,10 +317,12 @@ function socWizHTML(platform) {
     body = '<p>' + tr('soc.wiz.t2') + '</p>'
       + '<div class="soc-row"><input type="text" readonly id="socWizUri" class="soc-wiz-uri" value="' + esc(OAUTH_REDIRECT) + '"> '
       + '<button id="socWizCopy" class="btn btn-sm">' + tr('soc.wiz.copy') + '</button></div>'
+      + '<div class="se-note">' + tr('soc.wiz.localhost') + '</div>'
       + '<div class="soc-row"><button id="socWizNext" class="btn btn-sm btn-primary">' + tr('soc.wiz.next') + '</button></div>'
       + '<div id="socWizNote" class="se-note"></div>';
   } else if (socWizStep === 3) {
     body = '<p>' + tr(w.uri) + '</p>'
+      + '<div class="se-note">' + tr('soc.wiz.localhost') + '</div>'
       + '<div class="soc-row"><button id="socWizNext" class="btn btn-sm btn-primary">' + tr('soc.wiz.next') + '</button></div>';
   } else {
     var useBtn = '';
