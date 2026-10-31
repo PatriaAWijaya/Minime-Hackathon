@@ -786,6 +786,89 @@ async function socEnsureXToken(ch) {
   return ch;
 }
 
+// Tempel code manual (v122): jalan keluar saat tangkapan callback otomatis
+// gagal — mis. browser menolak loopback atau listener keburu timeout.
+// Pengguna menyalin alamat lengkap dari address bar (atau code-nya saja);
+// code ditukar jadi token lewat jalur yang SAMA dengan tangkapan otomatis.
+function socParsePaste(text) {
+  var t = (text || '').trim();
+  if (!t) return null;
+  var q = t;
+  var qi = t.indexOf('?');
+  if (qi >= 0) q = t.slice(qi + 1);
+  var hi = q.indexOf('#');
+  if (hi >= 0) q = q.slice(0, hi);
+  var code = null; var state = null;
+  q.split('&').forEach(function (part) {
+    var eq = part.indexOf('=');
+    if (eq < 0) return;
+    var k = part.slice(0, eq);
+    var v = part.slice(eq + 1);
+    try { v = decodeURIComponent(v.replace(/\+/g, ' ')); } catch (_) {}
+    if (k === 'code') code = v;
+    if (k === 'state') state = v;
+  });
+  if (code) return { code: code, state: state };
+  if (t.indexOf(' ') < 0 && t.indexOf('/') < 0 && t.indexOf('?') < 0 && t.indexOf('=') < 0) return { code: t, state: null };
+  return null;
+}
+
+function socPasteHide() {
+  var w = document.getElementById('socPasteWrap');
+  if (!w) return;
+  w.style.display = 'none';
+  w.innerHTML = '';
+}
+
+function socPasteShow(platform, clientId, clientSecret, state) {
+  var w = document.getElementById('socPasteWrap');
+  if (!w) return;
+  w.style.display = 'block';
+  w.innerHTML = '<div>' + esc(tr('soc.paste.hint')) + '</div>'
+    + '<div class="soc-row" style="margin-top:8px"><input type="text" id="socPasteInput" placeholder="' + esc(tr('soc.paste.ph')) + '" style="flex:1;min-width:0"> '
+    + '<button id="socPasteUse" class="btn btn-sm btn-primary">' + esc(tr('soc.paste.use')) + '</button> '
+    + '<button id="socPasteClose" class="btn btn-sm">' + esc(tr('soc.paste.close')) + '</button></div>';
+  var inp = document.getElementById('socPasteInput');
+  var useBtn = document.getElementById('socPasteUse');
+  var closeBtn = document.getElementById('socPasteClose');
+  if (closeBtn) closeBtn.addEventListener('click', function () { socPasteHide(); });
+  if (useBtn) useBtn.addEventListener('click', async function () {
+    var parsed = socParsePaste(inp ? inp.value : '');
+    if (!parsed || !parsed.code) { socNote(tr('soc.paste.nocode')); return; }
+    socNote(tr('soc.paste.busy'));
+    await socMetaFinishWithCode(platform, clientId, clientSecret, parsed.code, parsed.state, state);
+  });
+}
+
+// Langkah bersama tangkapan otomatis + tempel manual: tukar code -> token
+// -> daftar Page -> picker. gotState null (code polos) = lewati cek state.
+async function socMetaFinishWithCode(platform, clientId, clientSecret, code, gotState, expectedState) {
+  if (gotState !== null && gotState !== undefined && gotState !== expectedState) { socNote(tr('soc.err.state')); return false; }
+  var tok;
+  try {
+    tok = await invoke('social_meta_exchange', { req: { code: code, redirectUri: OAUTH_REDIRECT, clientId: clientId, clientSecret: clientSecret } });
+  } catch (e) { socNote(String(e || '')); return false; }
+  var tj;
+  try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return false; }
+  if (!tj.access_token) { socNote(tr('soc.err.token_body')); return false; }
+  var pagesBody;
+  try { pagesBody = await invoke('social_meta_pages', { token: tj.access_token }); }
+  catch (e) { socNote(String(e || '')); return false; }
+  var pj;
+  try { pj = JSON.parse(pagesBody); } catch (_) { socNote(tr('soc.err.pages')); return false; }
+  var pages = (pj.data || []).filter(function (pg) { return pg.id && pg.access_token; });
+  if (!pages.length) { socNote(tr('soc.err.pages')); return false; }
+  socMetaPending = {
+    platform: platform, clientId: clientId, clientSecret: clientSecret,
+    userToken: tj.access_token,
+    expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
+    pages: pages,
+  };
+  socPasteHide();
+  renderNativePlanner();
+  return true;
+}
+
 async function socConnectMeta(platform, clientId, clientSecret) {
   // Scope cara Postiz (v71): FB Page +pages_manage_engagement
   // +read_insights; IG +pages_read_engagement +manage_comments.
@@ -798,6 +881,7 @@ async function socConnectMeta(platform, clientId, clientSecret) {
     + '&scope=' + encodeURIComponent(scope)
     + '&state=' + encodeURIComponent(state);
   socNote(tr('soc.wait_login'));
+  socPasteShow(platform, clientId, clientSecret, state);
   var listenP = invoke('social_oauth_listen');
   try { await invoke('open_external_url', { url: authUrl }); }
   catch (e) { socNote(String(e || '')); return; }
@@ -807,28 +891,7 @@ async function socConnectMeta(platform, clientId, clientSecret) {
   var parsed;
   try { parsed = JSON.parse(res); } catch (_) { socNote(tr('soc.err.callback')); return; }
   if (parsed.state !== state) { socNote(tr('soc.err.state')); return; }
-  var tok;
-  try {
-    tok = await invoke('social_meta_exchange', { req: { code: parsed.code, redirectUri: OAUTH_REDIRECT, clientId: clientId, clientSecret: clientSecret } });
-  } catch (e) { socNote(String(e || '')); return; }
-  var tj;
-  try { tj = JSON.parse(tok); } catch (_) { socNote(tr('soc.err.token_body')); return; }
-  if (!tj.access_token) { socNote(tr('soc.err.token_body')); return; }
-  // facebook_page + instagram: ambil daftar Page, tampilkan picker.
-  var pagesBody;
-  try { pagesBody = await invoke('social_meta_pages', { token: tj.access_token }); }
-  catch (e) { socNote(String(e || '')); return; }
-  var pj;
-  try { pj = JSON.parse(pagesBody); } catch (_) { socNote(tr('soc.err.pages')); return; }
-  var pages = (pj.data || []).filter(function (pg) { return pg.id && pg.access_token; });
-  if (!pages.length) { socNote(tr('soc.err.pages')); return; }
-  socMetaPending = {
-    platform: platform, clientId: clientId, clientSecret: clientSecret,
-    userToken: tj.access_token,
-    expiresAt: tj.expires_in ? Date.now() + tj.expires_in * 1000 : 0,
-    pages: pages,
-  };
-  renderNativePlanner();
+  await socMetaFinishWithCode(platform, clientId, clientSecret, parsed.code, parsed.state, state);
 }
 
 // Threads mandiri (cara Postiz, v71): authorize di threads.net +

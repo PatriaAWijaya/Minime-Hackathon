@@ -936,6 +936,7 @@
     <div class="view" id="view-planner">
       <div class="scroll">
         <div id="socNotice" style="display:none;margin:0 14px 12px;padding:10px 12px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px"></div>
+        <div id="socPasteWrap" style="display:none;margin:0 14px 12px;padding:10px 12px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px"></div>
         <div id="nativePlanner"></div>
         <div id="socItemDlg"></div>
       </div>

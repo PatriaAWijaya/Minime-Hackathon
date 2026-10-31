@@ -63,6 +63,12 @@ async function invokeStub(cmd, args) {
   if (cmd === 'social_oauth_listen') {
     return new Promise(() => {});
   }
+  if (cmd === 'social_meta_exchange') {
+    return '{"access_token":"rig-meta-tok","expires_in":3600}';
+  }
+  if (cmd === 'social_meta_pages') {
+    return '{"data":[{"id":"rig-page-1","name":"Rig Page","access_token":"rig-page-tok"}]}';
+  }
   if (cmd === 'social_publish') {
     return 'ok';
   }
@@ -422,6 +428,34 @@ try {
   check('token kedaluwarsa + kanal terpilih -> tombol socConn-linkedin muncul', !!document.getElementById('socConn-linkedin'), '');
   check('nota persisten #socNotice ada di view-planner', !!document.getElementById('socNotice'), '');
   check('dialog detail chip terkirim #socItemDlg ada di view-planner', !!document.getElementById('socItemDlg'), '');
+
+  // 10. Tempel code manual (v122): form muncul saat connect dimulai
+  // (listener menggantung), tukar code -> picker Page.
+  store.set('minime.social', JSON.stringify({ instagram: { clientId: 'rig-ig-id', clientSecret: 'rig-ig-sec' } }));
+  dom.window.renderPlanner();
+  await tick(100);
+  document.getElementById('socAddChannel').click();
+  await tick(100);
+  globalThis.__lastOAuthUrl = '';
+  document.querySelector('[data-soc-tile="instagram"]').click();
+  await tick(100);
+  check('v122: form tempel code muncul saat connect dimulai', !!document.getElementById('socPasteInput') && !!document.getElementById('socPasteUse') && document.getElementById('socPasteWrap').style.display === 'block', document.getElementById('socPasteWrap')?.style.display);
+  check('v122: dialog Meta dibuka (client + localhost)', (globalThis.__lastOAuthUrl || '').includes('facebook.com') && (globalThis.__lastOAuthUrl || '').includes('localhost%3A4317'), globalThis.__lastOAuthUrl);
+  const mState = (globalThis.__lastOAuthUrl.match(/state=([^&]+)/) || [])[1] || '';
+  const pasteInput = document.getElementById('socPasteInput');
+  pasteInput.value = 'sampah tanpa code';
+  document.getElementById('socPasteUse').click();
+  await tick(100);
+  check('v122: tempel sampah -> nota nocode, form tetap', (document.getElementById('socNotice')?.textContent || '').length > 0 && !!document.getElementById('socPasteInput'), document.getElementById('socNotice')?.textContent);
+  pasteInput.value = 'http://localhost:4317/callback?code=RIG-CODE-SALAH&state=STATE-SALAH';
+  document.getElementById('socPasteUse').click();
+  await tick(100);
+  check('v122: state salah -> nota state, form tetap', !!document.getElementById('socPasteInput'), document.getElementById('socNotice')?.textContent);
+  pasteInput.value = 'http://localhost:4317/callback?code=RIG-CODE&state=' + mState;
+  document.getElementById('socPasteUse').click();
+  await waitFor(() => !!document.querySelector('[data-soc-pick="rig-page-1"]'), 'picker Page rig', 100);
+  check('v122: tempel code benar -> picker Page muncul', !!document.querySelector('[data-soc-pick="rig-page-1"]'), '');
+  check('v122: form tempel code hilang setelah sukses', !document.getElementById('socPasteInput'), '');
 
 } catch (e) {
   // eslint-disable-next-line no-console
