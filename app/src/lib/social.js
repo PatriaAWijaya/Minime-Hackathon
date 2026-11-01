@@ -1099,6 +1099,10 @@ async function socConnectCreds(platform, clientId, clientSecret) {
 // sehingga render ulang (toggle kanal, buka popup channel) tidak
 // menghilangkan draf yang sedang diketik.
 var socComposer = null; // {date, editId, orig, text, plats, src, media, when, repeat, mediaOpen}
+var socPendingCaption = '';
+export function socSetCaption(text) {
+  if (typeof text === 'string' && text.trim()) socPendingCaption = text;
+}
 var socComposerConfirm = false;
 
 var SOC_LIMITS = { threads: 500, x: 280, instagram: 2200, tiktok: 2000, linkedin: 3000, facebook_page: 63206, youtube: 5000, facebook: 63206 };
@@ -1115,6 +1119,7 @@ function socComposerOpen(dateStr, editId) {
   var s = socStore();
   var connected = PLATFORMS.filter(function (p) { return tokenValid(s[p.id]); }).map(function (p) { return p.id; });
   var st = { date: dateStr, editId: editId || null, orig: null, text: '', plats: connected.slice(), src: 'library', media: null, when: base, repeat: '', mediaOpen: true };
+  if (!editId && socPendingCaption) { st.text = socPendingCaption; socPendingCaption = ''; }
   if (editId) {
     var it = queueLoad().find(function (x) { return String(x.id) === String(editId); });
     if (it) {

@@ -24,21 +24,27 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
-import { fmtIdrNum } from './cost.js';
+import { fmtIdrNum, recordLiveCost } from './cost.js';
 import { readKeys } from './chat.js';
-import { libAddImage } from './v5logic.js';
+import { libAddImage, libAddScript } from './v5logic.js';
+import { ModelRouter, defaultRouterConfig } from '../../../src/router';
+import { vsSetScript } from './voicestudio.js';
+import { socSetCaption } from './social.js';
 import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, addImgSpend, readImgSpend, readThumb, thumbCache } from './image-api.js';
 import { brandSuffix } from './brand.js';
 import { esc } from './esc.js';
 
 const FLOW_LS = 'minime.imageFlow';
 
-type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number };
-const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0 };
+type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number; output: string; duration: number; scenes: number; slides: number; title: string; subtitle: string; listicle: string };
+const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0, output: 'poster', duration: 30, scenes: 4, slides: 6, title: '', subtitle: '', listicle: '' };
 let state: FlowState = { ...DEFAULTS };
 
 
-const STYLES = ['product photography', 'illustration', 'flat design', 'poster design', 'photorealistic'];
+// v163: Gaya Visual dipisah dari Output Desain (perintah Patria 1 Nov
+// 15:56). 'poster design' keluar dari gaya — Poster kini Output Desain.
+// Nilai lama 'poster design' di storage jatuh ke default via guard loadState.
+const STYLES = ['photorealistic', 'product photography', 'flat design', 'illustration', '3D model'];
 
 function el(id: string): HTMLElement | null {
   return document.getElementById(id);
@@ -46,6 +52,10 @@ function el(id: string): HTMLElement | null {
 
 function sentPrompt(): string {
   let p = state.brief.trim();
+  if (state.title.trim()) p += '. Title: ' + state.title.trim();
+  if (state.subtitle.trim()) p += '. Subtitle: ' + state.subtitle.trim();
+  const items = state.listicle.split('\n').map((x) => x.trim()).filter(Boolean);
+  if (items.length) p += '. List: ' + items.join('; ');
   if (state.style) p += ', in ' + state.style + ' style';
   if (state.textfree) p += ', no text, no words, no letters, no watermark';
   const b = brandSuffix();
@@ -68,6 +78,13 @@ function loadState(): void {
         n: [1, 2, 4].includes(o.n) ? o.n : 1,
         bulk: bulk.length ? bulk : null,
         bulkActive,
+        output: ['poster', 'storyboard', 'carousel'].includes(o.output) ? o.output : 'poster',
+        duration: Number.isInteger(o.duration) && (o.duration as number) >= 5 && (o.duration as number) <= 60 ? (o.duration as number) : 30,
+        scenes: Number.isInteger(o.scenes) && (o.scenes as number) >= 2 && (o.scenes as number) <= 6 ? (o.scenes as number) : 4,
+        slides: Number.isInteger(o.slides) && (o.slides as number) >= 6 && (o.slides as number) <= 10 ? (o.slides as number) : 6,
+        title: typeof o.title === 'string' ? o.title : '',
+        subtitle: typeof o.subtitle === 'string' ? o.subtitle : '',
+        listicle: typeof o.listicle === 'string' ? o.listicle : '',
       };
     }
   } catch { state = { ...DEFAULTS }; }
@@ -97,13 +114,16 @@ function renderCost(): void {
   }
 }
 
-type Variant = { b64: string; url: string; name: string };
+type Variant = { b64: string; url: string; name: string; label: string; prompt: string };
 let variants: Variant[] = [];
 let genBrief = '';
 
 function variantCard(v: Variant, i: number): string {
-  return `<div class="img-card"><img src="${v.url}" alt=""><div class="se-note">${esc(v.name)}</div>`
-    + `<button class="se-btn2" data-img-save="${i}">${esc(tr('img.save'))}</button></div>`;
+  return `<div class="img-card"><img src="${v.url}" alt=""><div class="se-note">${esc(v.name)}${v.label ? ' · ' + esc(v.label) : ''}</div>`
+    + `<div class="img-canva-row"><button class="se-btn2" data-img-save="${i}">${esc(tr('img.save'))}</button> `
+    + `<button class="se-btn2" data-img-canva="${i}">${esc(tr('img.canva.edit'))}</button> `
+    + `<input type="file" accept="image/*" data-img-canvafile="${i}"> `
+    + `<button class="se-btn2" data-img-canvaup="${i}">${esc(tr('img.canva.import'))}</button></div></div>`;
 }
 
 function renderVariants(): void {
@@ -112,6 +132,12 @@ function renderVariants(): void {
   g.innerHTML = variants.map(variantCard).join('');
   g.querySelectorAll('[data-img-save]').forEach((b) => {
     b.addEventListener('click', () => void saveVariant(Number((b as HTMLElement).dataset.imgSave)));
+  });
+  g.querySelectorAll('[data-img-canva]').forEach((b) => {
+    b.addEventListener('click', () => void canvaEdit(Number((b as HTMLElement).dataset.imgCanva)));
+  });
+  g.querySelectorAll('[data-img-canvaup]').forEach((b) => {
+    b.addEventListener('click', () => void canvaImport(Number((b as HTMLElement).dataset.imgCanvaup)));
   });
 }
 
@@ -171,6 +197,53 @@ async function saveVariant(i: number): Promise<void> {
   await renderGallery();
 }
 
+// v163: round-trip Canva per varian, pola batch-flow (handoff browser,
+// BUKAN API — Canva tidak membuka Magic Media untuk publik): Edit =
+// unduh varian + salin prompt + buka canva.com di browser luar; Impor =
+// file hasil Canva dibaca dan ditambahkan sebagai varian baru (label
+// Canva) yang kemudian bisa disimpan ke Library seperti varian biasa.
+async function canvaEdit(i: number): Promise<void> {
+  const v = variants[i];
+  if (!v) return;
+  try { await navigator.clipboard.writeText(v.prompt); } catch { /* clipboard boleh gagal */ }
+  try {
+    const a = document.createElement('a');
+    a.href = v.url; a.download = v.name;
+    document.body.appendChild(a); a.click(); a.remove();
+  } catch { /* abaikan */ }
+  try { await invoke('open_external_url', { url: 'https://www.canva.com/' }); } catch { /* abaikan: rig/jsdom tanpa Tauri */ }
+  setNote(tr('img.canva.opened'));
+}
+
+function readFileB64(f: File): Promise<{ b64: string; url: string }> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const res = (r.result as string) || '';
+      resolve({ b64: res.split(',')[1] || '', url: res });
+    };
+    r.onerror = () => reject(new Error('gagal membaca file'));
+    r.readAsDataURL(f);
+  });
+}
+
+async function canvaImport(i: number): Promise<void> {
+  const input = document.querySelector(`[data-img-canvafile="${i}"]`) as HTMLInputElement | null;
+  const files = input?.files;
+  if (!files || !files.length) { setNote(tr('img.canva.pick')); return; }
+  const ts = Date.now();
+  let added = 0;
+  for (const f of Array.from(files)) {
+    try {
+      const { b64, url } = await readFileB64(f);
+      if (!b64) continue;
+      variants.push({ b64, url, name: `img-canva-${ts}-${Math.floor(Math.random() * 1000)}.webp`, label: 'Canva', prompt: sentPrompt() });
+      added++;
+    } catch { /* lanjut ke file berikutnya */ }
+  }
+  if (added) { renderVariants(); setNote(tr('img.canva.imported')); }
+}
+
 async function generate(): Promise<void> {
   const brief = state.brief.trim();
   if (!brief) { setNote(tr('img.err.brief')); return; }
@@ -178,16 +251,30 @@ async function generate(): Promise<void> {
   if (!key) { setNote(tr('img.err.nokey')); return; }
   const btn = el('img-generate') as HTMLButtonElement | null;
   if (btn) btn.disabled = true;
-  setNote(tr('img.status.gen', { n: state.n }));
+  // v163: jumlah gambar mengikuti Output Desain — Poster pakai n,
+  // Story Board pakai scenes (satu gambar per keyframe), Carousel
+  // pakai slides. Tiap gambar diminta terpisah (n=1) agar prompt
+  // scene/slide-nya berbeda — bukan n varian dari satu prompt.
+  const count = state.output === 'poster' ? state.n : state.output === 'storyboard' ? state.scenes : state.slides;
+  const base = sentPrompt();
+  setNote(tr('img.status.gen', { n: count }));
   try {
-    const b64s = await metaGenerateImage(key, sentPrompt(), state.n, RATIO_SIZE[state.ratio]);
     genBrief = brief;
     const ts = Date.now();
-    variants = b64s.map((b64, k) => ({
-      b64,
-      url: 'data:image/webp;base64,' + b64,
-      name: `img-${ts}-${k}.webp`,
-    }));
+    const next: Variant[] = [];
+    for (let i = 0; i < count; i++) {
+      const prompt = state.output === 'poster' ? base
+        : state.output === 'storyboard' ? base + `, scene ${i + 1} of ${count} keyframe`
+        : base + `, slide ${i + 1} of ${count}`;
+      const label = state.output === 'poster' ? 'Poster'
+        : state.output === 'storyboard' ? `Scene ${i + 1}/${count}`
+        : `Slide ${i + 1}/${count}`;
+      const b64s = await metaGenerateImage(key, prompt, 1, RATIO_SIZE[state.ratio]);
+      for (const b64 of b64s) {
+        next.push({ b64, url: 'data:image/webp;base64,' + b64, name: `img-${ts}-${next.length}.webp`, label, prompt });
+      }
+    }
+    variants = next;
     if (variants.length === 0) { setNote(tr('img.err.api') + ' (respons tanpa gambar)'); return; }
     const usd = variants.length * IMG_PRICE_USD;
     addImgSpend(variants.length);
@@ -197,6 +284,78 @@ async function generate(): Promise<void> {
       + ' ' + tr('img.cost', { n: variants.length, usd: usd.toFixed(2), idr: fmtIdrNum(Math.round(usd * IMG_USD_RATE)) }));
   } catch (e) {
     setNote(tr('img.err.api') + ' ' + (e instanceof Error ? e.message : String(e)));
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function modelText(prompt: string, trace: string): Promise<string> {
+  const keys = readKeys();
+  const cfg = defaultRouterConfig();
+  cfg.geminiApiKey = keys.gemini; cfg.metaApiKey = keys.meta;
+  const router = new ModelRouter(cfg);
+  const r = await router.callWithFallback(prompt, trace);
+  recordLiveCost(r);
+  return r.text;
+}
+
+// v163: Setujui draft — gambar selalu tersimpan dulu (dedup aman
+// dipanggil ulang), lalu naskah turunan dibuat per output: Poster /
+// Carousel = caption -> Library; Story Board = rencana video (teks
+// rakitan, tanpa model) -> Video Editor, naskah VO (model) -> Voice
+// Editor + Library, caption (model) -> komposer Planner + Library.
+// Gagal model tidak menggagalkan approval: gambar tetap tersimpan,
+// placeholder yang gagal dibiarkan kosong + dicatat di note, dan
+// Setujui ulang aman (caption/VO dedup konten persis di Library).
+async function approveDraft(): Promise<void> {
+  if (!variants.length) { setNote(tr('img.approve.nodraft')); return; }
+  const btn = el('img-approve') as HTMLButtonElement | null;
+  if (btn) btn.disabled = true;
+  try {
+    for (let i = 0; i < variants.length; i++) await saveVariant(i);
+    const title = state.title.trim() || genBrief.slice(0, 40) || 'Draft';
+    const parts: string[] = [];
+    if (state.output === 'storyboard') {
+      const sceneLines = Array.from({ length: state.scenes }, (_, i) => `Scene ${i + 1}: keyframe ${i + 1} dari ${state.scenes}`).join('\n');
+      const plan = [
+        `Rencana perakitan video — ${title}`,
+        `Durasi: ${state.duration} detik · ${state.scenes} scene keyframe · Rasio: ${state.ratio}`,
+        state.subtitle.trim() ? `Subjudul: ${state.subtitle.trim()}` : '',
+        `Brief: ${state.brief.trim()}`,
+        state.listicle.trim() ? `Daftar:\n${state.listicle.trim()}` : '',
+        sceneLines,
+      ].filter(Boolean).join('\n');
+      const w = window as unknown as Record<string, unknown>;
+      if (typeof w.veSetPlan === 'function') (w.veSetPlan as (t: string) => void)(plan);
+      parts.push(tr('img.approve.video'));
+      try {
+        const vo = await modelText(
+          `Buatkan naskah voice over Bahasa Indonesia untuk video ${state.duration} detik dengan ${state.scenes} scene keyframe. Judul: ${title}. Brief: ${state.brief.trim()}. Untuk tiap scene, tulis timing dan kalimat VO-nya. Hanya naskah, tanpa penjelasan tambahan.`,
+          'trace-img-vo-' + Date.now());
+        vsSetScript(vo);
+        libAddScript(`Naskah VO: ${title}`, vo);
+        parts.push(tr('img.approve.voice'));
+      } catch { parts.push(tr('img.approve.vofail')); }
+      try {
+        const cap = await modelText(
+          `Buatkan satu caption media sosial Bahasa Indonesia untuk video teaser berikut. Judul: ${title}. Brief: ${state.brief.trim()}. Caption singkat, menarik, siap posting, tanpa penjelasan tambahan.`,
+          'trace-img-cap-' + Date.now());
+        socSetCaption(cap);
+        libAddScript(`Caption: ${title}`, cap);
+        parts.push(tr('img.approve.caption'));
+      } catch { parts.push(tr('img.approve.captionfail')); }
+    } else {
+      const kindLabel = state.output === 'carousel' ? `carousel ${state.slides} slide` : 'poster';
+      try {
+        const cap = await modelText(
+          `Buatkan satu caption media sosial Bahasa Indonesia untuk ${kindLabel} berikut. Judul: ${title}. ${state.subtitle.trim() ? `Subjudul: ${state.subtitle.trim()}. ` : ''}${state.listicle.trim() ? `Daftar: ${state.listicle.trim()}. ` : ''}Brief: ${state.brief.trim()}. Caption singkat, menarik, siap posting, tanpa penjelasan tambahan.`,
+          'trace-img-cap-' + Date.now());
+        libAddScript(`Caption: ${title}`, cap);
+        parts.push(tr('img.approve.caption'));
+      } catch { parts.push(tr('img.approve.captionfail')); }
+    }
+    setNote(tr('img.approve.done') + ' ' + parts.join(' '));
+    await renderGallery();
   } finally {
     if (btn) btn.disabled = false;
   }
@@ -213,6 +372,33 @@ function syncForm(): void {
   if (tf) tf.checked = state.textfree;
   const n = el('img-n') as HTMLSelectElement | null;
   if (n) n.value = String(state.n);
+  const output = el('img-output') as HTMLSelectElement | null;
+  if (output) output.value = state.output;
+  const duration = el('img-duration') as HTMLInputElement | null;
+  if (duration) duration.value = String(state.duration);
+  const scenes = el('img-scenes') as HTMLSelectElement | null;
+  if (scenes) scenes.value = String(state.scenes);
+  const slides = el('img-slides') as HTMLSelectElement | null;
+  if (slides) slides.value = String(state.slides);
+  const title = el('img-title') as HTMLInputElement | null;
+  if (title) title.value = state.title;
+  const subtitle = el('img-subtitle') as HTMLInputElement | null;
+  if (subtitle) subtitle.value = state.subtitle;
+  const listicle = el('img-listicle') as HTMLTextAreaElement | null;
+  if (listicle) listicle.value = state.listicle;
+  renderImgOutput();
+}
+
+// v163: blok kondisional per Output Desain — Poster: rasio + varian;
+// Story Board: durasi + scene + rasio; Carousel: jumlah slide saja
+// (rasio ikut nilai tersimpan, kontrolnya disembunyikan).
+function renderImgOutput(): void {
+  const vis = (id: string, show: boolean) => { const e = el(id); if (e) e.style.display = show ? '' : 'none'; };
+  vis('img-ratio-wrap', state.output !== 'carousel');
+  vis('img-n-wrap', state.output === 'poster');
+  vis('img-duration-wrap', state.output === 'storyboard');
+  vis('img-scenes-wrap', state.output === 'storyboard');
+  vis('img-slides-wrap', state.output === 'carousel');
 }
 
 function bind<T extends HTMLElement>(id: string, ev: string, fn: (e: T) => void): void {
@@ -279,6 +465,14 @@ export function initImageFlow(): void {
   bind<HTMLSelectElement>('img-style', 'change', (e) => { state.style = e.value; saveState(); renderPreview(); });
   bind<HTMLInputElement>('img-textfree', 'change', (e) => { state.textfree = e.checked; saveState(); renderPreview(); });
   bind<HTMLSelectElement>('img-n', 'change', (e) => { state.n = Number(e.value); saveState(); });
+  bind<HTMLSelectElement>('img-output', 'change', (e) => { state.output = e.value; saveState(); renderImgOutput(); renderPreview(); });
+  bind<HTMLInputElement>('img-duration', 'change', (e) => { const v = Math.round(Number(e.value)); state.duration = Number.isFinite(v) ? Math.min(60, Math.max(5, v)) : 30; saveState(); syncForm(); });
+  bind<HTMLSelectElement>('img-scenes', 'change', (e) => { state.scenes = Number(e.value); saveState(); });
+  bind<HTMLSelectElement>('img-slides', 'change', (e) => { state.slides = Number(e.value); saveState(); });
+  bind<HTMLInputElement>('img-title', 'input', (e) => { state.title = e.value; saveState(); renderPreview(); });
+  bind<HTMLInputElement>('img-subtitle', 'input', (e) => { state.subtitle = e.value; saveState(); renderPreview(); });
+  bind<HTMLTextAreaElement>('img-listicle', 'input', (e) => { state.listicle = e.value; saveState(); renderPreview(); });
+  bind('img-approve', 'click', () => void approveDraft());
   bind('img-generate', 'click', () => void generate());
   // v146: Bersihkan — hapus brief (+ tab bulk), pertahankan rasio/gaya/textfree/n.
   bind('img-clear', 'click', () => { state.brief = ''; state.bulk = null; state.bulkActive = 0; saveState(); syncForm(); renderPreview(); renderBulkTabs(); });

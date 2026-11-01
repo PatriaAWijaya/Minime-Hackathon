@@ -52,13 +52,29 @@ async function invokeStub(cmd, args) {
   throw new Error('unexpected invoke ' + cmd);
 }
 
-async function fetchStub(url) {
+async function fetchStub(url, opts) {
   log.push('fetch:' + String(url));
-  // Bentuk respons Meta terverifikasi probe live 28 Okt 2026.
+  let body = {};
+  try { body = typeof opts?.body === 'string' ? JSON.parse(opts.body) : (opts?.body || {}); } catch (_) { body = {}; }
+  const u = String(url);
+  // v163: cabang chat untuk caption/VO model (approve draft) — VO
+  // dibedakan dari caption lewat kata 'voice over' di prompt.
+  if (!u.includes('images/generations') && !u.includes('127.0.0.1') && !u.includes('localhost')) {
+    const text = JSON.stringify(body);
+    return makeResp({
+      jsonData: {
+        choices: [{ message: { content: text.includes('voice over') ? 'VO-UJI' : 'CAPTION-UJI' } }],
+        usage: { prompt_tokens: 42, completion_tokens: 30 },
+      },
+    });
+  }
+  // Gambar: hormati n seperti API nyata (sebelumnya stub selalu 2,
+  // padahal generate v163 memanggil per gambar dengan n=1).
+  const n = Number.isInteger(body.n) && body.n > 0 && body.n <= 10 ? body.n : 2;
   return makeResp({
     jsonData: {
       created: 1793000000,
-      data: [{ b64_json: PNG_1X1 }, { b64_json: PNG_1X1 }],
+      data: Array.from({ length: n }, () => ({ b64_json: PNG_1X1 })),
       output_format: 'webp',
       usage: {},
     },
@@ -213,6 +229,58 @@ try {
   document.querySelector('#img-gallery .img-thumb')?.click();
   await tick(100);
   check('v158: klik thumbnail memuat brief (uji galeri 2)', (document.getElementById('img-brief')?.value || '').includes('uji galeri 2'), document.getElementById('img-brief')?.value || '');
+
+  // 9. v163: Output Desain + kondisional + Canva + Setujui draft.
+  const disp = (id) => document.getElementById(id)?.style.display || '';
+  check('v163: default Poster (rasio+varian tampil, durasi/scene/slide sembunyi)', disp('img-ratio-wrap') !== 'none' && disp('img-n-wrap') !== 'none' && disp('img-duration-wrap') === 'none' && disp('img-scenes-wrap') === 'none' && disp('img-slides-wrap') === 'none', [disp('img-ratio-wrap'), disp('img-n-wrap'), disp('img-duration-wrap'), disp('img-scenes-wrap'), disp('img-slides-wrap')].join('|'));
+  const setSel = async (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new dom.window.Event('change', { bubbles: true })); await tick(100); };
+  await setSel('img-output', 'storyboard');
+  check('v163: Story Board (durasi+scene+rasio tampil, varian sembunyi)', disp('img-duration-wrap') !== 'none' && disp('img-scenes-wrap') !== 'none' && disp('img-ratio-wrap') !== 'none' && disp('img-n-wrap') === 'none', [disp('img-duration-wrap'), disp('img-scenes-wrap'), disp('img-ratio-wrap'), disp('img-n-wrap')].join('|'));
+  await setSel('img-output', 'carousel');
+  check('v163: Carousel (slide tampil, rasio+varian sembunyi)', disp('img-slides-wrap') !== 'none' && disp('img-ratio-wrap') === 'none' && disp('img-n-wrap') === 'none', [disp('img-slides-wrap'), disp('img-ratio-wrap'), disp('img-n-wrap')].join('|'));
+  await setSel('img-output', 'poster');
+  check('v163: kembali ke Poster', disp('img-ratio-wrap') !== 'none' && disp('img-n-wrap') !== 'none', [disp('img-ratio-wrap'), disp('img-n-wrap')].join('|'));
+
+  // Poster: generate -> tombol Canva per varian -> impor -> Setujui.
+  briefEl.value = 'poster uji';
+  briefEl.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(100);
+  document.getElementById('img-generate').click();
+  await waitFor(() => document.querySelectorAll('#img-variants img').length === 2, '2 varian poster', 120);
+  check('v163: tiap varian punya tombol Edit + Impor Canva', document.querySelectorAll('#img-variants [data-img-canva]').length === 2 && document.querySelectorAll('#img-variants [data-img-canvaup]').length === 2, document.querySelectorAll('#img-variants [data-img-canva]').length + '/' + document.querySelectorAll('#img-variants [data-img-canvaup]').length);
+  const fileInput = document.querySelector('#img-variants [data-img-canvafile]');
+  const pngBytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  const canvaFile = new dom.window.File([pngBytes], 'canva.png', { type: 'image/png' });
+  Object.defineProperty(fileInput, 'files', { value: [canvaFile] });
+  document.querySelector('#img-variants [data-img-canvaup]').click();
+  await waitFor(() => document.querySelectorAll('#img-variants img').length === 3, 'varian impor Canva tampil', 120);
+  check('v163: impor Canva menambah varian', document.querySelectorAll('#img-variants img').length === 3, document.querySelectorAll('#img-variants img').length);
+  const rowsBeforeApprove = libRows();
+  document.getElementById('img-approve').click();
+  await waitFor(() => (document.getElementById('img-status')?.textContent || '').includes('disetujui'), 'note Setujui poster', 120);
+  await tick(200);
+  const libAfterPoster = JSON.parse(store.get('minime.library.added') || '[]');
+  check('v163: Setujui poster menyimpan gambar + caption ke Library', libRows() >= rowsBeforeApprove + 3 && libAfterPoster.some((x) => (x.content || '').includes('CAPTION-UJI')), 'rows=' + libRows() + '/' + rowsBeforeApprove + ' cap=' + libAfterPoster.some((x) => (x.content || '').includes('CAPTION-UJI')));
+
+  // Story Board: generate 2 scene -> Setujui -> plan Video + VO Voice + caption.
+  await setSel('img-output', 'storyboard');
+  await setSel('img-scenes', '2');
+  briefEl.value = 'story uji';
+  briefEl.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(100);
+  document.getElementById('img-generate').click();
+  await waitFor(() => [...document.querySelectorAll('#img-variants .se-note')].some((el) => (el.textContent || '').includes('Scene 2')), 'varian Scene 2 tampil', 120);
+  const notes163 = [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent || '').join(' ');
+  check('v163: storyboard menghasilkan keyframe Scene 1 + Scene 2', notes163.includes('Scene 1') && notes163.includes('Scene 2'), notes163.slice(0, 200));
+  document.getElementById('img-approve').click();
+  await waitFor(() => (document.getElementById('img-status')?.textContent || '').includes('disetujui'), 'note Setujui storyboard', 120);
+  await tick(200);
+  const libAfterSb = JSON.parse(store.get('minime.library.added') || '[]');
+  const ve2 = JSON.parse(store.get('minime.ve2') || '{}');
+  check('v163: storyboard menyimpan VO + caption ke Library', libAfterSb.some((x) => (x.content || '').includes('VO-UJI')) && libAfterSb.some((x) => (x.content || '').includes('CAPTION-UJI')), libAfterSb.map((x) => (x.content || '').slice(0, 20)).join('|').slice(0, 200));
+  check('v163: rencana video masuk ke state Video Editor', (ve2.plan || '').includes('story uji'), (ve2.plan || '').slice(0, 120));
+  check('v163: naskah VO masuk ke kolom teks Voice Editor', (document.getElementById('vsText')?.value || '').includes('VO-UJI'), (document.getElementById('vsText')?.value || '').slice(0, 60));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-image exception :: ' + (e && e.stack ? e.stack : e));

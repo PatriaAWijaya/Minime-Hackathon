@@ -423,3 +423,10 @@ export async function vsSetupLaunch(): Promise<void> {
     setNote('vsSetupNote', tr('vs.error') + (e instanceof Error ? e.message : String(e)));
   }
 }
+
+/** Set teks TTS dari luar (dipakai handoff Story Board v163: naskah VO
+ *  otomatis masuk ke kolom teks Voice Editor, siap di-generate). */
+export function vsSetScript(text: string): void {
+  const ta = document.getElementById('vsText') as HTMLTextAreaElement | null;
+  if (ta) ta.value = text;
+}

@@ -60,6 +60,7 @@
     initBatchFlow();
     (window as unknown as Record<string, unknown>).refreshImgSpend = () => { imgSpend = readImgSpend(); };
     (window as unknown as Record<string, unknown>).refreshLiveCost = () => { liveCost = readLiveCost(); imgSpend = readImgSpend(); };
+    (window as unknown as Record<string, unknown>).veSetPlan = (t: string) => { ve2Plan = t; ve2SaveState(); };
     renderKeyButtons();
   });
 
@@ -221,7 +222,7 @@
   // klip gambar berurutan bersama track Video.
   interface Ve2Clip { id: string; name: string; track: 'Video' | 'B-Roll' | 'Audio' | 'Teks'; start: number; dur: number; src: string; effect: 'none' | 'fade' | 'zoom'; }
   interface Ve2Asset { id: string; name: string; icon: string; kind: 'Video' | 'B-Roll' | 'Audio' | 'Teks'; src: string; duration: number; }
-  function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number } | null {
+  function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number; plan: string } | null {
     try {
       const raw = localStorage.getItem('minime.ve2');
       if (!raw) return null;
@@ -230,7 +231,7 @@
       const tracks = ['Video', 'B-Roll', 'Audio', 'Teks'];
       const clips: Ve2Clip[] = v.clips.filter((c: any) => c && typeof c.id === 'string' && typeof c.name === 'string' && Number.isFinite(c.start) && Number.isFinite(c.dur)).map((c: any) => ({ id: c.id, name: c.name, track: (tracks.includes(c.track) ? c.track : 'Video') as Ve2Clip['track'], start: Number(c.start), dur: Number(c.dur), src: typeof c.src === 'string' ? c.src : '', effect: (['fade', 'zoom'].includes(c.effect) ? c.effect : 'none') as Ve2Clip['effect'] }));
       const assets: Ve2Asset[] = v.assets.filter((a: any) => a && typeof a.id === 'string' && typeof a.name === 'string').map((a: any) => ({ id: a.id, name: a.name, icon: typeof a.icon === 'string' ? a.icon : '🎬', kind: (tracks.includes(a.kind) ? a.kind : 'Video') as Ve2Asset['kind'], src: typeof a.src === 'string' ? a.src : '', duration: Number.isFinite(a.duration) ? Number(a.duration) : 0 }));
-      return { clips, assets, out: typeof v.out === 'string' ? v.out : '', zoom: [0.5, 1, 2].includes(Number(v.zoom)) ? Number(v.zoom) : 1 };
+      return { clips, assets, out: typeof v.out === 'string' ? v.out : '', zoom: [0.5, 1, 2].includes(Number(v.zoom)) ? Number(v.zoom) : 1, plan: typeof v.plan === 'string' ? v.plan : '' };
     } catch { return null; }
   }
   const ve2Loaded = ve2Load();
@@ -246,6 +247,7 @@
   let ve2Assets = $state<Ve2Asset[]>(ve2IsDummy ? [] : (ve2Loaded?.assets ?? []));
   let ve2Out = $state(ve2Loaded?.out || '/Users/mac/Movies/minime-ve2.mp4');
   let ve2Zoom = $state(ve2Loaded?.zoom ?? 1);
+  let ve2Plan = $state(ve2Loaded?.plan ?? '');
   if (ve2IsDummy) ve2SaveState();
   let ve2SelId = $state(ve2Clips[0]?.id ?? '');
   let ve2Status = $state('');
@@ -286,7 +288,7 @@
     return ve2Clips.find((c) => c.id === ve2SelId);
   }
   function ve2SaveState() {
-    try { localStorage.setItem('minime.ve2', JSON.stringify({ clips: ve2Clips, assets: ve2Assets, out: ve2Out, zoom: ve2Zoom })); } catch { /* kuota penuh: abaikan */ }
+    try { localStorage.setItem('minime.ve2', JSON.stringify({ clips: ve2Clips, assets: ve2Assets, out: ve2Out, zoom: ve2Zoom, plan: ve2Plan })); } catch { /* kuota penuh: abaikan */ }
   }
   function ve2SelectClip(id: string) {
     ve2SelId = id;
@@ -715,19 +717,32 @@
           </div>
           <div class="img-main">
           <div id="img-bulk-tabs"></div>
-          <div class="se-group"><label>{t('img.brief', lang)}<textarea id="img-brief" rows="4" class="se-field" placeholder={t('img.brief.ph', lang)}></textarea></label></div>
-          <div class="se-group"><label>{t('img.ratio', lang)}<select id="img-ratio" class="se-field">
+          <div class="se-group"><label>{t('img.brief', lang)}<textarea id="img-brief" rows="10" class="se-field" placeholder={t('img.brief.ph', lang)}></textarea></label></div>
+          <div class="se-group"><label>{t('img.title', lang)}<input id="img-title" class="se-field" type="text"></label></div>
+          <div class="se-group"><label>{t('img.subtitle', lang)}<input id="img-subtitle" class="se-field" type="text"></label></div>
+          <div class="se-group"><label>{t('img.listicle', lang)}<textarea id="img-listicle" rows="3" class="se-field"></textarea></label></div>
+          <div class="se-group"><label>{t('img.style', lang)}<select id="img-style" class="se-field">
+            <option value="photorealistic">photorealistic</option><option value="product photography">product photography</option><option value="flat design">flat design</option><option value="illustration">illustration</option><option value="3D model">3D model</option>
+          </select></label></div>
+          <div class="se-group"><label>{t('img.output', lang)}<select id="img-output" class="se-field">
+            <option value="poster">{t('img.output.poster', lang)}</option><option value="storyboard">{t('img.output.storyboard', lang)}</option><option value="carousel">{t('img.output.carousel', lang)}</option>
+          </select></label></div>
+          <div class="se-group" id="img-ratio-wrap"><label>{t('img.ratio', lang)}<select id="img-ratio" class="se-field">
             <option value="1:1">1:1</option><option value="4:5">4:5</option><option value="9:16">9:16</option><option value="16:9">16:9</option><option value="3:4">3:4</option><option value="3:2">3:2</option><option value="2:3">2:3</option>
           </select></label></div>
-          <div class="se-group"><label>{t('img.style', lang)}<select id="img-style" class="se-field">
-            <option value="product photography">product photography</option><option value="illustration">illustration</option><option value="flat design">flat design</option><option value="poster design">poster design</option><option value="photorealistic">photorealistic</option>
-          </select></label></div>
-          <div class="se-group"><label><input type="checkbox" id="img-textfree" checked> {t('img.textfree', lang)}</label></div>
-          <div class="se-group"><label>{t('img.n', lang)}<select id="img-n" class="se-field">
+          <div class="se-group" id="img-n-wrap"><label>{t('img.n', lang)}<select id="img-n" class="se-field">
             <option value="1">1</option><option value="2">2</option><option value="4">4</option>
           </select></label></div>
+          <div class="se-group" id="img-duration-wrap"><label>{t('img.duration', lang)}<input id="img-duration" class="se-field" type="number" min="5" max="60" value="30"></label></div>
+          <div class="se-group" id="img-scenes-wrap"><label>{t('img.scenes', lang)}<select id="img-scenes" class="se-field">
+            <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option>
+          </select></label></div>
+          <div class="se-group" id="img-slides-wrap"><label>{t('img.slides', lang)}<select id="img-slides" class="se-field">
+            <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+          </select></label></div>
+          <div class="se-group"><label><input type="checkbox" id="img-textfree" checked> {t('img.textfree', lang)}</label></div>
           <div id="img-preview" class="se-note"></div>
-          <div class="se-group"><button id="img-generate" class="se-btn">{t('img.generate', lang)}</button> <button id="img-load-script" class="se-btn2">{t('img.loadscript', lang)}</button> <button id="img-clear" class="se-btn2">{t('img.clear', lang)}</button></div>
+          <div class="se-group"><button id="img-generate" class="se-btn">{t('img.generate', lang)}</button> <button id="img-approve" class="se-btn2">{t('img.approve', lang)}</button> <button id="img-load-script" class="se-btn2">{t('img.loadscript', lang)}</button> <button id="img-clear" class="se-btn2">{t('img.clear', lang)}</button></div>
           <div id="img-status" class="se-note"></div>
           <div id="img-cost" class="se-note"></div>
           <div id="img-loaded" class="img-card" style="display:none"></div>
@@ -787,6 +802,7 @@
         </div>
         <div id="ms-tab-video" class="ms-video">
           <div class="ms-card">
+          <div class="se-group"><label>{t('img.plan', lang)}<textarea id="ve-plan" rows="4" class="se-field" value={ve2Plan} oninput={(e) => { ve2Plan = (e.target as HTMLTextAreaElement).value; ve2SaveState(); }}></textarea></label></div>
           <div class="ve-toolbar">
           <button id="ve2BtnCut" class="btn btn-sm" onclick={() => { ve2Cut() }}>{t('ve.cut', lang)}</button>
           <button id="ve2BtnText" class="btn btn-sm" onclick={() => { ve2AddText() }}>{t('ve.addtext', lang)}</button>
