@@ -2521,6 +2521,15 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v165 — LIVE (style lock storyboard, keluhan Patria 1 Nov 16:33 + lembar referensi storyboard)
+
+- Kejujuran: v164 memperbaiki URUTAN shot, tapi BUKAN gaya — bukti live 16:30: scene 1 foto sinematik, scene 2 kolase ber-header, scene 3 foto lifestyle, scene 4 poster ilustrasi. Patokan dari lembar referensi Patria: satu seniman, satu medium, satu palet di semua panel — shot boleh berganti, gaya tidak boleh. Akar: v164 hanya bilang "same visual style" secara generik, dan dua jebakan naskah tidak ditangani — "montase" dijawab model dengan kolase, "end-card" dijawab dengan poster (padahal gaya dipilih product photography).
+- Perbaikan di image-flow.ts: STYLE LOCK diulang verbatim tiap frame — gaya terpilih ditegaskan (medium, palet, lighting, lens feel sama), larangan eksplisit (bukan kolase, bukan multi-panel, bukan layout poster, bukan header judul, bukan border dekoratif), montase dipaksa SATU momen representatif, end-card dipaksa SATU frame momen penutup gaya sama (bukan desain poster). Shot list v164 + bible tidak diubah.
+- Batas jujur: ini tetap anchor teks — endpoint gambar yang terverifikasi hanya menerima teks per panggilan tanpa gambar referensi, jadi kesamaan piksel/karakter persis TIDAK bisa dijamin dari prompt saja; pengunci gaya yang sesungguhnya butuh dukungan image referensi yang belum terverifikasi di endpoint ini. Generate ulang menagih lagi ($0,04 untuk 4 scene).
+- Rig-image §11 (baru): prompt kedua frame terbukti memuat STYLE LOCK + larangan kolase/poster + gaya terpilih, shot montase/end-card tetap terpisah. §9–§10 tetap hijau.
+- Gerbang penuh lolos (13 rig, tsc, gate-test 14 grup, scan bersih, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0).
+- Push: kode lokal ea2a741 ↔ remote 242958e (tree identik).
+
 ## v164 — LIVE (storyboard jadi sequence, perintah Patria 1 Nov 16:19 "perbaiki segera")
 
 - Keluhan + bukti live: Story Board v163 menghasilkan 4 tema berbeda, bukan sequence — Scene 1 foto tuang V60 (kebetulan tepat), Scene 2–4 ketiganya jadi desain poster SELATAN SEDUH. Akar: v163 mengirim SELURUH brief + penanda ", scene i of N keyframe" ke 4 panggilan independen — tiap panggilan menafsir ulang semuanya, dan copy poster yang ikut di dalam brief (headline, prompt poster) menarik scene 2–4 jadi poster. Mekanik v163 lainnya terbukti jalan (4 gambar, label Scene, tombol Canva, biaya) — yang salah hanya logika prompt storyboard.
