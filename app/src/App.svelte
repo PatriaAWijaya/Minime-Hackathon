@@ -885,7 +885,6 @@
           <div class="ms-card">
           <div class="se-group"><label>{t('img.plan', lang)}<textarea id="ve-plan" rows="4" class="se-field" value={ve2Plan} oninput={(e) => { ve2Plan = (e.target as HTMLTextAreaElement).value; ve2SaveState(); }}></textarea></label></div>
           <div class="se-group"><h4>{t('vg.title', lang)}</h4>
-          <p class="se-note">{t('vg.billing_note', lang)}</p>
           <label>{t('vg.prompt', lang)}<textarea id="vg-prompt" rows="3" class="se-field" bind:value={vgPrompt}></textarea></label>
           <div class="se-group"><label for="vg-ref-file">{t('vg.ref.title', lang)}</label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
