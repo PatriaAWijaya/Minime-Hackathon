@@ -2527,7 +2527,7 @@ dokumen lama yang dipakai.
 - i18n: +3 kunci img.header/img.footer/img.palette = 1041/bahasa, 0 duplikat. Label membungkus kontrolnya sehingga svelte-check tetap baseline.
 - Rig-image § v171 hijau (field render; prompt poster memuat 5 marker dalam urutan pola).
 - Gerbang penuh lolos: vite build, 14 rig, root tsc + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0, scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
-- Kode lokal 0340373 ↔ remote dd4a7e0 (tree identik).
+- Kode lokal 0340373 ↔ remote dd4a7e0 (tree identik); log lokal 593ca54 ↔ remote 5e01e94; LIVE: PID 15875; md5 5cc99d01632ab1b9904b679ff6974f4a lokal == MacBook; marker bundle 'Header text'.
 
 ## v170 — LIVE (batch video + scene berurutan, perintah Patria 1 Nov 17:43/17:45)
 - Perintah awal ambigu (pilih dari Library / unggah banyak / maks 30) diklarifikasi lewat opsi: yang dibangun = batch video 1 gambar = 1 klip maks 30 sekali jalan; ditambah perintah susulan "beberapa gambar referensi sebagai sequential scene dalam video". Kejujuran teknis: satu panggilan Veo TIDAK bisa memuat banyak scene berurutan (maks 8 detik, 1 frame awal + maks 3 referensi) — scene berurutan dibangun lewat batch klip + susun di timeline + ekspor.
