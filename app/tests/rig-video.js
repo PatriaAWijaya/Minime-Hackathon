@@ -190,6 +190,22 @@ try {
   const hfClips = ve2State(store).clips || [];
   check('v175: klip HyperFrames masuk timeline', hfClips.some((c) => c.src === '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4' && c.name === 'HyperFrames 15s'), JSON.stringify(hfClips));
 
+  // (i) v176: template prompt Seri Harian Tuang.
+  check('v176: template seri harian render (6 beat + penutup + end card)', document.querySelectorAll('[data-vt-beat]').length === 6 && !!document.getElementById('vt-close') && !!document.getElementById('vt-signoff') && !!document.getElementById('vt-endcard'));
+  document.querySelector('[data-vt-beat="MONDAY"]').click();
+  await tick(100);
+  const vtPrompt = document.getElementById('vg-prompt').value || '';
+  check('v176: beat MONDAY memuat prompt tuang (kopi hitam + cardigan + tanpa teks)', vtPrompt.includes('kopi hitam') && vtPrompt.includes('cardigan') && vtPrompt.includes('tanpa teks'), vtPrompt.slice(0, 160));
+  check('v176: status template menyebut MONDAY', (document.getElementById('vt-status')?.textContent || '').includes('MONDAY'), document.getElementById('vt-status')?.textContent || '');
+  document.getElementById('vt-close').click();
+  await tick(100);
+  const vtClosePrompt = document.getElementById('vg-prompt').value || '';
+  check('v176: penutup memuat prompt top-down keramik', vtClosePrompt.includes('Top-down') && vtClosePrompt.includes('keramik'), vtClosePrompt.slice(0, 160));
+  document.getElementById('vt-endcard').click();
+  await tick(100);
+  const vtHf = document.getElementById('hf-html').value || '';
+  check('v176: end card dimuat ke HyperFrames (composition + sign-off + hijau zaitun)', vtHf.includes('data-composition-id="endcard"') && vtHf.includes('see you sooooooon') && vtHf.includes('#556B2F'), vtHf.slice(0, 160));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL v167 rig-video :: ' + String(e && e.stack || e).slice(0, 500));

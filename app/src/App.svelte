@@ -507,6 +507,40 @@
   let vgStatus = $state('');
   let vgLastPath = $state('');
   let vgLastDur = $state(0);
+  // v176: template prompt Seri Harian Tuang (pola video/reels seri
+  // harian 2 Nov 01:16). Satu template = 6 beat tuang + penutup.
+  // State sesi saja (seperti state panel Veo lainnya); slot tiap
+  // beat bisa diedit user, prompt dirakit saat beat diketuk.
+  let vgTplBeats = $state([
+    { label: 'MONDAY', pour: 'kopi hitam ke susu putih dan es', outfit: 'cardigan cokelat' },
+    { label: 'TUESDAY', pour: 'susu/krem ke kopi hitam es', outfit: 'atasan kotak cokelat' },
+    { label: 'WEDNESDAY', pour: 'kopi hitam dari teko keramik hitam ke susu', outfit: 'blus krem' },
+    { label: 'THURSDAY', pour: 'matcha hijau ke susu', outfit: 'atasan biru gelap, luar ruang' },
+    { label: 'FRIDAY', pour: 'minuman merah muda ke es batu', outfit: 'hoodie zaitun' },
+    { label: 'SATURDAY', pour: 'jus oranye ke es batu', outfit: 'kemeja hitam polkadot' },
+  ]);
+  let vgTplIdx = $state(-1);
+  let vgTplStatus = $state('');
+  let vgTplSignoff = $state('see you sooooooon');
+  function vgTplPromptBeat(b: { label: string; pour: string; outfit: string }) {
+    return `Close-up vertikal, satu tangan memegang gelas plastik bening, tangan lain menuang ${b.pour} dari atas, aliran tuang terlihat jelas, ${b.outfit}, cahaya matahari hangat, 4 detik, vertikal 9:16, tanpa teks di dalam footage.`;
+  }
+  const VG_TPL_CLOSE = 'Top-down statis, tangan memegang cangkir keramik berisi kopi hitam, latar hijau zaitun polos, cahaya matahari hangat, 4 detik, vertikal 9:16, tanpa teks.';
+  function vgTplLoadBeat(i: number) {
+    vgTplIdx = i;
+    vgPrompt = vgTplPromptBeat(vgTplBeats[i]);
+    vgTplStatus = t('vg.tpl.loaded', lang, { label: vgTplBeats[i].label });
+  }
+  function vgTplLoadClose() {
+    vgTplIdx = 6;
+    vgPrompt = VG_TPL_CLOSE;
+    vgTplStatus = t('vg.tpl.loaded', lang, { label: t('vg.tpl.close', lang) });
+  }
+  function vgTplLoadEndcard() {
+    const safe = vgTplSignoff.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    hfHtml = `<div data-composition-id="endcard" data-duration="2" data-width="720" data-height="1280" style="width:720px;height:1280px;background:#556B2F;display:flex;align-items:center;justify-content:center;"><p style="color:#fff;font-size:32px;letter-spacing:1px;margin:0;">${safe}</p></div>`;
+    vgTplStatus = t('vg.tpl.endcard_loaded', lang);
+  }
   let hfHtml = $state('');
   let hfQuality = $state('draft');
   let hfBusy = $state(false);
@@ -1005,6 +1039,25 @@
           <div class="se-group"><label>{t('img.plan', lang)}<textarea id="ve-plan" rows="4" class="se-field" value={ve2Plan} oninput={(e) => { ve2Plan = (e.target as HTMLTextAreaElement).value; ve2SaveState(); }}></textarea></label></div>
           <div class="se-group"><h4>{t('vg.title', lang)}</h4>
           <label>{t('vg.prompt', lang)}<textarea id="vg-prompt" rows="3" class="se-field" bind:value={vgPrompt}></textarea></label>
+          <div class="se-group"><h4>{t('vg.tpl.title', lang)}</h4>
+          <p class="se-note">{t('vg.tpl.note', lang)}</p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="se-note" style="width:110px">{t('vg.tpl.label', lang)}</span><span class="se-note" style="flex:1;min-width:180px">{t('vg.tpl.pour', lang)}</span><span class="se-note" style="flex:1;min-width:140px">{t('vg.tpl.outfit', lang)}</span></div>
+          {#each vgTplBeats as b, i}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px">
+          <input class="se-field" style="width:110px" aria-label={t('vg.tpl.label', lang) + ' ' + (i + 1)} bind:value={b.label}>
+          <input class="se-field" style="flex:1;min-width:180px" aria-label={t('vg.tpl.pour', lang) + ' ' + (i + 1)} bind:value={b.pour}>
+          <input class="se-field" style="flex:1;min-width:140px" aria-label={t('vg.tpl.outfit', lang) + ' ' + (i + 1)} bind:value={b.outfit}>
+          <button class="vt-beat {vgTplIdx === i ? 'vt-beat-sel' : ''}" data-vt-beat={b.label} onclick={() => vgTplLoadBeat(i)}>{b.label || (t('vg.tpl.beat', lang) + ' ' + (i + 1))}</button>
+          </div>
+          {/each}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <button class="vt-beat {vgTplIdx === 6 ? 'vt-beat-sel' : ''}" id="vt-close" onclick={() => vgTplLoadClose()}>{t('vg.tpl.close', lang)}</button>
+          <span class="se-note">{t('vg.tpl.endcard', lang)}</span>
+          <input id="vt-signoff" class="se-field" style="width:200px" aria-label={t('vg.tpl.signoff', lang)} bind:value={vgTplSignoff}>
+          <button id="vt-endcard" class="btn btn-sm" onclick={() => vgTplLoadEndcard()}>{t('vg.tpl.endcard_load', lang)}</button>
+          </div>
+          <p id="vt-status" class="se-note">{vgTplStatus}</p>
+          </div>
           <div class="se-group"><label for="vg-ref-file">{t('vg.ref.title', lang)}</label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
           <input id="vg-ref-file" type="file" accept="image/*" onchange={(e) => vgRefFromFile((e.target as HTMLInputElement).files?.[0] || null)}>

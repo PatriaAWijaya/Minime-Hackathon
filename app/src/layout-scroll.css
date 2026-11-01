@@ -712,3 +712,7 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .vg-batch-thumb { position: relative; padding: 0; border: none; background: transparent; cursor: pointer; }
 .vg-batch-thumb.vg-batch-on { outline: 3px solid #8ED694; outline-offset: -3px; }
 .vg-batch-num { position: absolute; top: 2px; left: 2px; background: #8ED694; color: #262626; font-size: 12px; font-weight: 700; min-width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 10px; padding: 0 4px; }
+
+/* v176: template prompt Seri Harian (tombol beat) */
+.vt-beat { border: 1px solid var(--t-border, #3a3a3a); background: var(--t-panel2, #262626); color: inherit; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+.vt-beat-sel { background: #8ED694; color: #262626; border-color: #8ED694; }
