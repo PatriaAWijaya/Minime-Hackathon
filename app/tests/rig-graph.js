@@ -602,6 +602,21 @@ try {
   const lastEdge156 = edgeRules156[edgeRules156.length - 1] || '';
   check('v156: #graphEdges absolut + seluas kanvas', /position:absolute/.test(lastEdge156) && /width:100%/.test(lastEdge156) && /height:100%/.test(lastEdge156), lastEdge156.slice(0, 160));
 
+  // 26. v157: buka tab Graph me-render ulang connector.
+  // (graphNewProject sudah me-render sekali; svg dikosongkan dulu agar
+  // uji ini membuktikan showView-lah yang menggambar ulang.)
+  const pid26 = dom.window.graphNewProject();
+  const prime26 = Object.keys(dom.window.GNODES).find((k) => dom.window.GNODES[k].proj === pid26 && dom.window.GNODES[k].agent === 'prime');
+  dom.window.graphEnsureAgentNode('riset', pid26, 'Tugas uji v157');
+  // createNode me-render lewat graphSelect, jadi svg dikosongkan SETELAH ensure.
+  document.getElementById('graphEdges').innerHTML = '';
+  check('v157: svg kosong sebelum buka tab Graph', !document.querySelector('#graphEdges path'), document.getElementById('graphEdges').innerHTML.slice(0, 80));
+  dom.window.showView('graph');
+  // v157 me-render lewat double-rAF: beri dua frame agar callback jalan.
+  await tick(50); await tick(50);
+  const path26 = document.querySelector('#graphEdges path[data-f="' + prime26 + '"]');
+  check('v157: buka tab Graph me-render ulang connector', !!path26, document.getElementById('graphEdges').innerHTML.slice(0, 120));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-graph exception :: ' + (e && e.stack ? e.stack : e));

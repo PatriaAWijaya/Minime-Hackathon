@@ -2155,6 +2155,22 @@ export function showView(id) {
     document.querySelectorAll(".sidebar button").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-view") === id); });
     document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
     document.getElementById("view-" + id).classList.add("active");
+    // v157: buka tab Graph WAJIB me-render ulang. Sebelum ini showView
+    // hanya mengganti class — renderGraph terakhir bisa terjadi saat
+    // kanvas masih tersembunyi (display:none), sehingga nodeRects()
+    // mengembalikan nol semua dan semua path edge degenerat menjadi
+    // titik di pojok kiri atas (tak terlihat), sementara node tetap
+    // tampil karena posisinya dari % bukan hasil ukur.
+    // Render DITUNDA dua frame: render sinkron di sini terbukti
+    // mengukur layout peralihan (box ~532px sebelum kolom samping
+    // menghilang; final ~1186px), sehingga path meleset. Setelah dua
+    // frame, layout sudah final. Fallback langsung bila rAF tak ada
+    // (rig jsdom) agar uji tetap jalan.
+    if (id === "graph") {
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(function () { requestAnimationFrame(function () { renderGraph(); }); });
+      } else renderGraph();
+    }
     document.querySelector(".app").classList.toggle("no-nav", id !== "home" && id !== "newagent");
     // Audit v66: Billing selalu menampilkan pemakaian live terbaru
     // saat dibuka (angka tidak beku di render pertama).
