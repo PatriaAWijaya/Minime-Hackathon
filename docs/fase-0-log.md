@@ -2529,7 +2529,7 @@ dokumen lama yang dipakai.
 - Rig-video ditulis ulang ke kontrak Interactions: stub satu POST (tanpa operasi/poll/unduh); asersi body model + response_format + bentuk input array; spend 720p 8 detik = $0,81; probe stub 8 detik untuk path omni (15 tetap untuk HF).
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal 6666271 ↔ remote 91b09c0 (tree identik).
-- LIVE: (diisi commit log-LIVE sesudah deploy)
+- LIVE: PID 26473; md5 JS b6397b3cecc702a665a6261713eb5ebe lokal == MacBook; marker 'gemini-omni-1.1-flash' 1 kemunculan di bundle MacBook; 'predictLongRunning' 0 kemunculan (kode Veo hilang total dari bundle).
 
 
 ## v180 — hapus paragraf catatan HyperFrames (perintah Patria 2 Nov 02:42)
