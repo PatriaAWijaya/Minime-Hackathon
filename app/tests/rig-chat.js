@@ -842,6 +842,21 @@ try {
   const primeBtn33 = lastB33.querySelector('.rec-btn');
   check('v154: jawaban Prime tetap menampilkan button saran', !!primeBtn33 && primeBtn33.textContent.includes('Opsi A'), primeBtn33?.textContent || lastB33.textContent.slice(0, 150));
 
+  // §34 v155: konteks project + aturan grounding terkirim ke model.
+  // (Delegasi eksplisit ke Riset di dalam project bernama coffeeshop;
+  //  pesan TANPA kata kunci cabang stub lain agar sampai ke model.)
+  const pid155 = 'grounding-uji';
+  dom.window.PROJECTS[pid155] = { name: 'Riset coffeeshop Surabaya Selatan', agents: [{ key: 'riset', status: 'Idle', task: '—' }], chat: [], kanban: [] };
+  dom.window.switchProject(pid155);
+  await tick(100);
+  const recsAwal34 = fetchRecs.length;
+  await sendMsg('riset peta sebaran coffeeshop');
+  await waitFor(() => bodyText().includes('NASKAH-UJI'), 'hasil grounding uji', 120);
+  await tick(200);
+  const scopeFetches34 = fetchRecs.slice(recsAwal34).filter((f) => f.body.includes('peta sebaran coffeeshop'));
+  check('v155: prompt agen memuat nama project aktif', scopeFetches34.some((f) => f.body.includes('Riset coffeeshop Surabaya Selatan')), scopeFetches34.map((f) => f.body.slice(0, 120)).join(' | ') || 'tidak ada fetch');
+  check('v155: prompt agen memuat aturan grounding (jangan melebar)', scopeFetches34.some((f) => f.body.includes('Jangan melebar')), scopeFetches34.length ? 'ada ' + scopeFetches34.length + ' fetch' : 'tidak ada fetch');
+
 
 
 

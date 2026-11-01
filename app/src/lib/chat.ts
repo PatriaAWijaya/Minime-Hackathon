@@ -12,7 +12,7 @@
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { AGENTS, activateAgent, clearReplyTarget, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, getReplyTarget, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, kbTaskMove, kbTaskStart, kbUpdateTaskOut, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView } from './v5logic.js';
-import { getLang, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_INSTRUCTION, tr } from './i18n.js';
+import { getLang, GROUNDING_INSTRUCTION, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
 import { cbAnswer, cbIsActive, cbIsFlowEntry, cbStart } from './creative-brief.js';
@@ -315,6 +315,12 @@ async function callAgentModel(router: ModelRouter, cfg: ReturnType<typeof defaul
    (bukan sekadar menampilkan error). Pola pendingStudios: tiap tombol
    mengikat indeksnya sendiri. */
 const pendingRetries: Array<{ agent: string; task: string; kind: 'agent' | 'prime' }> = [];
+/* v155: baris konteks project aktif untuk systemInstruction. Tanpa project
+   (Main chat) mengembalikan string kosong — pesannya sendiri adalah konteks. */
+function scopeLine(): string {
+  return hasProject() ? ' ' + tr('chat.scope', { name: currentProjectName() }) : '';
+}
+
 function retryButton(agentKey: string, taskText: string, kind: 'agent' | 'prime'): string {
   pendingRetries.push({ agent: agentKey, task: taskText, kind });
   if (pendingRetries.length > 50) pendingRetries.shift();
@@ -333,7 +339,7 @@ export async function retryAgentTask(idx?: number): Promise<void> {
   const trace = 'trace-retry-' + item.agent + '-' + Date.now();
   try {
     if (item.kind === 'agent' && ag) {
-      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
+      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
       setAgentPhase(item.agent, 'busy');
       const r = await callAgentModel(router, cfg, item.agent, item.task, trace);
       recordLiveCost(r);
@@ -344,7 +350,7 @@ export async function retryAgentTask(idx?: number): Promise<void> {
       postChat(item.agent, ag.name, ag.color, esc(r.text) + footer + studio);
       kbUpdateTaskOut(ag.name, taskShort(item.task), r.text);
     } else {
-      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
+      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
       const r = await router.callWithFallback(item.task, trace);
       recordLiveCost(r);
       const footer = ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms'
@@ -483,7 +489,7 @@ export async function sendChatReal(): Promise<void> {
         postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
         setAgentPhase(t.agent, 'starting');
         const kbCard = kbTaskStart(ag.name, taskShort(t.task), t.task);
-        cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
+        cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
         const trace = 'trace-flow1-' + t.agent + '-' + Date.now();
         let resultText: string;
         try {
@@ -509,7 +515,7 @@ export async function sendChatReal(): Promise<void> {
       }
       let qcText: string;
       try {
-        cfg.systemInstruction = 'QC hasil kerja agen: nilai tiap hasil terhadap brief. Balas dengan verdict singkat per agen: LOLOS atau REVISI + satu kalimat alasan, diakhiri satu kalimat simpulan. Bahasa Indonesia.';
+        cfg.systemInstruction = 'QC hasil kerja agen: nilai tiap hasil terhadap brief. Balas dengan verdict singkat per agen: LOLOS atau REVISI + satu kalimat alasan, diakhiri satu kalimat simpulan. Beri REVISI bila hasil melebar dari topik, segmen, atau lokasi brief ke kategori yang lebih umum. Bahasa Indonesia.';
         const qcInput = 'Brief: ' + text + '\n\nHasil agen:\n' + results.map((r) => '- ' + r.name + ': ' + r.text).join('\n');
         const q = await router.callWithFallback(qcInput, 'trace-flow1-qc-' + Date.now());
         recordLiveCost(q);
@@ -550,7 +556,7 @@ export async function sendChatReal(): Promise<void> {
       postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
       setAgentPhase(t.agent, 'starting');
       const kbCard = kbTaskStart(ag.name, taskShort(t.task), t.task);
-      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
+      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
       const trace = 'trace-flow2-' + t.agent + '-' + Date.now();
       let resultText: string;
       try {
@@ -576,7 +582,7 @@ export async function sendChatReal(): Promise<void> {
     }
     let qcText: string;
     try {
-      cfg.systemInstruction = 'QC hasil kerja agen: nilai tiap hasil terhadap brief. Balas dengan verdict singkat per agen: LOLOS atau REVISI + satu kalimat alasan, diakhiri satu kalimat simpulan. Bahasa Indonesia.';
+      cfg.systemInstruction = 'QC hasil kerja agen: nilai tiap hasil terhadap brief. Balas dengan verdict singkat per agen: LOLOS atau REVISI + satu kalimat alasan, diakhiri satu kalimat simpulan. Beri REVISI bila hasil melebar dari topik, segmen, atau lokasi brief ke kategori yang lebih umum. Bahasa Indonesia.';
       const qcInput = 'Brief: ' + text + '\n\nHasil agen:\n' + results.map((r) => '- ' + r.name + ': ' + r.text).join('\n');
       const q = await router.callWithFallback(qcInput, 'trace-flow2-qc-' + Date.now());
       recordLiveCost(q);
@@ -594,7 +600,7 @@ export async function sendChatReal(): Promise<void> {
   let delegate = delegateFor(text);
   if (delegate && isAgentDeactivated(delegate)) delegate = null;
   if (!delegate) {
-    cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
+    cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
     const trace = 'trace-chat-' + Date.now();
     try {
       const r = await router.callWithFallback(text, trace);
@@ -628,7 +634,7 @@ export async function sendChatReal(): Promise<void> {
   setAgentPhase(delegate, 'starting');
   const kbCard = kbTaskStart(ag.name, taskShort(text), text);
   let kbOut = '';
-  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
+  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
   const trace = 'trace-chat-' + delegate + '-' + Date.now();
   try {
     setAgentPhase(delegate, 'busy');

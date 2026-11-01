@@ -806,6 +806,7 @@ const ID: Dict = {
   'chat.error.hint': ' — cek kunci di Settings, atau pastikan Ollama jalan (127.0.0.1:11434).',
   'chat.retry': 'Coba lagi',
   'chat.recs.label': 'Saran:',
+  'chat.scope': 'Konteks project aktif: "{name}".',
   'kanban.card.agent': 'Agen: ',
   'detail.val.tables': '0 tables ›',
   'detail.val.configured': '0 configured ›',
@@ -1773,6 +1774,7 @@ const EN: Dict = {
   'chat.error.hint': ' — check keys in Settings, or make sure Ollama is running (127.0.0.1:11434).',
   'chat.retry': 'Retry',
   'chat.recs.label': 'Suggestions:',
+  'chat.scope': 'Active project context: "{name}".',
   'kanban.card.agent': 'Agent: ',
   'detail.val.tables': '0 tables ›',
   'detail.val.configured': '0 configured ›',
@@ -2740,6 +2742,7 @@ const ZH: Dict = {
   'chat.error.hint': ' — 请检查“设置”中的密钥，或确认 Ollama 正在运行（127.0.0.1:11434）。',
   'chat.retry': '重试',
   'chat.recs.label': '建议：',
+  'chat.scope': '当前项目背景：“{name}”。',
   'kanban.card.agent': '智能体：',
   'detail.val.tables': '0 个表格 ›',
   'detail.val.configured': '0 已配置 ›',
@@ -2965,6 +2968,17 @@ export const MODEL_LANG_INSTRUCTION: Record<Lang, string> = {
  * caption bukan laporan). Blok ini bersyarat ("saat jawabanmu berupa
  * laporan") sehingga obrolan singkat tetap natural. Bukan entri Dict —
  * tidak mengubah hitungan 843 kunci i18n. */
+
+/* v155 (keluhan Patria 1 Nov 13:02: jawaban melebar dari coffeeshop ke
+   pola konsumsi F&B umum): aturan konteks. Konstanta, bukan kunci Dict —
+   tidak mengubah hitungan kunci. Disisipkan ke systemInstruction semua
+   jalur agen + Prime langsung, sesudah scope project, sebelum format. */
+export const GROUNDING_INSTRUCTION: Record<Lang, string> = {
+  id: ' ATURAN KONTEKS — Jawabanmu harus membumi pada topik, segmen, dan lokasi yang diminta user, termasuk konteks project aktif bila ada. Jangan melebar ke kategori yang lebih umum (contoh: brief tentang coffeeshop jangan dijawab dengan pola konsumsi F&B umum) dan jangan menambah topik di luar brief, kecuali user memintanya secara eksplisit. Bila data untuk konteks itu tidak tersedia, katakan terus terang dan batasi jawaban pada konteks tersebut — jangan mengisi kekosongan dengan generalisasi.',
+  en: ' CONTEXT RULE — Your answer must stay grounded in the topic, segment, and location the user asked for, including the active project context when present. Do not broaden to a more general category (example: a brief about coffeeshops must not be answered with general F&B consumption patterns) and do not add topics outside the brief, unless the user explicitly asks. If data for that context is unavailable, say so plainly and limit the answer to that context — do not fill the gap with generalisations.',
+  zh: ' 背景规则 — 你的回答必须紧扣用户要求的主题、细分和地点，包括当前项目背景（如有）。不要扩展到更宽泛的类别（例如：关于咖啡馆的简报不能用餐饮业总体消费模式来回答），也不要增加简报之外的主题，除非用户明确要求。如果该背景下没有数据，请直说并将回答限制在该背景内——不要用泛化来填补空白。',
+};
+
 export const REPORT_FORMAT_INSTRUCTION: Record<Lang, string> = {
   id: ' STANDAR LAPORAN — Saat jawabanmu berupa laporan atau hasil kerja (bukan obrolan singkat), patuhi struktur ini: (1) Judul: satu baris judul utama di awal. (2) Subjudul: satu baris konteks (topik/proyek) tepat di bawah judul. (3) Header tiap bagian: pisahkan tiap bagian dengan header (##) bernomor, satu topik per bagian. (4) Body: paragraf pendek, satu gagasan per paragraf, tanpa pengulangan kata atau kalimat yang sama. (5) Poin dan numbering: daftar tak berurutan memakai bullet (-), daftar berurutan atau peringkat memakai numbering (1. 2. 3.). (6) Pemisah antarbagian harus jelas (baris kosong, tanpa menumpuk semua isi dalam satu paragraf panjang). Tulis dengan rapi dan mudah dipahami. Jika kamu menawarkan beberapa alternatif tindak lanjut, cantumkan semuanya dalam SATU baris di akhir jawaban dengan format persis: ►RECOMMEND: opsi pertama | opsi kedua | opsi ketiga (maksimal 5 opsi, tiap opsi singkat maksimal 40 karakter). Opsi rekomendasi harus mendahulukan pendalaman hasil ini — perbaiki, perinci, atau eksekusi di Media Studio (konsep visual: buat atau perhalus di Image Editor, video di Video Editor) — dan JANGAN menawarkan versi untuk jenis usaha atau industri lain kecuali user yang memintanya. Setiap opsi harus mempertajam tujuan, memperjelas manfaat, dan memudahkan user mengambil keputusan. Baris itu ditampilkan sebagai saran tindak lanjut (tombol pada jawaban kurasi Prime, teks pada jawaban agen), jadi jangan menulis daftar yang sama di body jawaban.',
   en: ' REPORT STANDARD — When your answer is a report or work result (not short chat), follow this structure: (1) Title: one main title line at the start. (2) Subtitle: one context line (topic/project) right under the title. (3) Section headers: separate each section with a numbered header (##), one topic per section. (4) Body: short paragraphs, one idea per paragraph, no repeated words or sentences. (5) Points and numbering: unordered lists use bullets (-), ordered lists or rankings use numbering (1. 2. 3.). (6) Section separation must be clear (blank lines, never cram everything into one long paragraph). Write neatly and easy to understand. If you offer several follow-up alternatives, list them all in ONE line at the end of your answer with the exact format: ►RECOMMEND: first option | second option | third option (at most 5 options, each short, at most 40 characters). Recommendation options must first deepen this result — refine, detail, or execute it in Media Studio (visual concepts: create or refine in the Image Editor, video in the Video Editor) — and NEVER offer versions for other business types or industries unless the user asks for them. Each option must sharpen the goal, clarify the benefit, and make it easier for the user to decide. That line is shown as follow-up suggestions (buttons on Prime-curated answers, plain text on agent answers), so do not repeat the same list in the body of your answer.',
