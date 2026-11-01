@@ -679,3 +679,9 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 
 /* v154: saran tindak lanjut pada jawaban agen — teks redup, bukan button. */
 .msg-recs-text { margin-top: 6px; font-size: 13px; color: var(--t-muted, #A89AC2); }
+
+/* v156: SVG connector Graph harus seluas kanvas. Tanpa aturan ini, browser
+   memberi <svg> tanpa ukuran itu kotak default 300x150 di pojok kiri atas,
+   sehingga path connector (koordinat 0-100%) terpotong dan tak terlihat
+   padahal datanya di GEDGES sudah benar. */
+#graphEdges { position: absolute; inset: 0; width: 100%; height: 100%; }

@@ -591,6 +591,17 @@ try {
   check('v151: delegasi Graph-only membuat node Prime', !!primeNull24, Object.keys(dom.window.GNODES).join(','));
   check('v151: delegasi Graph-only menghubungkan node agen ke Prime', !!primeNull24 && !!mediaNull24 && dom.window.GEDGES.some((e) => e.f === primeNull24 && e.t === mediaNull24), JSON.stringify(dom.window.GEDGES));
 
+  // 25. v156: SVG connector seluas kanvas (bukan kotak default 300x150).
+  // jsdom tanpa layout tidak bisa membuktikan garis terlihat, jadi yang
+  // dibuktikan adalah aturan CSS-nya di bundle: #graphEdges absolut
+  // inset 0 + width/height 100%.
+  const cssFiles156 = fs.readdirSync(path.join(distDir, 'assets')).filter((f) => f.endsWith('.css'));
+  let css156 = '';
+  for (const f of cssFiles156) css156 += fs.readFileSync(path.join(distDir, 'assets', f), 'utf-8');
+  const edgeRules156 = [...css156.matchAll(/#graphEdges\{([^}]*)\}/g)].map((m) => m[1]);
+  const lastEdge156 = edgeRules156[edgeRules156.length - 1] || '';
+  check('v156: #graphEdges absolut + seluas kanvas', /position:absolute/.test(lastEdge156) && /width:100%/.test(lastEdge156) && /height:100%/.test(lastEdge156), lastEdge156.slice(0, 160));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-graph exception :: ' + (e && e.stack ? e.stack : e));
