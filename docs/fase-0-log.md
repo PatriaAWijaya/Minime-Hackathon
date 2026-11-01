@@ -2524,7 +2524,7 @@ dokumen lama yang dipakai.
 ## v169 — LIVE (hapus catatan billing Veo, perintah Patria 1 Nov 17:42)
 - Baris catatan "Veo tidak ada free tier — kunci Gemini harus milik project Google Cloud dengan billing aktif; tanpa billing, Google menolak generate." dicabut dari panel Generate (App.svelte) beserta kunci vg.billing_note di 3 bahasa (1025 -> 1024/bahasa, 0 referensi tersisa). Estimasi harga per klip tetap tampil; catatan billing di select penyedia Google tab Image tidak disentuh (perintah khusus Veo).
 - Gerbang penuh lolos: vite build, 14 rig, root tsc + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0, scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
-- Kode lokal ece0cec ↔ remote d603164 (tree identik).
+- Kode lokal ece0cec ↔ remote d603164 (tree identik); log lokal 4399995 ↔ remote d8e3684; PID 8093; md5 7223393974227d22453a031083ae5f80 lokal == MacBook; bundle MacBook memuat 0 kemunculan 'billing_note'.
 
 ## v168 — LIVE (referensi gambar storyboard ke Veo + generate image Google, perintah Patria 1 Nov 17:25/17:26)
 - Perintah Patria: (1) 17:25 "tambahkan fungsi untuk memasukkan gambar yang digunakan sebagai story board, sehingga video yang digenerate sesuai dengan image yang sudah dibuat sebelumnya"; (2) 17:26 "tambahkan pula, menu generate image dari ggogle flo". Keduanya dibangun dalam satu versi (satu gerbang, satu deploy) karena menyentuh file yang sama (App.svelte, i18n, image-flow).
