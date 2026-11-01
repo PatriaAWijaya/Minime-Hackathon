@@ -1,8 +1,9 @@
-// Rig video generator Veo (jsdom, test-only): membuktikan panel Generate
-// tab Video nyata (v167) — tanpa kunci live, tanpa panggilan Google.
-// Stub: predictLongRunning -> operasi; poll pertama done:false, kedua
-// done:true + URI file; unduh -> byte palsu; video_save -> path palsu.
-// Jeda polling dipangkas via seam __VEO_POLL_MS__ (test-only).
+// Rig video generator Gemini Omni (jsdom, test-only): membuktikan panel
+// Generate tab Video nyata (v181, migrasi dari Veo yang pensiun 22 Okt
+// 2026) — tanpa kunci live, tanpa panggilan Google.
+// Stub: POST /interactions -> steps model_output berisi video base64
+// palsu; video_save -> path palsu; video_probe -> durasi 8 detik untuk
+// path omni (15 untuk HyperFrames).
 // Jalankan: npm run rig:video (butuh dist ter-build + jsdom devDependency).
 import { JSDOM } from 'jsdom';
 import fs from 'node:fs';
@@ -16,27 +17,20 @@ if (!modMatch) throw new Error('script module dist tidak ditemukan');
 html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch[1]}"></script></body>`);
 
 const fetchLog = [];
-let pollCount = 0;
 async function fetchStub(url, opts) {
   const u = String(url);
   fetchLog.push({ url: u, body: opts && opts.body ? String(opts.body) : '' });
   const base = { ok: true, status: 200, headers: { get: () => '' }, text: async () => '', arrayBuffer: async () => new TextEncoder().encode('FAKE-MP4').buffer };
-  if (u.includes('predictLongRunning')) return { ...base, json: async () => ({ name: 'operations/veo-uji' }) };
-  if (u.includes('operations/veo-uji')) {
-    pollCount++;
-    if (pollCount === 1) return { ...base, json: async () => ({ done: false }) };
-    return { ...base, json: async () => ({ done: true, response: { generateVideoResponse: { generatedSamples: [{ video: { uri: 'https://generativelanguage.googleapis.com/v1beta/files/veo-uji' } }] } } }) };
-  }
-  if (u.includes('files/veo-uji')) return base;
+  if (u.includes('/interactions')) return { ...base, json: async () => ({ steps: [{ type: 'model_output', content: [{ type: 'video', mime_type: 'video/mp4', data: 'RkFLRS1NUDQ=' }] }], id: 'v1_uji', status: 'completed', model: 'gemini-omni-1.1-flash', object: 'interaction' }) };
   return { ...base, ok: false, status: 0, json: async () => ({}) };
 }
 const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 function invokeStub(cmd, args) {
   if (cmd === 'image_read') return { b64: PNG_1X1 };
-  if (cmd === 'video_save') return { path: '/Users/mac/Movies/minime-veo/veo-uji.mp4' };
+  if (cmd === 'video_save') return { path: '/Users/mac/Movies/minime-veo/omni-uji.mp4' };
   if (cmd === 'hyperframes_check') return { found: true, version: 'hyperframes 0.8.212', method: 'npx' };
   if (cmd === 'hyperframes_render') return { path: '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4', quality: 'draft', bytes: 107597 };
-  if (cmd === 'video_probe') return { duration: 15, size: 107597, streams: [], format_name: 'mp4' };
+  if (cmd === 'video_probe') return { duration: String(args?.req?.path || '').includes('omni') ? 8 : 15, size: 107597, streams: [], format_name: 'mp4' };
   throw new Error('unexpected invoke ' + cmd);
 }
 function makeDom(store) {
@@ -47,7 +41,6 @@ function makeDom(store) {
     pretendToBeVisual: true,
     beforeParse(window) {
       window.__TAURI_INTERNALS__ = { invoke: invokeStub };
-      window.__VEO_POLL_MS__ = 10;
       window.fetch = fetchStub;
       const ls = {
         getItem: (k) => (store.has(k) ? store.get(k) : null),
@@ -93,35 +86,35 @@ try {
   document.querySelector('[data-view="media"]').click();
   await tick(100);
   document.getElementById('ms-tabbtn-video').click();
-  await waitFor(() => document.getElementById('vg-generate'), 'panel veo', 100);
+  await waitFor(() => document.getElementById('vg-generate'), 'panel video', 100);
   const status = () => document.getElementById('vg-status')?.textContent || '';
 
-  // (a) Tanpa kunci: generate ditolak sebelum fetch Veo apa pun.
+  // (a) Tanpa kunci: generate ditolak sebelum fetch Omni apa pun.
   document.getElementById('vg-generate').click();
   await waitFor(() => status().includes('Kunci Gemini'), 'status need-key', 100);
-  check('v167 tanpa kunci ditolak', !fetchLog.some((f) => f.url.includes('predictLongRunning')), fetchLog.map((f) => f.url).join(' '));
+  check('v181 tanpa kunci ditolak', !fetchLog.some((f) => f.url.includes('/interactions')), fetchLog.map((f) => f.url).join(' '));
 
-  // (b) Dengan kunci: start -> poll -> unduh -> simpan -> aset + spend.
+  // (b) Dengan kunci: satu POST interactions -> simpan -> aset + spend.
   store.set('minime.geminiKey', 'rig-key');
   setInput(document.getElementById('vg-prompt'), 'barista menuang latte art, sinematik', 'input');
   document.getElementById('vg-generate').click();
-  await waitFor(() => status().includes('veo-uji.mp4'), 'status done', 200);
-  const start = fetchLog.find((f) => f.url.includes('predictLongRunning'));
+  await waitFor(() => status().includes('omni-uji.mp4'), 'status done', 200);
+  const start = fetchLog.find((f) => f.url.includes('/interactions'));
   let body = {};
   try { body = JSON.parse(start ? start.body : '{}'); } catch { body = {}; }
-  check('v167 start pakai model fast default', !!start && start.url.includes('veo-3.1-fast-generate-preview'), start ? start.url : 'no-start');
-  check('v167 body aspek + durasi default', body?.parameters?.aspectRatio === '9:16' && body?.parameters?.durationSeconds === 8 && body?.parameters?.sampleCount === 1, JSON.stringify(body?.parameters));
-  check('v167 poll sampai done', pollCount >= 2, 'poll=' + pollCount);
+  check('v181 POST ke Interactions API model gemini-omni-1.1-flash', !!start && body?.model === 'gemini-omni-1.1-flash', start ? start.url + ' ' + JSON.stringify(body?.model) : 'no-start');
+  check('v181 body teks + format default (9:16, 720p, tanpa durasi)', body?.input === 'barista menuang latte art, sinematik' && body?.response_format?.aspect_ratio === '9:16' && body?.response_format?.resolution === '720p' && body?.response_format?.type === 'video' && !('durationSeconds' in (body || {})), JSON.stringify(body?.response_format));
+  check('v181 satu panggilan tanpa polling', fetchLog.filter((f) => f.url.includes('/interactions')).length === 1, 'n=' + fetchLog.filter((f) => f.url.includes('/interactions')).length);
   const st = ve2State(store);
-  check('v167 aset ve2 bertambah', (st.assets || []).some((a) => a.src === '/Users/mac/Movies/minime-veo/veo-uji.mp4'), JSON.stringify(st.assets));
+  check('v181 aset ve2 bertambah', (st.assets || []).some((a) => a.src === '/Users/mac/Movies/minime-veo/omni-uji.mp4'), JSON.stringify(st.assets));
   const sp = spendState(store);
-  check('v167 spend fast 1080p 8s = $0,96', sp.videos === 1 && sp.usd === 0.96, JSON.stringify(sp));
+  check('v181 spend omni 720p 8s = $0,81', sp.videos === 1 && sp.usd === 0.81, JSON.stringify(sp));
 
   // (c) Tambah ke timeline: klip Video dari path hasil generate.
   document.getElementById('vg-add-timeline').click();
   await tick(100);
   const st2 = ve2State(store);
-  check('v167 klip timeline dari hasil generate', (st2.clips || []).some((c) => c.src === '/Users/mac/Movies/minime-veo/veo-uji.mp4' && c.track === 'Video' && c.dur === 8), JSON.stringify(st2.clips));
+  check('v181 klip timeline dari hasil generate', (st2.clips || []).some((c) => c.src === '/Users/mac/Movies/minime-veo/omni-uji.mp4' && c.track === 'Video' && c.dur === 8), JSON.stringify(st2.clips));
 
   // (d) v178: frame awal dari Library -> preview png (sniff, bukan webp).
   document.querySelector('[data-vg-tab="frames"]').click();
@@ -140,18 +133,18 @@ try {
   await waitFor(() => (document.getElementById('vg-first-preview')?.parentElement?.textContent || '').includes('frame-test.png'), 'preview first file', 100);
   check('v178 frame awal file tampil', true);
 
-  // (f) v178: generate frame awal saja -> body image, tanpa lastFrame.
+  // (f) v181: generate frame awal saja -> input [gambar, teks].
   document.querySelector('[data-vg-tab="prompt"]').click();
   await tick(100);
   document.getElementById('vg-prompt').value = 'gerakan kamera pelan';
   document.getElementById('vg-prompt').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   document.getElementById('vg-generate').click();
-  await waitFor(() => (document.getElementById('vg-status')?.textContent || '').includes('veo-uji.mp4'), 'status done first', 200);
-  const starts = fetchLog.filter((x) => x.url.includes('predictLongRunning'));
+  await waitFor(() => (document.getElementById('vg-status')?.textContent || '').includes('omni-uji.mp4'), 'status done first', 200);
+  const starts = fetchLog.filter((x) => x.url.includes('/interactions'));
   let lastBody = {};
   try { lastBody = JSON.parse(starts[starts.length - 1].body); } catch { lastBody = {}; }
-  check('v178 body memuat image frame awal tanpa lastFrame', lastBody?.instances?.[0]?.image?.bytesBase64Encoded === 'AQID' && lastBody?.instances?.[0]?.image?.mimeType === 'image/png' && !lastBody?.instances?.[0]?.lastFrame, JSON.stringify(lastBody?.instances?.[0]));
-  // (f2) v178: frame akhir -> body image + lastFrame (byte beda).
+  check('v181 input frame awal [gambar, teks]', Array.isArray(lastBody?.input) && lastBody.input.length === 2 && lastBody.input[0]?.type === 'image' && lastBody.input[0]?.data === 'AQID' && lastBody.input[0]?.mime_type === 'image/png' && lastBody.input[1]?.type === 'text' && lastBody.input[1]?.text === 'gerakan kamera pelan', JSON.stringify(lastBody?.input));
+  // (f2) v181: frame akhir -> input [awal, akhir, teks] (byte beda).
   document.querySelector('[data-vg-tab="frames"]').click();
   await tick(100);
   const lastFile = document.getElementById('vg-last-file');
@@ -160,18 +153,17 @@ try {
   lastFile.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
   await waitFor(() => (document.getElementById('vg-last-preview')?.parentElement?.textContent || '').includes('frame-akhir.png'), 'preview last file', 100);
   document.getElementById('vg-generate').click();
-  await waitFor(() => (document.getElementById('vg-status')?.textContent || '').includes('veo-uji.mp4'), 'status done frames', 200);
-  const starts2 = fetchLog.filter((x) => x.url.includes('predictLongRunning'));
+  await waitFor(() => (document.getElementById('vg-status')?.textContent || '').includes('omni-uji.mp4'), 'status done frames', 200);
+  const starts2 = fetchLog.filter((x) => x.url.includes('/interactions'));
   let framesBody = {};
   try { framesBody = JSON.parse(starts2[starts2.length - 1].body); } catch { framesBody = {}; }
-  check('v178 body memuat image + lastFrame', framesBody?.instances?.[0]?.image?.bytesBase64Encoded === 'AQID' && framesBody?.instances?.[0]?.lastFrame?.bytesBase64Encoded === 'BAUG', JSON.stringify(framesBody?.instances?.[0]));
-
+  check('v181 input frame awal + akhir + teks', Array.isArray(framesBody?.input) && framesBody.input.length === 3 && framesBody.input[0]?.data === 'AQID' && framesBody.input[1]?.data === 'BAUG' && framesBody.input[2]?.type === 'text', JSON.stringify(framesBody?.input));
 
   // (h) v179: HyperFrames sebagai pilihan model lokal (bukan panel terpisah).
-  check('v179: select model ada (Veo + HyperFrames)', !!document.getElementById('vg-model') && document.getElementById('vg-model').options.length === 2);
+  check('v179: select model ada (Omni + HyperFrames)', !!document.getElementById('vg-model') && document.getElementById('vg-model').options.length === 2);
   setInput(document.getElementById('vg-model'), 'hyperframes', 'change');
   await tick(100);
-  check('v179: model HyperFrames menampilkan form HF, menyembunyikan Veo', !!document.getElementById('hf-html') && !!document.getElementById('hf-render') && !!document.getElementById('hf-quality') && !document.getElementById('vg-prompt'));
+  check('v179: model HyperFrames menampilkan form HF, menyembunyikan Omni', !!document.getElementById('hf-html') && !!document.getElementById('hf-render') && !!document.getElementById('hf-quality') && !document.getElementById('vg-prompt'));
   document.getElementById('hf-sample').click();
   await tick(100);
   const hfHtmlVal = document.getElementById('hf-html').value || '';
@@ -187,13 +179,10 @@ try {
   const hfClips = ve2State(store).clips || [];
   check('v175: klip HyperFrames masuk timeline', hfClips.some((c) => c.src === '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4' && c.name === 'HyperFrames 15s'), JSON.stringify(hfClips));
 
-  // (j) v178: tab References 0/3 + durasi dipaksa 8 + Lite auto-pindah + contoh.
-  setInput(document.getElementById('vg-model'), 'veo', 'change');
+  // (j) v181: tab References 0/3 + input [gambar, gambar, teks] + contoh.
+  setInput(document.getElementById('vg-model'), 'omni', 'change');
   await tick(100);
   check('v178: tiga tab generator render', document.querySelectorAll('[data-vg-tab]').length === 3);
-  setInput(document.getElementById('vg-dur'), '4', 'change');
-  setInput(document.getElementById('vg-tier'), 'lite', 'change');
-  await tick(50);
   document.querySelector('[data-vg-tab="refs"]').click();
   await tick(100);
   document.getElementById('vg-refs-lib').click();
@@ -201,14 +190,13 @@ try {
   document.querySelectorAll('.vg-ref-thumb')[0].click();
   document.querySelectorAll('.vg-ref-thumb')[1].click();
   await tick(100);
-  check('v178: 2 slot referensi terisi (2/3) + Lite auto-pindah ke Cepat', document.querySelectorAll('[data-vg-refdel]').length === 2 && document.getElementById('vg-tier').value === 'fast', 'slots=' + document.querySelectorAll('[data-vg-refdel]').length + ' tier=' + document.getElementById('vg-tier').value);
-  check('v178: select durasi terkunci saat referensi aktif', document.getElementById('vg-dur').disabled === true, 'disabled=' + document.getElementById('vg-dur').disabled);
+  check('v181: 2 slot referensi terisi (2/3)', document.querySelectorAll('[data-vg-refdel]').length === 2, 'slots=' + document.querySelectorAll('[data-vg-refdel]').length);
   document.getElementById('vg-generate').click();
-  await waitFor(() => (document.getElementById('vg-status')?.textContent || '').includes('veo-uji.mp4'), 'status done refs', 200);
-  const refStarts = fetchLog.filter((x) => x.url.includes('predictLongRunning'));
+  await waitFor(() => (document.getElementById('vg-status')?.textContent || '').includes('omni-uji.mp4'), 'status done refs', 200);
+  const refStarts = fetchLog.filter((x) => x.url.includes('/interactions'));
   let refBody = {};
   try { refBody = JSON.parse(refStarts[refStarts.length - 1].body); } catch { refBody = {}; }
-  check('v178: body referenceImages 2 + durasi dipaksa 8 + tanpa image', refBody?.instances?.[0]?.referenceImages?.length === 2 && refBody?.parameters?.durationSeconds === 8 && !refBody?.instances?.[0]?.image, JSON.stringify(refBody?.instances?.[0]));
+  check('v181: input referensi [gambar, gambar, teks], tanpa instances', Array.isArray(refBody?.input) && refBody.input.length === 3 && refBody.input[0]?.type === 'image' && refBody.input[1]?.type === 'image' && refBody.input[2]?.type === 'text' && !refBody?.instances, JSON.stringify(refBody?.input));
   document.querySelector('[data-vg-tab="prompt"]').click();
   await tick(100);
   document.getElementById('vg-sample').click();
@@ -223,7 +211,7 @@ try {
 
 } catch (e) {
   // eslint-disable-next-line no-console
-  console.log('FAIL v167 rig-video :: ' + String(e && e.stack || e).slice(0, 500));
+  console.log('FAIL v181 rig-video :: ' + String(e && e.stack || e).slice(0, 500));
   failed++;
 }
 // eslint-disable-next-line no-console

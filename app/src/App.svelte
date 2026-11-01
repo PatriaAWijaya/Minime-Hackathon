@@ -12,7 +12,7 @@
   import { initBatchFlow, batchRefreshUI } from "./lib/batch-flow.js";
   import { readImgSpend } from "./lib/image-api.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
-  import { readVideoSpend, veoGenerateClip, veoPriceUsd, veoMimeForB64, b64FromBytes } from "./lib/video-gen.js";
+  import { readVideoSpend, omniGenerateClip, omniPriceUsd, mimeForB64, b64FromBytes } from "./lib/omni-gen.js";
   import { HF_SAMPLE } from "./lib/hf-sample.js";
   import { readKeys } from "./lib/chat.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtIdrNum, fmtInt, fmtUsd, readLiveCost } from "./lib/cost.js";
@@ -350,15 +350,15 @@
     ve2StopPlayback();
     ve2Playhead = Math.min(ve2Total, Math.max(0, frac * ve2Total));
   }
-  // v167: generator video Veo (panel tab Video). Prompt -> job Veo
-  // (polling) -> unduh MP4 -> simpan ~/Movies/minime-veo -> aset ve2.
+  // v181: generator video Gemini Omni (panel tab Video). Prompt ->
+  // satu panggilan Interactions API -> base64 MP4 -> simpan
+  // ~/Movies/minime-veo (folder lama dipertahankan) -> aset ve2.
   // Satu klik lagi (Tambah ke timeline) menaruhnya di timeline.
+  // Durasi tidak diminta (klip hingga 10 detik, ditentukan model).
   let vgPrompt = $state('');
-  let vgTier = $state('fast');
-  let vgModel = $state('veo');
+  let vgModel = $state('omni');
   let vgAspect = $state('9:16');
-  let vgRes = $state('1080p');
-  let vgDur = $state(8);
+  let vgRes = $state('720p');
   let vgBusy = $state(false);
   let vgStatus = $state('');
   let vgLastPath = $state('');
@@ -397,7 +397,6 @@
   function vgRefsAdd(img: { label: string; mime: string; b64: string }) {
     if (vgRefs.length >= 3) { vgStatus = t('vg2.refs.max', lang); return; }
     vgRefs = [...vgRefs, img];
-    if (vgTier === 'lite') vgTier = 'fast';
   }
   async function vgRefsFromFile(file: File | null) {
     try { const img = await vgFileToImg(file); if (img) vgRefsAdd(img); } catch (e) { vgStatus = `${t('vg.fail', lang)} ${String(e)}`; }
@@ -411,7 +410,7 @@
     for (const it of items) {
       try {
         const res = await invoke<{ b64: string }>('image_read', { req: { name: it.imageFile } });
-        out.push({ file: it.imageFile as string, title: it.o as string, mime: veoMimeForB64(res.b64), b64: res.b64 });
+        out.push({ file: it.imageFile as string, title: it.o as string, mime: mimeForB64(res.b64), b64: res.b64 });
       } catch { /* file hilang: lewati */ }
     }
     return out;
@@ -436,9 +435,6 @@
     if (vgFirst) return 'frames';
     return 'text';
   }
-  function vgEffDur(): number {
-    return vgRefs.length > 0 ? 8 : Number(vgDur);
-  }
   function vgLoadSample(portrait: boolean) {
     vgTab = 'prompt';
     if (portrait) vgAspect = '9:16';
@@ -448,17 +444,15 @@
     const key = readKeys().gemini;
     if (!key) { vgStatus = t('vg.need_key', lang); return; }
     if (!vgPrompt.trim()) { vgStatus = t('vg.need_prompt', lang); return; }
-    if (vgRefs.length > 0 && vgTier === 'lite') { vgStatus = t('vg2.refs.lite', lang); return; }
     vgBusy = true;
     vgStatus = t('vg.status.start', lang);
-    const t0 = Date.now();
     try {
       const mode = vgMode();
-      const r = await veoGenerateClip(key, { prompt: vgPrompt.trim(), tier: vgTier as 'standard' | 'fast' | 'lite', aspect: vgAspect, resolution: vgRes, duration: vgEffDur(), image: mode === 'frames' && vgFirst ? { b64: vgFirst.b64, mime: vgFirst.mime } : undefined, lastFrame: mode === 'frames' && vgFirst && vgLast ? { b64: vgLast.b64, mime: vgLast.mime } : undefined, referenceImages: mode === 'refs' ? vgRefs.map((r) => ({ b64: r.b64, mime: r.mime })) : undefined }, (phase) => {
-        const el = Math.round((Date.now() - t0) / 1000);
-        vgStatus = phase === 'download' ? t('vg.status.download', lang) : `${t('vg.status.poll', lang)} (${el}s)`;
+      const imgs = mode === 'refs' ? vgRefs.map((r) => ({ b64: r.b64, mime: r.mime })) : mode === 'frames' && vgFirst ? [{ b64: vgFirst.b64, mime: vgFirst.mime }, ...(vgLast ? [{ b64: vgLast.b64, mime: vgLast.mime }] : [])] : undefined;
+      const r = await omniGenerateClip(key, { prompt: vgPrompt.trim(), aspect: vgAspect, resolution: vgRes, images: imgs }, (phase, elapsed) => {
+        vgStatus = phase === 'save' ? t('vg.status.download', lang) : phase === 'generating' ? `${t('vg.status.poll', lang)} (${elapsed ?? 0}s)` : t('vg.status.start', lang);
       });
-      ve2Assets = [...ve2Assets, { id: 'veo' + Date.now(), name: `Veo ${r.seconds}s`, icon: '🎬', kind: 'Video', src: r.path, duration: r.seconds }];
+      ve2Assets = [...ve2Assets, { id: 'omni' + Date.now(), name: `Omni ${r.seconds.toFixed(1)}s`, icon: '🎬', kind: 'Video', src: r.path, duration: r.seconds }];
       ve2SaveState();
       videoSpend = readVideoSpend();
       vgLastPath = r.path;
@@ -473,7 +467,7 @@
   function vgAddToTimeline() {
     if (!vgLastPath) return;
     const start = ve2Clips.reduce((m, c) => Math.max(m, c.start + c.dur), 0);
-    ve2Clips = [...ve2Clips, { id: 'veoc' + Date.now(), name: `Veo ${vgLastDur}s`, track: 'Video', start, dur: vgLastDur, src: vgLastPath, effect: 'none' }];
+    ve2Clips = [...ve2Clips, { id: 'omnic' + Date.now(), name: `Omni ${vgLastDur.toFixed(1)}s`, track: 'Video', start, dur: vgLastDur, src: vgLastPath, effect: 'none' }];
     ve2SaveState();
     vgStatus = t('vg.added_timeline', lang);
   }
@@ -851,8 +845,8 @@
           <div class="ms-card">
 <div class="se-group"><h4>{t('vg.title', lang)}</h4></div>
 <div class="vg-card">
-<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><label>{t('vg2.model', lang)} <select id="vg-model" bind:value={vgModel}><option value="veo">{t('vg2.model.veo', lang)}</option><option value="hyperframes">{t('vg2.model.hf', lang)}</option></select></label>{#if vgModel === 'veo'}<span class="se-note" style="font-weight:700">{t('vg2.veo31', lang)}</span><label>{t('vg.tier', lang)} <select id="vg-tier" bind:value={vgTier}><option value="fast">{t('vg.tier.fast', lang)}</option><option value="standard">{t('vg.tier.standard', lang)}</option><option value="lite" disabled={vgRefs.length > 0}>{t('vg.tier.lite', lang)}</option></select></label>{/if}</div>
-{#if vgModel === 'veo'}
+<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><label>{t('vg2.model', lang)} <select id="vg-model" bind:value={vgModel}><option value="omni">{t('vg2.model.omni', lang)}</option><option value="hyperframes">{t('vg2.model.hf', lang)}</option></select></label>{#if vgModel === 'omni'}<span class="se-note" style="font-weight:700">{t('vg2.omni', lang)}</span>{/if}</div>
+{#if vgModel === 'omni'}
 <div class="vg-tabs"><button class="vg-tab {vgTab === 'prompt' ? 'vg-tab-sel' : ''}" data-vg-tab="prompt" onclick={() => { vgTab = 'prompt'; }}>{t('vg2.tab.prompt', lang)}</button><button class="vg-tab {vgTab === 'refs' ? 'vg-tab-sel' : ''}" data-vg-tab="refs" onclick={() => { vgTab = 'refs'; }}>{t('vg2.tab.refs', lang)}</button><button class="vg-tab {vgTab === 'frames' ? 'vg-tab-sel' : ''}" data-vg-tab="frames" onclick={() => { vgTab = 'frames'; }}>{t('vg2.tab.frames', lang)}</button></div>
 {#if vgTab === 'prompt'}
 <label>{t('vg.prompt', lang)}<textarea id="vg-prompt" rows="3" class="se-field" bind:value={vgPrompt}></textarea></label>
@@ -878,11 +872,11 @@
 {/if}
 <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
 <label>{t('vg.aspect', lang)} <select id="vg-aspect" bind:value={vgAspect}><option value="9:16">9:16</option><option value="16:9">16:9</option></select></label>
-<label>{t('vg.res', lang)} <select id="vg-res" bind:value={vgRes}><option value="1080p">1080p</option><option value="720p">720p</option></select></label>
-<label>{t('vg.dur', lang)} <select id="vg-dur" disabled={vgRefs.length > 0} bind:value={vgDur}><option value={8}>8</option><option value={6}>6</option><option value={4}>4</option></select></label>
+<label>{t('vg.res', lang)} <select id="vg-res" bind:value={vgRes}><option value="360p">360p</option><option value="720p">720p</option><option value="1080p">1080p</option><option value="4k">4K</option></select></label>
 </div>
-<p class="se-note">{t('vg2.audio', lang)}</p>
-<p class="se-note">{t('vg.price', lang, { usd: veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, vgEffDur()).toFixed(2), idr: Math.round(veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, vgEffDur()) * 18148).toLocaleString('id-ID'), s: vgEffDur() })}</p>
+<p class="se-note">{t('omni.dur', lang)}</p>
+<p class="se-note">{t('omni.audio', lang)}</p>
+<p class="se-note">{t('omni.price', lang, { usd: omniPriceUsd(vgRes, 10).toFixed(2), idr: Math.round(omniPriceUsd(vgRes, 10) * 18148).toLocaleString('id-ID'), res: vgRes })}</p>
 <button id="vg-generate" class="btn btn-primary" disabled={vgBusy} onclick={() => vgGenerate()}>{vgBusy ? t('vg.generating', lang) : t('vg.generate', lang)}</button> <button id="vg-add-timeline" class="btn btn-sm" disabled={!vgLastPath} onclick={() => vgAddToTimeline()}>{t('vg.add_timeline', lang)}</button>
 <p id="vg-status" class="se-note" style="white-space:pre-line">{vgStatus}</p>
 {#if videoSpend.videos > 0}<p class="se-note">{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</p>{/if}
