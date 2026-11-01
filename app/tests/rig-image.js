@@ -173,6 +173,46 @@ try {
   check('v146: brief kosong setelah Bersihkan', (document.getElementById('img-brief')?.value || '') === '');
   check('v146: tab bulk hilang setelah Bersihkan', document.querySelectorAll('#img-bulk-tabs .img-tab').length === 0);
   check('v146: rasio dipertahankan setelah Bersihkan', (JSON.parse(store.get('minime.imageFlow') || '{}').ratio || '') !== '', JSON.stringify(JSON.parse(store.get('minime.imageFlow') || '{}')));
+
+  // 8. v158: galeri hanya 10 output terakhir, thumbnail saja.
+  // (Jalur UI asli: 6 siklus generate + simpan semua varian dengan
+  // brief berbeda. Sebelum seksi ini Library sudah berisi 1 gambar
+  // §4, sehingga total 13 — galeri wajib menampilkan 10 terakhir.)
+  const briefEl = document.getElementById('img-brief');
+  for (let cyc = 1; cyc <= 6; cyc++) {
+    // Nama varian memuat timestamp: tunggu nama BERUBAH agar tidak
+    // terkecoh varian basi §3 (fetch stub mengembalikan PNG yang sama).
+    const oldNames = [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent).join('|');
+    briefEl.value = 'uji galeri ' + cyc;
+    briefEl.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    await tick(100);
+    document.getElementById('img-generate').click();
+    await waitFor(() => {
+      const names = [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent).join('|');
+      return document.querySelectorAll('#img-variants img').length === 2 && names !== oldNames;
+    }, '2 varian baru siklus ' + cyc, 120);
+    // Tombol varian yang sudah tersimpan tetap bertuliskan "Simpan ke
+    // Library" (klik ulang = dedup, baris tidak bertambah) — jadi klik
+    // tiap tombol sekali saja, tanpa menuntut +1 per klik.
+    const rowsBefore = libRows();
+    const saveBtns = [...document.querySelectorAll('#img-variants button')].filter((b) => b.textContent.trim() === 'Simpan ke Library');
+    for (const btn of saveBtns) {
+      btn.click();
+      await tick(200);
+    }
+    await waitFor(() => libRows() > rowsBefore, 'simpan siklus ' + cyc, 120);
+  }
+  await waitFor(() => document.querySelectorAll('#img-gallery .img-thumb').length === 10, 'galeri 10 thumbnail', 120);
+  // Thumbnail sukses tidak punya teks (judul hanya di atribut title
+  // + data-img-brief) — asersi memakai atribut, bukan textContent.
+  const galAttrs = [...document.querySelectorAll('#img-gallery .img-thumb')].map((el) => (el.getAttribute('title') || '') + '|' + (el.dataset.imgBrief || '')).join(' ');
+  check('v158: galeri tepat 10 thumbnail', document.querySelectorAll('#img-gallery .img-thumb').length === 10, document.querySelectorAll('#img-gallery .img-thumb').length);
+  check('v158: 10 terakhir tampil (uji galeri 2-6)', ['uji galeri 2', 'uji galeri 3', 'uji galeri 4', 'uji galeri 5', 'uji galeri 6'].every((t) => galAttrs.includes(t)), galAttrs.slice(0, 200));
+  check('v158: output lama tidak tampil (uji galeri 1 + kopi susu §4)', !galAttrs.includes('uji galeri 1') && !galAttrs.includes('kopi susu'), galAttrs.slice(0, 200));
+  check('v158: tanpa tombol Muat ke brief di galeri', ![...document.querySelectorAll('#img-gallery button')].some((b) => b.textContent.trim() === 'Muat ke brief'), [...document.querySelectorAll('#img-gallery button')].map((b) => b.textContent.trim()).join('|'));
+  document.querySelector('#img-gallery .img-thumb')?.click();
+  await tick(100);
+  check('v158: klik thumbnail memuat brief (uji galeri 2)', (document.getElementById('img-brief')?.value || '').includes('uji galeri 2'), document.getElementById('img-brief')?.value || '');
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-image exception :: ' + (e && e.stack ? e.stack : e));

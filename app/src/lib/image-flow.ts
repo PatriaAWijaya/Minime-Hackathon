@@ -123,6 +123,10 @@ async function renderGallery(): Promise<void> {
     const raw = window.localStorage.getItem('minime.library.added');
     const arr = raw ? JSON.parse(raw) : [];
     if (Array.isArray(arr)) added = arr.filter((x) => x && x.kind === 'image' && x.imageFile);
+  // v158: galeri HANYA 10 output terakhir, thumbnail saja. Library
+  // tetap arsip lengkap (tidak dipotong); yang dibatasi hanya galeri.
+  // LIB_ADDED kronologis (push) sehingga slice(-10) = 10 terbaru.
+  added = added.slice(-10);
   } catch { /* abaikan */ }
   if (added.length === 0) {
     g.innerHTML = `<div class="se-note">${esc(tr('img.gallery.empty'))}</div>`;
@@ -133,11 +137,11 @@ async function renderGallery(): Promise<void> {
     try {
       const url = item.imageFile ? await readThumb(item.imageFile) : null;
       if (!url) throw new Error('nofile');
-      cards.push(`<div class="img-card"><img src="${url}" alt="">`
-        + `<div class="se-note">${esc(item.o)}</div>`
-        + `<button class="se-btn2" data-img-brief="${esc(item.content || '')}">${esc(tr('img.loadbrief'))}</button></div>`);
+      // v158: thumbnail saja — klik thumbnail memuat ke brief
+      // (fungsi lama tombol "Muat ke brief" pindah ke klik gambar).
+      cards.push(`<button class="img-thumb" data-img-brief="${esc(item.content || '')}" title="${esc(item.o)}"><img src="${url}" alt=""></button>`);
     } catch {
-      cards.push(`<div class="img-card"><div class="se-note">${esc(item.o)} — ${esc(tr('img.err.nofile'))}</div></div>`);
+      cards.push(`<div class="img-thumb img-thumb-missing"><div class="se-note">${esc(item.o)} — ${esc(tr('img.err.nofile'))}</div></div>`);
     }
   }
   g.innerHTML = cards.join('');
