@@ -2521,6 +2521,11 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v169 — LIVE (hapus catatan billing Veo, perintah Patria 1 Nov 17:42)
+- Baris catatan "Veo tidak ada free tier — kunci Gemini harus milik project Google Cloud dengan billing aktif; tanpa billing, Google menolak generate." dicabut dari panel Generate (App.svelte) beserta kunci vg.billing_note di 3 bahasa (1025 -> 1024/bahasa, 0 referensi tersisa). Estimasi harga per klip tetap tampil; catatan billing di select penyedia Google tab Image tidak disentuh (perintah khusus Veo).
+- Gerbang penuh lolos: vite build, 14 rig, root tsc + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0, scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
+- Kode lokal ece0cec ↔ remote d603164 (tree identik).
+
 ## v168 — LIVE (referensi gambar storyboard ke Veo + generate image Google, perintah Patria 1 Nov 17:25/17:26)
 - Perintah Patria: (1) 17:25 "tambahkan fungsi untuk memasukkan gambar yang digunakan sebagai story board, sehingga video yang digenerate sesuai dengan image yang sudah dibuat sebelumnya"; (2) 17:26 "tambahkan pula, menu generate image dari ggogle flo". Keduanya dibangun dalam satu versi (satu gerbang, satu deploy) karena menyentuh file yang sama (App.svelte, i18n, image-flow).
 - (1) Image-to-video Veo: panel Generate tab Video kini punya seksi "Gambar referensi storyboard (opsional)": input file (accept image/*) ATAU tombol "Pilih dari Library" (10 gambar kind image terbaru, thumbnail klik-pilih, preview + label + tombol Hapus). Gambar terpilih dikirim sebagai frame awal: instances[0].image = {bytesBase64Encoded, mimeType} (format REST dari SDK field image + panduan API Veo 3.1; endpoint/poll/download tidak berubah). Referensi bersifat sesi (tidak dipersistensikan). Mime ditebak dari prefix base64 (png/jpeg/gif/webp) agar impor PNG tidak salah label webp; file input memakai File.type.
