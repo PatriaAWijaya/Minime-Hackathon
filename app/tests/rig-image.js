@@ -371,6 +371,26 @@ try {
   const last12 = added12[added12.length - 1] || {};
   check('v168: file tersimpan berekstensi .png', typeof last12.imageFile === 'string' && last12.imageFile.endsWith('.png'), JSON.stringify(last12));
 
+
+  // v171: template pola prompt poster — Header/Footer/Palet masuk prompt sesuai urutan pola.
+  await setSel('img-provider', 'meta');
+  await setSel('img-output', 'poster');
+  const setTxt171 = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new dom.window.Event('input', { bubbles: true })); };
+  check('v171: field template render', !!document.getElementById('img-header') && !!document.getElementById('img-footer') && !!document.getElementById('img-palette'));
+  setTxt171('img-brief', 'foto prestasi tim');
+  setTxt171('img-header', 'JUARA 3');
+  setTxt171('img-title', 'POSTER DESIGN');
+  setTxt171('img-subtitle', 'LO KREATIF 2024');
+  setTxt171('img-footer', 'Nama A');
+  setTxt171('img-palette', 'marun #7A1C28');
+  await tick(100);
+  imgPrompts.length = 0;
+  document.getElementById('img-generate').click();
+  await waitFor(() => imgPrompts.length > 0, 'prompt template terkirim', 120);
+  const pr171 = imgPrompts[imgPrompts.length - 1];
+  const ord171 = ['Header text: JUARA 3', 'Title: POSTER DESIGN', 'Subtitle: LO KREATIF 2024', 'Footer text: Nama A', 'Color palette: marun #7A1C28'].map((m) => pr171.indexOf(m));
+  check('v171: prompt template urut pola (header>judul>subjudul>footer>palet)', ord171.every((v) => v >= 0) && ord171.every((v, i) => i === 0 || v > ord171[i - 1]), JSON.stringify(ord171) + ' :: ' + pr171.slice(0, 300));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-image exception :: ' + (e && e.stack ? e.stack : e));

@@ -36,8 +36,8 @@ import { esc } from './esc.js';
 
 const FLOW_LS = 'minime.imageFlow';
 
-type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number; output: string; duration: number; scenes: number; slides: number; title: string; subtitle: string; listicle: string; provider: string };
-const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0, output: 'poster', duration: 30, scenes: 4, slides: 6, title: '', subtitle: '', listicle: '', provider: 'meta' };
+type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number; output: string; duration: number; scenes: number; slides: number; title: string; subtitle: string; listicle: string; header: string; footer: string; palette: string; provider: string };
+const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0, output: 'poster', duration: 30, scenes: 4, slides: 6, title: '', subtitle: '', listicle: '', header: '', footer: '', palette: '', provider: 'meta' };
 let state: FlowState = { ...DEFAULTS };
 
 
@@ -52,10 +52,13 @@ function el(id: string): HTMLElement | null {
 
 function sentPrompt(): string {
   let p = state.brief.trim();
+  if (state.header.trim()) p += '. Header text: ' + state.header.trim();
   if (state.title.trim()) p += '. Title: ' + state.title.trim();
   if (state.subtitle.trim()) p += '. Subtitle: ' + state.subtitle.trim();
   const items = state.listicle.split('\n').map((x) => x.trim()).filter(Boolean);
   if (items.length) p += '. List: ' + items.join('; ');
+  if (state.footer.trim()) p += '. Footer text: ' + state.footer.trim();
+  if (state.palette.trim()) p += '. Color palette: ' + state.palette.trim();
   if (state.style) p += ', in ' + state.style + ' style';
   if (state.textfree) p += ', no text, no words, no letters, no watermark';
   const b = brandSuffix();
@@ -85,6 +88,9 @@ function loadState(): void {
         title: typeof o.title === 'string' ? o.title : '',
         subtitle: typeof o.subtitle === 'string' ? o.subtitle : '',
         listicle: typeof o.listicle === 'string' ? o.listicle : '',
+        header: typeof o.header === 'string' ? o.header : '',
+        footer: typeof o.footer === 'string' ? o.footer : '',
+        palette: typeof o.palette === 'string' ? o.palette : '',
         provider: o.provider === 'google' ? 'google' : 'meta',
       };
     }
@@ -470,6 +476,12 @@ function syncForm(): void {
   if (subtitle) subtitle.value = state.subtitle;
   const listicle = el('img-listicle') as HTMLTextAreaElement | null;
   if (listicle) listicle.value = state.listicle;
+  const header = el('img-header') as HTMLInputElement | null;
+  if (header) header.value = state.header;
+  const footer = el('img-footer') as HTMLTextAreaElement | null;
+  if (footer) footer.value = state.footer;
+  const palette = el('img-palette') as HTMLInputElement | null;
+  if (palette) palette.value = state.palette;
   const provider = el('img-provider') as HTMLSelectElement | null;
   if (provider) provider.value = state.provider;
   renderImgOutput();
@@ -558,6 +570,9 @@ export function initImageFlow(): void {
   bind<HTMLInputElement>('img-title', 'input', (e) => { state.title = e.value; saveState(); renderPreview(); });
   bind<HTMLInputElement>('img-subtitle', 'input', (e) => { state.subtitle = e.value; saveState(); renderPreview(); });
   bind<HTMLTextAreaElement>('img-listicle', 'input', (e) => { state.listicle = e.value; saveState(); renderPreview(); });
+  bind<HTMLInputElement>('img-header', 'input', (e) => { state.header = e.value; saveState(); renderPreview(); });
+  bind<HTMLTextAreaElement>('img-footer', 'input', (e) => { state.footer = e.value; saveState(); renderPreview(); });
+  bind<HTMLInputElement>('img-palette', 'input', (e) => { state.palette = e.value; saveState(); renderPreview(); });
   bind('img-approve', 'click', () => void approveDraft());
   bind('img-provider', 'change', () => { const p = el('img-provider') as HTMLSelectElement | null; state.provider = p && p.value === 'google' ? 'google' : 'meta'; saveState(); });
   bind('img-generate', 'click', () => void generate());

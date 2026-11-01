@@ -866,9 +866,12 @@
           <div class="img-main">
           <div id="img-bulk-tabs"></div>
           <div class="se-group"><label>{t('img.brief', lang)}<textarea id="img-brief" rows="10" class="se-field" placeholder={t('img.brief.ph', lang)}></textarea></label></div>
+          <div class="se-group"><label>{t('img.header', lang)}<input id="img-header" class="se-field" type="text"></label></div>
           <div class="se-group"><label>{t('img.title', lang)}<input id="img-title" class="se-field" type="text"></label></div>
           <div class="se-group"><label>{t('img.subtitle', lang)}<input id="img-subtitle" class="se-field" type="text"></label></div>
           <div class="se-group"><label>{t('img.listicle', lang)}<textarea id="img-listicle" rows="3" class="se-field"></textarea></label></div>
+          <div class="se-group"><label>{t('img.footer', lang)}<textarea id="img-footer" rows="2" class="se-field"></textarea></label></div>
+          <div class="se-group"><label>{t('img.palette', lang)}<input id="img-palette" class="se-field" type="text"></label></div>
           <div class="se-group"><label>{t('img.style', lang)}<select id="img-style" class="se-field">
             <option value="photorealistic">photorealistic</option><option value="product photography">product photography</option><option value="flat design">flat design</option><option value="illustration">illustration</option><option value="3D model">3D model</option>
           </select></label></div>
