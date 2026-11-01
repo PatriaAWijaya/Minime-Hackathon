@@ -2529,7 +2529,7 @@ dokumen lama yang dipakai.
 - Rig-video § (h) hijau: panel render, Muat contoh memuat data-composition-id + gsap.min.js + window.__timelines, Periksa CLI memuat 0.8.212 + npx, Render memuat path + 15 detik, Tambah ke Timeline memuat klip 'HyperFrames 15s'.
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0, scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal b0f0898 ↔ remote 8668dc6 (tree identik).
-- LIVE: menyusul (deploy mh-build175, verifikasi PID + md5 + marker bundle, lalu entri ini diperbarui).
+- LIVE: PID 19638; md5 ca7722b818e34b7d838b7884723baced lokal == MacBook; marker bundle 'hf-render' + 'Motion Graphics'.
 
 ## v172 — caption 3 jalur terisolasi-terintegrasi (perintah Patria 1 Nov 22:58 + "perbaiki" 22:59 + prinsip 23:03)
 - Aturan berdiri: penulisan script caption DIBEDAKAN sesuai perintah user — (1) ARTIKEL, (2) SOSMED, (3) VIDEO — masing-masing jalurnya sendiri, jangan dicampur. Prinsip 23:03: tiap jalur terisolasi penulisannya, namun terintegrasi datanya — hasil satu jalur langsung bisa dipakai di pemakaian berikutnya tanpa salin-tempel manual.
