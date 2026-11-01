@@ -114,12 +114,12 @@ function renderCost(): void {
   }
 }
 
-type Variant = { b64: string; url: string; name: string; label: string; prompt: string };
+type Variant = { b64: string; url: string; name: string; label: string; prompt: string; shot: string };
 let variants: Variant[] = [];
 let genBrief = '';
 
 function variantCard(v: Variant, i: number): string {
-  return `<div class="img-card"><img src="${v.url}" alt=""><div class="se-note">${esc(v.name)}${v.label ? ' · ' + esc(v.label) : ''}</div>`
+  return `<div class="img-card"><img src="${v.url}" alt=""${v.shot ? ` title="${esc(v.shot)}"` : ''}><div class="se-note">${esc(v.name)}${v.label ? ' · ' + esc(v.label) : ''}</div>`
     + `<div class="img-canva-row"><button class="se-btn2" data-img-save="${i}">${esc(tr('img.save'))}</button> `
     + `<button class="se-btn2" data-img-canva="${i}">${esc(tr('img.canva.edit'))}</button> `
     + `<input type="file" accept="image/*" data-img-canvafile="${i}"> `
@@ -237,11 +237,63 @@ async function canvaImport(i: number): Promise<void> {
     try {
       const { b64, url } = await readFileB64(f);
       if (!b64) continue;
-      variants.push({ b64, url, name: `img-canva-${ts}-${Math.floor(Math.random() * 1000)}.webp`, label: 'Canva', prompt: sentPrompt() });
+      variants.push({ b64, url, name: `img-canva-${ts}-${Math.floor(Math.random() * 1000)}.webp`, label: 'Canva', prompt: sentPrompt(), shot: '' });
       added++;
     } catch { /* lanjut ke file berikutnya */ }
   }
   if (added) { renderVariants(); setNote(tr('img.canva.imported')); }
+}
+
+// v164: storyboard = SEQUENCE, bukan 4 tema (perintah Patria 1 Nov
+// 16:19 + bukti live: v163 mengirim SELURUH brief + penanda scene ke
+// 4 panggilan independen — tiap panggilan menafsir ulang semuanya,
+// dan copy poster di dalam brief menarik scene 2–4 jadi desain poster).
+// Prinsip storyboard yang dipakai: satu dunia, shot berurutan, tiap
+// panel HANYA satu momen. Maka prompt per frame = bible bersama
+// (video + gaya yang sama, urutan cerita) + deskripsi shot itu saja —
+// brief utuh TIDAK PERNAH dikirim per frame. Shot list didapat dari
+// parse blok bernomor di brief bila jumlahnya pas; bila tidak, model
+// membagi brief jadi shot list; bila itu pun gagal, fallback bible +
+// penanda keyframe (tetap tanpa brief utuh).
+let lastShots: string[] = [];
+
+function extractNumbered(text: string): string[] {
+  const lines = text.split('\n');
+  const blocks: string[] = [];
+  let cur: string[] = [];
+  const startRe = /^\s*(?:\d{1,2}\s*[.)]\s+|scene\s+\d+\s*[:.)]?\s+|shot\s+\d+\s*[:.)]?\s+)/i;
+  for (const line of lines) {
+    if (startRe.test(line)) { if (cur.length) blocks.push(cur.join(' ').trim()); cur = [line.trim()]; }
+    else if (cur.length) { cur.push(line.trim()); }
+  }
+  if (cur.length) blocks.push(cur.join(' ').trim());
+  return blocks
+    .map((b) => b.replace(/^\s*(?:\d{1,2}\s*[.)]\s+|scene\s+\d+\s*[:.)]?\s+|shot\s+\d+\s*[:.)]?\s+)/i, '').trim())
+    .filter(Boolean);
+}
+
+function parseStoryboardShots(brief: string, count: number): string[] | null {
+  const shots = extractNumbered(brief);
+  return shots.length === count ? shots : null;
+}
+
+async function modelShotList(brief: string, count: number): Promise<string[] | null> {
+  const text = await modelText(
+    `Bagi brief video berikut menjadi tepat ${count} deskripsi shot berurutan untuk storyboard. Tiap shot: satu kalimat visual — hanya apa yang terlihat di frame (subjek, aksi, suasana, kamera). Abaikan copy poster, headline, dan teks promosi. Balas HANYA dengan daftar bernomor, satu shot per baris, tanpa penjelasan.\n\nBrief:\n${brief}`,
+    'trace-img-shots-' + Date.now());
+  const shots = extractNumbered(text);
+  return shots.length === count ? shots : null;
+}
+
+function storyboardPrompt(i: number, count: number, shots: string[] | null): string {
+  const bible = `Storyboard frame ${i + 1} of ${count} for one ${state.duration}-second video titled "${state.title.trim() || 'Video'}". All frames belong to the same video and share the same visual style, in story order.`;
+  const shot = shots ? shots[i] : '';
+  let p = bible + (shot ? ` Shot: ${shot}` : ` Keyframe ${i + 1} of the sequence.`);
+  if (state.style) p += `, in ${state.style} style`;
+  if (state.textfree) p += ', no text, no words, no letters, no watermark';
+  const b = brandSuffix();
+  if (b) p += b;
+  return p;
 }
 
 async function generate(): Promise<void> {
@@ -261,17 +313,29 @@ async function generate(): Promise<void> {
   try {
     genBrief = brief;
     const ts = Date.now();
+    // v164: storyboard menyiapkan shot list dulu (parse, lalu model).
+    let shots: string[] | null = null;
+    if (state.output === 'storyboard') {
+      shots = parseStoryboardShots(brief, count);
+      if (!shots) {
+        try { shots = await modelShotList(brief, count); } catch { shots = null; }
+      }
+      lastShots = shots || [];
+    } else {
+      lastShots = [];
+    }
     const next: Variant[] = [];
     for (let i = 0; i < count; i++) {
       const prompt = state.output === 'poster' ? base
-        : state.output === 'storyboard' ? base + `, scene ${i + 1} of ${count} keyframe`
+        : state.output === 'storyboard' ? storyboardPrompt(i, count, shots)
         : base + `, slide ${i + 1} of ${count}`;
       const label = state.output === 'poster' ? 'Poster'
         : state.output === 'storyboard' ? `Scene ${i + 1}/${count}`
         : `Slide ${i + 1}/${count}`;
+      const shot = state.output === 'storyboard' ? (shots ? shots[i] : '') : '';
       const b64s = await metaGenerateImage(key, prompt, 1, RATIO_SIZE[state.ratio]);
       for (const b64 of b64s) {
-        next.push({ b64, url: 'data:image/webp;base64,' + b64, name: `img-${ts}-${next.length}.webp`, label, prompt });
+        next.push({ b64, url: 'data:image/webp;base64,' + b64, name: `img-${ts}-${next.length}.webp`, label, prompt, shot });
       }
     }
     variants = next;
@@ -316,7 +380,9 @@ async function approveDraft(): Promise<void> {
     const title = state.title.trim() || genBrief.slice(0, 40) || 'Draft';
     const parts: string[] = [];
     if (state.output === 'storyboard') {
-      const sceneLines = Array.from({ length: state.scenes }, (_, i) => `Scene ${i + 1}: keyframe ${i + 1} dari ${state.scenes}`).join('\n');
+      const sceneLines = lastShots.length
+        ? lastShots.map((sh, i) => `Scene ${i + 1}: ${sh}`).join('\n')
+        : Array.from({ length: state.scenes }, (_, i) => `Scene ${i + 1}: keyframe ${i + 1} dari ${state.scenes}`).join('\n');
       const plan = [
         `Rencana perakitan video — ${title}`,
         `Durasi: ${state.duration} detik · ${state.scenes} scene keyframe · Rasio: ${state.ratio}`,

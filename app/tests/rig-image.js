@@ -24,6 +24,7 @@ if (!modMatch) throw new Error('script module dist tidak ditemukan');
 html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch[1]}"></script></body>`);
 
 const log = [];
+const imgPrompts = [];
 const store = new Map();
 const imgFiles = new Map();
 const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -68,6 +69,8 @@ async function fetchStub(url, opts) {
       },
     });
   }
+  // v164: rekam prompt gambar terkirim untuk asersi sequence.
+  if (u.includes('images/generations') && typeof body.prompt === 'string') imgPrompts.push(body.prompt);
   // Gambar: hormati n seperti API nyata (sebelumnya stub selalu 2,
   // padahal generate v163 memanggil per gambar dengan n=1).
   const n = Number.isInteger(body.n) && body.n > 0 && body.n <= 10 ? body.n : 2;
@@ -280,6 +283,37 @@ try {
   check('v163: storyboard menyimpan VO + caption ke Library', libAfterSb.some((x) => (x.content || '').includes('VO-UJI')) && libAfterSb.some((x) => (x.content || '').includes('CAPTION-UJI')), libAfterSb.map((x) => (x.content || '').slice(0, 20)).join('|').slice(0, 200));
   check('v163: rencana video masuk ke state Video Editor', (ve2.plan || '').includes('story uji'), (ve2.plan || '').slice(0, 120));
   check('v163: naskah VO masuk ke kolom teks Voice Editor', (document.getElementById('vsText')?.value || '').includes('VO-UJI'), (document.getElementById('vsText')?.value || '').slice(0, 60));
+
+
+  // 10. v164: storyboard = sequence (satu shot per frame, bukan tema).
+  await setSel('img-output', 'storyboard');
+  await setSel('img-scenes', '2');
+  briefEl.value = '1. 00-05 detik: tuang V60 perlahan, uap naik.\n2. 05-10 detik: barista tersenyum menyajikan cangkir.';
+  briefEl.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(100);
+  const oldNames10 = [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent).join('|');
+  imgPrompts.length = 0;
+  document.getElementById('img-generate').click();
+  await waitFor(() => {
+    const names = [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent).join('|');
+    return document.querySelectorAll('#img-variants img').length === 2 && names !== oldNames10;
+  }, '2 varian storyboard parse', 120);
+  check('v164: frame 1 hanya shot 1 (bukan brief utuh)', imgPrompts.length === 2 && imgPrompts[0].includes('tuang V60') && !imgPrompts[0].includes('barista tersenyum'), JSON.stringify(imgPrompts).slice(0, 300));
+  check('v164: frame 2 hanya shot 2', imgPrompts[1].includes('barista tersenyum') && !imgPrompts[1].includes('tuang V60'), JSON.stringify(imgPrompts).slice(0, 300));
+  check('v164: kedua frame berbagi bible sequence', imgPrompts[0].includes('Storyboard frame 1 of 2') && imgPrompts[1].includes('Storyboard frame 2 of 2') && imgPrompts[0].includes('same video') && imgPrompts[1].includes('same video'), JSON.stringify(imgPrompts).slice(0, 200));
+  // Fallback: brief tanpa nomor -> model-split gagal di stub -> bible
+  // + penanda keyframe, tetap tanpa brief utuh.
+  briefEl.value = 'video teaser kopi hangat komunal sore hari';
+  briefEl.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(100);
+  const oldNames10b = [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent).join('|');
+  imgPrompts.length = 0;
+  document.getElementById('img-generate').click();
+  await waitFor(() => {
+    const names = [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent).join('|');
+    return document.querySelectorAll('#img-variants img').length === 2 && names !== oldNames10b;
+  }, '2 varian storyboard fallback', 120);
+  check('v164: fallback tetap sequence tanpa brief utuh', imgPrompts.length === 2 && imgPrompts[0].includes('Storyboard frame 1 of 2') && imgPrompts[1].includes('Storyboard frame 2 of 2') && !imgPrompts[0].includes('video teaser kopi hangat') && !imgPrompts[1].includes('video teaser kopi hangat'), JSON.stringify(imgPrompts).slice(0, 300));
 
 } catch (e) {
   // eslint-disable-next-line no-console
