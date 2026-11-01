@@ -3016,6 +3016,14 @@ function graphSyncAgent(agentKey, pid, brief) {
 /* v92: satu jalur pembuatan node agen per-project (dipakai delegasi chat,
    picker aktivasi, DnD, dan pembuatan project). Prime selalu dibuat sebagai
    node orkestrator, BUKAN sebagai anggota project. */
+// v151: pastikan connector Prime -> agen ada (tanpa ganda). Dipakai delegasi:
+// node agen yang sudah ada (aktivasi manual, Prime pernah dihapus, atau
+// edge dihapus manual) tetap tersambung begitu tugas didelegasikan.
+function graphEnsureEdge(fromKey, toKey) {
+  if (!fromKey || !toKey || !GNODES[fromKey] || !GNODES[toKey]) return;
+  var ex = GEDGES.some(function (e) { return e.f === fromKey && e.t === toKey; });
+  if (!ex) { GEDGES.push({ f: fromKey, t: toKey, l: "" }); saveGraphState(); }
+}
 export function graphEnsureAgentNode(agentKey, pid, briefText) {
   if (!pid || !PROJECTS[pid] || !AGENTS[agentKey]) return null;
   var chain = Object.keys(GNODES).filter(function (k) { return GNODES[k].proj === pid && GNODES[k].agent; });
@@ -3030,6 +3038,7 @@ export function graphEnsureAgentNode(agentKey, pid, briefText) {
     var nx = n < 4 ? 10 + 22 * n : 10 + 22 * (n - 4), ny = n < 4 ? 32 : 60;
     aKey = createNode({ name: AGENTS[agentKey].name, sub: AGENTS[agentKey].role || "", icon: AGENTS[agentKey].name.charAt(0), x: Math.min(88, nx), y: ny, w: 170, kind: "output", desc: "", agent: agentKey, proj: pid, brief: briefText || "" }, { edgeFrom: primeKey, quiet: true });
   } else if (briefText && !GNODES[aKey].brief) { GNODES[aKey].brief = briefText; saveGraphState(); }
+  if (agentKey !== "prime") graphEnsureEdge(primeKey, aKey);
   return aKey;
 }
 export function graphBuildProject(pid) {
@@ -3102,15 +3111,22 @@ export function graphNoteDelegation(agentKey, briefText) {
   if (!pid || !PROJECTS[pid]) {
     /* v104 (aturan Patria 30 Okt 16:16): delegasi tanpa project tetap
        memunculkan agen — sebagai node Graph-only (proj null) yang tampil
-       di grup "Dari Graph" pada list agen aktif, bukan hilang diam-diam. */
+       di grup "Dari Graph" pada list agen aktif, bukan hilang diam-diam.
+       v151: Prime Graph-only selalu dibuat bila belum ada, dan connector
+       Prime -> agen selalu dipastikan (node lama tanpa edge ikut tersambung). */
+    var primeNull = Object.keys(GNODES).filter(function (k) { return GNODES[k].agent === "prime" && !GNODES[k].proj; })[0] || null;
+    if (!primeNull) {
+      primeNull = createNode({ name: "Prime Agent", sub: "Orkestrasi & kurasi", icon: "\uD83E\uDD16", x: 10, y: 32, w: 195, kind: "prime", desc: "Agen utama: memecah arahan, memanggil agen, dan mengkurasi semua hasil sebelum final.", agent: "prime", proj: null, brief: "" }, {});
+    }
+    if (agentKey === "prime") { renderAgents(); renderGraph(); return; }
     var existing = Object.keys(GNODES).filter(function (k) { return GNODES[k].agent === agentKey && !GNODES[k].proj; });
     if (existing.length) {
       if (briefText && !GNODES[existing[0]].brief) { GNODES[existing[0]].brief = briefText; saveGraphState(); }
+      graphEnsureEdge(primeNull, existing[0]);
       renderAgents(); renderGraph(); return;
     }
-    var primeNull = Object.keys(GNODES).filter(function (k) { return GNODES[k].agent === "prime" && !GNODES[k].proj; })[0] || null;
     var n = Object.keys(GNODES).filter(function (k) { return GNODES[k].agent && !GNODES[k].proj; }).length;
-    createNode({ name: AGENTS[agentKey].name, sub: AGENTS[agentKey].role || "", icon: AGENTS[agentKey].name.charAt(0), x: Math.min(88, 10 + 22 * n), y: n < 4 ? 32 : 60, w: 170, kind: "output", desc: "", agent: agentKey, proj: null, brief: briefText || "" }, primeNull ? { edgeFrom: primeNull } : {});
+    createNode({ name: AGENTS[agentKey].name, sub: AGENTS[agentKey].role || "", icon: AGENTS[agentKey].name.charAt(0), x: Math.min(88, 10 + 22 * n), y: n < 4 ? 32 : 60, w: 170, kind: "output", desc: "", agent: agentKey, proj: null, brief: briefText || "" }, { edgeFrom: primeNull });
     renderAgents(); renderGraph(); return;
   }
   graphEnsureAgentNode(agentKey, pid, briefText);

@@ -572,6 +572,25 @@ try {
   check('v129: Hapus -> project hilang permanen dari Graph + list', !dom.window.PROJECTS['pdd1'] && !dom.window.GNODES['gxdel'] && ![...document.querySelectorAll('#agentList .group')].some((el) => el.textContent.includes('Hapus Uji')), '');
   check('v129: project lain tidak ikut terhapus', !!dom.window.PROJECTS['pdd2'], '');
 
+  // 24. v151: delegasi selalu memastikan connector Prime -> agen.
+  const pid24 = dom.window.graphNewProject();
+  const prime24 = Object.keys(dom.window.GNODES).find((k) => dom.window.GNODES[k].proj === pid24 && dom.window.GNODES[k].agent === 'prime');
+  dom.window.graphEnsureAgentNode('riset', pid24, 'Tugas uji v151');
+  const riset24 = Object.keys(dom.window.GNODES).find((k) => dom.window.GNODES[k].proj === pid24 && dom.window.GNODES[k].agent === 'riset');
+  check('v151: node agen baru langsung terhubung ke Prime', !!prime24 && !!riset24 && dom.window.GEDGES.some((e) => e.f === prime24 && e.t === riset24), JSON.stringify(dom.window.GEDGES));
+  dom.window.GEDGES.length = 0;
+  dom.window.graphNoteDelegation('riset', 'Tugas uji v151 kedua');
+  check('v151: delegasi ke node yang sudah ada menyambungkan lagi connector yang hilang', dom.window.GEDGES.some((e) => e.f === prime24 && e.t === riset24), JSON.stringify(dom.window.GEDGES));
+  check('v151: tidak ada connector ganda', dom.window.GEDGES.filter((e) => e.f === prime24 && e.t === riset24).length === 1, JSON.stringify(dom.window.GEDGES));
+  Object.keys(dom.window.PROJECTS).forEach((k) => { delete dom.window.PROJECTS[k]; });
+  Object.keys(dom.window.GNODES).forEach((k) => { delete dom.window.GNODES[k]; });
+  dom.window.GEDGES.length = 0;
+  dom.window.graphNoteDelegation('media', 'Tugas graph-only v151');
+  const primeNull24 = Object.keys(dom.window.GNODES).find((k) => dom.window.GNODES[k].agent === 'prime' && !dom.window.GNODES[k].proj);
+  const mediaNull24 = Object.keys(dom.window.GNODES).find((k) => dom.window.GNODES[k].agent === 'media' && !dom.window.GNODES[k].proj);
+  check('v151: delegasi Graph-only membuat node Prime', !!primeNull24, Object.keys(dom.window.GNODES).join(','));
+  check('v151: delegasi Graph-only menghubungkan node agen ke Prime', !!primeNull24 && !!mediaNull24 && dom.window.GEDGES.some((e) => e.f === primeNull24 && e.t === mediaNull24), JSON.stringify(dom.window.GEDGES));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-graph exception :: ' + (e && e.stack ? e.stack : e));
