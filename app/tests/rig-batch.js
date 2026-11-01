@@ -128,8 +128,10 @@ const invokeCount = (part) => log.filter((l) => l.startsWith('invoke:') && l.inc
 
 try {
   await waitFor(() => typeof dom.window.showView === 'function', 'mount showView', 120);
-  dom.window.showView('media');
-  dom.window.mediaTab('batch');
+  // v148: Batch pindah dari Media Studio ke Planner.
+  check('v148: tombol tab Batch tidak ada lagi di Media Studio', !document.getElementById('ms-tabbtn-batch'));
+  dom.window.showView('planner');
+  check('v148: Batch tampil di Planner', !!document.getElementById('batch-main') && document.getElementById('view-planner')?.classList.contains('active'));
   await tick(100);
 
   // 1. Form render + topik kosong ditolak tanpa fetch.

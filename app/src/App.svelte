@@ -692,7 +692,6 @@
       <div class="filters" style="flex-shrink:0;margin:0 14px 12px">
         <button id="ms-tabbtn-script" onclick={() => { mediaTab('script') }}>{t('ms.tab.script', lang)}</button>
         <button id="ms-tabbtn-image" onclick={() => { mediaTab('image') }}>{t('ms.tab.image', lang)}</button>
-        <button id="ms-tabbtn-batch" onclick={() => { mediaTab('batch') }}>{t('ms.tab.batch', lang)}</button>
         <button id="ms-tabbtn-voice" onclick={() => { mediaTab('voice'); vedRefresh(); }}>{t('ms.tab.voice', lang)}</button>
         <button id="ms-tabbtn-video" class="active" onclick={() => { mediaTab('video') }}>{t('ms.tab.video', lang)}</button>
       </div>
@@ -737,10 +736,6 @@
           <div id="img-gallery" class="mediagrid"></div>
           </div>
           </div>
-        </div>
-        <div id="ms-tab-batch" style="display:none">
-          <h3>{t('ms.tab.batch', lang)}</h3>
-          <div id="batch-main"></div>
         </div>
         <div id="ms-tab-voice" style="display:none">
           <h3>{t('ms.tab.voice', lang)}</h3>
@@ -929,6 +924,8 @@
     </div>
     <div class="view" id="view-planner">
       <div class="scroll">
+        <h3 style="margin:0 14px 12px">{t('ms.tab.batch', lang)}</h3>
+        <div id="batch-main" style="margin:0 14px 12px"></div>
         <div id="socNotice" style="display:none;margin:0 14px 12px;padding:10px 12px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px"></div>
         <div id="socPasteWrap" style="display:none;margin:0 14px 12px;padding:10px 12px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px"></div>
         <div id="nativePlanner"></div>

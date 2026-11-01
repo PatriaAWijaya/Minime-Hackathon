@@ -1917,7 +1917,7 @@ function tabSwitcher(panelPrefix, btnPrefix, keys, id) {
 }
 
 export function mediaTab(id) {
-  tabSwitcher('ms-tab-', 'ms-tabbtn-', ['script', 'image', 'batch', 'voice', 'video'], id);
+  tabSwitcher('ms-tab-', 'ms-tabbtn-', ['script', 'image', 'voice', 'video'], id);
 }
 
 export function campaignTab(id) {
