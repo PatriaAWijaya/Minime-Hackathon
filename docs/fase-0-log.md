@@ -2521,6 +2521,12 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v180 — hapus paragraf catatan HyperFrames (perintah Patria 2 Nov 02:42)
+- Paragraf `<p>{t('hf.note')}</p>` di cabang model HyperFrames dihapus dari markup; kunci hf.note dihapus di 3 bahasa (satu-satunya rujukan sudah tidak ada — diverifikasi grep). i18n: 1094 → 1093/bahasa, 0 duplikat. Tidak ada perubahan fungsi lain; rig-video tidak menyentuh hf.note sehingga tidak perlu diubah.
+- Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0, scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
+- Kode lokal c277f61 ↔ remote 5628cc4 (tree identik).
+- LIVE: menyusul (deploy mh-build180, verifikasi PID + md5 + marker bundle, lalu entri ini diperbarui).
+
 ## v179 — hapus Ringkasan tugas + template Seri Harian + batch + panel HyperFrames; HyperFrames jadi pilihan model lokal; judul Video Generator; heading Video Editor (perintah Patria 2 Nov 02:34 + 02:35 + 02:36)
 - Dihapus total dari tab Video (markup + fungsi + CSS, bukan disembunyikan): blok Ringkasan tugas (mode + path hasil terakhir — duplikat info timeline editor), template Seri Harian Tuang v176 (state + fungsi + markup + CSS .vt-beat), batch video 30 klip v170 (state + fungsi + markup + CSS .vg-batch-*), panel HyperFrames terpisah v175. Kunci i18n vg.tpl.*/vg.batch.*/hf.*/vg2.summary/vg2.mode.* dipertahankan sebagai data tak terujuk (preseden v178 untuk t1/t2); fungsi + state HF dipertahankan karena dipakai cabang model baru.
 - Model generator: dropdown #vg-model di atas kartu — 'Veo 3.1 — API' (default) vs 'HyperFrames — lokal'. Cabang Veo = tab Prompt/References/Frames + format + harga + Generate seperti v178; cabang HyperFrames = form HTML + kualitas + Periksa/Render/Tambah ke Timeline (isi panel v175 pindah ke sini). Rencana perakitan + timeline + ekspor ve2 tidak berubah.
