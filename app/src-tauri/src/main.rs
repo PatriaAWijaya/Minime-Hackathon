@@ -2,6 +2,7 @@
 
 mod audio;
 mod browser;
+mod hyperframes;
 mod image;
 mod sherpa;
 mod social;
@@ -55,6 +56,8 @@ fn main() {
             video::video_write_ass,
             video::video_read,
             video::video_save,
+            hyperframes::hyperframes_check,
+            hyperframes::hyperframes_render,
             voicestudio::vs_launch,
             voicestudio::vs_install,
             sherpa::sherpa_status,

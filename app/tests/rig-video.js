@@ -34,6 +34,9 @@ const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8B
 function invokeStub(cmd, args) {
   if (cmd === 'image_read') return { b64: PNG_1X1 };
   if (cmd === 'video_save') return { path: '/Users/mac/Movies/minime-veo/veo-uji.mp4' };
+  if (cmd === 'hyperframes_check') return { found: true, version: 'hyperframes 0.8.212', method: 'npx' };
+  if (cmd === 'hyperframes_render') return { path: '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4', quality: 'draft', bytes: 107597 };
+  if (cmd === 'video_probe') return { duration: 15, size: 107597, streams: [], format_name: 'mp4' };
   throw new Error('unexpected invoke ' + cmd);
 }
 function makeDom(store) {
@@ -169,6 +172,24 @@ try {
   await tick(100);
   const clips = ve2State(store).clips || [];
   check('v170 timeline berurutan scene 1 lalu 2', clips.length === 3 && clips[1].name === 'Veo scene 1' && clips[2].name === 'Veo scene 2' && clips[1].start === 8 && clips[2].start === 16, JSON.stringify(clips));
+
+  // (h) v175: HyperFrames — panel render + tambah ke timeline.
+  check('v175: panel HyperFrames render', !!document.getElementById('hf-html') && !!document.getElementById('hf-render') && !!document.getElementById('hf-quality'));
+  document.getElementById('hf-sample').click();
+  await tick(100);
+  const hfHtmlVal = document.getElementById('hf-html').value || '';
+  check('v175: contoh memuat format probe (composition-id + gsap + timeline)', hfHtmlVal.includes('data-composition-id="main"') && hfHtmlVal.includes('gsap.min.js') && hfHtmlVal.includes('window.__timelines'), hfHtmlVal.slice(0, 120));
+  document.getElementById('hf-check').click();
+  await waitFor(() => (document.getElementById('hf-status')?.textContent || '').includes('0.8.212'), 'status check CLI', 100);
+  check('v175: Periksa CLI menampilkan versi + metode', (document.getElementById('hf-status')?.textContent || '').includes('npx'), document.getElementById('hf-status')?.textContent || '');
+  document.getElementById('hf-render').click();
+  await waitFor(() => (document.getElementById('hf-status')?.textContent || '').includes('hf-uji.mp4'), 'status render done', 100);
+  check('v175: render stub menghasilkan path + durasi probe', (document.getElementById('hf-status')?.textContent || '').includes('15'), document.getElementById('hf-status')?.textContent || '');
+  document.getElementById('hf-add-timeline').click();
+  await tick(100);
+  const hfClips = ve2State(store).clips || [];
+  check('v175: klip HyperFrames masuk timeline', hfClips.some((c) => c.src === '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4' && c.name === 'HyperFrames 15s'), JSON.stringify(hfClips));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL v167 rig-video :: ' + String(e && e.stack || e).slice(0, 500));

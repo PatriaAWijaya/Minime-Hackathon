@@ -153,7 +153,7 @@ pub(crate) fn find_tool(name: &str) -> Option<PathBuf> {
     None
 }
 
-fn tail(s: &str, n: usize) -> String {
+pub(crate) fn tail(s: &str, n: usize) -> String {
     if s.len() <= n {
         s.to_string()
     } else {
@@ -290,7 +290,7 @@ fn segments_from_stderr(stderr: &str, start_label: &str, end_label: &str) -> Vec
 // (agar anak tidak menggantung saat pipa penuh), thread utama mem-poll
 // try_wait; bila lewat batas, anak di-kill dan di-reap. Tanpa ini, satu
 // FFmpeg menggantung = invoke menggantung selamanya.
-fn output_timeout(cmd: &mut Command, secs: u64) -> Result<std::process::Output, String> {
+pub(crate) fn output_timeout(cmd: &mut Command, secs: u64) -> Result<std::process::Output, String> {
     use std::io::Read;
     use std::sync::mpsc;
     let mut child = cmd

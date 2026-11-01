@@ -13,6 +13,7 @@
   import { readImgSpend } from "./lib/image-api.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
   import { readVideoSpend, veoGenerateClip, veoPriceUsd, veoMimeForB64, b64FromBytes } from "./lib/video-gen.js";
+  import { HF_SAMPLE } from "./lib/hf-sample.js";
   import { readKeys } from "./lib/chat.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtIdrNum, fmtInt, fmtUsd, readLiveCost } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
@@ -506,6 +507,12 @@
   let vgStatus = $state('');
   let vgLastPath = $state('');
   let vgLastDur = $state(0);
+  let hfHtml = $state('');
+  let hfQuality = $state('draft');
+  let hfBusy = $state(false);
+  let hfStatus = $state('');
+  let hfLastPath = $state('');
+  let hfLastDur = $state(0);
   // v168: referensi gambar storyboard untuk Veo (image-to-video:
   // gambar jadi frame awal; video mengikuti subjek/gaya gambar itu).
   // Referensi bersifat sesi (tidak dipersistensikan): dari file atau
@@ -638,6 +645,45 @@
     ve2Clips = [...ve2Clips, { id: 'veoc' + Date.now(), name: `Veo ${vgLastDur}s`, track: 'Video', start, dur: vgLastDur, src: vgLastPath, effect: 'none' }];
     ve2SaveState();
     vgStatus = t('vg.added_timeline', lang);
+  }
+  async function hfCheck() {
+    try {
+      const r = await invoke<{ found: boolean; version: string; method: string }>('hyperframes_check');
+      hfStatus = t('hf.checked', lang, { v: r.version, m: r.method });
+    } catch (e) {
+      hfStatus = String(e);
+    }
+  }
+  async function hfRender() {
+    if (!hfHtml.trim()) { hfStatus = t('hf.need_html', lang); return; }
+    hfBusy = true;
+    hfStatus = t('hf.rendering', lang);
+    try {
+      const r = await invoke<{ path: string; quality: string; bytes: number }>('hyperframes_render', { req: { html: hfHtml, quality: hfQuality } });
+      hfLastPath = r.path;
+      let dur = 0;
+      try {
+        const pr = await invoke<{ duration: number; size: number }>('video_probe', { req: { path: r.path } });
+        dur = Math.round(pr.duration);
+      } catch { /* fallback ke data-duration root di bawah */ }
+      if (!dur) {
+        const m = hfHtml.match(/data-duration="([\d.]+)"/);
+        dur = m ? Math.round(Number(m[1])) : 0;
+      }
+      hfLastDur = dur;
+      hfStatus = t('hf.done', lang, { path: r.path, s: dur });
+    } catch (e) {
+      hfStatus = String(e);
+    } finally {
+      hfBusy = false;
+    }
+  }
+  function hfAddToTimeline() {
+    if (!hfLastPath || !hfLastDur) return;
+    const start = ve2Clips.reduce((m, c) => Math.max(m, c.start + c.dur), 0);
+    ve2Clips = [...ve2Clips, { id: 'hf' + Date.now(), name: `HyperFrames ${hfLastDur}s`, track: 'Video', start, dur: hfLastDur, src: hfLastPath, effect: 'none' }];
+    ve2SaveState();
+    hfStatus = t('hf.added_timeline', lang);
   }
   async function ve2Export() {
     if (ve2Busy) return;
@@ -992,6 +1038,19 @@
           </div>
           <p id="vg-status" class="se-note" style="white-space:pre-line">{vgStatus}</p>
           {#if videoSpend.videos > 0}<p class="se-note">{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</p>{/if}
+          <div class="se-group"><h4>{t('hf.title', lang)}</h4>
+          <p class="se-note">{t('hf.note', lang)}</p>
+          <label for="hf-html">{t('hf.html', lang)}</label>
+          <textarea id="hf-html" rows="14" class="se-field" style="font-family:monospace" bind:value={hfHtml}></textarea>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <button id="hf-sample" class="btn btn-sm" onclick={() => { hfHtml = HF_SAMPLE; }}>{t('hf.sample', lang)}</button>
+          <label>{t('hf.quality', lang)} <select id="hf-quality" bind:value={hfQuality}><option value="draft">{t('hf.quality.draft', lang)}</option><option value="looks">{t('hf.quality.looks', lang)}</option><option value="delivery">{t('hf.quality.delivery', lang)}</option></select></label>
+          <button id="hf-check" class="btn btn-sm" onclick={() => hfCheck()}>{t('hf.check', lang)}</button>
+          <button id="hf-render" class="btn btn-primary" disabled={hfBusy} onclick={() => hfRender()}>{hfBusy ? t('hf.rendering', lang) : t('hf.render', lang)}</button>
+          <button id="hf-add-timeline" class="btn btn-sm" disabled={!hfLastPath || !hfLastDur} onclick={() => hfAddToTimeline()}>{t('hf.add_timeline', lang)}</button>
+          </div>
+          <p id="hf-status" class="se-note" style="white-space:pre-line">{hfStatus}</p>
+          </div>
           </div>
           <div class="ve-toolbar">
           <button id="ve2BtnCut" class="btn btn-sm" onclick={() => { ve2Cut() }}>{t('ve.cut', lang)}</button>
