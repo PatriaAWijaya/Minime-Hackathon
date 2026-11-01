@@ -2521,6 +2521,13 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v147 — LIVE (perintah Patria 1 Nov 11:45: 5W1H jadi Brief tambahan roll-over)
+- Elemen 5W1H di Script Editor (menu Sosial) dipindah ke dalam lipatan "Brief tambahan (5W1H)": tombol toggle ▸/▾ + wadah #se-w-fields. Sifat roll-over: tertutup bila tidak dipakai, terbuka bila user mengklik atau ada isi (diisi user/agen) — aturan buka = flag sesi wOpen ATAU ada field 5W1H yang terisi; flag TIDAK dipersistensikan (muat ulang dalam keadaan kosong -> tertutup lagi); seClear() ikut menutup lipatan.
+- Kunci i18n baru: se.briefextra (ID/EN/ZH; total 951 kunci/bahasa). Label lama se.w.label tidak dipakai lagi di pane sosial.
+- Rig: rig-script §akhir (4 cek: tertutup setelah Bersihkan, toggle buka, toggle tutup saat kosong, ada isi -> terbuka sendiri setelah render ulang).
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan bersih kecuali false positive kb-ask-del, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal 330f6fb ↔ remote 35162e8 (tree identik).
+
 ## v146 — LIVE (perintah Patria 1 Nov 10:59: menu Clear + bersihkan semua dummy Media Studio)
 - Menu Clear baru: Script Editor tombol "Bersihkan" di samping Generate (3 menu) -> seClear() mengosongkan field teks + output + note + flag, konfigurasi (menu/platform/mode/format/framework/length/genre) dipertahankan. Image Editor tombol "Bersihkan" di samping Generate -> brief + tab bulk dikosongkan, rasio/gaya/textfree/n dipertahankan. Galeri/varian tersimpan TIDAK ikut terhapus. Kunci i18n baru: se.btn.clear + img.clear (ID/EN/ZH; total 950 kunci/bahasa).
 - Dummy Video Editor dihapus total: fungsi ve2SeedClips/ve2SeedAssets DICABUT dari App.svelte; fallback state kosong; ve2Load tidak lagi mengubah state kosong jadi null (kosong = valid, tidak re-seed). Migrasi sekali jalan di app: state lama yang masih memuat id ve2c*/ve2a* dianggap proyek dummy -> seluruh timeline (14 klip + 5 aset di state live Patria) dikosongkan dan disimpan; backup state lama di luar repo: workspace/backups/ve2-2026-11-01.json (tidak ikut push).
