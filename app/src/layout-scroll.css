@@ -707,3 +707,8 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .se-imp-row b { display: block; }
 .se-imp-row span { color: var(--t-muted); font-size: 13px; }
 .se-imp-foot { margin-top: 12px; text-align: right; }
+
+/* v170: picker batch video — thumbnail terpilih ber-outline + nomor urut scene */
+.vg-batch-thumb { position: relative; padding: 0; border: none; background: transparent; cursor: pointer; }
+.vg-batch-thumb.vg-batch-on { outline: 3px solid #8ED694; outline-offset: -3px; }
+.vg-batch-num { position: absolute; top: 2px; left: 2px; background: #8ED694; color: #262626; font-size: 12px; font-weight: 700; min-width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 10px; padding: 0 4px; }

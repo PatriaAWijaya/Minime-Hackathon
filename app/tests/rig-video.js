@@ -82,7 +82,7 @@ const store = new Map();
 store.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
 store.set('minime.cleaned-v84', '1');
 store.set('minime.cleaned-graph-v88', '1');
-store.set('minime.library.added', JSON.stringify([{ o: 'Gambar: storyboard uji', a: 'Kreatif', s: 'Draf', badge: 'b-idle', content: '', kind: 'image', imageFile: 'img-uji.webp', proj: '', addedAt: '2026-11-01' }]));
+store.set('minime.library.added', JSON.stringify(Array.from({ length: 31 }, (_, k) => ({ o: 'Gambar: storyboard uji ' + k, a: 'Kreatif', s: 'Draf', badge: 'b-idle', content: '', kind: 'image', imageFile: 'img-uji' + k + '.webp', proj: '', addedAt: '2026-11-01' }))));
 try {
   const dom = makeDom(store);
   const { document } = dom.window;
@@ -144,6 +144,31 @@ try {
   let lastBody = {};
   try { lastBody = JSON.parse(starts[starts.length - 1].body); } catch { lastBody = {}; }
   check('v168 body memuat image frame awal', lastBody?.instances?.[0]?.image?.bytesBase64Encoded === 'AQID' && lastBody?.instances?.[0]?.image?.mimeType === 'image/png', JSON.stringify(lastBody?.instances?.[0]?.image));
+
+  // (g) v170: batch — picker dibatasi 30 walau Library berisi 31.
+  document.getElementById('vg-batch-lib').click();
+  await waitFor(() => document.querySelectorAll('.vg-batch-thumb').length === 30, '30 thumbnail batch', 200);
+  check('v170 picker batch dibatasi 30', document.querySelectorAll('.vg-batch-thumb').length === 30);
+  // Pilih 2 pertama (urutan klik = urutan scene).
+  document.querySelectorAll('.vg-batch-thumb')[0].click();
+  document.querySelectorAll('.vg-batch-thumb')[1].click();
+  await tick(100);
+  check('v170 counter 2/30 + nomor urut tampil', (document.getElementById('vg-batch-count')?.textContent || '').includes('2/30') && document.querySelectorAll('.vg-batch-num').length === 2, document.getElementById('vg-batch-count')?.textContent);
+  // Batch 2 klip (prompt + setelan sama dari uji sebelumnya).
+  const startsBefore = fetchLog.filter((x) => x.url.includes('predictLongRunning')).length;
+  const assetsBefore = (ve2State(store).assets || []).length;
+  document.getElementById('vg-batch-start').click();
+  await waitFor(() => (document.getElementById('vg-batch-status')?.textContent || '').includes('berhasil'), 'status batch selesai', 300);
+  const startsAfter = fetchLog.filter((x) => x.url.includes('predictLongRunning'));
+  const batchBodies = startsAfter.slice(startsBefore).map((x) => { try { return JSON.parse(x.body); } catch { return {}; } });
+  check('v170 batch memanggil 2x dengan image frame', startsAfter.length - startsBefore === 2 && batchBodies.every((b) => b?.instances?.[0]?.image?.bytesBase64Encoded === PNG_1X1), JSON.stringify(batchBodies.map((b) => b?.instances?.[0]?.image)));
+  const assetsAfter = ve2State(store).assets || [];
+  check('v170 2 aset batch bernama scene 1/2', assetsAfter.length - assetsBefore === 2 && assetsAfter.slice(-2).map((a) => a.name).join('|') === 'Veo scene 1/2|Veo scene 2/2', JSON.stringify(assetsAfter.slice(-2).map((a) => a.name)));
+  // Tambah semua ke timeline: berurutan sesuai scene.
+  document.getElementById('vg-batch-to-timeline').click();
+  await tick(100);
+  const clips = ve2State(store).clips || [];
+  check('v170 timeline berurutan scene 1 lalu 2', clips.length === 3 && clips[1].name === 'Veo scene 1' && clips[2].name === 'Veo scene 2' && clips[1].start === 8 && clips[2].start === 16, JSON.stringify(clips));
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL v167 rig-video :: ' + String(e && e.stack || e).slice(0, 500));

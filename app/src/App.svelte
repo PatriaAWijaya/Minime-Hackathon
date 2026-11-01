@@ -522,21 +522,91 @@
       vgStatus = `${t('vg.fail', lang)} ${String(e)}`;
     }
   }
+  async function loadLibImages(limit: number) {
+    const items = libAll().filter((x: { kind?: string; imageFile?: string }) => x.kind === 'image' && x.imageFile).reverse().slice(0, limit);
+    const out = [];
+    for (const it of items) {
+      try {
+        const res = await invoke<{ b64: string }>('image_read', { req: { name: it.imageFile } });
+        out.push({ file: it.imageFile as string, title: it.o as string, mime: veoMimeForB64(res.b64), b64: res.b64 });
+      } catch { /* file hilang: lewati */ }
+    }
+    return out;
+  }
   async function vgRefLoadLib() {
     try {
-      const items = libAll().filter((x: { kind?: string; imageFile?: string }) => x.kind === 'image' && x.imageFile).reverse().slice(0, 10);
-      const out = [];
-      for (const it of items) {
-        try {
-          const res = await invoke<{ b64: string }>('image_read', { req: { name: it.imageFile } });
-          out.push({ file: it.imageFile as string, title: it.o as string, mime: veoMimeForB64(res.b64), b64: res.b64 });
-        } catch { /* file hilang: lewati */ }
-      }
-      vgLibList = out;
-      if (!out.length) vgStatus = t('vg.ref.lib_empty', lang);
+      vgLibList = await loadLibImages(10);
+      if (!vgLibList.length) vgStatus = t('vg.ref.lib_empty', lang);
     } catch (e) {
       vgStatus = `${t('vg.fail', lang)} ${String(e)}`;
     }
+  }
+  // v170: batch video — 1 gambar = 1 klip, maks 30 klip sekali jalan.
+  // Urutan klik = urutan scene. Prompt + tier/rasio/resolusi/durasi yang
+  // sama dipakai semua klip; generate berurutan (bukan paralel) agar
+  // progres terpantau dan kuota tidak dihantam sekaligus; klip gagal
+  // dicatat dan TIDAK menghentikan batch. Batal hanya menghentikan
+  // SESUDAH klip yang sedang berjalan selesai (biayanya sudah terjadi,
+  // jadi hasilnya tetap disimpan). Batch hidup selama app terbuka.
+  let vgBatchList = $state([] as Array<{ file: string; title: string; mime: string; b64: string }>);
+  let vgBatchSel = $state([] as string[]);
+  let vgBatchBusy = $state(false);
+  let vgBatchCancel = $state(false);
+  let vgBatchResults = $state([] as Array<{ i: number; label: string; ok: boolean; path: string; seconds: number; usd: number; error: string }>);
+  let vgBatchStatus = $state('');
+  async function vgBatchLoadLib() {
+    try {
+      vgBatchList = await loadLibImages(30);
+      if (!vgBatchList.length) vgBatchStatus = t('vg.ref.lib_empty', lang);
+    } catch (e) {
+      vgBatchStatus = `${t('vg.fail', lang)} ${String(e)}`;
+    }
+  }
+  function vgBatchToggle(file: string) {
+    const at = vgBatchSel.indexOf(file);
+    if (at >= 0) { vgBatchSel = vgBatchSel.filter((f) => f !== file); return; }
+    if (vgBatchSel.length >= 30) { vgBatchStatus = t('vg.batch.max', lang); return; }
+    vgBatchSel = [...vgBatchSel, file];
+  }
+  async function vgBatchStart() {
+    const key = readKeys().gemini;
+    if (!key) { vgBatchStatus = t('vg.need_key', lang); return; }
+    if (!vgPrompt.trim()) { vgBatchStatus = t('vg.need_prompt', lang); return; }
+    if (!vgBatchSel.length) { vgBatchStatus = t('vg.batch.none', lang); return; }
+    vgBatchBusy = true; vgBatchCancel = false; vgBatchResults = [];
+    const items = vgBatchSel.map((f) => vgBatchList.find((x) => x.file === f)).filter((x) => !!x);
+    const t0 = Date.now();
+    for (let i = 0; i < items.length; i++) {
+      if (vgBatchCancel) break;
+      const it = items[i]!;
+      vgBatchStatus = `${t('vg.batch.progress', lang, { i: i + 1, n: items.length })} — ${it.title}`;
+      try {
+        const r = await veoGenerateClip(key, { prompt: vgPrompt.trim(), tier: vgTier as 'standard' | 'fast' | 'lite', aspect: vgAspect, resolution: vgRes, duration: Number(vgDur), image: { b64: it.b64, mime: it.mime } }, (phase) => {
+          const el = Math.round((Date.now() - t0) / 1000);
+          vgBatchStatus = `${t('vg.batch.progress', lang, { i: i + 1, n: items.length })} — ${phase === 'download' ? t('vg.status.download', lang) : `${t('vg.status.poll', lang)} (${el}s)`}`;
+        });
+        ve2Assets = [...ve2Assets, { id: 'veob' + Date.now() + '_' + i, name: `Veo scene ${i + 1}/${items.length}`, icon: '🎬', kind: 'Video', src: r.path, duration: r.seconds }];
+        vgBatchResults = [...vgBatchResults, { i, label: it.title, ok: true, path: r.path, seconds: r.seconds, usd: r.usd, error: '' }];
+      } catch (e) {
+        vgBatchResults = [...vgBatchResults, { i, label: it.title, ok: false, path: '', seconds: 0, usd: 0, error: String(e) }];
+      }
+      ve2SaveState(); videoSpend = readVideoSpend();
+    }
+    const ok = vgBatchResults.filter((r) => r.ok).length;
+    const fail = vgBatchResults.length - ok;
+    vgBatchBusy = false;
+    vgBatchStatus = (vgBatchCancel ? t('vg.batch.cancelled', lang) + ' ' : '') + t('vg.batch.done', lang, { ok, fail });
+  }
+  function vgBatchToTimeline() {
+    const oks = vgBatchResults.filter((r) => r.ok);
+    if (!oks.length) return;
+    let start = ve2Clips.reduce((m, c) => Math.max(m, c.start + c.dur), 0);
+    for (const r of oks) {
+      ve2Clips = [...ve2Clips, { id: 'veobt' + Date.now() + '_' + r.i, name: `Veo scene ${r.i + 1}`, track: 'Video', start, dur: r.seconds, src: r.path, effect: 'none' }];
+      start += r.seconds;
+    }
+    ve2SaveState();
+    vgBatchStatus = t('vg.batch.added_timeline', lang);
   }
   async function vgGenerate() {
     const key = readKeys().gemini;
@@ -903,6 +973,20 @@
           </div>
           <p class="se-note">{t('vg.price', lang, { usd: veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, Number(vgDur)).toFixed(2), idr: Math.round(veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, Number(vgDur)) * 18148).toLocaleString('id-ID'), s: Number(vgDur) })}</p>
           <button id="vg-generate" class="btn btn-primary" disabled={vgBusy} onclick={() => vgGenerate()}>{vgBusy ? t('vg.generating', lang) : t('vg.generate', lang)}</button> <button id="vg-add-timeline" class="btn btn-sm" disabled={!vgLastPath} onclick={() => vgAddToTimeline()}>{t('vg.add_timeline', lang)}</button>
+          <div class="se-group"><label for="vg-batch-lib">{t('vg.batch.title', lang)}</label>
+          <p class="se-note">{t('vg.batch.note', lang)}</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
+          <button id="vg-batch-lib" class="btn btn-sm" onclick={() => vgBatchLoadLib()}>{t('vg.batch.pick', lang)}</button>
+          <button id="vg-batch-start" class="btn btn-primary" disabled={vgBatchBusy || !vgBatchSel.length} onclick={() => vgBatchStart()}>{vgBatchBusy ? t('vg.generating', lang) : t('vg.batch.start', lang)}</button>
+          {#if vgBatchBusy}<button id="vg-batch-cancel" class="btn btn-sm" onclick={() => { vgBatchCancel = true; }}>{t('vg.batch.cancel', lang)}</button>{/if}
+          {#if vgBatchResults.filter((r) => r.ok).length}<button id="vg-batch-to-timeline" class="btn btn-sm" disabled={vgBatchBusy} onclick={() => vgBatchToTimeline()}>{t('vg.batch.to_timeline', lang)}</button>{/if}
+          </div>
+          <p id="vg-batch-count" class="se-note">{t('vg.batch.selected', lang, { n: vgBatchSel.length })}</p>
+          {#if vgBatchSel.length}<p class="se-note">{t('vg.batch.price', lang, { usd: (veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, Number(vgDur)) * vgBatchSel.length).toFixed(2), n: vgBatchSel.length, per: veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, Number(vgDur)).toFixed(2) })}</p>{/if}
+          {#if vgBatchList.length}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">{#each vgBatchList as it}<button class="vg-batch-thumb {vgBatchSel.includes(it.file) ? 'vg-batch-on' : ''}" data-vg-batch={it.file} onclick={() => vgBatchToggle(it.file)} title={it.title}><img src="data:{it.mime};base64,{it.b64}" alt={it.title} style="width:72px;height:72px;object-fit:cover;display:block">{#if vgBatchSel.includes(it.file)}<span class="vg-batch-num">{vgBatchSel.indexOf(it.file) + 1}</span>{/if}</button>{/each}</div>{/if}
+          <p id="vg-batch-status" class="se-note" style="white-space:pre-line">{vgBatchStatus}</p>
+          {#each vgBatchResults as r}<div class="se-note">{r.ok ? '✓' : '✗'} {r.label}{r.ok ? ' — ' + r.path + ' ($' + r.usd.toFixed(2) + ')' : ' — ' + r.error}</div>{/each}
+          </div>
           <p id="vg-status" class="se-note" style="white-space:pre-line">{vgStatus}</p>
           {#if videoSpend.videos > 0}<p class="se-note">{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</p>{/if}
           </div>
