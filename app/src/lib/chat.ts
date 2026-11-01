@@ -349,6 +349,7 @@ export async function retryAgentTask(idx?: number): Promise<void> {
       postChat(item.agent, ag.name, ag.color, esc(g.text) + footer + studio);
       kbUpdateTaskOut(ag.name, taskShort(item.task), g.text);
       postChat('prime', 'Prime Agent', '#EB87B4', g.verdictText, true);
+      autoImageBrief(item.task, g.text);
     } else {
       cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
       const r = await router.callWithFallback(item.task, trace);
@@ -438,6 +439,25 @@ async function gatedAgentAnswer(
     text = r.text;
   }
   return { r, text, verdictText, rounds };
+}
+
+// v162 (brief Image otomatis, perintah Patria 1 Nov 14:57): output yang
+// sudah dikurasi (jawaban final pasca-gate) langsung menjadi brief Image
+// Editor, tanpa tempel manual. Hanya delegasi tunggal + retry (satu
+// jawaban, tidak ambigu); fan-out dikecualikan (banyak jawaban,
+// last-wins); Prime langsung tidak di-QC sehingga bukan output kurasi.
+// Brief diisi mentah (teks final, bukan esc HTML) karena targetnya
+// textarea, bukan bubble. Jembatan window.imgSetBrief sudah ada sejak
+// lama (dipakai alur brief Kreatif + tombol Muat dari Script).
+const IMAGE_WORDS = ['gambar', 'desain', 'poster', 'visual', 'foto', 'image', 'infografis', 'banner', 'flyer', 'thumbnail'];
+function imageNeeded(text: string): boolean {
+  const low = ' ' + text.toLowerCase() + ' ';
+  return IMAGE_WORDS.some((w) => low.includes(' ' + w + ' '));
+}
+function autoImageBrief(taskText: string, finalText: string): void {
+  if (!imageNeeded(taskText)) return;
+  const w = window as unknown as Record<string, unknown>;
+  if (typeof w.imgSetBrief === 'function') (w.imgSetBrief as (t: string) => void)(finalText);
 }
 async function splitBriefTasks(router: ModelRouter, cfg: ReturnType<typeof defaultRouterConfig>, brief: string): Promise<{ agent: string; task: string }[]> {
   cfg.systemInstruction = 'Bagi brief user menjadi tugas untuk agen-agen berikut (pakai kunci persis ini): riset (Riset pasar & audiens), strategi (Positioning & STP), kreatif (Naskah & Brief), media (Produksi media), distribusi (Draf distribusi), produk (Brief produk digital). Balas HANYA dengan array JSON, tanpa teks lain dan tanpa pagar kode. Format: [{"agent":"riset","task":"..."}]. Sertakan hanya agen yang benar-benar relevan dengan brief; tugas singkat, konkret, Bahasa Indonesia.';
@@ -706,6 +726,7 @@ export async function sendChatReal(): Promise<void> {
     kbOut = g.text;
     postChat(delegate, ag.name, ag.color, esc(g.text) + footer + studio);
     postChat('prime', 'Prime Agent', '#EB87B4', g.verdictText, true);
+    autoImageBrief(text, g.text);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     kbOut = tr('chat.error') + msg;

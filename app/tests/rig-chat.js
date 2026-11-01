@@ -900,6 +900,23 @@ try {
   check('v161: REVISI memicu revisi (min 4 call: jawab + QC + revisi + QC)', fetchCount() - fetchSebelum36 >= 4, 'delta=' + (fetchCount() - fetchSebelum36));
   check('v161: verdict interim REVISI tidak diposting sebagai bubble', ![...document.querySelectorAll('#chatBox .msg')].some((m) => (m.textContent || '').includes('GATE-UJI-MARKER')), [...document.querySelectorAll('#chatBox .msg')].map((m) => (m.textContent || '').slice(0, 40)).join(' | '));
 
+  // §37 v162: brief Image otomatis dari output kurasi (tugas visual).
+  const pid162 = 'brief-uji';
+  dom.window.PROJECTS[pid162] = { name: 'Riset kopi brief', agents: [{ key: 'riset', status: 'Idle', task: '—' }], chat: [], kanban: [] };
+  dom.window.switchProject(pid162);
+  await tick(100);
+  const imgBrief = () => { try { const raw = dom.window.localStorage.getItem('minime.imageFlow'); if (!raw) return ''; const st = JSON.parse(raw); return typeof st.brief === 'string' ? st.brief : ''; } catch (_) { return ''; } };
+  check('v162: jembatan imgSetBrief tersedia di rig', typeof dom.window.imgSetBrief === 'function', typeof dom.window.imgSetBrief);
+  const briefSebelum = imgBrief();
+  await sendMsg('riset TEKS-UJI laporan pasar');
+  await waitFor(() => [...document.querySelectorAll('#chatBox .msg')].some((m) => (m.textContent || '').includes('NASKAH-UJI')), 'jawaban non-visual', 120);
+  await tick(200);
+  check('v162: tugas non-visual TIDAK mengubah brief Image', imgBrief() === briefSebelum, JSON.stringify(imgBrief().slice(0, 60)));
+  await sendMsg('riset VISUAL-UJI poster kopi');
+  await waitFor(() => imgBrief().includes('NASKAH-UJI'), 'brief Image terisi output kurasi', 120);
+  await tick(200);
+  check('v162: tugas visual mengisi brief Image dengan jawaban final', imgBrief().includes('NASKAH-UJI'), imgBrief().slice(0, 60));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-chat exception :: ' + (e && e.stack ? e.stack : e));
