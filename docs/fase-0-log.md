@@ -2529,7 +2529,7 @@ dokumen lama yang dipakai.
 - Rig-video diperbarui: § v168 ditulis ulang jadi frame awal/akhir (§(d)(e)(f) + (f2) lastFrame BAUG) + § (j) v178 (3 tab, 2 slot, Lite auto-pindah, durasi terkunci, body referenceImages 2 + durasi 8 + tanpa image, contoh + portrait). Insiden saat build: loadLibImages ikut terhapus bersama blok v168 (rig §(d) timeout) → dikembalikan; label frame tanpa for= menaikkan svelte-check 26 → 28 → dikaitkan for= ke input file → kembali 26.
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0, scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal b4ca3d6 ↔ remote 93380c0 (tree identik).
-- LIVE: menyusul (deploy mh-build178, verifikasi PID + md5 + marker bundle, lalu entri ini diperbarui).
+- LIVE: PID 24471; md5 JS 95c1a88c4c5254746de90ee915636791 lokal == MacBook; marker bundle CSS 'vg-tab-sel' + 'vg-refslot' terverifikasi di MacBook.
 
 ## v177 — scrollbar sendiri pada kolom Brand di tab Image (perintah Patria 2 Nov 02:00, didahulukan dari redesain panel video)
 - Masalah: kolom Brand (.img-brand-side, 320px, di kiri tab Image Media Studio) ikut scroll halaman bersama form gambar — isinya panjang (nama, logo, visual, font, warna, header, footer) sehingga kolom terseret pergi saat form di-scroll.
