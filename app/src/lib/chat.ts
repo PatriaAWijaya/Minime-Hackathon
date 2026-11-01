@@ -349,6 +349,16 @@ export async function retryAgentTask(idx?: number): Promise<void> {
       const studio = item.agent === 'kreatif' && mediaNeeded(item.task) ? studioButton(r.text, item.agent) : '';
       postChat(item.agent, ag.name, ag.color, esc(r.text) + footer + studio);
       kbUpdateTaskOut(ag.name, taskShort(item.task), r.text);
+      // v159: jawaban retry agen ikut di-QC Prime (sama seperti delegasi).
+      try {
+        cfg.systemInstruction = QC_INSTRUCTION;
+        const qcInput = 'Tugas: ' + item.task + '\n\nHasil agen:\n- ' + ag.name + ': ' + r.text;
+        const q = await router.callWithFallback(qcInput, 'trace-retry-qc-' + Date.now());
+        recordLiveCost(q);
+        postChat('prime', 'Prime Agent', '#EB87B4', q.text, true);
+      } catch {
+        postChat('prime', 'Prime Agent', '#EB87B4', tr('flow.qc.unavailable'), true);
+      }
     } else {
       cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
       const r = await router.callWithFallback(item.task, trace);
@@ -382,6 +392,10 @@ export async function retryAgentTask(idx?: number): Promise<void> {
 // call. Balasan harus array JSON murni; apa pun yang tidak lolos validasi
 // (agen tak dikenal, Prime, duplikat, tugas kosong) dibuang — bila hasil
 // kosong, pengirim jatuh kembali ke delegasi tunggal lama.
+// v159 (perintah Patria 14:32 — QC harus kuat sebagai pembeda produk):
+// satu instruksi QC bersama untuk semua jalur (fan-out Alur 1/2,
+// delegasi tunggal, retry agen). Reasoning eksplisit 5 kriteria.
+const QC_INSTRUCTION = 'QC hasil kerja agen SEBELUM output sampai ke user. Nilai dengan reasoning eksplisit atas 5 kriteria: (1) kesesuaian brief — apakah semua poin tugas dijawab, apa yang terlewat; (2) grounding — apakah tetap pada topik, segmen, dan lokasi brief, tanpa melebar ke kategori umum; (3) konsistensi internal — apakah ada angka atau fakta yang saling bertentangan; (4) kelengkapan — apakah ada bagian yang dijanjikan tapi kosong atau dangkal; (5) fabrikasi — apakah ada angka, nama, atau URL yang tampak dikarang tanpa dasar. Balas dengan verdict per agen: LOLOS atau REVISI, diikuti satu baris alasan per kriteria yang GAGAL saja (kriteria yang lolos cukup disebut namanya), diakhiri satu kalimat simpulan. Beri REVISI bila ada satu pun kriteria gagal. Bahasa Indonesia.';
 const FLOW_AGENTS = ['riset', 'strategi', 'kreatif', 'media', 'distribusi', 'produk'];
 async function splitBriefTasks(router: ModelRouter, cfg: ReturnType<typeof defaultRouterConfig>, brief: string): Promise<{ agent: string; task: string }[]> {
   cfg.systemInstruction = 'Bagi brief user menjadi tugas untuk agen-agen berikut (pakai kunci persis ini): riset (Riset pasar & audiens), strategi (Positioning & STP), kreatif (Naskah & Brief), media (Produksi media), distribusi (Draf distribusi), produk (Brief produk digital). Balas HANYA dengan array JSON, tanpa teks lain dan tanpa pagar kode. Format: [{"agent":"riset","task":"..."}]. Sertakan hanya agen yang benar-benar relevan dengan brief; tugas singkat, konkret, Bahasa Indonesia.';
@@ -515,7 +529,7 @@ export async function sendChatReal(): Promise<void> {
       }
       let qcText: string;
       try {
-        cfg.systemInstruction = 'QC hasil kerja agen: nilai tiap hasil terhadap brief. Balas dengan verdict singkat per agen: LOLOS atau REVISI + satu kalimat alasan, diakhiri satu kalimat simpulan. Beri REVISI bila hasil melebar dari topik, segmen, atau lokasi brief ke kategori yang lebih umum. Bahasa Indonesia.';
+        cfg.systemInstruction = QC_INSTRUCTION;
         const qcInput = 'Brief: ' + text + '\n\nHasil agen:\n' + results.map((r) => '- ' + r.name + ': ' + r.text).join('\n');
         const q = await router.callWithFallback(qcInput, 'trace-flow1-qc-' + Date.now());
         recordLiveCost(q);
@@ -582,7 +596,7 @@ export async function sendChatReal(): Promise<void> {
     }
     let qcText: string;
     try {
-      cfg.systemInstruction = 'QC hasil kerja agen: nilai tiap hasil terhadap brief. Balas dengan verdict singkat per agen: LOLOS atau REVISI + satu kalimat alasan, diakhiri satu kalimat simpulan. Beri REVISI bila hasil melebar dari topik, segmen, atau lokasi brief ke kategori yang lebih umum. Bahasa Indonesia.';
+      cfg.systemInstruction = QC_INSTRUCTION;
       const qcInput = 'Brief: ' + text + '\n\nHasil agen:\n' + results.map((r) => '- ' + r.name + ': ' + r.text).join('\n');
       const q = await router.callWithFallback(qcInput, 'trace-flow2-qc-' + Date.now());
       recordLiveCost(q);
@@ -649,6 +663,19 @@ export async function sendChatReal(): Promise<void> {
     const studio = delegate === 'kreatif' && mediaNeeded(text) ? studioButton(r.text, delegate) : '';
     kbOut = r.text;
     postChat(delegate, ag.name, ag.color, esc(r.text) + footer + studio);
+    // v159: ulasan Prime atas jawaban delegasi tunggal. Sebelumnya QC
+    // hanya jalan di fan-out Alur 1/2, sehingga tanya-jawab lanjutan
+    // (delegasi eksplisit) tampil tanpa kurasi Prime — tidak konsisten.
+    // try/catch sendiri: gagal QC tidak boleh menjelma jadi error agen.
+    try {
+      cfg.systemInstruction = QC_INSTRUCTION;
+      const qcInput = 'Tugas: ' + text + '\n\nHasil agen:\n- ' + ag.name + ': ' + r.text;
+      const q = await router.callWithFallback(qcInput, 'trace-chat-qc-' + Date.now());
+      recordLiveCost(q);
+      postChat('prime', 'Prime Agent', '#EB87B4', q.text, true);
+    } catch {
+      postChat('prime', 'Prime Agent', '#EB87B4', tr('flow.qc.unavailable'), true);
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     kbOut = tr('chat.error') + msg;

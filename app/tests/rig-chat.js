@@ -192,7 +192,7 @@ try {
   const sel = document.querySelector('#agentList .agent.sel');
   check('Riset aktif di list (.sel)', !!sel && sel.textContent.includes('Riset'), sel?.textContent || '');
   check('Riset tanpa tombol studio (bukan skill-nya)', ![...document.querySelectorAll('#chatBox button')].some((b) => b.textContent.trim() === 'Buka di Media Studio'));
-  check('delegasi Riset 1 model call lagi', fetchCount() === 3, 'fetch=' + fetchCount());
+  check('v159: delegasi Riset = jawaban + QC (2 model call)', fetchCount() === 4, 'fetch=' + fetchCount());
 
   // 3. Delegasi Kreatif + studio: tombol Approve -> pindah studio.
   await sendMsg('buatkan naskah video kopi');
@@ -206,13 +206,13 @@ try {
   check('Approve membuka tab Script', document.getElementById('ms-tab-script')?.style.display === 'block', document.getElementById('ms-tab-script')?.style.display || '');
   check('Approve memuat hasil ke output Script', (document.getElementById('se-output')?.value || '').includes('NASKAH-UJI'), document.getElementById('se-output')?.value || '');
   check('Approve dikonfirmasi di chat', bodyText().includes('Baik, saya buka Media Studio'));
-  check('delegasi Kreatif 1 model call lagi', fetchCount() === 4, 'fetch=' + fetchCount());
+  check('v159: delegasi Kreatif = jawaban + QC (2 model call)', fetchCount() === 6, 'fetch=' + fetchCount());
 
   // 4. Produk tidak pernah jadi target delegasi.
   const delegBefore = countOcc('Saya delegasikan');
   dom.window.showView('home');
   await sendMsg('buatkan brief produk digital');
-  await waitFor(() => fetchCount() === 6, 'model call produk', 120);
+  await waitFor(() => fetchCount() === 8, 'model call produk', 120);
   await tick(200);
   check('produk tidak didelegasikan', countOcc('Saya delegasikan') === delegBefore, 'sebelum=' + delegBefore + ' sesudah=' + countOcc('Saya delegasikan'));
 
@@ -829,7 +829,8 @@ try {
   await sendMsg('riset SARAN-UJI');
   await waitFor(() => bodyText().includes('Hasil uji saran'), 'hasil saran agen', 120);
   await tick(200);
-  const msgsA33 = document.querySelectorAll('#chatBox .msg');
+  // v159: bubble terakhir kini bisa jadi bubble QC Prime — cari bubble Riset terakhir.
+  const msgsA33 = [...document.querySelectorAll('#chatBox .msg')].filter((m) => (m.querySelector('.who')?.textContent || '').includes('Riset'));
   const lastA33 = msgsA33[msgsA33.length - 1];
   check('v154: jawaban agen tidak menampilkan button saran', !lastA33.querySelector('.rec-btn'), lastA33.textContent.slice(0, 150));
   check('v154: jawaban agen menampilkan saran sebagai teks', (lastA33.textContent || '').includes('Opsi A') && !!lastA33.querySelector('.msg-recs-text'), lastA33.textContent.slice(0, 150));
@@ -859,6 +860,25 @@ try {
 
 
 
+
+  // §35 v159: delegasi tunggal kini di-QC Prime + bubble project tersimpan.
+  // (Delegasi eksplisit ke Riset di dalam project; pesan TANPA kata kunci
+  // cabang stub lain agar sampai ke model.)
+  const pid159 = 'qc-uji';
+  dom.window.PROJECTS[pid159] = { name: 'Riset kopi uji', agents: [{ key: 'riset', status: 'Idle', task: '—' }], chat: [], kanban: [] };
+  dom.window.switchProject(pid159);
+  await tick(100);
+  await sendMsg('riset peta sebaran lanjutan');
+  await waitFor(() => bodyText().includes('NASKAH-UJI'), 'hasil delegasi tunggal', 120);
+  await waitFor(() => bodyText().includes('KURASI PRIME'), 'bubble QC Prime', 120);
+  await tick(200);
+  const msgs159 = [...document.querySelectorAll('#chatBox .msg')];
+  const idxAns159 = msgs159.findIndex((m) => (m.textContent || '').includes('NASKAH-UJI') && (m.querySelector('.who')?.textContent || '').includes('Riset'));
+  const idxQc159 = msgs159.findIndex((m) => (m.textContent || '').includes('KURASI PRIME'));
+  check('v159: QC Prime muncul sesudah jawaban agen', idxAns159 >= 0 && idxQc159 > idxAns159, idxAns159 + '/' + idxQc159);
+  const stored159 = JSON.parse(dom.window.localStorage.getItem('minime.homeState') || '{}');
+  const chat159 = (stored159.projects?.[pid159]?.chat || []);
+  check('v159: jawaban + QC tersimpan di homeState', chat159.some((m) => (m.text || '').includes('NASKAH-UJI')) && chat159.some((m) => m.curation && m.who === 'prime'), chat159.length + ' pesan');
 
 } catch (e) {
   // eslint-disable-next-line no-console

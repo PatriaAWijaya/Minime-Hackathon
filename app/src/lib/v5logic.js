@@ -645,7 +645,7 @@ function mainChatGet() {
   if (!Array.isArray(MAINCHAT)) MAINCHAT = [];
   return MAINCHAT;
 }
-function mainChatSave() { try { window.localStorage.setItem('minime.mainChat', JSON.stringify(mainChatGet().slice(-500))); } catch (_) {} }
+function mainChatSave() { try { window.localStorage.setItem('minime.mainChat', JSON.stringify(mainChatGet())); } catch (_) {} }
 /* v116 (perintah Patria 30 Okt 21:15): link di chat.
    Temuan: URL telanjang di teks agen selama ini hanya teks biasa (tidak
    bisa diklik sama sekali), dan <a href> mentah dari output model akan
@@ -1091,17 +1091,19 @@ export function postChat(who, name, color, text, curation, extra) {
       var _mm = { who: who, name: name, color: color, text: text, curation: !!curation };
       if (extra) Object.assign(_mm, extra);
       _mc.push(_mm);
-      if (_mc.length > 500) _mc.splice(0, _mc.length - 500);
       mainChatSave(); renderChat(); return;
     }
     var _pm = { who: who, name: name, color: color, text: text, curation: !!curation };
     if (extra) Object.assign(_pm, extra);
     PROJECTS[currentProj].chat.push(_pm);
-    // v89 (audit m2): cap 500 pesan/proyek — tanpa cap, tiap aksi menulis
-    // ulang seluruh riwayat (saveHomeState men-stringify semua chat).
-    var _c = PROJECTS[currentProj].chat;
-    if (_c.length > 500) _c.splice(0, _c.length - 500);
+    // v159 (perintah Patria 14:32): cap 500 pesan/project DIHAPUS — skema
+    // percakapan satu project bisa sangat banyak dan pendalaman tidak
+    // boleh berhenti karena terbatasnya logic (menggantikan cap v89).
     renderChat();
+    // v159: simpan tiap bubble project di sini juga (cabang Main chat
+    // sudah memanggil mainChatSave). Tanpa ini, bubble hanya hidup di
+    // memori sampai ada aksi lain yang kebetulan memanggil saveHomeState.
+    saveHomeState();
   }
 
 
