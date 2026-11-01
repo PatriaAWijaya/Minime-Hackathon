@@ -888,7 +888,6 @@
 {#if videoSpend.videos > 0}<p class="se-note">{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</p>{/if}
 {:else}
 <div class="se-group"><h4>{t('hf.title', lang)}</h4>
-<p class="se-note">{t('hf.note', lang)}</p>
 <label for="hf-html">{t('hf.html', lang)}</label>
 <textarea id="hf-html" rows="14" class="se-field" style="font-family:monospace" bind:value={hfHtml}></textarea>
 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
