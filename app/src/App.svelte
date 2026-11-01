@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, toggleAddMenu, waAttach, waMic, waToggleAttach, graphNewProject, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, getTheme, setTheme, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck } from "./lib/v5logic.js";
+  import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, toggleAddMenu, waAttach, waMic, waToggleAttach, graphNewProject, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, getTheme, setTheme, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck, libAll } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
   import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
@@ -12,7 +12,7 @@
   import { initBatchFlow, batchRefreshUI } from "./lib/batch-flow.js";
   import { readImgSpend } from "./lib/image-api.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
-  import { readVideoSpend, veoGenerateClip, veoPriceUsd } from "./lib/video-gen.js";
+  import { readVideoSpend, veoGenerateClip, veoPriceUsd, veoMimeForB64, b64FromBytes } from "./lib/video-gen.js";
   import { readKeys } from "./lib/chat.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtIdrNum, fmtInt, fmtUsd, readLiveCost } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
@@ -506,6 +506,38 @@
   let vgStatus = $state('');
   let vgLastPath = $state('');
   let vgLastDur = $state(0);
+  // v168: referensi gambar storyboard untuk Veo (image-to-video:
+  // gambar jadi frame awal; video mengikuti subjek/gaya gambar itu).
+  // Referensi bersifat sesi (tidak dipersistensikan): dari file atau
+  // dari Library (gambar kind 'image' + imageFile, terbaru dulu).
+  let vgRef = $state(null as null | { label: string; mime: string; b64: string });
+  let vgLibList = $state([] as Array<{ file: string; title: string; mime: string; b64: string }>);
+  async function vgRefFromFile(file: File | null) {
+    if (!file) return;
+    try {
+      const buf = await file.arrayBuffer();
+      const mime = file.type || veoMimeForB64('');
+      vgRef = { label: file.name, mime: mime.startsWith('image/') ? mime : 'image/png', b64: b64FromBytes(new Uint8Array(buf)) };
+    } catch (e) {
+      vgStatus = `${t('vg.fail', lang)} ${String(e)}`;
+    }
+  }
+  async function vgRefLoadLib() {
+    try {
+      const items = libAll().filter((x: { kind?: string; imageFile?: string }) => x.kind === 'image' && x.imageFile).reverse().slice(0, 10);
+      const out = [];
+      for (const it of items) {
+        try {
+          const res = await invoke<{ b64: string }>('image_read', { req: { name: it.imageFile } });
+          out.push({ file: it.imageFile as string, title: it.o as string, mime: veoMimeForB64(res.b64), b64: res.b64 });
+        } catch { /* file hilang: lewati */ }
+      }
+      vgLibList = out;
+      if (!out.length) vgStatus = t('vg.ref.lib_empty', lang);
+    } catch (e) {
+      vgStatus = `${t('vg.fail', lang)} ${String(e)}`;
+    }
+  }
   async function vgGenerate() {
     const key = readKeys().gemini;
     if (!key) { vgStatus = t('vg.need_key', lang); return; }
@@ -514,7 +546,7 @@
     vgStatus = t('vg.status.start', lang);
     const t0 = Date.now();
     try {
-      const r = await veoGenerateClip(key, { prompt: vgPrompt.trim(), tier: vgTier as 'standard' | 'fast' | 'lite', aspect: vgAspect, resolution: vgRes, duration: Number(vgDur) }, (phase) => {
+      const r = await veoGenerateClip(key, { prompt: vgPrompt.trim(), tier: vgTier as 'standard' | 'fast' | 'lite', aspect: vgAspect, resolution: vgRes, duration: Number(vgDur), image: vgRef ? { b64: vgRef.b64, mime: vgRef.mime } : undefined }, (phase) => {
         const el = Math.round((Date.now() - t0) / 1000);
         vgStatus = phase === 'download' ? t('vg.status.download', lang) : `${t('vg.status.poll', lang)} (${el}s)`;
       });
@@ -770,6 +802,9 @@
           <div class="se-group"><label>{t('img.style', lang)}<select id="img-style" class="se-field">
             <option value="photorealistic">photorealistic</option><option value="product photography">product photography</option><option value="flat design">flat design</option><option value="illustration">illustration</option><option value="3D model">3D model</option>
           </select></label></div>
+          <div class="se-group"><label>{t('img.provider', lang)}<select id="img-provider" class="se-field">
+            <option value="meta">{t('img.provider.meta', lang)}</option><option value="google">{t('img.provider.google', lang)}</option>
+          </select></label><p class="se-note">{t('img.provider.note', lang)}</p></div>
           <div class="se-group"><label>{t('img.output', lang)}<select id="img-output" class="se-field">
             <option value="poster">{t('img.output.poster', lang)}</option><option value="storyboard">{t('img.output.storyboard', lang)}</option><option value="carousel">{t('img.output.carousel', lang)}</option>
           </select></label></div>
@@ -852,6 +887,15 @@
           <div class="se-group"><h4>{t('vg.title', lang)}</h4>
           <p class="se-note">{t('vg.billing_note', lang)}</p>
           <label>{t('vg.prompt', lang)}<textarea id="vg-prompt" rows="3" class="se-field" bind:value={vgPrompt}></textarea></label>
+          <div class="se-group"><label for="vg-ref-file">{t('vg.ref.title', lang)}</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
+          <input id="vg-ref-file" type="file" accept="image/*" onchange={(e) => vgRefFromFile((e.target as HTMLInputElement).files?.[0] || null)}>
+          <button id="vg-ref-lib" class="btn btn-sm" onclick={() => vgRefLoadLib()}>{t('vg.ref.lib', lang)}</button>
+          {#if vgRef}<button class="btn btn-sm" onclick={() => { vgRef = null; }}>{t('vg.ref.clear', lang)}</button>{/if}
+          </div>
+          {#if vgLibList.length}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">{#each vgLibList as it}<button class="vg-ref-thumb" data-vg-ref={it.file} onclick={() => { vgRef = { label: it.title, mime: it.mime, b64: it.b64 }; }} title={it.title}><img src="data:{it.mime};base64,{it.b64}" alt={it.title} style="width:72px;height:72px;object-fit:cover;display:block"></button>{/each}</div>{/if}
+          {#if vgRef}<div style="margin-top:8px"><img id="vg-ref-preview" src="data:{vgRef.mime};base64,{vgRef.b64}" alt={vgRef.label} style="max-width:220px;display:block"><span class="se-note">{vgRef.label}</span></div>{/if}
+          </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
           <label>{t('vg.tier', lang)} <select id="vg-tier" bind:value={vgTier}><option value="fast">{t('vg.tier.fast', lang)}</option><option value="standard">{t('vg.tier.standard', lang)}</option><option value="lite">{t('vg.tier.lite', lang)}</option></select></label>
           <label>{t('vg.aspect', lang)} <select id="vg-aspect" bind:value={vgAspect}><option value="9:16">9:16</option><option value="16:9">16:9</option></select></label>

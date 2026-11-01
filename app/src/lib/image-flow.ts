@@ -30,14 +30,14 @@ import { libAddImage, libAddScript } from './v5logic.js';
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { vsSetScript } from './voicestudio.js';
 import { socSetCaption } from './social.js';
-import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, addImgSpend, readImgSpend, readThumb, thumbCache } from './image-api.js';
+import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, googleGenerateImage, GOOGLE_IMG_PRICE_USD, GOOGLE_IMG_ASPECT, mimeFromB64, addImgSpend, readImgSpend, readThumb, thumbCache } from './image-api.js';
 import { brandSuffix } from './brand.js';
 import { esc } from './esc.js';
 
 const FLOW_LS = 'minime.imageFlow';
 
-type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number; output: string; duration: number; scenes: number; slides: number; title: string; subtitle: string; listicle: string };
-const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0, output: 'poster', duration: 30, scenes: 4, slides: 6, title: '', subtitle: '', listicle: '' };
+type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number; output: string; duration: number; scenes: number; slides: number; title: string; subtitle: string; listicle: string; provider: string };
+const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0, output: 'poster', duration: 30, scenes: 4, slides: 6, title: '', subtitle: '', listicle: '', provider: 'meta' };
 let state: FlowState = { ...DEFAULTS };
 
 
@@ -85,6 +85,7 @@ function loadState(): void {
         title: typeof o.title === 'string' ? o.title : '',
         subtitle: typeof o.subtitle === 'string' ? o.subtitle : '',
         listicle: typeof o.listicle === 'string' ? o.listicle : '',
+        provider: o.provider === 'google' ? 'google' : 'meta',
       };
     }
   } catch { state = { ...DEFAULTS }; }
@@ -311,7 +312,8 @@ function storyboardPrompt(i: number, count: number, shots: string[] | null): str
 async function generate(): Promise<void> {
   const brief = state.brief.trim();
   if (!brief) { setNote(tr('img.err.brief')); return; }
-  const key = readKeys().meta;
+  const keys = readKeys();
+  const key = state.provider === 'google' ? keys.gemini : keys.meta;
   if (!key) { setNote(tr('img.err.nokey')); return; }
   const btn = el('img-generate') as HTMLButtonElement | null;
   if (btn) btn.disabled = true;
@@ -345,15 +347,19 @@ async function generate(): Promise<void> {
         : state.output === 'storyboard' ? `Scene ${i + 1}/${count}`
         : `Slide ${i + 1}/${count}`;
       const shot = state.output === 'storyboard' ? (shots ? shots[i] : '') : '';
-      const b64s = await metaGenerateImage(key, prompt, 1, RATIO_SIZE[state.ratio]);
-      for (const b64 of b64s) {
-        next.push({ b64, url: 'data:image/webp;base64,' + b64, name: `img-${ts}-${next.length}.webp`, label, prompt, shot });
+      const imgs = state.provider === 'google'
+        ? await googleGenerateImage(key, prompt, GOOGLE_IMG_ASPECT[state.ratio] || '1:1')
+        : (await metaGenerateImage(key, prompt, 1, RATIO_SIZE[state.ratio])).map((b64) => ({ b64, mime: 'image/webp' }));
+      for (const it of imgs) {
+        const ext = it.mime === 'image/png' ? 'png' : it.mime === 'image/jpeg' ? 'jpg' : 'webp';
+        next.push({ b64: it.b64, url: 'data:' + it.mime + ';base64,' + it.b64, name: `img-${ts}-${next.length}.${ext}`, label, prompt, shot });
       }
     }
     variants = next;
     if (variants.length === 0) { setNote(tr('img.err.api') + ' (respons tanpa gambar)'); return; }
-    const usd = variants.length * IMG_PRICE_USD;
-    addImgSpend(variants.length);
+    const pricePer = state.provider === 'google' ? GOOGLE_IMG_PRICE_USD : IMG_PRICE_USD;
+    const usd = variants.length * pricePer;
+    addImgSpend(variants.length, pricePer);
     renderVariants();
     renderCost();
     setNote(tr('img.status.done', { n: variants.length })
@@ -464,6 +470,8 @@ function syncForm(): void {
   if (subtitle) subtitle.value = state.subtitle;
   const listicle = el('img-listicle') as HTMLTextAreaElement | null;
   if (listicle) listicle.value = state.listicle;
+  const provider = el('img-provider') as HTMLSelectElement | null;
+  if (provider) provider.value = state.provider;
   renderImgOutput();
 }
 
@@ -551,6 +559,7 @@ export function initImageFlow(): void {
   bind<HTMLInputElement>('img-subtitle', 'input', (e) => { state.subtitle = e.value; saveState(); renderPreview(); });
   bind<HTMLTextAreaElement>('img-listicle', 'input', (e) => { state.listicle = e.value; saveState(); renderPreview(); });
   bind('img-approve', 'click', () => void approveDraft());
+  bind('img-provider', 'change', () => { const p = el('img-provider') as HTMLSelectElement | null; state.provider = p && p.value === 'google' ? 'google' : 'meta'; saveState(); });
   bind('img-generate', 'click', () => void generate());
   // v146: Bersihkan — hapus brief (+ tab bulk), pertahankan rasio/gaya/textfree/n.
   bind('img-clear', 'click', () => { state.brief = ''; state.bulk = null; state.bulkActive = 0; saveState(); syncForm(); renderPreview(); renderBulkTabs(); });
@@ -585,7 +594,7 @@ export function initImageFlow(): void {
     if (box && item.imageFile) {
       try {
         const res = await invoke<{ b64: string }>('image_read', { req: { name: item.imageFile } });
-        box.innerHTML = `<img src="data:image/webp;base64,${res.b64}" alt="">`;
+        box.innerHTML = `<img src="data:${mimeFromB64(res.b64)};base64,${res.b64}" alt="">`;
         box.style.display = 'block';
       } catch { box.innerHTML = ''; box.style.display = 'none'; }
     }

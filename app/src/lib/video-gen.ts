@@ -37,15 +37,37 @@ export interface VeoOpts {
   aspect: string;
   resolution: string;
   duration: number;
+  // v168: gambar referensi (storyboard) = frame awal video
+  // (image-to-video). Satu gambar; prompt menjelaskan gerakannya.
+  image?: { b64: string; mime: string };
+}
+
+// Tebak mime dari prefix base64 (cerminan mimeFromB64 di image-api;
+// diduplikasi di sini agar video-gen tetap mandiri tanpa impor silang).
+export function veoMimeForB64(b64: string): string {
+  if (b64.startsWith('iVBORw0KGgo')) return 'image/png';
+  if (b64.startsWith('/9j/')) return 'image/jpeg';
+  if (b64.startsWith('R0lGOD')) return 'image/gif';
+  return 'image/webp';
+}
+
+// Uint8Array -> base64 tanpa stack overflow (chunked).
+export function b64FromBytes(bytes: Uint8Array): string {
+  let bin = '';
+  const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH) as unknown as number[]);
+  }
+  return btoa(bin);
 }
 
 export function veoPriceUsd(tier: VeoTier, resolution: string, seconds: number): number {
   return (VEO_RATES[tier]?.[resolution] ?? 0) * seconds;
 }
 
-export function veoRequestBody(prompt: string, aspect: string, resolution: string, duration: number): unknown {
+export function veoRequestBody(prompt: string, aspect: string, resolution: string, duration: number, image?: { b64: string; mime: string }): unknown {
   return {
-    instances: [{ prompt }],
+    instances: [{ prompt, ...(image ? { image: { bytesBase64Encoded: image.b64, mimeType: image.mime } } : {}) }],
     parameters: { aspectRatio: aspect, resolution, durationSeconds: duration, sampleCount: 1 },
   };
 }
@@ -55,7 +77,7 @@ async function veoStart(key: string, o: VeoOpts): Promise<string> {
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(veoRequestBody(o.prompt, o.aspect, o.resolution, o.duration)),
+    body: JSON.stringify(veoRequestBody(o.prompt, o.aspect, o.resolution, o.duration, o.image)),
   });
   if (!r.ok) throw new Error(`Veo start HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
   const data = (await r.json()) as { name?: string };
@@ -84,13 +106,7 @@ async function veoDownloadB64(key: string, uri: string): Promise<string> {
   const r = await fetch(`${uri}${sep}key=${encodeURIComponent(key)}`);
   if (!r.ok) throw new Error(`Veo unduh HTTP ${r.status}`);
   const buf = await r.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  let bin = '';
-  const CH = 0x8000;
-  for (let i = 0; i < bytes.length; i += CH) {
-    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH) as unknown as number[]);
-  }
-  return btoa(bin);
+  return b64FromBytes(new Uint8Array(buf));
 }
 
 // Seam test-only untuk rig-video: jeda polling default 10 detik.

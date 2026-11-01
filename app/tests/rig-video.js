@@ -30,7 +30,9 @@ async function fetchStub(url, opts) {
   if (u.includes('files/veo-uji')) return base;
   return { ...base, ok: false, status: 0, json: async () => ({}) };
 }
+const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 function invokeStub(cmd, args) {
+  if (cmd === 'image_read') return { b64: PNG_1X1 };
   if (cmd === 'video_save') return { path: '/Users/mac/Movies/minime-veo/veo-uji.mp4' };
   throw new Error('unexpected invoke ' + cmd);
 }
@@ -78,6 +80,9 @@ const spendState = (store) => JSON.parse(store.get('minime.videoSpend') || '{}')
 
 const store = new Map();
 store.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
+store.set('minime.cleaned-v84', '1');
+store.set('minime.cleaned-graph-v88', '1');
+store.set('minime.library.added', JSON.stringify([{ o: 'Gambar: storyboard uji', a: 'Kreatif', s: 'Draf', badge: 'b-idle', content: '', kind: 'image', imageFile: 'img-uji.webp', proj: '', addedAt: '2026-11-01' }]));
 try {
   const dom = makeDom(store);
   const { document } = dom.window;
@@ -114,6 +119,31 @@ try {
   await tick(100);
   const st2 = ve2State(store);
   check('v167 klip timeline dari hasil generate', (st2.clips || []).some((c) => c.src === '/Users/mac/Movies/minime-veo/veo-uji.mp4' && c.track === 'Video' && c.dur === 8), JSON.stringify(st2.clips));
+
+  // (d) v168: referensi dari Library -> preview png (sniff, bukan webp).
+  document.getElementById('vg-ref-lib').click();
+  await waitFor(() => document.querySelector('.vg-ref-thumb'), 'thumbnail Library', 100);
+  document.querySelector('.vg-ref-thumb').click();
+  await waitFor(() => (document.getElementById('vg-ref-preview')?.src || '').startsWith('data:image/png;base64,'), 'preview ref png', 100);
+  check('v168 ref Library tampil + mime png', true);
+
+  // (e) v168: referensi dari file -> label nama file tampil.
+  const refFile = document.getElementById('vg-ref-file');
+  const f = new dom.window.File([new Uint8Array([1, 2, 3])], 'frame-test.png', { type: 'image/png' });
+  Object.defineProperty(refFile, 'files', { value: [f], configurable: true });
+  refFile.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  await waitFor(() => (document.getElementById('vg-ref-preview')?.parentElement?.textContent || '').includes('frame-test.png'), 'preview ref file', 100);
+  check('v168 ref file tampil', true);
+
+  // (f) v168: generate dengan referensi -> body memuat image frame awal.
+  document.getElementById('vg-prompt').value = 'gerakan kamera pelan';
+  document.getElementById('vg-prompt').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  document.getElementById('vg-generate').click();
+  await waitFor(() => (document.getElementById('vg-status')?.textContent || '').includes('veo-uji.mp4'), 'status done ref', 200);
+  const starts = fetchLog.filter((x) => x.url.includes('predictLongRunning'));
+  let lastBody = {};
+  try { lastBody = JSON.parse(starts[starts.length - 1].body); } catch { lastBody = {}; }
+  check('v168 body memuat image frame awal', lastBody?.instances?.[0]?.image?.bytesBase64Encoded === 'AQID' && lastBody?.instances?.[0]?.image?.mimeType === 'image/png', JSON.stringify(lastBody?.instances?.[0]?.image));
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL v167 rig-video :: ' + String(e && e.stack || e).slice(0, 500));

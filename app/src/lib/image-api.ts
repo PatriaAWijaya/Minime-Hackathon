@@ -44,10 +44,10 @@ export function saveImgSpend(s: ImgSpend): void {
   if (typeof fn === 'function') (fn as () => void)();
 }
 
-export function addImgSpend(n: number): ImgSpend {
+export function addImgSpend(n: number, priceUsd: number = IMG_PRICE_USD): ImgSpend {
   const s = readImgSpend();
   s.images += n;
-  s.usd = Math.round((s.usd + n * IMG_PRICE_USD) * 100) / 100;
+  s.usd = Math.round((s.usd + n * priceUsd) * 100) / 100;
   s.idr = Math.round(s.usd * IMG_USD_RATE);
   s.rate = IMG_USD_RATE;
   s.rateDate = '2026-10-28';
@@ -81,6 +81,50 @@ export async function metaGenerateImage(key: string, prompt: string, n: number, 
     .map((d: { b64_json: string }) => d.b64_json);
 }
 
+// v168: generate gambar Google — Nano Banana 2 (gemini-3.1-flash-image)
+// via generateContent. CATATAN: Google Flow TIDAK punya API publik;
+// jalur API resmi untuk kemampuan gambar Flow adalah keluarga Nano
+// Banana. Imagen 4 (imagen-4.0-*) PENSIUN 17 Agu 2026 — JANGAN dipakai.
+// Nano Banana ditagih per token, bukan flat per gambar; GOOGLE_IMG_PRICE_USD
+// = referensi 1K yang diterbitkan ($0,067/gambar) untuk pencatatan spend,
+// tagihan aktual bisa sedikit berbeda. Image output TIDAK ada free tier:
+// kunci Gemini harus milik project dengan billing aktif (sama seperti Veo).
+export const GOOGLE_IMG_MODEL = 'gemini-3.1-flash-image';
+export const GOOGLE_IMG_PRICE_USD = 0.067;
+export const GOOGLE_IMG_ASPECT: Record<string, string> = {
+  '1:1': '1:1', '4:5': '3:4', '9:16': '9:16', '16:9': '16:9',
+  '3:4': '3:4', '3:2': '4:3', '2:3': '3:4',
+};
+export async function googleGenerateImage(key: string, prompt: string, aspect: string): Promise<Array<{ b64: string; mime: string }>> {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_IMG_MODEL}:generateContent?key=${encodeURIComponent(key)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio: aspect, imageSize: '1K' } },
+    }),
+  });
+  if (!r.ok) {
+    throw new Error('Google images HTTP ' + r.status + ' ' + (await r.text()).slice(0, 200));
+  }
+  const j = await r.json();
+  const parts = (j?.candidates?.[0]?.content?.parts ?? []) as Array<{ inlineData?: { data?: string; mimeType?: string } }>;
+  return parts
+    .filter((pt) => typeof pt.inlineData?.data === 'string' && pt.inlineData.data.length > 0)
+    .map((pt) => ({ b64: pt.inlineData!.data as string, mime: pt.inlineData!.mimeType || 'image/png' }));
+}
+
+// Tebak mime dari prefix base64 (PNG/JPEG/GIF punya magic number yang
+// khas; selain itu asumsikan webp — format bawaan app ini). Dipakai
+// readThumb + referensi Veo agar file PNG/JPG imporan tidak salah
+// dilabeli webp.
+export function mimeFromB64(b64: string): string {
+  if (b64.startsWith('iVBORw0KGgo')) return 'image/png';
+  if (b64.startsWith('/9j/')) return 'image/jpeg';
+  if (b64.startsWith('R0lGOD')) return 'image/gif';
+  return 'image/webp';
+}
+
 // Cache data-URL thumbnail BERSAMA (dipakai batch-flow, image-flow,
 // brand): satu Map, satu jalur invoke. Tanpa cache, tiap render ulang
 // (ganti bahasa, mutasi brand, tugas batch selesai) me-image_read ulang
@@ -99,7 +143,7 @@ export async function readThumb(file: string): Promise<string | null> {
   }
   try {
     const res = await invoke<{ b64: string }>('image_read', { req: { name: file } });
-    const url = 'data:image/webp;base64,' + res.b64;
+    const url = 'data:' + mimeFromB64(res.b64) + ';base64,' + res.b64;
     thumbCache.set(file, url);
     while (thumbCache.size > THUMB_CACHE_MAX) {
       const oldest = thumbCache.keys().next().value;

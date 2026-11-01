@@ -1514,7 +1514,7 @@ function saveLibDeleted() {
   try { window.localStorage.setItem(LIB_DEL_LS, JSON.stringify(LIB_DELETED)); libSaveError = false; return true; }
   catch (_) { libSaveError = true; return false; }
 }
-function libAll() {
+export function libAll() {
   return LIB.filter(function (x) { return LIB_DELETED.indexOf("b:" + x.o) === -1; }).concat(LIB_ADDED);
 }
 

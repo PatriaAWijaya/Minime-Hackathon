@@ -24,6 +24,7 @@ if (!modMatch) throw new Error('script module dist tidak ditemukan');
 html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch[1]}"></script></body>`);
 
 const log = [];
+const googleBodies = [];
 const imgPrompts = [];
 const store = new Map();
 const imgFiles = new Map();
@@ -58,6 +59,16 @@ async function fetchStub(url, opts) {
   let body = {};
   try { body = typeof opts?.body === 'string' ? JSON.parse(opts.body) : (opts?.body || {}); } catch (_) { body = {}; }
   const u = String(url);
+  // v168: cabang Google image (Nano Banana) — SEBELUM cabang chat,
+  // karena generateContent juga bukan images/generations.
+  if (u.includes('generateContent')) {
+    googleBodies.push(body);
+    return makeResp({
+      jsonData: {
+        candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: PNG_1X1 } }] } }],
+      },
+    });
+  }
   // v163: cabang chat untuk caption/VO model (approve draft) — VO
   // dibedakan dari caption lewat kata 'voice over' di prompt.
   if (!u.includes('images/generations') && !u.includes('127.0.0.1') && !u.includes('localhost')) {
@@ -332,6 +343,33 @@ try {
   // pemisah shot diuji lewat 'montase' vs 'SELATAN SEDUH'.
   check('v165: tiap frame memuat style lock', imgPrompts.length === 2 && imgPrompts.every((pr) => pr.includes('STYLE LOCK') && pr.includes('never a collage') && pr.includes('never a poster layout') && pr.includes('flat design')), JSON.stringify(imgPrompts).slice(0, 300));
   check('v165: shot montase/end-card tetap terpisah', imgPrompts[0].includes('montase') && !imgPrompts[0].includes('SELATAN SEDUH') && imgPrompts[1].includes('SELATAN SEDUH') && !imgPrompts[1].includes('montase'), JSON.stringify(imgPrompts).slice(0, 300));
+
+  // 12. v168: generate gambar Google (Nano Banana) via provider select.
+  await setSel('img-output', 'poster');
+  await setSel('img-provider', 'google');
+  store.set('minime.geminiKey', 'rig-key');
+  briefEl.value = 'kopi google uji';
+  briefEl.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(100);
+  const spendBefore = JSON.parse(store.get('minime.imageSpend') || '{}');
+  googleBodies.length = 0;
+  const oldNames12 = [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent).join('|');
+  document.getElementById('img-generate').click();
+  await waitFor(() => {
+    const names = [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent).join('|');
+    return document.querySelectorAll('#img-variants img').length === 2 && names !== oldNames12;
+  }, '2 varian Google', 120);
+  check('v168: Google dipanggil 2x + aspek 1:1', googleBodies.length === 2 && googleBodies.every((b) => b?.generationConfig?.imageConfig?.aspectRatio === '1:1' && JSON.stringify(b?.contents || []).includes('kopi google uji')), JSON.stringify(googleBodies).slice(0, 300));
+  const vimgs = [...document.querySelectorAll('#img-variants img')].map((im) => im.getAttribute('src') || '');
+  check('v168: varian Google bermime png', vimgs.length === 2 && vimgs.every((u) => u.startsWith('data:image/png;base64,')), vimgs.join(' ').slice(0, 200));
+  const spendAfter = JSON.parse(store.get('minime.imageSpend') || '{}');
+  check('v168: spend Google +2 gambar ~$0,134', spendAfter.images - spendBefore.images === 2 && Math.abs((spendAfter.usd - spendBefore.usd) - 0.134) <= 0.01, JSON.stringify({ before: spendBefore, after: spendAfter }));
+  const rows12 = libRows();
+  [...document.querySelectorAll('#img-variants button')].find((b) => b.textContent.trim() === 'Simpan ke Library').click();
+  await waitFor(() => libRows() === rows12 + 1, 'kartu Library Google bertambah', 120);
+  const added12 = JSON.parse(store.get('minime.library.added') || '[]');
+  const last12 = added12[added12.length - 1] || {};
+  check('v168: file tersimpan berekstensi .png', typeof last12.imageFile === 'string' && last12.imageFile.endsWith('.png'), JSON.stringify(last12));
 
 } catch (e) {
   // eslint-disable-next-line no-console
