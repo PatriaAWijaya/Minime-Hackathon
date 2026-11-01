@@ -226,6 +226,22 @@ try {
   check('v146: output hilang setelah Bersihkan', !document.getElementById('se-output'));
   check('v146: state tersimpan kosong setelah Bersihkan', !(JSON.parse(store.get('minime.scriptEditor') || '{}').output || ''), store.get('minime.scriptEditor') || '');
   check('v146: platform dipertahankan setelah Bersihkan', (JSON.parse(store.get('minime.scriptEditor') || '{}').platform || '') === 'instagram', store.get('minime.scriptEditor') || '');
+
+  // v147: 5W1H jadi Brief tambahan roll-over (tertutup bila tak dipakai).
+  check('v147: 5W1H tertutup setelah Bersihkan', document.getElementById('se-w-fields')?.style.display === 'none', document.getElementById('se-w-fields')?.style.display || 'tidak ada');
+  document.getElementById('se-w-toggle').click();
+  await tick(100);
+  check('v147: klik toggle membuka 5W1H', document.getElementById('se-w-fields')?.style.display === 'block', document.getElementById('se-w-fields')?.style.display || 'tidak ada');
+  document.getElementById('se-w-toggle').click();
+  await tick(100);
+  check('v147: klik toggle lagi menutup 5W1H kosong', document.getElementById('se-w-fields')?.style.display === 'none', document.getElementById('se-w-fields')?.style.display || 'tidak ada');
+  document.getElementById('se-what').value = 'Es kopi susu Rp15.000';
+  document.getElementById('se-what').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  document.getElementById('se-framework').value = 'pas';
+  document.getElementById('se-framework').dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  await tick(100);
+  check('v147: ada isi -> 5W1H terbuka sendiri setelah render ulang', document.getElementById('se-w-fields')?.style.display === 'block', document.getElementById('se-w-fields')?.style.display || 'tidak ada');
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));
   failures.push('rig error');

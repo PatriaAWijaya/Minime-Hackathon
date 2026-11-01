@@ -88,6 +88,10 @@ const DEFAULTS: SeState = {
 
 let state: SeState = { ...DEFAULTS };
 let busy = false;
+// v147: lipatan Brief tambahan (5W1H) — flag sesi saja, TIDAK dipersistensikan:
+// tertutup bila tidak dipakai, terbuka bila user mengklik atau ada isi
+// (diisi user/agen) sehingga render berikutnya ikut terbuka.
+let wOpen = false;
 
 function inList<T extends string>(v: unknown, list: readonly T[], fallback: T): T {
   return typeof v === 'string' && (list as readonly string[]).includes(v) ? (v as T) : fallback;
@@ -164,6 +168,7 @@ function seClear(): void {
   state.topic = state.audience = state.premise = state.character = '';
   state.output = state.outputMeta = state.note = '';
   state.copied = state.saved = state.used = false;
+  wOpen = false;
   saveState();
   renderSeMain();
 }
@@ -210,18 +215,20 @@ function paneHtml(): string {
       <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button></div>
       ${outputBlock()}`;
   }
+  const wShow = wOpen || [state.what, state.who, state.where, state.when, state.why, state.how].some((v) => v.trim() !== '');
   return `<div class="se-group"><div>${esc(tr('se.platform.label'))}</div>${radioRow('se-platform', PLATFORMS, state.platform, (o) => 'se.platform.' + o)}</div>
     <div class="se-group"><div>${esc(tr('se.mode.label'))}</div>${radioRow('se-mode', MODES, state.mode, (o) => 'se.mode.' + o)}</div>
     ${state.platform === 'instagram' ? `<div class="se-group" id="se-format-row"><div>${esc(tr('se.format.label'))}</div>${radioRow('se-format', FORMATS, state.format, (o) => 'se.format.' + o)}</div>` : ''}
     <div class="se-group"><div>${esc(tr('se.framework.label'))}</div>${fwSelect()}</div>
-    <div class="se-group"><div>${esc(tr('se.w.label'))}</div>
+    <div class="se-group"><button id="se-w-toggle" class="se-btn2">${wShow ? '▾' : '▸'} ${esc(tr('se.briefextra'))}</button>
+    <div id="se-w-fields" style="display:${wShow ? 'block' : 'none'}">
       ${wField('se-what', 'se.w.what', state.what)}
       ${wField('se-who', 'se.w.who', state.who)}
       ${wField('se-where', 'se.w.where', state.where)}
       ${wField('se-when', 'se.w.when', state.when)}
       ${wField('se-why', 'se.w.why', state.why)}
       ${wField('se-how', 'se.w.how', state.how)}
-    </div>
+    </div></div>
     <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button></div>
     ${outputBlock()}`;
 }
@@ -300,6 +307,8 @@ function renderSeMain(): void {
   if (gen) gen.addEventListener('click', () => void seGenerate());
   const clr = document.getElementById('se-clear');
   if (clr) clr.addEventListener('click', () => seClear());
+  const wTgl = document.getElementById('se-w-toggle');
+  if (wTgl) wTgl.addEventListener('click', () => { wOpen = !wOpen; renderSeMain(); });
   const saveBtn = document.getElementById('se-save');
   if (saveBtn) saveBtn.addEventListener('click', () => seSave());
   const useBtn = document.getElementById('se-use');
