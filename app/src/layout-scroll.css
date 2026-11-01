@@ -697,3 +697,13 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .img-canva-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
 .img-canva-row input[type="file"] { max-width: 180px; }
 #ve-plan { min-height: 120px; }
+
+/* v166: dialog Impor skrip Script Editor (pola overlay #kbTaskDlg v153). */
+.se-imp-dlg { position: fixed; inset: 0; z-index: 300; background: rgba(10,5,20,0.55); display: none; align-items: center; justify-content: center; padding: 16px; }
+.se-imp-pop { position: relative; width: 100%; max-width: 560px; max-height: 85vh; overflow: auto; background: var(--t-panel); border-radius: 14px; padding: 20px 22px; box-shadow: 0 12px 40px rgba(0,0,0,0.45); }
+.se-imp-x { position: absolute; top: 8px; right: 10px; width: 32px; height: 32px; background: transparent; border: none; color: inherit; font-size: 18px; cursor: pointer; }
+.se-imp-sec h4 { margin: 14px 0 8px; }
+.se-imp-row { display: block; width: 100%; text-align: left; background: var(--t-panel2); border: 1px solid var(--t-border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; color: inherit; cursor: pointer; }
+.se-imp-row b { display: block; }
+.se-imp-row span { color: var(--t-muted); font-size: 13px; }
+.se-imp-foot { margin-top: 12px; text-align: right; }

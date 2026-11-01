@@ -242,6 +242,40 @@ try {
   document.getElementById('se-framework').dispatchEvent(new dom.window.Event('change', { bubbles: true }));
   await tick(100);
   check('v147: ada isi -> 5W1H terbuka sendiri setelah render ulang', document.getElementById('se-w-fields')?.style.display === 'block', document.getElementById('se-w-fields')?.style.display || 'tidak ada');
+
+  // v166: Impor skrip dari Library / Chat.
+  check('v166: tombol Impor ada', !!document.getElementById('se-import'));
+  store.set('minime.library.added', JSON.stringify([
+    { o: 'Caption Uji', a: 'Kreatif', s: 'Draf', badge: 'b-idle', content: 'CAPTION-IMPOR-UJI: promo kopi susu.', kind: 'script', proj: '', addedAt: '2026-11-01' },
+    { o: 'Gambar Uji', a: 'Kreatif', s: 'Disetujui', badge: 'b-ok', content: 'prompt gambar', kind: 'image', imageFile: 'img-x.webp', proj: '', addedAt: '2026-11-01' },
+  ]));
+  store.set('minime.mainChat', JSON.stringify([
+    { who: 'user', name: 'Patria', color: '#8ED694', text: 'tolong buatkan caption' },
+    { who: 'riset', name: 'Riset', color: '#4ade80', text: 'CHAT-IMPOR-UJI: hasil riset pasar kopi.' },
+  ]));
+  document.getElementById('se-import').click();
+  await tick(100);
+  const dlg = document.getElementById('se-import-dlg');
+  check('v166: dialog impor tampil', dlg?.style.display === 'flex', dlg?.style.display || 'tidak ada');
+  const dlgText = dlg?.textContent || '';
+  check('v166: daftar Library hanya skrip (bukan gambar)', dlgText.includes('Caption Uji') && !dlgText.includes('Gambar Uji'), dlgText.slice(0, 200));
+  check('v166: daftar Chat hanya pesan agen (bukan user)', dlgText.includes('Riset') && !dlgText.includes('tolong buatkan'), dlgText.slice(0, 200));
+  check('v166: daftar Chat mencakup chat project', dlgText.includes('Project Proyek Uji'), dlgText.slice(0, 200));
+  dlg.querySelector('[data-se-imp="0"]').click();
+  await tick(100);
+  check('v166: impor Library mengisi Hasil', (document.getElementById('se-output')?.value || '').includes('CAPTION-IMPOR-UJI'), document.getElementById('se-output')?.value || '');
+  document.getElementById('se-import').click();
+  await tick(100);
+  // Klik berdasar isi (bukan indeks mentah): urutan = Library, lalu
+  // chat project, lalu chat utama — indeks bergeser bila project
+  // punya pesan agen sendiri (temuan debug v166).
+  const chatRow = [...document.getElementById('se-import-dlg').querySelectorAll('[data-se-imp]')].find((el) => el.textContent.includes('CHAT-IMPOR-UJI'));
+  if (!chatRow) throw new Error('baris chat impor tidak ada');
+  chatRow.click();
+  await tick(100);
+  check('v166: impor Chat mengisi Hasil', (document.getElementById('se-output')?.value || '').includes('CHAT-IMPOR-UJI'), document.getElementById('se-output')?.value || '');
+  check('v166: dialog tertutup setelah impor', document.getElementById('se-import-dlg')?.style.display === 'none', document.getElementById('se-import-dlg')?.style.display || '');
+
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));
   failures.push('rig error');

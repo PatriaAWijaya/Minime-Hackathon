@@ -202,7 +202,7 @@ function paneHtml(): string {
       <div class="se-group"><label>${esc(tr('se.artikel.audience'))}<input id="se-audience" class="se-field" value="${esc(state.audience)}"></label></div>
       <div class="se-group"><div>${esc(tr('se.artikel.length'))}</div>${radioRow('se-length', LENGTHS, state.length, (o) => 'se.len.' + o)}</div>
       <div class="se-group"><div>${esc(tr('se.framework.label'))}</div>${fwSelect()}</div>
-      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button></div>
+      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button> <button id="se-import" class="se-btn2">${esc(tr('se.btn.import'))}</button></div>
       ${outputBlock()}`;
   }
   if (state.menu === 'movie') {
@@ -212,7 +212,7 @@ function paneHtml(): string {
         (g) => `<option value="${g}"${g === state.genre ? ' selected' : ''}>${esc(tr('se.genre.' + g))}</option>`,
       ).join('')}</select></label></div>
       <div class="se-group"><label>${esc(tr('se.movie.character'))}<input id="se-character" class="se-field" value="${esc(state.character)}"></label></div>
-      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button></div>
+      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button> <button id="se-import" class="se-btn2">${esc(tr('se.btn.import'))}</button></div>
       ${outputBlock()}`;
   }
   const wShow = wOpen || [state.what, state.who, state.where, state.when, state.why, state.how].some((v) => v.trim() !== '');
@@ -229,7 +229,7 @@ function paneHtml(): string {
       ${wField('se-why', 'se.w.why', state.why)}
       ${wField('se-how', 'se.w.how', state.how)}
     </div></div>
-    <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button></div>
+    <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button> <button id="se-import" class="se-btn2">${esc(tr('se.btn.import'))}</button></div>
     ${outputBlock()}`;
 }
 
@@ -307,6 +307,8 @@ function renderSeMain(): void {
   if (gen) gen.addEventListener('click', () => void seGenerate());
   const clr = document.getElementById('se-clear');
   if (clr) clr.addEventListener('click', () => seClear());
+  const imp = document.getElementById('se-import');
+  if (imp) imp.addEventListener('click', () => seImportOpen());
   const wTgl = document.getElementById('se-w-toggle');
   if (wTgl) wTgl.addEventListener('click', () => { wOpen = !wOpen; renderSeMain(); });
   const saveBtn = document.getElementById('se-save');
@@ -416,6 +418,78 @@ export function setSeMenu(menu: SeMenu): void {
 
 export function seRefreshUI(): void {
   renderSeMain();
+}
+
+// v166: Impor skrip dari Library / Chat (perintah Patria 1 Nov 16:53).
+// Dialog dibuat JS di body (di luar #se-main) agar renderSeMain tak
+// menghancurkannya. Sumber dibaca langsung dari localStorage pada
+// saat dialog dibuka (selalu segar): Library = 'minime.library.added'
+// kind 'script' saja (LIB bawaan kosong di app ini, jadi ini lengkap);
+// Chat = 'minime.mainChat' + chat project aktif, pesan agen saja
+// (bukan pesan user). Muat lewat jalur output yang sama seperti
+// seLoadOutput (sudah terbukti jalur approve dari chat).
+type ImportItem = { label: string; text: string };
+let importCache: ImportItem[] = [];
+function readJsonLS(key: string): unknown[] {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(key) || '[]');
+    return Array.isArray(v) ? v : [];
+  } catch { return []; }
+}
+function seImportLists(): { lib: ImportItem[]; chat: ImportItem[] } {
+  const lib = (readJsonLS('minime.library.added') as Array<Record<string, unknown>>)
+    .filter((x) => x && x.kind === 'script' && typeof x.content === 'string' && (x.content as string).trim() !== '')
+    .map((x) => ({ label: String(x.o || 'Tanpa judul'), text: String(x.content) }))
+    .reverse().slice(0, 20);
+  const msgs: ImportItem[] = [];
+  const pushMsgs = (arr: unknown[], src: string) => {
+    (arr as Array<Record<string, unknown>>).forEach((m) => {
+      if (!m || m.who === 'user' || typeof m.text !== 'string' || !(m.text as string).trim()) return;
+      msgs.push({ label: `${src} · ${String(m.name || m.who)}`, text: String(m.text) });
+    });
+  };
+  pushMsgs(readJsonLS('minime.mainChat'), 'Chat utama');
+  try {
+    const hs = JSON.parse(window.localStorage.getItem('minime.homeState') || '{}') as { currentProj?: string; projects?: Record<string, { name?: string; chat?: unknown[] }> };
+    const pr = hs.currentProj && hs.projects ? hs.projects[hs.currentProj] : undefined;
+    if (pr && Array.isArray(pr.chat)) pushMsgs(pr.chat, `Project ${pr.name || hs.currentProj}`);
+  } catch { /* abaikan homeState korup: Library + Chat utama tetap jalan */ }
+  return { lib, chat: msgs.reverse().slice(0, 20) };
+}
+function seImportOpen(): void {
+  const { lib, chat } = seImportLists();
+  importCache = [...lib, ...chat];
+  let dlg = document.getElementById('se-import-dlg');
+  if (!dlg) {
+    dlg = document.createElement('div');
+    dlg.id = 'se-import-dlg';
+    dlg.className = 'se-imp-dlg';
+    dlg.addEventListener('click', (ev) => {
+      const t = ev.target as HTMLElement;
+      const btn = t.closest('[data-se-imp]') as HTMLElement | null;
+      if (btn) {
+        const item = importCache[Number(btn.getAttribute('data-se-imp'))];
+        if (item) {
+          state.output = item.text;
+          state.copied = state.saved = state.used = false;
+          state.note = tr('se.import.done');
+          saveState();
+          renderSeMain();
+        }
+        dlg!.style.display = 'none';
+        return;
+      }
+      if (t.closest('[data-se-imp-close]') || t === dlg) dlg!.style.display = 'none';
+    });
+    document.body.appendChild(dlg);
+  }
+  const snip = (t: string) => t.replace(/\s+/g, ' ').trim().slice(0, 60);
+  const row = (it: ImportItem, i: number) => `<button class="se-imp-row" data-se-imp="${i}"><b>${esc(it.label)}</b><span>${esc(snip(it.text))}</span></button>`;
+  const sec = (title: string, items: ImportItem[], off: number) => items.length
+    ? `<div class="se-imp-sec"><h4>${esc(title)}</h4>${items.map((it, k) => row(it, off + k)).join('')}</div>`
+    : '';
+  dlg.innerHTML = `<div class="se-imp-pop"><h3>${esc(tr('se.import.title'))}</h3><button class="se-imp-x" data-se-imp-close>✕</button>${sec(tr('se.import.lib'), lib, 0)}${sec(tr('se.import.chat'), chat, lib.length)}${lib.length + chat.length === 0 ? `<div class="se-note">${esc(tr('se.import.empty'))}</div>` : ''}<div class="se-imp-foot"><button class="se-btn2" data-se-imp-close>${esc(tr('se.import.close'))}</button></div></div>`;
+  dlg.style.display = 'flex';
 }
 
 export function initScriptEditor(): void {
