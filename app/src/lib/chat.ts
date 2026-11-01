@@ -11,7 +11,7 @@
 // No key -> that provider is skipped by the chain (LiveUnavailableError
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
-import { AGENTS, activateAgent, clearReplyTarget, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, getReplyTarget, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView } from './v5logic.js';
+import { AGENTS, activateAgent, clearReplyTarget, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, getReplyTarget, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, kbTaskMove, kbTaskStart, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
@@ -400,11 +400,13 @@ export async function sendChatReal(): Promise<void> {
         activateAgent(t.agent);
         postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
         setAgentPhase(t.agent, 'starting');
+        const kbCard = kbTaskStart(ag.name, taskShort(t.task));
         cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
         const trace = 'trace-flow1-' + t.agent + '-' + Date.now();
         let resultText: string;
         try {
           setAgentPhase(t.agent, 'busy');
+          kbTaskMove(kbCard, 1);
           const r = await router.callWithFallback(t.task, trace);
           recordLiveCost(r);
           const footer =
@@ -420,6 +422,7 @@ export async function sendChatReal(): Promise<void> {
           postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
         }
         setAgentPhase(t.agent, null);
+        kbTaskMove(kbCard, 4);
         results.push({ name: ag.name, task: t.task, text: resultText });
       }
       let qcText: string;
@@ -464,11 +467,13 @@ export async function sendChatReal(): Promise<void> {
       activateAgent(t.agent);
       postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
       setAgentPhase(t.agent, 'starting');
+      const kbCard = kbTaskStart(ag.name, taskShort(t.task));
       cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
       const trace = 'trace-flow2-' + t.agent + '-' + Date.now();
       let resultText: string;
       try {
         setAgentPhase(t.agent, 'busy');
+        kbTaskMove(kbCard, 1);
         const r = await router.callWithFallback(t.task, trace);
         recordLiveCost(r);
         const footer =
@@ -484,6 +489,7 @@ export async function sendChatReal(): Promise<void> {
         postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
       }
       setAgentPhase(t.agent, null);
+      kbTaskMove(kbCard, 4);
       results.push({ name: ag.name, task: t.task, text: resultText });
     }
     let qcText: string;
@@ -538,10 +544,12 @@ export async function sendChatReal(): Promise<void> {
     return;
   }
   setAgentPhase(delegate, 'starting');
+  const kbCard = kbTaskStart(ag.name, taskShort(text));
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
   const trace = 'trace-chat-' + delegate + '-' + Date.now();
   try {
     setAgentPhase(delegate, 'busy');
+    kbTaskMove(kbCard, 1);
     const r = await router.callWithFallback(text, trace);
     recordLiveCost(r);
     const footer =
@@ -556,4 +564,5 @@ export async function sendChatReal(): Promise<void> {
     postChat(delegate, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
   }
   setAgentPhase(delegate, null);
+  kbTaskMove(kbCard, 4);
 }

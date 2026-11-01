@@ -738,6 +738,34 @@ try {
   await waitFor(() => [...document.querySelectorAll('#chatBox .msg.user')].some((m) => (m.textContent || '').includes('Buat caption + hashtag')), 'rec145b terkirim');
   check('v145: opsi non-studio tidak memindahkan view', !!document.getElementById('view-home')?.classList.contains('active') && !document.getElementById('view-media')?.classList.contains('active'));
 
+  // §30 v149: tugas agen muncul di Kanban (Antrian -> Dikerjakan -> Selesai).
+  dom.window.showView('home');
+  await tick(100);
+  document.querySelector('.agent-plus').click();
+  await tick(50);
+  [...document.querySelectorAll('#addMenu .plus-item')].find((el) => el.textContent.includes('New project')).click();
+  await tick(100);
+  const ncName30 = document.getElementById('ncName');
+  ncName30.value = 'Proyek Kanban';
+  ncName30.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  document.querySelectorAll('.chan-list .pick-card input[type="checkbox"]').forEach((cb) => cb.click());
+  await tick(50);
+  document.getElementById('ncCreateBtn').click();
+  await tick(100);
+  await sendMsg('buatkan riset pasar kopi susu');
+  await waitFor(() => bodyText().includes('Saya delegasikan'), 'delegasi kanban', 120);
+  await waitFor(() => bodyText().includes('NASKAH-UJI'), 'hasil kanban', 120);
+  await tick(500);
+  const kbAll30 = JSON.parse(store.get('minime.kanban') || '{}');
+  const kbCards30 = Object.values(kbAll30.cards || {}).flat();
+  const risetCard30 = kbCards30.find((c) => c.a === 'Riset' && /riset/i.test(c.t || ''));
+  check('v149: tugas Riset jadi kartu Kanban', !!risetCard30, JSON.stringify(kbCards30));
+  check('v149: kartu tugas sampai di Selesai (c=4)', !!risetCard30 && risetCard30.c === 4, risetCard30 ? JSON.stringify(risetCard30) : 'tidak ada');
+  dom.window.renderKanban();
+  await tick(100);
+  check('v149: kartu tugas tampil di papan Kanban', (document.getElementById('kanbanBox')?.textContent || '').includes('Riset'), document.getElementById('kanbanBox')?.textContent?.slice(0, 200) || '');
+
 
 
 
