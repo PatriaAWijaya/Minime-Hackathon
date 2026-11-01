@@ -2527,7 +2527,7 @@ dokumen lama yang dipakai.
 - Verifikasi jujur: jsdom tidak menghitung layout, jadi bukti visual live (scrollbar terlihat + kolom menempel) tetap menunggu ketukan Patria; yang terbukti di sini = vite build lolos + aturan baru ada di bundle CSS (minified: img-brand-side{...position:sticky;...max-height:calc(100vh - 100px);overflow-y:auto}).
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED (termasuk rig-brand), root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0, scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal d1ae2e1 ↔ remote 3118c59 (tree identik).
-- LIVE: menyusul (deploy mh-build177, verifikasi PID + md5 + marker bundle, lalu entri ini diperbarui).
+- LIVE: PID 23078; md5 JS dbf326e14143481daad702038a95fe68 lokal == MacBook (JS sama dengan v176 — hanya CSS berubah); marker bundle CSS 'img-brand-side{...position:sticky;...overflow-y:auto}'.
 
 ## v176 — template prompt Seri Harian Tuang di panel video generator (perintah Patria 2 Nov 01:21: "buat pola ini sebagai template prompt video generator")
 - Pola yang dibangun = pola seri harian (dokumen specs-visualisasi/pola-prompt-video-reels-seri-harian.md, reverse engineering video tuang MONDAY–SATURDAY 2 Nov 01:16). Pola sinematik (VLOG CINEMATIC) TIDAK ikut dibangun di versi ini — perintahnya "pola ini" (tunggal, pola terakhir yang disampaikan); template sinematik menunggu perintah tersendiri.
