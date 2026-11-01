@@ -2521,6 +2521,13 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v151 — LIVE (perintah Patria 1 Nov 12:13: saat tugas terdelegasikan, node otomatis terhubung connector)
+- Audit menemukan celah: edge Prime -> agen hanya dibuat saat node agen pertama kali dibuat. Node yang sudah ada (aktivasi manual, Prime pernah dihapus, edge dihapus manual) tidak pernah dipastikan ulang, dan jalur Graph-only bahkan membuat node agen pertama tanpa Prime sama sekali.
+- Perbaikan: helper graphEnsureEdge (tambah edge bila belum ada, tanpa ganda) dipanggil di graphEnsureAgentNode untuk semua jalur (node baru maupun lama; juga menutupi DnD aktivasi yang memakai helper yang sama). Jalur Graph-only di graphNoteDelegation kini selalu membuat node Prime Graph-only bila belum ada, lalu memastikan edge Prime -> agen (termasuk untuk node lama; delegasi ke prime sendiri tidak membuat self-edge/duplikat).
+- Rig: rig-graph §24 (node baru langsung terhubung; hapus semua edge -> delegasi ulang menyambung lagi tanpa ganda; Graph-only membuat Prime + connector).
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan bersih kecuali false positive kb-ask-del/task-close, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal 08e998a ↔ remote c5225a2 (tree identik).
+
 ## v150 — LIVE (tambahan Patria 1 Nov 12:05: kartu menetap + detail 2x klik)
 - Menetap: audit jalur hapus Kanban membuktikan TIDAK ada penghapusan otomatis (tidak ada kedaluwarsa/arsip seperti Library; loadKanban + loadHomeState menyimpan objek kartu utuh sehingga field tambahan selamat reload). Kartu hanya hilang lewat tindakan eksplisit: hapus kartu dari dialognya (kbDel), hapus dokumen Library yang bersangkutan (hanya kartu "Revisi: <judul>"-nya), atau hapus projectnya (kartu ikut terhapus bersama project).
 - Detail 2x klik: kartu tugas kini menyimpan deskripsi pekerjaan lengkap (desc = teks tugas utuh, bukan judul terpotong) dan capaian output (out = hasil akhir agen / pesan error bila gagal). Dblclick kartu (papan via listener langsung; list/table via delegasi kanbanWire) menutup dialog edit klik-1x lalu membuka dialog #kbTaskDlg read-only: tugas, agen + status, deskripsi pekerjaan, capaian output ("Masih berjalan" bila c<4). Kartu lama/manual tanpa desc/out memakai fallback, bukan error. Klik 1x tetap dialog edit.
