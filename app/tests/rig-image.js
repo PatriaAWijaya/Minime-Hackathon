@@ -315,6 +315,24 @@ try {
   }, '2 varian storyboard fallback', 120);
   check('v164: fallback tetap sequence tanpa brief utuh', imgPrompts.length === 2 && imgPrompts[0].includes('Storyboard frame 1 of 2') && imgPrompts[1].includes('Storyboard frame 2 of 2') && !imgPrompts[0].includes('video teaser kopi hangat') && !imgPrompts[1].includes('video teaser kopi hangat'), JSON.stringify(imgPrompts).slice(0, 300));
 
+
+  // 11. v165: style lock storyboard (konsistensi gaya antar panel).
+  await setSel('img-style', 'flat design');
+  briefEl.value = '1. 00-05 detik: montase cepat suasana kedai.\n2. 05-10 detik: end-card SELATAN SEDUH.';
+  briefEl.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(100);
+  const oldNames11 = [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent).join('|');
+  imgPrompts.length = 0;
+  document.getElementById('img-generate').click();
+  await waitFor(() => {
+    const names = [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent).join('|');
+    return document.querySelectorAll('#img-variants img').length === 2 && names !== oldNames11;
+  }, '2 varian storyboard lock', 120);
+  // Catatan: lock sendiri memuat kata 'end-card' (aturan), jadi
+  // pemisah shot diuji lewat 'montase' vs 'SELATAN SEDUH'.
+  check('v165: tiap frame memuat style lock', imgPrompts.length === 2 && imgPrompts.every((pr) => pr.includes('STYLE LOCK') && pr.includes('never a collage') && pr.includes('never a poster layout') && pr.includes('flat design')), JSON.stringify(imgPrompts).slice(0, 300));
+  check('v165: shot montase/end-card tetap terpisah', imgPrompts[0].includes('montase') && !imgPrompts[0].includes('SELATAN SEDUH') && imgPrompts[1].includes('SELATAN SEDUH') && !imgPrompts[1].includes('montase'), JSON.stringify(imgPrompts).slice(0, 300));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-image exception :: ' + (e && e.stack ? e.stack : e));

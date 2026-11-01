@@ -285,10 +285,22 @@ async function modelShotList(brief: string, count: number): Promise<string[] | n
   return shots.length === count ? shots : null;
 }
 
+// v165: STYLE LOCK (keluhan Patria 1 Nov 16:33 + lembar referensi
+// storyboard: satu medium/palet di semua panel, shot boleh berganti,
+// gaya tidak boleh). Bukti live v164: shot sudah berurutan, tapi gaya
+// masih beda — scene 2 jadi kolase ber-header ("montase"), scene 4
+// jadi poster ilustrasi ("end-card"), padahal gaya dipilih product
+// photography. v164 hanya bilang "same visual style" secara generik
+// dan tidak menangani dua jebakan itu. Lock ini diulang verbatim di
+// tiap frame: gaya terpilih ditegaskan, kolase/poster/header/border
+// dilarang eksplisit, montase dipaksa satu momen, end-card dipaksa
+// satu frame gaya sama (bukan desain poster).
 function storyboardPrompt(i: number, count: number, shots: string[] | null): string {
   const bible = `Storyboard frame ${i + 1} of ${count} for one ${state.duration}-second video titled "${state.title.trim() || 'Video'}". All frames belong to the same video and share the same visual style, in story order.`;
+  const sty = state.style || 'product photography';
+  const lock = ` STYLE LOCK: every frame uses exactly the same ${sty} treatment — same medium, same color palette, same lighting, same lens feel. One single shot per frame: never a collage, never multiple panels in one image, never a poster layout, never a title header bar, never a decorative border. If a shot describes a montage, render ONE representative moment from it as a single frame. If a shot describes an end-card, render it as one frame of that closing moment in the same style, not as a designed poster.`;
   const shot = shots ? shots[i] : '';
-  let p = bible + (shot ? ` Shot: ${shot}` : ` Keyframe ${i + 1} of the sequence.`);
+  let p = bible + lock + (shot ? ` Shot: ${shot}` : ` Keyframe ${i + 1} of the sequence.`);
   if (state.style) p += `, in ${state.style} style`;
   if (state.textfree) p += ', no text, no words, no letters, no watermark';
   const b = brandSuffix();
