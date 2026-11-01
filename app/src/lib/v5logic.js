@@ -3426,13 +3426,13 @@ export function kbTaskDetail(pid, idx) {
   var cards = PROJECTS[pid] ? (PROJECTS[pid].kanban || []) : [];
   var card = cards[idx]; if (!card) return;
   var out = card.out || (card.c < 4 ? tr('kb.detail.running') : tr('kb.detail.none'));
-  box.style.display = "block";
-  box.innerHTML = "<div class='kb-dlg'><h4>" + tr('kb.detail.title') + "</h4>"
+  box.style.display = "flex";
+  box.innerHTML = "<div class='kb-task-pop'><h4>" + tr('kb.detail.title') + "</h4><button class='kb-task-x' data-act='kb-task-close'>✕</button>"
     + "<p><b>" + tr('kb.detail.task') + ":</b> " + esc(card.t) + "</p>"
     + "<p>" + tr('kanban.card.agent') + esc(card.a) + " • " + colName(card.c) + "</p>"
     + "<p><b>" + tr('kb.detail.desc') + ":</b></p><p style='white-space:pre-wrap'>" + esc(card.desc || tr('kb.detail.nodesc')) + "</p>"
     + "<p><b>" + tr('kb.detail.out') + ":</b></p><p style='white-space:pre-wrap;max-height:300px;overflow:auto'>" + esc(out) + "</p>"
-    + "<div class='kb-dlg-btns'><button class='btn' data-act='kb-task-close'>" + tr('kb.detail.close') + "</button></div></div>";
+    + "</div>";
 }
 export function kbTaskDetailClose() {
   var box = document.getElementById("kbTaskDlg"); if (!box) return;

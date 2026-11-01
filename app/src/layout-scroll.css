@@ -665,3 +665,14 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .img-tab { min-width: 32px; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--t-border, #E9D5FF); background: var(--t-panel2, #F5F0FE); color: var(--t-text, #2E1065); cursor: pointer; }
 .img-tab.active { background: var(--t-accent-grad, linear-gradient(135deg, #9333EA, #D946EF)); color: #fff; border-color: transparent; }
 .img-tab-x { min-width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent; color: var(--t-muted, #A89AC2); cursor: pointer; }
+
+/* v153 (perintah Patria 1 Nov 12:28): detail kartu Kanban tampil sebagai
+   popup di atas papan, bukan panel di dalam scroll view. #kbTaskDlg jadi
+   overlay gelap; kartu di tengah dengan tombol X di sudut kanan atas
+   (data-act kb-task-close yang sama — wire kanbanWire tidak berubah).
+   Catatan: kunci kb.detail.close kini tidak dirujuk markup lagi, sengaja
+   dipertahankan (pola v87: kunci tampak-mati tidak dihapus). */
+#kbTaskDlg { position: fixed; inset: 0; z-index: 300; background: rgba(10, 5, 20, 0.55); align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; }
+.kb-task-pop { position: relative; width: 100%; max-width: 560px; max-height: 85vh; overflow: auto; background: var(--t-panel, #FFFFFF); color: var(--t-text, #2E1065); border-radius: 14px; padding: 20px 22px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); }
+.kb-task-x { position: absolute; top: 8px; right: 10px; width: 32px; height: 32px; border: none; border-radius: 8px; background: transparent; color: var(--t-muted, #A89AC2); font-size: 18px; line-height: 1; cursor: pointer; }
+.kb-task-x:hover { background: var(--t-panel2, #F5F0FE); color: var(--t-text, #2E1065); }

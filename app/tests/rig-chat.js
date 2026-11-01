@@ -780,12 +780,13 @@ try {
   kcard31.dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true }));
   await tick(100);
   const dlg31 = document.getElementById('kbTaskDlg');
-  check('v150: 2x klik membuka dialog detail', dlg31?.style.display === 'block', dlg31?.style.display || '');
+  check('v153: 2x klik membuka popup detail', dlg31?.style.display === 'flex', dlg31?.style.display || '');
+  check('v153: popup punya tombol X sudut kanan atas', !!dlg31?.querySelector('.kb-task-x[data-act="kb-task-close"]'), dlg31?.innerHTML?.slice(0, 120) || '');
   check('v150: detail memuat deskripsi pekerjaan', (dlg31?.textContent || '').toLowerCase().includes('riset pasar'), dlg31?.textContent?.slice(0, 200) || '');
   check('v150: detail memuat capaian output', (dlg31?.textContent || '').includes('NASKAH-UJI'), dlg31?.textContent?.slice(0, 300) || '');
   dlg31.querySelector('[data-act="kb-task-close"]').click();
   await tick(50);
-  check('v150: tombol Tutup menutup detail', dlg31.style.display === 'none', dlg31.style.display || '');
+  check('v153: ketuk X menutup popup detail', dlg31.style.display === 'none', dlg31.style.display || '');
 
   // §32 v152: (b) tombol Coba lagi dulu (Brain masih default -> rantai global).
   const naskahSebelum32 = countOcc('NASKAH-UJI');
