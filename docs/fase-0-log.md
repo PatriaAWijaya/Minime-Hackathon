@@ -2527,7 +2527,7 @@ dokumen lama yang dipakai.
 - i18n: +14 kunci vg.batch.* = 1038/bahasa. CSS blok v170 (.vg-batch-thumb/.vg-batch-on/.vg-batch-num). Loader Library di-refaktor jadi helper loadLibImages(limit) bersama untuk referensi tunggal (10) dan batch (30).
 - Rig-video § v170 hijau (seed 31 item membuktikan picker tepat 30; counter 2/30 + nomor urut; 2 panggilan dengan image frame; 2 aset scene 1/2; timeline berurutan — temuan debug: asersi awal salah hitung karena timeline sudah berisi 1 klip uji (c); produk benar, uji diperbaiki ke 3 klip @0/@8/@16). Peringatan svelte-check sempat 27 (label judul batch tanpa kontrol, pola sama v168) — diperbaiki dengan for="vg-batch-lib", kembali ke baseline 26.
 - Gerbang penuh lolos: vite build, 14 rig, root tsc + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0, scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
-- Kode lokal {CODE} ↔ remote {REMOTE} (tree identik).
+- Kode lokal 487734a ↔ remote 65a20b9 (tree identik).
 
 ## v169 — LIVE (hapus catatan billing Veo, perintah Patria 1 Nov 17:42)
 - Baris catatan "Veo tidak ada free tier — kunci Gemini harus milik project Google Cloud dengan billing aktif; tanpa billing, Google menolak generate." dicabut dari panel Generate (App.svelte) beserta kunci vg.billing_note di 3 bahasa (1025 -> 1024/bahasa, 0 referensi tersisa). Estimasi harga per klip tetap tampil; catatan billing di select penyedia Google tab Image tidak disentuh (perintah khusus Veo).
