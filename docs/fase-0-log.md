@@ -2521,6 +2521,14 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v154 — LIVE (perintah Patria 1 Nov 12:37 + 12:40: tombol saran hanya untuk jawaban kurasi Prime; mutu saran)
+- Aturan render baru di msgRecsHtml: button .rec-btn HANYA bila who === 'prime' (jawaban langsung Prime, verdict QC, laporan alur) atau flag cbAsk. Jawaban agen lain menampilkan sarannya sebagai teks redup .msg-recs-text ("Saran: ..."), tanpa button. Kunci baru chat.recs.label (total 961/bahasa).
+- Instruksi model (REPORT_FORMAT_INSTRUCTION, 3 bahasa) diperketat: tiap opsi harus mempertajam tujuan, memperjelas manfaat, dan memudahkan user mengambil keputusan; kalimat "baris itu akan diubah menjadi tombol" dikoreksi (tombol hanya pada jawaban kurasi Prime, teks pada jawaban agen). Aturan v143 (dahulukan pendalaman, tanpa pivot industri) tetap.
+- Pembeda penting: pertanyaan langkah brief Kreatif (askStep) BUKAN saran — itu pilihan jawaban yang diketuk user. Tanpa pembeda ini, alur brief v138-v140 rusak total (rig §20-§27 gagal). Solusi: postKreatifAsk dengan flag cbAsk hanya di jalur pertanyaan; hasil Kreatif lain tetap teks. Uji §16/§29 diperbarui ke pesan Prime; §33 membuktikan agen->teks, Prime->button.
+- Batas: bubble pertanyaan brief yang tersimpan sebelum deploy (tanpa flag) akan tampil sebagai teks setelah update — jawaban masih bisa diketik manual.
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan: hanya false positive 'sk-' di dalam class kb-task-pop, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal 0651282 ↔ remote 04da1b5 (tree identik).
+
 ## v153 — LIVE (perintah Patria 1 Nov 12:28: detail kartu Kanban jadi popup, tutup via X sudut kanan atas)
 - kbTaskDetail kini merender kartu .kb-task-pop di dalam overlay #kbTaskDlg (fixed, backdrop gelap, kartu tengah max 560px) dengan tombol X .kb-task-x di sudut kanan atas; tombol Tutup bawah dicabut (data-act kb-task-close yang sama, wire kanbanWire tidak berubah). Kunci kb.detail.close kini tidak dirujuk markup lagi, sengaja dipertahankan (pola v87).
 - Rig: §31 diperbarui (display flex, cek X, ketuk X menutup). Insiden: baris markup pertama ditulis dengan backslash harfiah dari salah-baca escape ganda output tool (tr(\'...\') di luar string -> build vite gagal); diperbaiki ke kutip biasa + karakter X harfiah, pelajaran dicatat di AGENTS.md.
