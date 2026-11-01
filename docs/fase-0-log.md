@@ -2521,6 +2521,12 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v148 — LIVE (perintah Patria 1 Nov 11:49: Batch harusnya di Planner, bukan Media Studio)
+- Tab Batch dicabut dari Media Studio (tombol ms-tabbtn-batch + div ms-tab-batch dihapus; mediaTab kini hanya script/image/voice/video) dan pindah jadi seksi di atas antrean Planner (judul ms.tab.batch + #batch-main di view-planner sebelum #nativePlanner). Batch hanya menempel ke #batch-main lewat id (initBatchFlow/batchRefreshUI), jadi pemindahan tidak mengubah logika batch sama sekali; kunci ms.tab.batch tetap dipakai sebagai judul seksi (jumlah kunci i18n tetap 951/bahasa).
+- Rig: rig-batch diperbarui (cek tidak ada lagi tombol tab Batch di Media Studio; Batch tampil di Planner).
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan bersih kecuali false positive kb-ask-del, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal 5939552 ↔ remote 35017f8 (tree identik).
+
 ## v147 — LIVE (perintah Patria 1 Nov 11:45: 5W1H jadi Brief tambahan roll-over)
 - Elemen 5W1H di Script Editor (menu Sosial) dipindah ke dalam lipatan "Brief tambahan (5W1H)": tombol toggle ▸/▾ + wadah #se-w-fields. Sifat roll-over: tertutup bila tidak dipakai, terbuka bila user mengklik atau ada isi (diisi user/agen) — aturan buka = flag sesi wOpen ATAU ada field 5W1H yang terisi; flag TIDAK dipersistensikan (muat ulang dalam keadaan kosong -> tertutup lagi); seClear() ikut menutup lipatan.
 - Kunci i18n baru: se.briefextra (ID/EN/ZH; total 951 kunci/bahasa). Label lama se.w.label tidak dipakai lagi di pane sosial.
