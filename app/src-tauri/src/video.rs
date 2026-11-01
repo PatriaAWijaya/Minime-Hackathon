@@ -11,6 +11,7 @@
 // Path BACA dibiarkan apa adanya (compiler membaca aset user di mana
 // saja); path TULIS dikurung ke temp/Movies/minime-* (output_allowed).
 
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -726,6 +727,43 @@ pub fn video_write_ass(req: WriteAssRequest) -> Result<WriteAssResult, String> {
     let path = std::env::temp_dir().join(format!("minime-subs-{}.ass", std::process::id()));
     std::fs::write(&path, &req.content).map_err(|e| format!("gagal menulis ASS: {e}"))?;
     Ok(WriteAssResult {
+        path: path.to_string_lossy().to_string(),
+    })
+}
+
+// v167: simpan byte video hasil generate (Veo) ke ~/Movies/minime-veo.
+// Nama file dikurung safe_name (pola image_save) + wajib .mp4; cap 100 MB.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoSaveReq {
+    pub name: String,
+    pub b64: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoSaveRes {
+    pub path: String,
+}
+
+#[tauri::command]
+pub fn video_save(req: VideoSaveReq) -> Result<VideoSaveRes, String> {
+    let name = crate::image::safe_name(&req.name).ok_or("nama file tidak valid")?;
+    if !name.to_lowercase().ends_with(".mp4") {
+        return Err("hanya .mp4".to_string());
+    }
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(&req.b64)
+        .map_err(|e| e.to_string())?;
+    if bytes.len() > 100_000_000 {
+        return Err("video melebihi 100 MB".to_string());
+    }
+    let home = std::env::var("HOME").map_err(|_| "direktori HOME tidak ditemukan.".to_string())?;
+    let dir = PathBuf::from(home).join("Movies").join("minime-veo");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let path = dir.join(&name);
+    std::fs::write(&path, &bytes).map_err(|e| e.to_string())?;
+    Ok(VideoSaveRes {
         path: path.to_string_lossy().to_string(),
     })
 }

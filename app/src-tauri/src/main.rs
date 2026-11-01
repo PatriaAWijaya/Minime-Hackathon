@@ -54,6 +54,7 @@ fn main() {
             video::video_asset_hash,
             video::video_write_ass,
             video::video_read,
+            video::video_save,
             voicestudio::vs_launch,
             voicestudio::vs_install,
             sherpa::sherpa_status,

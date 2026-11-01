@@ -12,6 +12,8 @@
   import { initBatchFlow, batchRefreshUI } from "./lib/batch-flow.js";
   import { readImgSpend } from "./lib/image-api.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
+  import { readVideoSpend, veoGenerateClip, veoPriceUsd } from "./lib/video-gen.js";
+  import { readKeys } from "./lib/chat.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtIdrNum, fmtInt, fmtUsd, readLiveCost } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
   import { invoke } from "@tauri-apps/api/core";
@@ -26,6 +28,7 @@
   }
   let imgSpend = $state(readImgSpend());
   let liveCost = $state(readLiveCost());
+  let videoSpend = $state(readVideoSpend());
 
   function applyLanguage(value: string) {
     const next = value === 'en' || value === 'zh' ? value : 'id';
@@ -59,7 +62,7 @@
     initBrand();
     initBatchFlow();
     (window as unknown as Record<string, unknown>).refreshImgSpend = () => { imgSpend = readImgSpend(); };
-    (window as unknown as Record<string, unknown>).refreshLiveCost = () => { liveCost = readLiveCost(); imgSpend = readImgSpend(); };
+    (window as unknown as Record<string, unknown>).refreshLiveCost = () => { liveCost = readLiveCost(); imgSpend = readImgSpend(); videoSpend = readVideoSpend(); };
     (window as unknown as Record<string, unknown>).veSetPlan = (t: string) => { ve2Plan = t; ve2SaveState(); };
     renderKeyButtons();
   });
@@ -491,6 +494,49 @@
     ve2StopPlayback();
     ve2Playhead = Math.min(ve2Total, Math.max(0, frac * ve2Total));
   }
+  // v167: generator video Veo (panel tab Video). Prompt -> job Veo
+  // (polling) -> unduh MP4 -> simpan ~/Movies/minime-veo -> aset ve2.
+  // Satu klik lagi (Tambah ke timeline) menaruhnya di timeline.
+  let vgPrompt = $state('');
+  let vgTier = $state('fast');
+  let vgAspect = $state('9:16');
+  let vgRes = $state('1080p');
+  let vgDur = $state(8);
+  let vgBusy = $state(false);
+  let vgStatus = $state('');
+  let vgLastPath = $state('');
+  let vgLastDur = $state(0);
+  async function vgGenerate() {
+    const key = readKeys().gemini;
+    if (!key) { vgStatus = t('vg.need_key', lang); return; }
+    if (!vgPrompt.trim()) { vgStatus = t('vg.need_prompt', lang); return; }
+    vgBusy = true;
+    vgStatus = t('vg.status.start', lang);
+    const t0 = Date.now();
+    try {
+      const r = await veoGenerateClip(key, { prompt: vgPrompt.trim(), tier: vgTier as 'standard' | 'fast' | 'lite', aspect: vgAspect, resolution: vgRes, duration: Number(vgDur) }, (phase) => {
+        const el = Math.round((Date.now() - t0) / 1000);
+        vgStatus = phase === 'download' ? t('vg.status.download', lang) : `${t('vg.status.poll', lang)} (${el}s)`;
+      });
+      ve2Assets = [...ve2Assets, { id: 'veo' + Date.now(), name: `Veo ${r.seconds}s`, icon: '🎬', kind: 'Video', src: r.path, duration: r.seconds }];
+      ve2SaveState();
+      videoSpend = readVideoSpend();
+      vgLastPath = r.path;
+      vgLastDur = r.seconds;
+      vgStatus = `${t('vg.done', lang)} ${r.path} ($${r.usd.toFixed(2)})`;
+    } catch (e) {
+      vgStatus = `${t('vg.fail', lang)} ${String(e)}`;
+    } finally {
+      vgBusy = false;
+    }
+  }
+  function vgAddToTimeline() {
+    if (!vgLastPath) return;
+    const start = ve2Clips.reduce((m, c) => Math.max(m, c.start + c.dur), 0);
+    ve2Clips = [...ve2Clips, { id: 'veoc' + Date.now(), name: `Veo ${vgLastDur}s`, track: 'Video', start, dur: vgLastDur, src: vgLastPath, effect: 'none' }];
+    ve2SaveState();
+    vgStatus = t('vg.added_timeline', lang);
+  }
   async function ve2Export() {
     if (ve2Busy) return;
     const out = ve2Out.trim();
@@ -803,6 +849,20 @@
         <div id="ms-tab-video" class="ms-video">
           <div class="ms-card">
           <div class="se-group"><label>{t('img.plan', lang)}<textarea id="ve-plan" rows="4" class="se-field" value={ve2Plan} oninput={(e) => { ve2Plan = (e.target as HTMLTextAreaElement).value; ve2SaveState(); }}></textarea></label></div>
+          <div class="se-group"><h4>{t('vg.title', lang)}</h4>
+          <p class="se-note">{t('vg.billing_note', lang)}</p>
+          <label>{t('vg.prompt', lang)}<textarea id="vg-prompt" rows="3" class="se-field" bind:value={vgPrompt}></textarea></label>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+          <label>{t('vg.tier', lang)} <select id="vg-tier" bind:value={vgTier}><option value="fast">{t('vg.tier.fast', lang)}</option><option value="standard">{t('vg.tier.standard', lang)}</option><option value="lite">{t('vg.tier.lite', lang)}</option></select></label>
+          <label>{t('vg.aspect', lang)} <select id="vg-aspect" bind:value={vgAspect}><option value="9:16">9:16</option><option value="16:9">16:9</option></select></label>
+          <label>{t('vg.res', lang)} <select id="vg-res" bind:value={vgRes}><option value="1080p">1080p</option><option value="720p">720p</option></select></label>
+          <label>{t('vg.dur', lang)} <select id="vg-dur" bind:value={vgDur}><option value={8}>8</option><option value={6}>6</option><option value={4}>4</option></select></label>
+          </div>
+          <p class="se-note">{t('vg.price', lang, { usd: veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, Number(vgDur)).toFixed(2), idr: Math.round(veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, Number(vgDur)) * 18148).toLocaleString('id-ID'), s: Number(vgDur) })}</p>
+          <button id="vg-generate" class="btn btn-primary" disabled={vgBusy} onclick={() => vgGenerate()}>{vgBusy ? t('vg.generating', lang) : t('vg.generate', lang)}</button> <button id="vg-add-timeline" class="btn btn-sm" disabled={!vgLastPath} onclick={() => vgAddToTimeline()}>{t('vg.add_timeline', lang)}</button>
+          <p id="vg-status" class="se-note" style="white-space:pre-line">{vgStatus}</p>
+          {#if videoSpend.videos > 0}<p class="se-note">{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</p>{/if}
+          </div>
           <div class="ve-toolbar">
           <button id="ve2BtnCut" class="btn btn-sm" onclick={() => { ve2Cut() }}>{t('ve.cut', lang)}</button>
           <button id="ve2BtnText" class="btn btn-sm" onclick={() => { ve2AddText() }}>{t('ve.addtext', lang)}</button>
@@ -1004,6 +1064,12 @@
             <div>{t('img.billing', lang, { n: imgSpend.images })} · ${imgSpend.usd.toFixed(2)} ≈ Rp{imgSpend.idr.toLocaleString('id-ID')}</div>
           </div>
           {/if}
+          {#if videoSpend.videos > 0}
+          <div style="margin-bottom:12px">
+            <div><b>Veo 3.1</b> <span style="color:#a1a1a1">Google</span></div>
+            <div>{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</div>
+          </div>
+          {/if}
           {#if liveCost.calls > 0}
           <div style="margin-bottom:12px">
             <div><b>{t('cost.live', lang)}</b> <span style="color:#a1a1a1">app</span></div>
@@ -1021,8 +1087,8 @@
         <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px">
           <h3 style="margin:0 0 12px">{t('billing.limit', lang)}</h3>
           <div>{t('billing.limit.hard', lang)}: {fmtUsd(BILLING_HARD_LIMIT, lang)} (≈ Rp{fmtIdrNum(90740)})</div>
-          <div>{t('billing.used', lang)}: ${(COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd).toFixed(4)} (≈ Rp{fmtIdrNum(Math.round((COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd) * 18137))})</div>
-          {#if COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd > BILLING_HARD_LIMIT.usdMax}
+          <div>{t('billing.used', lang)}: ${(COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd + videoSpend.usd).toFixed(4)} (≈ Rp{fmtIdrNum(Math.round((COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd + videoSpend.usd) * 18137))})</div>
+          {#if COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd + videoSpend.usd > BILLING_HARD_LIMIT.usdMax}
           <div style="color:#EB87B4;margin-top:8px">{t('billing.over', lang)}</div>
           {/if}
         </div>
