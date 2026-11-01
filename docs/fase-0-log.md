@@ -2521,6 +2521,13 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v149 — LIVE (perintah Patria 1 Nov 11:55: semua proses tugas agen harus muncul di Kanban)
+- Cermin Kanban untuk tugas agen: helper kbTaskStart/kbTaskMove di v5logic (satu kartu per delegasi, judul = taskShort tugas, agen = nama agen). Antrian (c=0) saat agen menyatakan kesediaan, Dikerjakan (c=1) saat model call berjalan, Selesai (c=4) saat hasil/error sudah diposting. Mutasi + renderKanban (render menyimpan via saveKanban) sehingga kartu persisten dan bisa dibuka/dikomentari/dihapus manual seperti kartu biasa.
+- Dikaitkan ke 3 jalur chat.ts: fan-out Alur 1, fan-out Alur 2, delegasi tunggal (model-call path). Tanpa project aktif (Main chat / Graph-only) kbTaskStart mengembalikan null — tidak ada kartu, kbTaskMove(null) aman. Sesi brief interaktif Kreatif (cbStart) tidak dapat kartu (jalan keluar lebih awal, sebelum model call). Kolom Butuh Approval/Revisi tidak dipakai otomatis untuk tugas agen (tetap untuk kartu manual + Revisi Library); verdict QC tidak diparse dari teks bebas.
+- Rig: rig-chat §30 (buat project via UI, delegasi Riset, kartu ada + c=4 + tampil di #kanbanBox).
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan bersih kecuali false positive kb-ask-del, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal 2f70388 ↔ remote 5a55cac (tree identik).
+
 ## v148 — LIVE (perintah Patria 1 Nov 11:49: Batch harusnya di Planner, bukan Media Studio)
 - Tab Batch dicabut dari Media Studio (tombol ms-tabbtn-batch + div ms-tab-batch dihapus; mediaTab kini hanya script/image/voice/video) dan pindah jadi seksi di atas antrean Planner (judul ms.tab.batch + #batch-main di view-planner sebelum #nativePlanner). Batch hanya menempel ke #batch-main lewat id (initBatchFlow/batchRefreshUI), jadi pemindahan tidak mengubah logika batch sama sekali; kunci ms.tab.batch tetap dipakai sebagai judul seksi (jumlah kunci i18n tetap 951/bahasa).
 - Rig: rig-batch diperbarui (cek tidak ada lagi tombol tab Batch di Media Studio; Batch tampil di Planner).
