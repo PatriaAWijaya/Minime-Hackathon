@@ -2521,6 +2521,14 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v166 — LIVE (tombol Impor di Script Editor, perintah Patria 1 Nov 16:53)
+
+- Permintaan: menu import skrip dari Library / dari chat di Script Editor. Implementasi: tombol "Impor" di baris tombol ketiga menu (Social, Artikel, Movie) → dialog overlay (dibuat JS di body, di luar #se-main, agar render ulang form tak menghancurkannya; gaya mengikuti pola popup #kbTaskDlg) berisi dua seksi: Dari Library (item kind 'script' dari 'minime.library.added', terbaru dulu, maks 20; item gambar dikecualikan) dan Dari Chat (pesan agen dari Chat utama + chat project aktif, terbaru dulu, maks 20; pesan user dikecualikan). Daftar dibaca dari localStorage pada saat dialog dibuka (selalu segar). Klik item → isi penuh dimuat ke kolom Hasil yang bisa diedit (jalur yang sama seperti seLoadOutput/jalur approve dari chat) + catatan "Skrip diimpor — silakan edit.", lalu dialog tertutup; tombol Salin/Simpan/Gunakan tetap berlaku untuk hasil impor.
+- Catatan cakupan: yang diimpor adalah ISI PENUH sebagai Hasil (bukan ke kolom Apa/brief). Bila Patria maksudnya impor sebagai bahan brief, itu perubahan satu baris — tinggal bilang. LIB bawaan app ini kosong, jadi daftar Library = seluruh item simpanan pengguna (lengkap, tanpa celah).
+- 7 kunci i18n baru → 993/bahasa (ID/EN/ZH setara). Rig-script § v166: tombol ada, dialog tampil, Library hanya skrip, Chat hanya pesan agen + mencakup chat project, impor Library dan Chat mengisi Hasil, dialog tertutup sesudah impor. Temuan debug rig (bukan bug produk): urutan daftar = Library, chat project, chat utama — klik uji kini berdasar isi, bukan indeks mentah.
+- Gerbang penuh lolos (13 rig, tsc, gate-test 14 grup, scan bersih, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0).
+- Push: kode lokal e51fc3b ↔ remote 5d393b2 (tree identik).
+
 ## v165 — LIVE (style lock storyboard, keluhan Patria 1 Nov 16:33 + lembar referensi storyboard)
 
 - Kejujuran: v164 memperbaiki URUTAN shot, tapi BUKAN gaya — bukti live 16:30: scene 1 foto sinematik, scene 2 kolase ber-header, scene 3 foto lifestyle, scene 4 poster ilustrasi. Patokan dari lembar referensi Patria: satu seniman, satu medium, satu palet di semua panel — shot boleh berganti, gaya tidak boleh. Akar: v164 hanya bilang "same visual style" secara generik, dan dua jebakan naskah tidak ditangani — "montase" dijawab model dengan kolase, "end-card" dijawab dengan poster (padahal gaya dipilih product photography).
