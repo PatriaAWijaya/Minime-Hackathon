@@ -716,3 +716,11 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 /* v176: template prompt Seri Harian (tombol beat) */
 .vt-beat { border: 1px solid var(--t-border, #3a3a3a); background: var(--t-panel2, #262626); color: inherit; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
 .vt-beat-sel { background: #8ED694; color: #262626; border-color: #8ED694; }
+
+/* v177: kolom Brand di tab Image punya scrollbar sendiri — menempel di
+   atas (sticky) dan scroll internal, sementara form gambar di kanan
+   tetap ikut scroll halaman biasa. max-height 100vh-100px menutup
+   tombol tab Media Studio (~46px) + padding scroll (12px) + margin. */
+.img-brand-side { width: 320px; flex-shrink: 0; position: sticky; top: 0; max-height: calc(100vh - 100px); overflow-y: auto; }
+.img-brand-side::-webkit-scrollbar { width: 10px; }
+.img-brand-side::-webkit-scrollbar-thumb { background: var(--t-border-strong, #333); border-radius: 5px; }
