@@ -166,33 +166,12 @@ try {
   try { framesBody = JSON.parse(starts2[starts2.length - 1].body); } catch { framesBody = {}; }
   check('v178 body memuat image + lastFrame', framesBody?.instances?.[0]?.image?.bytesBase64Encoded === 'AQID' && framesBody?.instances?.[0]?.lastFrame?.bytesBase64Encoded === 'BAUG', JSON.stringify(framesBody?.instances?.[0]));
 
-  // (g) v170: batch — picker dibatasi 30 walau Library berisi 31.
-  document.getElementById('vg-batch-lib').click();
-  await waitFor(() => document.querySelectorAll('.vg-batch-thumb').length === 30, '30 thumbnail batch', 200);
-  check('v170 picker batch dibatasi 30', document.querySelectorAll('.vg-batch-thumb').length === 30);
-  // Pilih 2 pertama (urutan klik = urutan scene).
-  document.querySelectorAll('.vg-batch-thumb')[0].click();
-  document.querySelectorAll('.vg-batch-thumb')[1].click();
-  await tick(100);
-  check('v170 counter 2/30 + nomor urut tampil', (document.getElementById('vg-batch-count')?.textContent || '').includes('2/30') && document.querySelectorAll('.vg-batch-num').length === 2, document.getElementById('vg-batch-count')?.textContent);
-  // Batch 2 klip (prompt + setelan sama dari uji sebelumnya).
-  const startsBefore = fetchLog.filter((x) => x.url.includes('predictLongRunning')).length;
-  const assetsBefore = (ve2State(store).assets || []).length;
-  document.getElementById('vg-batch-start').click();
-  await waitFor(() => (document.getElementById('vg-batch-status')?.textContent || '').includes('berhasil'), 'status batch selesai', 300);
-  const startsAfter = fetchLog.filter((x) => x.url.includes('predictLongRunning'));
-  const batchBodies = startsAfter.slice(startsBefore).map((x) => { try { return JSON.parse(x.body); } catch { return {}; } });
-  check('v170 batch memanggil 2x dengan image frame', startsAfter.length - startsBefore === 2 && batchBodies.every((b) => b?.instances?.[0]?.image?.bytesBase64Encoded === PNG_1X1), JSON.stringify(batchBodies.map((b) => b?.instances?.[0]?.image)));
-  const assetsAfter = ve2State(store).assets || [];
-  check('v170 2 aset batch bernama scene 1/2', assetsAfter.length - assetsBefore === 2 && assetsAfter.slice(-2).map((a) => a.name).join('|') === 'Veo scene 1/2|Veo scene 2/2', JSON.stringify(assetsAfter.slice(-2).map((a) => a.name)));
-  // Tambah semua ke timeline: berurutan sesuai scene.
-  document.getElementById('vg-batch-to-timeline').click();
-  await tick(100);
-  const clips = ve2State(store).clips || [];
-  check('v170 timeline berurutan scene 1 lalu 2', clips.length === 3 && clips[1].name === 'Veo scene 1' && clips[2].name === 'Veo scene 2' && clips[1].start === 8 && clips[2].start === 16, JSON.stringify(clips));
 
-  // (h) v175: HyperFrames — panel render + tambah ke timeline.
-  check('v175: panel HyperFrames render', !!document.getElementById('hf-html') && !!document.getElementById('hf-render') && !!document.getElementById('hf-quality'));
+  // (h) v179: HyperFrames sebagai pilihan model lokal (bukan panel terpisah).
+  check('v179: select model ada (Veo + HyperFrames)', !!document.getElementById('vg-model') && document.getElementById('vg-model').options.length === 2);
+  setInput(document.getElementById('vg-model'), 'hyperframes', 'change');
+  await tick(100);
+  check('v179: model HyperFrames menampilkan form HF, menyembunyikan Veo', !!document.getElementById('hf-html') && !!document.getElementById('hf-render') && !!document.getElementById('hf-quality') && !document.getElementById('vg-prompt'));
   document.getElementById('hf-sample').click();
   await tick(100);
   const hfHtmlVal = document.getElementById('hf-html').value || '';
@@ -208,25 +187,9 @@ try {
   const hfClips = ve2State(store).clips || [];
   check('v175: klip HyperFrames masuk timeline', hfClips.some((c) => c.src === '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4' && c.name === 'HyperFrames 15s'), JSON.stringify(hfClips));
 
-  // (i) v176: template prompt Seri Harian Tuang (kembali ke tab Prompt dulu).
-  document.querySelector('[data-vg-tab="prompt"]').click();
-  await tick(100);
-  check('v176: template seri harian render (6 beat + penutup + end card)', document.querySelectorAll('[data-vt-beat]').length === 6 && !!document.getElementById('vt-close') && !!document.getElementById('vt-signoff') && !!document.getElementById('vt-endcard'));
-  document.querySelector('[data-vt-beat="MONDAY"]').click();
-  await tick(100);
-  const vtPrompt = document.getElementById('vg-prompt').value || '';
-  check('v176: beat MONDAY memuat prompt tuang (kopi hitam + cardigan + tanpa teks)', vtPrompt.includes('kopi hitam') && vtPrompt.includes('cardigan') && vtPrompt.includes('tanpa teks'), vtPrompt.slice(0, 160));
-  check('v176: status template menyebut MONDAY', (document.getElementById('vt-status')?.textContent || '').includes('MONDAY'), document.getElementById('vt-status')?.textContent || '');
-  document.getElementById('vt-close').click();
-  await tick(100);
-  const vtClosePrompt = document.getElementById('vg-prompt').value || '';
-  check('v176: penutup memuat prompt top-down keramik', vtClosePrompt.includes('Top-down') && vtClosePrompt.includes('keramik'), vtClosePrompt.slice(0, 160));
-  document.getElementById('vt-endcard').click();
-  await tick(100);
-  const vtHf = document.getElementById('hf-html').value || '';
-  check('v176: end card dimuat ke HyperFrames (composition + sign-off + hijau zaitun)', vtHf.includes('data-composition-id="endcard"') && vtHf.includes('see you sooooooon') && vtHf.includes('#556B2F'), vtHf.slice(0, 160));
-
   // (j) v178: tab References 0/3 + durasi dipaksa 8 + Lite auto-pindah + contoh.
+  setInput(document.getElementById('vg-model'), 'veo', 'change');
+  await tick(100);
   check('v178: tiga tab generator render', document.querySelectorAll('[data-vg-tab]').length === 3);
   setInput(document.getElementById('vg-dur'), '4', 'change');
   setInput(document.getElementById('vg-tier'), 'lite', 'change');
@@ -254,6 +217,9 @@ try {
   document.getElementById('vg-portrait').click();
   await tick(50);
   check('v178: portrait set rasio 9:16 + isi prompt vertikal', document.getElementById('vg-aspect').value === '9:16' && (document.getElementById('vg-prompt').value || '').includes('vertikal'), 'aspect=' + document.getElementById('vg-aspect').value);
+  // (k) v179: penghapusan + heading Video Editor.
+  check('v179: ringkasan tugas + template + batch sudah tidak ada', !document.getElementById('vg-batch-run') && document.querySelectorAll('[data-vt-beat]').length === 0 && !(document.body.textContent || '').includes('Ringkasan tugas'), 'batch=' + !!document.getElementById('vg-batch-run') + ' beats=' + document.querySelectorAll('[data-vt-beat]').length);
+  check('v179: heading Video Editor tampil di atas kartu editor', (document.body.textContent || '').includes('Video Editor') && !!document.querySelector('.ve2-top'), 've2-top=' + !!document.querySelector('.ve2-top'));
 
 } catch (e) {
   // eslint-disable-next-line no-console

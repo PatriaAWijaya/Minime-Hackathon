@@ -355,6 +355,7 @@
   // Satu klik lagi (Tambah ke timeline) menaruhnya di timeline.
   let vgPrompt = $state('');
   let vgTier = $state('fast');
+  let vgModel = $state('veo');
   let vgAspect = $state('9:16');
   let vgRes = $state('1080p');
   let vgDur = $state(8);
@@ -362,40 +363,6 @@
   let vgStatus = $state('');
   let vgLastPath = $state('');
   let vgLastDur = $state(0);
-  // v176: template prompt Seri Harian Tuang (pola video/reels seri
-  // harian 2 Nov 01:16). Satu template = 6 beat tuang + penutup.
-  // State sesi saja (seperti state panel Veo lainnya); slot tiap
-  // beat bisa diedit user, prompt dirakit saat beat diketuk.
-  let vgTplBeats = $state([
-    { label: 'MONDAY', pour: 'kopi hitam ke susu putih dan es', outfit: 'cardigan cokelat' },
-    { label: 'TUESDAY', pour: 'susu/krem ke kopi hitam es', outfit: 'atasan kotak cokelat' },
-    { label: 'WEDNESDAY', pour: 'kopi hitam dari teko keramik hitam ke susu', outfit: 'blus krem' },
-    { label: 'THURSDAY', pour: 'matcha hijau ke susu', outfit: 'atasan biru gelap, luar ruang' },
-    { label: 'FRIDAY', pour: 'minuman merah muda ke es batu', outfit: 'hoodie zaitun' },
-    { label: 'SATURDAY', pour: 'jus oranye ke es batu', outfit: 'kemeja hitam polkadot' },
-  ]);
-  let vgTplIdx = $state(-1);
-  let vgTplStatus = $state('');
-  let vgTplSignoff = $state('see you sooooooon');
-  function vgTplPromptBeat(b: { label: string; pour: string; outfit: string }) {
-    return `Close-up vertikal, satu tangan memegang gelas plastik bening, tangan lain menuang ${b.pour} dari atas, aliran tuang terlihat jelas, ${b.outfit}, cahaya matahari hangat, 4 detik, vertikal 9:16, tanpa teks di dalam footage.`;
-  }
-  const VG_TPL_CLOSE = 'Top-down statis, tangan memegang cangkir keramik berisi kopi hitam, latar hijau zaitun polos, cahaya matahari hangat, 4 detik, vertikal 9:16, tanpa teks.';
-  function vgTplLoadBeat(i: number) {
-    vgTplIdx = i;
-    vgPrompt = vgTplPromptBeat(vgTplBeats[i]);
-    vgTplStatus = t('vg.tpl.loaded', lang, { label: vgTplBeats[i].label });
-  }
-  function vgTplLoadClose() {
-    vgTplIdx = 6;
-    vgPrompt = VG_TPL_CLOSE;
-    vgTplStatus = t('vg.tpl.loaded', lang, { label: t('vg.tpl.close', lang) });
-  }
-  function vgTplLoadEndcard() {
-    const safe = vgTplSignoff.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    hfHtml = `<div data-composition-id="endcard" data-duration="2" data-width="720" data-height="1280" style="width:720px;height:1280px;background:#556B2F;display:flex;align-items:center;justify-content:center;"><p style="color:#fff;font-size:32px;letter-spacing:1px;margin:0;">${safe}</p></div>`;
-    vgTplStatus = t('vg.tpl.endcard_loaded', lang);
-  }
   let hfHtml = $state('');
   let hfQuality = $state('draft');
   let hfBusy = $state(false);
@@ -476,73 +443,6 @@
     vgTab = 'prompt';
     if (portrait) vgAspect = '9:16';
     vgPrompt = portrait ? t('vg2.portraittext', lang) : t('vg2.sampletext', lang);
-  }
-  // v170: batch video — 1 gambar = 1 klip, maks 30 klip sekali jalan.
-  // Urutan klik = urutan scene. Prompt + tier/rasio/resolusi/durasi yang
-  // sama dipakai semua klip; generate berurutan (bukan paralel) agar
-  // progres terpantau dan kuota tidak dihantam sekaligus; klip gagal
-  // dicatat dan TIDAK menghentikan batch. Batal hanya menghentikan
-  // SESUDAH klip yang sedang berjalan selesai (biayanya sudah terjadi,
-  // jadi hasilnya tetap disimpan). Batch hidup selama app terbuka.
-  let vgBatchList = $state([] as Array<{ file: string; title: string; mime: string; b64: string }>);
-  let vgBatchSel = $state([] as string[]);
-  let vgBatchBusy = $state(false);
-  let vgBatchCancel = $state(false);
-  let vgBatchResults = $state([] as Array<{ i: number; label: string; ok: boolean; path: string; seconds: number; usd: number; error: string }>);
-  let vgBatchStatus = $state('');
-  async function vgBatchLoadLib() {
-    try {
-      vgBatchList = await loadLibImages(30);
-      if (!vgBatchList.length) vgBatchStatus = t('vg.ref.lib_empty', lang);
-    } catch (e) {
-      vgBatchStatus = `${t('vg.fail', lang)} ${String(e)}`;
-    }
-  }
-  function vgBatchToggle(file: string) {
-    const at = vgBatchSel.indexOf(file);
-    if (at >= 0) { vgBatchSel = vgBatchSel.filter((f) => f !== file); return; }
-    if (vgBatchSel.length >= 30) { vgBatchStatus = t('vg.batch.max', lang); return; }
-    vgBatchSel = [...vgBatchSel, file];
-  }
-  async function vgBatchStart() {
-    const key = readKeys().gemini;
-    if (!key) { vgBatchStatus = t('vg.need_key', lang); return; }
-    if (!vgPrompt.trim()) { vgBatchStatus = t('vg.need_prompt', lang); return; }
-    if (!vgBatchSel.length) { vgBatchStatus = t('vg.batch.none', lang); return; }
-    vgBatchBusy = true; vgBatchCancel = false; vgBatchResults = [];
-    const items = vgBatchSel.map((f) => vgBatchList.find((x) => x.file === f)).filter((x) => !!x);
-    const t0 = Date.now();
-    for (let i = 0; i < items.length; i++) {
-      if (vgBatchCancel) break;
-      const it = items[i]!;
-      vgBatchStatus = `${t('vg.batch.progress', lang, { i: i + 1, n: items.length })} — ${it.title}`;
-      try {
-        const r = await veoGenerateClip(key, { prompt: vgPrompt.trim(), tier: vgTier as 'standard' | 'fast' | 'lite', aspect: vgAspect, resolution: vgRes, duration: Number(vgDur), image: { b64: it.b64, mime: it.mime } }, (phase) => {
-          const el = Math.round((Date.now() - t0) / 1000);
-          vgBatchStatus = `${t('vg.batch.progress', lang, { i: i + 1, n: items.length })} — ${phase === 'download' ? t('vg.status.download', lang) : `${t('vg.status.poll', lang)} (${el}s)`}`;
-        });
-        ve2Assets = [...ve2Assets, { id: 'veob' + Date.now() + '_' + i, name: `Veo scene ${i + 1}/${items.length}`, icon: '🎬', kind: 'Video', src: r.path, duration: r.seconds }];
-        vgBatchResults = [...vgBatchResults, { i, label: it.title, ok: true, path: r.path, seconds: r.seconds, usd: r.usd, error: '' }];
-      } catch (e) {
-        vgBatchResults = [...vgBatchResults, { i, label: it.title, ok: false, path: '', seconds: 0, usd: 0, error: String(e) }];
-      }
-      ve2SaveState(); videoSpend = readVideoSpend();
-    }
-    const ok = vgBatchResults.filter((r) => r.ok).length;
-    const fail = vgBatchResults.length - ok;
-    vgBatchBusy = false;
-    vgBatchStatus = (vgBatchCancel ? t('vg.batch.cancelled', lang) + ' ' : '') + t('vg.batch.done', lang, { ok, fail });
-  }
-  function vgBatchToTimeline() {
-    const oks = vgBatchResults.filter((r) => r.ok);
-    if (!oks.length) return;
-    let start = ve2Clips.reduce((m, c) => Math.max(m, c.start + c.dur), 0);
-    for (const r of oks) {
-      ve2Clips = [...ve2Clips, { id: 'veobt' + Date.now() + '_' + r.i, name: `Veo scene ${r.i + 1}`, track: 'Video', start, dur: r.seconds, src: r.path, effect: 'none' }];
-      start += r.seconds;
-    }
-    ve2SaveState();
-    vgBatchStatus = t('vg.batch.added_timeline', lang);
   }
   async function vgGenerate() {
     const key = readKeys().gemini;
@@ -951,7 +851,8 @@
           <div class="ms-card">
 <div class="se-group"><h4>{t('vg.title', lang)}</h4></div>
 <div class="vg-card">
-<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><span class="se-note" style="font-weight:700">{t('vg2.veo31', lang)}</span><label>{t('vg.tier', lang)} <select id="vg-tier" bind:value={vgTier}><option value="fast">{t('vg.tier.fast', lang)}</option><option value="standard">{t('vg.tier.standard', lang)}</option><option value="lite" disabled={vgRefs.length > 0}>{t('vg.tier.lite', lang)}</option></select></label></div>
+<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><label>{t('vg2.model', lang)} <select id="vg-model" bind:value={vgModel}><option value="veo">{t('vg2.model.veo', lang)}</option><option value="hyperframes">{t('vg2.model.hf', lang)}</option></select></label>{#if vgModel === 'veo'}<span class="se-note" style="font-weight:700">{t('vg2.veo31', lang)}</span><label>{t('vg.tier', lang)} <select id="vg-tier" bind:value={vgTier}><option value="fast">{t('vg.tier.fast', lang)}</option><option value="standard">{t('vg.tier.standard', lang)}</option><option value="lite" disabled={vgRefs.length > 0}>{t('vg.tier.lite', lang)}</option></select></label>{/if}</div>
+{#if vgModel === 'veo'}
 <div class="vg-tabs"><button class="vg-tab {vgTab === 'prompt' ? 'vg-tab-sel' : ''}" data-vg-tab="prompt" onclick={() => { vgTab = 'prompt'; }}>{t('vg2.tab.prompt', lang)}</button><button class="vg-tab {vgTab === 'refs' ? 'vg-tab-sel' : ''}" data-vg-tab="refs" onclick={() => { vgTab = 'refs'; }}>{t('vg2.tab.refs', lang)}</button><button class="vg-tab {vgTab === 'frames' ? 'vg-tab-sel' : ''}" data-vg-tab="frames" onclick={() => { vgTab = 'frames'; }}>{t('vg2.tab.frames', lang)}</button></div>
 {#if vgTab === 'prompt'}
 <label>{t('vg.prompt', lang)}<textarea id="vg-prompt" rows="3" class="se-field" bind:value={vgPrompt}></textarea></label>
@@ -985,58 +886,23 @@
 <button id="vg-generate" class="btn btn-primary" disabled={vgBusy} onclick={() => vgGenerate()}>{vgBusy ? t('vg.generating', lang) : t('vg.generate', lang)}</button> <button id="vg-add-timeline" class="btn btn-sm" disabled={!vgLastPath} onclick={() => vgAddToTimeline()}>{t('vg.add_timeline', lang)}</button>
 <p id="vg-status" class="se-note" style="white-space:pre-line">{vgStatus}</p>
 {#if videoSpend.videos > 0}<p class="se-note">{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</p>{/if}
-<div class="se-group"><h4>{t('vg2.summary', lang)}</h4>
-<p class="se-note">veo-3.1 · {vgAspect} · {vgEffDur()}s · {vgMode() === 'refs' ? t('vg2.mode.refs', lang) : vgMode() === 'frames' ? t('vg2.mode.frames', lang) : t('vg2.mode.text', lang)}</p>
-{#if vgLastPath}<p class="se-note">{vgLastPath}</p>{/if}
+{:else}
+<div class="se-group"><h4>{t('hf.title', lang)}</h4>
+<p class="se-note">{t('hf.note', lang)}</p>
+<label for="hf-html">{t('hf.html', lang)}</label>
+<textarea id="hf-html" rows="14" class="se-field" style="font-family:monospace" bind:value={hfHtml}></textarea>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+<button id="hf-sample" class="btn btn-sm" onclick={() => { hfHtml = HF_SAMPLE; }}>{t('hf.sample', lang)}</button>
+<label>{t('hf.quality', lang)} <select id="hf-quality" bind:value={hfQuality}><option value="draft">{t('hf.quality.draft', lang)}</option><option value="looks">{t('hf.quality.looks', lang)}</option><option value="delivery">{t('hf.quality.delivery', lang)}</option></select></label>
+<button id="hf-check" class="btn btn-sm" onclick={() => hfCheck()}>{t('hf.check', lang)}</button>
+<button id="hf-render" class="btn btn-primary" disabled={hfBusy} onclick={() => hfRender()}>{hfBusy ? t('hf.rendering', lang) : t('hf.render', lang)}</button>
+<button id="hf-add-timeline" class="btn btn-sm" disabled={!hfLastPath || !hfLastDur} onclick={() => hfAddToTimeline()}>{t('hf.add_timeline', lang)}</button>
 </div>
+<p id="hf-status" class="se-note" style="white-space:pre-line">{hfStatus}</p>
+</div>
+{/if}
 <div class="se-group"><label>{t('img.plan', lang)}<textarea id="ve-plan" rows="2" class="se-field" value={ve2Plan} oninput={(e) => { ve2Plan = (e.target as HTMLTextAreaElement).value; ve2SaveState(); }}></textarea></label></div>
 </div>
-          <div class="se-group"><h4>{t('vg.tpl.title', lang)}</h4>
-          <p class="se-note">{t('vg.tpl.note', lang)}</p>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="se-note" style="width:110px">{t('vg.tpl.label', lang)}</span><span class="se-note" style="flex:1;min-width:180px">{t('vg.tpl.pour', lang)}</span><span class="se-note" style="flex:1;min-width:140px">{t('vg.tpl.outfit', lang)}</span></div>
-          {#each vgTplBeats as b, i}
-          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px">
-          <input class="se-field" style="width:110px" aria-label={t('vg.tpl.label', lang) + ' ' + (i + 1)} bind:value={b.label}>
-          <input class="se-field" style="flex:1;min-width:180px" aria-label={t('vg.tpl.pour', lang) + ' ' + (i + 1)} bind:value={b.pour}>
-          <input class="se-field" style="flex:1;min-width:140px" aria-label={t('vg.tpl.outfit', lang) + ' ' + (i + 1)} bind:value={b.outfit}>
-          <button class="vt-beat {vgTplIdx === i ? 'vt-beat-sel' : ''}" data-vt-beat={b.label} onclick={() => vgTplLoadBeat(i)}>{b.label || (t('vg.tpl.beat', lang) + ' ' + (i + 1))}</button>
-          </div>
-          {/each}
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
-          <button class="vt-beat {vgTplIdx === 6 ? 'vt-beat-sel' : ''}" id="vt-close" onclick={() => vgTplLoadClose()}>{t('vg.tpl.close', lang)}</button>
-          <span class="se-note">{t('vg.tpl.endcard', lang)}</span>
-          <input id="vt-signoff" class="se-field" style="width:200px" aria-label={t('vg.tpl.signoff', lang)} bind:value={vgTplSignoff}>
-          <button id="vt-endcard" class="btn btn-sm" onclick={() => vgTplLoadEndcard()}>{t('vg.tpl.endcard_load', lang)}</button>
-          </div>
-          <p id="vt-status" class="se-note">{vgTplStatus}</p>
-          </div>
-          <div class="se-group"><label for="vg-batch-lib">{t('vg.batch.title', lang)}</label>
-          <p class="se-note">{t('vg.batch.note', lang)}</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
-          <button id="vg-batch-lib" class="btn btn-sm" onclick={() => vgBatchLoadLib()}>{t('vg.batch.pick', lang)}</button>
-          <button id="vg-batch-start" class="btn btn-primary" disabled={vgBatchBusy || !vgBatchSel.length} onclick={() => vgBatchStart()}>{vgBatchBusy ? t('vg.generating', lang) : t('vg.batch.start', lang)}</button>
-          {#if vgBatchBusy}<button id="vg-batch-cancel" class="btn btn-sm" onclick={() => { vgBatchCancel = true; }}>{t('vg.batch.cancel', lang)}</button>{/if}
-          {#if vgBatchResults.filter((r) => r.ok).length}<button id="vg-batch-to-timeline" class="btn btn-sm" disabled={vgBatchBusy} onclick={() => vgBatchToTimeline()}>{t('vg.batch.to_timeline', lang)}</button>{/if}
-          </div>
-          <p id="vg-batch-count" class="se-note">{t('vg.batch.selected', lang, { n: vgBatchSel.length })}</p>
-          {#if vgBatchSel.length}<p class="se-note">{t('vg.batch.price', lang, { usd: (veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, Number(vgDur)) * vgBatchSel.length).toFixed(2), n: vgBatchSel.length, per: veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, Number(vgDur)).toFixed(2) })}</p>{/if}
-          {#if vgBatchList.length}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">{#each vgBatchList as it}<button class="vg-batch-thumb {vgBatchSel.includes(it.file) ? 'vg-batch-on' : ''}" data-vg-batch={it.file} onclick={() => vgBatchToggle(it.file)} title={it.title}><img src="data:{it.mime};base64,{it.b64}" alt={it.title} style="width:72px;height:72px;object-fit:cover;display:block">{#if vgBatchSel.includes(it.file)}<span class="vg-batch-num">{vgBatchSel.indexOf(it.file) + 1}</span>{/if}</button>{/each}</div>{/if}
-          <p id="vg-batch-status" class="se-note" style="white-space:pre-line">{vgBatchStatus}</p>
-          {#each vgBatchResults as r}<div class="se-note">{r.ok ? '✓' : '✗'} {r.label}{r.ok ? ' — ' + r.path + ' ($' + r.usd.toFixed(2) + ')' : ' — ' + r.error}</div>{/each}
-          </div>
-          <div class="se-group"><h4>{t('hf.title', lang)}</h4>
-          <p class="se-note">{t('hf.note', lang)}</p>
-          <label for="hf-html">{t('hf.html', lang)}</label>
-          <textarea id="hf-html" rows="14" class="se-field" style="font-family:monospace" bind:value={hfHtml}></textarea>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
-          <button id="hf-sample" class="btn btn-sm" onclick={() => { hfHtml = HF_SAMPLE; }}>{t('hf.sample', lang)}</button>
-          <label>{t('hf.quality', lang)} <select id="hf-quality" bind:value={hfQuality}><option value="draft">{t('hf.quality.draft', lang)}</option><option value="looks">{t('hf.quality.looks', lang)}</option><option value="delivery">{t('hf.quality.delivery', lang)}</option></select></label>
-          <button id="hf-check" class="btn btn-sm" onclick={() => hfCheck()}>{t('hf.check', lang)}</button>
-          <button id="hf-render" class="btn btn-primary" disabled={hfBusy} onclick={() => hfRender()}>{hfBusy ? t('hf.rendering', lang) : t('hf.render', lang)}</button>
-          <button id="hf-add-timeline" class="btn btn-sm" disabled={!hfLastPath || !hfLastDur} onclick={() => hfAddToTimeline()}>{t('hf.add_timeline', lang)}</button>
-          </div>
-          <p id="hf-status" class="se-note" style="white-space:pre-line">{hfStatus}</p>
-          </div>
           <div class="ve-toolbar">
           <button id="ve2BtnCut" class="btn btn-sm" onclick={() => { ve2Cut() }}>{t('ve.cut', lang)}</button>
           <button id="ve2BtnText" class="btn btn-sm" onclick={() => { ve2AddText() }}>{t('ve.addtext', lang)}</button>
@@ -1052,6 +918,7 @@
           </div>
           {#if ve2Frame}<div><img id="ve2Frame" src={ve2Frame} alt="" style="max-width:100%"></div>{/if}
           </div>
+          <div class="se-group"><h4>{t('ve2.editor', lang)}</h4></div>
           <div class="ms-card">
           <div class="ve2-top">
           <div class="ve2-assets">
