@@ -626,7 +626,7 @@
           </label>
         </div>
       </div>
-      <div class="scroll"><div id="kanbanBox"></div><div id="kbDlg" style="display:none"></div></div>
+      <div class="scroll"><div id="kanbanBox"></div><div id="kbDlg" style="display:none"></div><div id="kbTaskDlg" style="display:none"></div></div>
     </div>
     <div class="view" id="view-graph">
       <div class="colhead"><h2>{t('view.graph.title', lang)}</h2>

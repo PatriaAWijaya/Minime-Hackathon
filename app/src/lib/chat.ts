@@ -400,7 +400,7 @@ export async function sendChatReal(): Promise<void> {
         activateAgent(t.agent);
         postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
         setAgentPhase(t.agent, 'starting');
-        const kbCard = kbTaskStart(ag.name, taskShort(t.task));
+        const kbCard = kbTaskStart(ag.name, taskShort(t.task), t.task);
         cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
         const trace = 'trace-flow1-' + t.agent + '-' + Date.now();
         let resultText: string;
@@ -422,7 +422,7 @@ export async function sendChatReal(): Promise<void> {
           postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
         }
         setAgentPhase(t.agent, null);
-        kbTaskMove(kbCard, 4);
+        kbTaskMove(kbCard, 4, resultText);
         results.push({ name: ag.name, task: t.task, text: resultText });
       }
       let qcText: string;
@@ -467,7 +467,7 @@ export async function sendChatReal(): Promise<void> {
       activateAgent(t.agent);
       postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
       setAgentPhase(t.agent, 'starting');
-      const kbCard = kbTaskStart(ag.name, taskShort(t.task));
+      const kbCard = kbTaskStart(ag.name, taskShort(t.task), t.task);
       cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
       const trace = 'trace-flow2-' + t.agent + '-' + Date.now();
       let resultText: string;
@@ -489,7 +489,7 @@ export async function sendChatReal(): Promise<void> {
         postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
       }
       setAgentPhase(t.agent, null);
-      kbTaskMove(kbCard, 4);
+      kbTaskMove(kbCard, 4, resultText);
       results.push({ name: ag.name, task: t.task, text: resultText });
     }
     let qcText: string;
@@ -544,7 +544,8 @@ export async function sendChatReal(): Promise<void> {
     return;
   }
   setAgentPhase(delegate, 'starting');
-  const kbCard = kbTaskStart(ag.name, taskShort(text));
+  const kbCard = kbTaskStart(ag.name, taskShort(text), text);
+  let kbOut = '';
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
   const trace = 'trace-chat-' + delegate + '-' + Date.now();
   try {
@@ -558,11 +559,13 @@ export async function sendChatReal(): Promise<void> {
       (r.promptTokens != null || r.completionTokens != null ? ' · ' + (r.promptTokens ?? '—') + '+' + (r.completionTokens ?? '—') + ' token' : '');
     // Tombol studio HANYA untuk Kreatif (aturan skill) + tugas media.
     const studio = delegate === 'kreatif' && mediaNeeded(text) ? studioButton(r.text, delegate) : '';
+    kbOut = r.text;
     postChat(delegate, ag.name, ag.color, esc(r.text) + footer + studio);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    kbOut = tr('chat.error') + msg;
     postChat(delegate, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
   }
   setAgentPhase(delegate, null);
-  kbTaskMove(kbCard, 4);
+  kbTaskMove(kbCard, 4, kbOut);
 }

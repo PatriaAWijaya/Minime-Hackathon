@@ -766,6 +766,19 @@ try {
   await tick(100);
   check('v149: kartu tugas tampil di papan Kanban', (document.getElementById('kanbanBox')?.textContent || '').includes('Riset'), document.getElementById('kanbanBox')?.textContent?.slice(0, 200) || '');
 
+  // §31 v150: 2x klik kartu -> detail (deskripsi + capaian output).
+  const kcard31 = [...document.querySelectorAll('#kanbanBox .kcard')].find((el) => el.textContent.includes('Riset'));
+  check('v150: kartu Riset ada di papan untuk 2x klik', !!kcard31);
+  kcard31.dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true }));
+  await tick(100);
+  const dlg31 = document.getElementById('kbTaskDlg');
+  check('v150: 2x klik membuka dialog detail', dlg31?.style.display === 'block', dlg31?.style.display || '');
+  check('v150: detail memuat deskripsi pekerjaan', (dlg31?.textContent || '').toLowerCase().includes('riset pasar'), dlg31?.textContent?.slice(0, 200) || '');
+  check('v150: detail memuat capaian output', (dlg31?.textContent || '').includes('NASKAH-UJI'), dlg31?.textContent?.slice(0, 300) || '');
+  dlg31.querySelector('[data-act="kb-task-close"]').click();
+  await tick(50);
+  check('v150: tombol Tutup menutup detail', dlg31.style.display === 'none', dlg31.style.display || '');
+
 
 
 

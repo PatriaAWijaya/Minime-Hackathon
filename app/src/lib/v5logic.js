@@ -204,6 +204,19 @@ function kanbanWire() {
     else if (act === "kb-open-pid") kbOpenPid(el.getAttribute("data-pid") || "", idx);
     else if (act === "kb-add-list") addKanbanList();
   });
+  if (box) box.addEventListener("dblclick", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !box.contains(el)) return;
+    var act = el.getAttribute("data-act"), idx = parseInt(el.getAttribute("data-idx") || "0", 10);
+    if (act === "kb-open") { kbClose(); kbTaskDetail(currentProj, idx); }
+    else if (act === "kb-open-pid") { kbClose(); kbTaskDetail(el.getAttribute("data-pid") || "", idx); }
+  });
+  var taskDlg = document.getElementById("kbTaskDlg");
+  if (taskDlg) taskDlg.addEventListener("click", function (e) {
+    if (!e.target || !e.target.closest) return;
+    var el = e.target.closest("[data-act]"); if (!el || !taskDlg.contains(el)) return;
+    if (el.getAttribute("data-act") === "kb-task-close") kbTaskDetailClose();
+  });
   var dlg = document.getElementById("kbDlg");
   if (dlg) dlg.addEventListener("click", function (e) {
     if (!e.target || !e.target.closest) return;
@@ -1205,6 +1218,7 @@ export function renderKanban() {
           k.addEventListener("dragstart", function () { dragCard = i; dragPid = gpid; });
           k.addEventListener("mousedown", function (e) { kbDownPos = { x: e.clientX, y: e.clientY }; });
           k.addEventListener("click", function (e) { if (kbDownPos && Math.abs(e.clientX - kbDownPos.x) + Math.abs(e.clientY - kbDownPos.y) > 5) return; if (gpid === currentProj) kbOpen(i); else kbOpenPid(gpid, i); });
+          k.addEventListener("dblclick", function (e) { e.preventDefault(); kbClose(); kbTaskDetail(gpid, i); });
           if (ci < totalCols - 1) {
             var b = document.createElement("button"); b.className = "btn btn-sm"; b.textContent = tr('kanban.advance');
             b.addEventListener("click", function (e) { e.stopPropagation(); card.c = ci + 1; renderKanban(); });
@@ -3363,18 +3377,39 @@ export function kbApprove() { var card = kbCards()[kbDlgIdx]; if (!card) return;
 // call berjalan, Selesai (4) saat hasil (atau error) sudah diposting.
 // Tanpa project aktif (Main chat / Graph-only) mengembalikan null: tidak
 // ada kartu yang dibuat, dan kbTaskMove(null) aman dipanggil.
-export function kbTaskStart(agentName, title) {
+export function kbTaskStart(agentName, title, desc) {
   if (!PROJECTS[currentProj]) return null;
   if (!PROJECTS[currentProj].kanban) PROJECTS[currentProj].kanban = [];
-  var card = { t: title, a: agentName, c: 0 };
+  var card = { t: title, a: agentName, c: 0, desc: desc || '' };
   PROJECTS[currentProj].kanban.push(card);
   renderKanban();
   return card;
 }
-export function kbTaskMove(card, col) {
+export function kbTaskMove(card, col, out) {
   if (!card) return;
   card.c = col;
+  if (out !== undefined) card.out = out;
   renderKanban();
+}
+// v150: detail kartu 2x klik — tugas + deskripsi pekerjaan + capaian
+// output (read-only, terpisah dari dialog edit klik-1x). Kartu lama/manual
+// tanpa desc/out memakai fallback, bukan error.
+export function kbTaskDetail(pid, idx) {
+  var box = document.getElementById("kbTaskDlg"); if (!box) return;
+  var cards = PROJECTS[pid] ? (PROJECTS[pid].kanban || []) : [];
+  var card = cards[idx]; if (!card) return;
+  var out = card.out || (card.c < 4 ? tr('kb.detail.running') : tr('kb.detail.none'));
+  box.style.display = "block";
+  box.innerHTML = "<div class='kb-dlg'><h4>" + tr('kb.detail.title') + "</h4>"
+    + "<p><b>" + tr('kb.detail.task') + ":</b> " + esc(card.t) + "</p>"
+    + "<p>" + tr('kanban.card.agent') + esc(card.a) + " • " + colName(card.c) + "</p>"
+    + "<p><b>" + tr('kb.detail.desc') + ":</b></p><p style='white-space:pre-wrap'>" + esc(card.desc || tr('kb.detail.nodesc')) + "</p>"
+    + "<p><b>" + tr('kb.detail.out') + ":</b></p><p style='white-space:pre-wrap;max-height:300px;overflow:auto'>" + esc(out) + "</p>"
+    + "<div class='kb-dlg-btns'><button class='btn' data-act='kb-task-close'>" + tr('kb.detail.close') + "</button></div></div>";
+}
+export function kbTaskDetailClose() {
+  var box = document.getElementById("kbTaskDlg"); if (!box) return;
+  box.style.display = "none"; box.innerHTML = "";
 }
 export function kbAddComment() {
   var inp = document.getElementById("kbDlgComment"); if (!inp) return;
@@ -3599,5 +3634,5 @@ export function initV5() {
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
 
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphNoteDelegationForMember, currentProjectMemberKeys, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphNewProject, markChatApproveDone, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, setAgentPhase, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbTaskStart, kbTaskMove, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphNoteDelegationForMember, currentProjectMemberKeys, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphNewProject, markChatApproveDone, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, setAgentPhase, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbTaskStart, kbTaskMove, kbTaskDetail, kbTaskDetailClose, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }
