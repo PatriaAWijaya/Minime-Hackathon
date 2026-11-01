@@ -2529,7 +2529,7 @@ dokumen lama yang dipakai.
 - Batas jujur yang dipertahankan: prompt TIDAK meminta teks di dalam footage (teks hari lapisan terpisah — belum bisa burn-in di app); end card HyperFrames adalah komposisi statis (tanpa timeline GSAP) — render live-nya dibuktikan saat uji live panel HyperFrames.
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0, scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal 87cae30 ↔ remote 7b65d4f (tree identik).
-- LIVE: menyusul (deploy mh-build176, verifikasi PID + md5 + marker bundle, lalu entri ini diperbarui).
+- LIVE: PID 20714; md5 dbf326e14143481daad702038a95fe68 lokal == MacBook; marker bundle 'vt-beat' + 'Seri Harian'.
 
 ## v175 — integrasi HyperFrames ke Video Editor (perintah Patria 2 Nov 00:52: "integrasikan ffmpeg dan hyperframes, sampai berhasil dan siap uji live")
 - Catatan jujur di awal: FFmpeg SUDAH terintegrasi sejak awal (video_render/qc/capture/probe) — v175 TIDAK mengklaim integrasi FFmpeg sebagai pekerjaan baru. Yang baru = HyperFrames + penyambungannya ke jalur FFmpeg yang sudah ada (output HyperFrames → probe FFmpeg → aset/klip ve2 → ekspor FFmpeg). HyperFrames = TOOL pihak ketiga (CLI Apache-2.0; GSAP lisensi standar GreenSock), bukan karya event; yang karya event = panel + perintah Rust + wiring-nya.
