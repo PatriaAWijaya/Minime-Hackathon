@@ -2521,6 +2521,14 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v150 — LIVE (tambahan Patria 1 Nov 12:05: kartu menetap + detail 2x klik)
+- Menetap: audit jalur hapus Kanban membuktikan TIDAK ada penghapusan otomatis (tidak ada kedaluwarsa/arsip seperti Library; loadKanban + loadHomeState menyimpan objek kartu utuh sehingga field tambahan selamat reload). Kartu hanya hilang lewat tindakan eksplisit: hapus kartu dari dialognya (kbDel), hapus dokumen Library yang bersangkutan (hanya kartu "Revisi: <judul>"-nya), atau hapus projectnya (kartu ikut terhapus bersama project).
+- Detail 2x klik: kartu tugas kini menyimpan deskripsi pekerjaan lengkap (desc = teks tugas utuh, bukan judul terpotong) dan capaian output (out = hasil akhir agen / pesan error bila gagal). Dblclick kartu (papan via listener langsung; list/table via delegasi kanbanWire) menutup dialog edit klik-1x lalu membuka dialog #kbTaskDlg read-only: tugas, agen + status, deskripsi pekerjaan, capaian output ("Masih berjalan" bila c<4). Kartu lama/manual tanpa desc/out memakai fallback, bukan error. Klik 1x tetap dialog edit.
+- Kunci i18n baru kb.detail.* (8 kunci: title/task/desc/out/nodesc/running/none/close; total 959/bahasa, 0 duplikat).
+- Rig: rig-chat §31 (dblclick kartu Riset -> detail memuat deskripsi + NASKAH-UJI; Tutup menutup dialog).
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, ledger md5 tetap, gate-test 14 grup; 3 baris scan = false positive "sk-" di dalam kata task-close, bukan kredensial).
+- Push: kode lokal c8d6e85 ↔ remote fb15ffa (tree identik).
+
 ## v149 — LIVE (perintah Patria 1 Nov 11:55: semua proses tugas agen harus muncul di Kanban)
 - Cermin Kanban untuk tugas agen: helper kbTaskStart/kbTaskMove di v5logic (satu kartu per delegasi, judul = taskShort tugas, agen = nama agen). Antrian (c=0) saat agen menyatakan kesediaan, Dikerjakan (c=1) saat model call berjalan, Selesai (c=4) saat hasil/error sudah diposting. Mutasi + renderKanban (render menyimpan via saveKanban) sehingga kartu persisten dan bisa dibuka/dikomentari/dihapus manual seperti kartu biasa.
 - Dikaitkan ke 3 jalur chat.ts: fan-out Alur 1, fan-out Alur 2, delegasi tunggal (model-call path). Tanpa project aktif (Main chat / Graph-only) kbTaskStart mengembalikan null — tidak ada kartu, kbTaskMove(null) aman. Sesi brief interaktif Kreatif (cbStart) tidak dapat kartu (jalan keluar lebih awal, sebelum model call). Kolom Butuh Approval/Revisi tidak dipakai otomatis untuk tugas agen (tetap untuk kartu manual + Revisi Library); verdict QC tidak diparse dari teks bebas.
