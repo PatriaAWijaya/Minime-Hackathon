@@ -724,3 +724,14 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .img-brand-side { width: 320px; flex-shrink: 0; position: sticky; top: 0; max-height: calc(100vh - 100px); overflow-y: auto; }
 .img-brand-side::-webkit-scrollbar { width: 10px; }
 .img-brand-side::-webkit-scrollbar-thumb { background: var(--t-border-strong, #333); border-radius: 5px; }
+
+/* v178: kartu generator gaya Veo 3.1 — tab Prompt/References/Frames +
+   slot referensi. Menggantikan panel Veo lama yang ditumpuk dengan
+   form Tier 1/klip/caption/aset (dihapus); timeline + ekspor ve2 tetap. */
+.vg-card { background: var(--t-panel2, #262626); border: 1px solid var(--t-border, #3a3a3a); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.vg-tabs { display: flex; gap: 6px; margin: 10px 0; }
+.vg-tab { border: 1px solid var(--t-border, #3a3a3a); background: transparent; color: inherit; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.vg-tab-sel { background: #8ED694; color: #262626; border-color: #8ED694; }
+.vg-refslot { position: relative; width: 96px; }
+.vg-refslot img { width: 96px; height: 96px; object-fit: cover; display: block; border-radius: 8px; }
+.vg-refslot-x { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; border-radius: 11px; border: none; background: #262626; color: #fff; cursor: pointer; }

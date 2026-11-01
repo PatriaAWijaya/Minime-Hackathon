@@ -68,151 +68,6 @@
     renderKeyButtons();
   });
 
-  // ---- Panel Render Video Tier 1 ----
-  interface T1RenderResult { success: boolean; output: string; duration_ms: number; stderr_tail: string; }
-  interface T1Segment { start: number; end: number; }
-  interface T1QcResult { duration: number; has_video: boolean; has_audio: boolean; black: T1Segment[]; silent: T1Segment[]; passed: boolean; notes: string[]; }
-  interface T1CaptureResult { data_url: string; }
-
-  let t1Clips = $state<T1Clip[]>([{ id: 't1c1', src: '', kind: 'video', trimIn: 0, dur: 2, volume: 1, track: 'voice' }]);
-  let t1Next = $state(2);
-  let t1W = $state(1280);
-  let t1H = $state(720);
-  let t1Fps = $state(30);
-  let t1Out = $state('');
-  let t1Busy = $state(false);
-  let t1Status = $state('');
-  let t1Qc = $state('');
-  let t1Frame = $state('');
-  let t1Json = $state('');
-
-  function t1AddClip() {
-    t1Clips = [...t1Clips, { id: 't1c' + t1Next, src: '', kind: 'video', trimIn: 0, dur: 2, volume: 1, track: 'voice' }];
-    t1Next += 1;
-  }
-  function t1RemoveClip(id: string) {
-    t1Clips = t1Clips.filter((c) => c.id !== id);
-  }
-  function t1QcText(qc: T1QcResult): string {
-    const seg = (ss: T1Segment[]) => ss.length ? ss.map((s) => `${s.start.toFixed(1)}-${s.end.toFixed(1)}`).join(', ') : t('t1.qc.none', lang);
-    return [
-      (qc.passed ? t('t1.qc.pass', lang) : t('t1.qc.fail', lang)),
-      `${t('t1.qc.duration', lang)}: ${qc.duration.toFixed(1)}s`,
-      `${t('t1.qc.black', lang)}: ${seg(qc.black)}`,
-      `${t('t1.qc.silent', lang)}: ${seg(qc.silent)}`,
-      ...qc.notes,
-    ].join('\n');
-  }
-  async function t1Render() {
-    const seq: T1Sequence = {
-      name: 't1',
-      width: Number(t1W), height: Number(t1H), fps: Number(t1Fps),
-      clips: t1Clips.map((c) => ({ id: c.id, src: c.src.trim(), kind: c.kind, trimIn: Number(c.trimIn), dur: Number(c.dur), volume: Number(c.volume), track: c.track ?? 'voice' })),
-    };
-    const out = t1Out.trim();
-    const errs = validateSequence(seq, out);
-    if (errs.length > 0) { t1Status = errs.map((e) => t(e, lang)).join(' '); return; }
-    const compiled = compileTimeline(seq, out);
-    t1Json = JSON.stringify({ sequence: seq, ffmpegArgs: compiled.args }, null, 2);
-    t1Busy = true;
-    t1Status = t('t1.rendering', lang);
-    t1Qc = ''; t1Frame = '';
-    try {
-      const r = await invoke<T1RenderResult>('video_render', { req: { args: compiled.args, output: compiled.output } });
-      if (!r.success) { t1Status = `${t('t1.fail', lang)} ${r.stderr_tail}`; return; }
-      const qc = await invoke<T1QcResult>('video_qc', { req: { path: compiled.output, expectedDuration: compiled.expectedDuration } });
-      t1Qc = t1QcText(qc);
-      const cap = await invoke<T1CaptureResult>('video_capture', { req: { path: compiled.output, at: compiled.expectedDuration / 2 } });
-      t1Frame = cap.data_url;
-      t1Status = `${t('t1.done', lang)} ${qc.passed ? t('t1.qc.pass', lang) : t('t1.qc.fail', lang)}`;
-    } catch (e) {
-      t1Status = `${t('t1.fail', lang)} ${String(e)}`;
-    } finally {
-      t1Busy = false;
-    }
-  }
-
-  // ---- Caption ASS sidecar Tier 2 (bukan burn-in: ffmpeg tanpa subtitles) ----
-  let t1Caps = $state<{ id: string; text: string; start: number; end: number }[]>([]);
-  let t1CapNext = $state(1);
-  let t1CapBusy = $state(false);
-  let t1CapStatus = $state('');
-  let t1CapPath = $state('');
-  let t1CapAss = $state('');
-  function t1AddCap() {
-    t1Caps = [...t1Caps, { id: 't1cap' + t1CapNext, text: '', start: 0, end: 2 }];
-    t1CapNext += 1;
-  }
-  function t1RemoveCap(id: string) {
-    t1Caps = t1Caps.filter((c) => c.id !== id);
-  }
-  async function t1SaveAss() {
-    const caps: T1Caption[] = t1Caps.map((c) => ({ text: c.text.trim(), start: Number(c.start), end: Number(c.end) }));
-    const errs: string[] = [];
-    for (const cap of caps) {
-      if (!cap.text) errs.push('t2.err.captext');
-      if (!(cap.start >= 0) || !(cap.end > cap.start)) errs.push('t2.err.caprange');
-    }
-    const uniq = [...new Set(errs)];
-    if (uniq.length > 0) { t1CapStatus = uniq.map((e) => t(e, lang)).join(' '); return; }
-    t1CapBusy = true;
-    t1CapStatus = '';
-    try {
-      const ass = assFromCaptions(caps, Number(t1W), Number(t1H));
-      const r = await invoke<{ path: string }>('video_write_ass', { req: { content: ass } });
-      t1CapPath = r.path;
-      t1CapAss = ass;
-      t1CapStatus = `${t('t2.cap.saved', lang)} ${r.path}`;
-    } catch (e) {
-      t1CapStatus = `${t('t1.fail', lang)} ${String(e)}`;
-    } finally {
-      t1CapBusy = false;
-    }
-  }
-
-  // ---- Panel Asset Library Tier 2 ----
-  interface T2Stream { index: number; codec_type: string; codec_name: string; width: number | null; height: number | null; }
-  interface T2ProbeResult { duration: number; size: number; streams: T2Stream[]; format_name: string; }
-  interface T2HashResult { sha256: string; size: number; }
-  interface T2Asset { id: string; src: string; name: string; duration: number; size: number; streams: T2Stream[]; sha256: string; thumb: string; }
-  let t2Assets = $state<T2Asset[]>([]);
-  let t2Next = $state(1);
-  let t2NewSrc = $state('');
-  let t2Busy = $state(false);
-  let t2Status = $state('');
-  function t2StreamsText(streams: T2Stream[]): string {
-    return streams.map((x) => x.codec_type === 'video' && x.width && x.height ? `${x.codec_name} ${x.width}x${x.height}` : x.codec_name).join(' + ') || '-';
-  }
-  function t2Manifest(): string {
-    return JSON.stringify({ version: 1, assets: t2Assets.map((a) => ({ src: a.src, name: a.name, duration: a.duration, size: a.size, streams: a.streams, sha256: a.sha256 })) }, null, 2);
-  }
-  function t2RemoveAsset(id: string) {
-    t2Assets = t2Assets.filter((a) => a.id !== id);
-  }
-  async function t2AddAsset() {
-    const src = t2NewSrc.trim();
-    if (!src) { t2Status = t('t2.assets.fail', lang); return; }
-    t2Busy = true;
-    t2Status = t('t2.assets.loading', lang);
-    try {
-      const probe = await invoke<T2ProbeResult>('video_probe', { req: { path: src } });
-      const hash = await invoke<T2HashResult>('video_asset_hash', { req: { path: src } });
-      let thumb = '';
-      try {
-        const cap = await invoke<T1CaptureResult>('video_capture', { req: { path: src, at: Math.min(1, probe.duration / 2) } });
-        thumb = cap.data_url;
-      } catch { thumb = ''; }
-      const name = src.split('/').pop() || src;
-      t2Assets = [...t2Assets, { id: 't2a' + t2Next, src, name, duration: probe.duration, size: hash.size, streams: probe.streams, sha256: hash.sha256, thumb }];
-      t2Next += 1;
-      t2NewSrc = '';
-      t2Status = '';
-    } catch (e) {
-      t2Status = `${t('t2.assets.fail', lang)} ${String(e)}`;
-    } finally {
-      t2Busy = false;
-    }
-  }
 
   // ---- Engine Video Editor ve2 NYATA (v80, gantikan simulasi) ----
   // State timeline + aset tersimpan di localStorage minime.ve2 (pola
@@ -547,21 +402,41 @@
   let hfStatus = $state('');
   let hfLastPath = $state('');
   let hfLastDur = $state(0);
-  // v168: referensi gambar storyboard untuk Veo (image-to-video:
-  // gambar jadi frame awal; video mengikuti subjek/gaya gambar itu).
-  // Referensi bersifat sesi (tidak dipersistensikan): dari file atau
-  // dari Library (gambar kind 'image' + imageFile, terbaru dulu).
-  let vgRef = $state(null as null | { label: string; mime: string; b64: string });
+  // v178: mode input generator Veo (desain Veo 3.1): tab Prompt /
+  // References (0/3) / First and last frames. Mode saling eksklusif:
+  // refs > 0 -> referenceImages (durasi dipaksa 8, Lite ditolak);
+  // vgFirst saja -> image-to-video; vgFirst + vgLast -> first+last.
+  // Semua input gambar bersifat sesi (tidak dipersistensikan), dari
+  // file atau dari Library (gambar kind 'image' + imageFile, terbaru
+  // dulu). Menggantikan referensi tunggal v168 (vgRef).
+  let vgTab = $state('prompt');
+  let vgFirst = $state(null as null | { label: string; mime: string; b64: string });
+  let vgLast = $state(null as null | { label: string; mime: string; b64: string });
+  let vgRefs = $state([] as Array<{ label: string; mime: string; b64: string }>);
+  let vgLibTarget = $state('refs');
   let vgLibList = $state([] as Array<{ file: string; title: string; mime: string; b64: string }>);
-  async function vgRefFromFile(file: File | null) {
-    if (!file) return;
-    try {
-      const buf = await file.arrayBuffer();
-      const mime = file.type || veoMimeForB64('');
-      vgRef = { label: file.name, mime: mime.startsWith('image/') ? mime : 'image/png', b64: b64FromBytes(new Uint8Array(buf)) };
-    } catch (e) {
-      vgStatus = `${t('vg.fail', lang)} ${String(e)}`;
-    }
+  async function vgFileToImg(file: File | null) {
+    if (!file) return null;
+    const buf = await file.arrayBuffer();
+    const mime = file.type || 'image/png';
+    return { label: file.name, mime: mime.startsWith('image/') ? mime : 'image/png', b64: b64FromBytes(new Uint8Array(buf)) };
+  }
+  async function vgFirstFromFile(file: File | null) {
+    try { const img = await vgFileToImg(file); if (img) vgFirst = img; } catch (e) { vgStatus = `${t('vg.fail', lang)} ${String(e)}`; }
+  }
+  async function vgLastFromFile(file: File | null) {
+    try { const img = await vgFileToImg(file); if (img) vgLast = img; } catch (e) { vgStatus = `${t('vg.fail', lang)} ${String(e)}`; }
+  }
+  function vgRefsAdd(img: { label: string; mime: string; b64: string }) {
+    if (vgRefs.length >= 3) { vgStatus = t('vg2.refs.max', lang); return; }
+    vgRefs = [...vgRefs, img];
+    if (vgTier === 'lite') vgTier = 'fast';
+  }
+  async function vgRefsFromFile(file: File | null) {
+    try { const img = await vgFileToImg(file); if (img) vgRefsAdd(img); } catch (e) { vgStatus = `${t('vg.fail', lang)} ${String(e)}`; }
+  }
+  function vgRefsDel(i: number) {
+    vgRefs = vgRefs.filter((_, j) => j !== i);
   }
   async function loadLibImages(limit: number) {
     const items = libAll().filter((x: { kind?: string; imageFile?: string }) => x.kind === 'image' && x.imageFile).reverse().slice(0, limit);
@@ -574,13 +449,33 @@
     }
     return out;
   }
-  async function vgRefLoadLib() {
+  async function vgLibLoad(target: string) {
+    vgLibTarget = target;
     try {
       vgLibList = await loadLibImages(10);
       if (!vgLibList.length) vgStatus = t('vg.ref.lib_empty', lang);
     } catch (e) {
       vgStatus = `${t('vg.fail', lang)} ${String(e)}`;
     }
+  }
+  function vgLibPick(it: { file: string; title: string; mime: string; b64: string }) {
+    const img = { label: it.title, mime: it.mime, b64: it.b64 };
+    if (vgLibTarget === 'first') vgFirst = img;
+    else if (vgLibTarget === 'last') vgLast = img;
+    else vgRefsAdd(img);
+  }
+  function vgMode(): string {
+    if (vgRefs.length > 0) return 'refs';
+    if (vgFirst) return 'frames';
+    return 'text';
+  }
+  function vgEffDur(): number {
+    return vgRefs.length > 0 ? 8 : Number(vgDur);
+  }
+  function vgLoadSample(portrait: boolean) {
+    vgTab = 'prompt';
+    if (portrait) vgAspect = '9:16';
+    vgPrompt = portrait ? t('vg2.portraittext', lang) : t('vg2.sampletext', lang);
   }
   // v170: batch video — 1 gambar = 1 klip, maks 30 klip sekali jalan.
   // Urutan klik = urutan scene. Prompt + tier/rasio/resolusi/durasi yang
@@ -653,11 +548,13 @@
     const key = readKeys().gemini;
     if (!key) { vgStatus = t('vg.need_key', lang); return; }
     if (!vgPrompt.trim()) { vgStatus = t('vg.need_prompt', lang); return; }
+    if (vgRefs.length > 0 && vgTier === 'lite') { vgStatus = t('vg2.refs.lite', lang); return; }
     vgBusy = true;
     vgStatus = t('vg.status.start', lang);
     const t0 = Date.now();
     try {
-      const r = await veoGenerateClip(key, { prompt: vgPrompt.trim(), tier: vgTier as 'standard' | 'fast' | 'lite', aspect: vgAspect, resolution: vgRes, duration: Number(vgDur), image: vgRef ? { b64: vgRef.b64, mime: vgRef.mime } : undefined }, (phase) => {
+      const mode = vgMode();
+      const r = await veoGenerateClip(key, { prompt: vgPrompt.trim(), tier: vgTier as 'standard' | 'fast' | 'lite', aspect: vgAspect, resolution: vgRes, duration: vgEffDur(), image: mode === 'frames' && vgFirst ? { b64: vgFirst.b64, mime: vgFirst.mime } : undefined, lastFrame: mode === 'frames' && vgFirst && vgLast ? { b64: vgLast.b64, mime: vgLast.mime } : undefined, referenceImages: mode === 'refs' ? vgRefs.map((r) => ({ b64: r.b64, mime: r.mime })) : undefined }, (phase) => {
         const el = Math.round((Date.now() - t0) / 1000);
         vgStatus = phase === 'download' ? t('vg.status.download', lang) : `${t('vg.status.poll', lang)} (${el}s)`;
       });
@@ -718,6 +615,22 @@
     ve2Clips = [...ve2Clips, { id: 'hf' + Date.now(), name: `HyperFrames ${hfLastDur}s`, track: 'Video', start, dur: hfLastDur, src: hfLastPath, effect: 'none' }];
     ve2SaveState();
     hfStatus = t('hf.added_timeline', lang);
+  }
+  // v178: tipe + teks QC bersama (dipakai Ekspor ve2; dulu bagian
+  // panel Tier 1 yang dihapus — fungsinya pindah ke helper ini).
+  interface T1RenderResult { success: boolean; output: string; duration_ms: number; stderr_tail: string; }
+  interface T1Segment { start: number; end: number; }
+  interface T1QcResult { duration: number; has_video: boolean; has_audio: boolean; black: T1Segment[]; silent: T1Segment[]; passed: boolean; notes: string[]; }
+  interface T1CaptureResult { data_url: string; }
+  function t1QcText(qc: T1QcResult): string {
+    const seg = (ss: T1Segment[]) => ss.length ? ss.map((s) => `${s.start.toFixed(1)}-${s.end.toFixed(1)}`).join(', ') : t('t1.qc.none', lang);
+    return [
+      (qc.passed ? t('t1.qc.pass', lang) : t('t1.qc.fail', lang)),
+      `${t('t1.qc.duration', lang)}: ${qc.duration.toFixed(1)}s`,
+      `${t('t1.qc.black', lang)}: ${seg(qc.black)}`,
+      `${t('t1.qc.silent', lang)}: ${seg(qc.silent)}`,
+      ...qc.notes,
+    ].join('\n');
   }
   async function ve2Export() {
     if (ve2Busy) return;
@@ -1036,9 +949,48 @@
         </div>
         <div id="ms-tab-video" class="ms-video">
           <div class="ms-card">
-          <div class="se-group"><label>{t('img.plan', lang)}<textarea id="ve-plan" rows="4" class="se-field" value={ve2Plan} oninput={(e) => { ve2Plan = (e.target as HTMLTextAreaElement).value; ve2SaveState(); }}></textarea></label></div>
-          <div class="se-group"><h4>{t('vg.title', lang)}</h4>
-          <label>{t('vg.prompt', lang)}<textarea id="vg-prompt" rows="3" class="se-field" bind:value={vgPrompt}></textarea></label>
+<div class="se-group"><h4>{t('vg.title', lang)}</h4></div>
+<div class="vg-card">
+<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><span class="se-note" style="font-weight:700">{t('vg2.veo31', lang)}</span><label>{t('vg.tier', lang)} <select id="vg-tier" bind:value={vgTier}><option value="fast">{t('vg.tier.fast', lang)}</option><option value="standard">{t('vg.tier.standard', lang)}</option><option value="lite" disabled={vgRefs.length > 0}>{t('vg.tier.lite', lang)}</option></select></label></div>
+<div class="vg-tabs"><button class="vg-tab {vgTab === 'prompt' ? 'vg-tab-sel' : ''}" data-vg-tab="prompt" onclick={() => { vgTab = 'prompt'; }}>{t('vg2.tab.prompt', lang)}</button><button class="vg-tab {vgTab === 'refs' ? 'vg-tab-sel' : ''}" data-vg-tab="refs" onclick={() => { vgTab = 'refs'; }}>{t('vg2.tab.refs', lang)}</button><button class="vg-tab {vgTab === 'frames' ? 'vg-tab-sel' : ''}" data-vg-tab="frames" onclick={() => { vgTab = 'frames'; }}>{t('vg2.tab.frames', lang)}</button></div>
+{#if vgTab === 'prompt'}
+<label>{t('vg.prompt', lang)}<textarea id="vg-prompt" rows="3" class="se-field" bind:value={vgPrompt}></textarea></label>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button id="vg-sample" class="btn btn-sm" onclick={() => vgLoadSample(false)}>{t('vg2.sample', lang)}</button><button id="vg-portrait" class="btn btn-sm" onclick={() => vgLoadSample(true)}>{t('vg2.portrait', lang)}</button></div>
+{:else if vgTab === 'refs'}
+<p class="se-note">{t('vg2.refs.count', lang, { n: vgRefs.length })}</p>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px"><input id="vg-refs-file" type="file" accept="image/*" aria-label={t('vg.ref.file', lang)} onchange={(e) => vgRefsFromFile((e.target as HTMLInputElement).files?.[0] || null)}><button id="vg-refs-lib" class="btn btn-sm" onclick={() => vgLibLoad('refs')}>{t('vg.ref.lib', lang)}</button></div>
+{#if vgLibTarget === 'refs' && vgLibList.length}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">{#each vgLibList as it}<button class="vg-ref-thumb" data-vg-ref={it.file} onclick={() => vgLibPick(it)} title={it.title}><img src="data:{it.mime};base64,{it.b64}" alt={it.title} style="width:72px;height:72px;object-fit:cover;display:block"></button>{/each}</div>{/if}
+{#if vgRefs.length}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">{#each vgRefs as r, i}<div class="vg-refslot"><img src="data:{r.mime};base64,{r.b64}" alt={r.label}><button class="vg-refslot-x" data-vg-refdel={i} onclick={() => vgRefsDel(i)}>✕</button><span class="se-note">{r.label}</span></div>{/each}</div>{/if}
+<p class="se-note">{t('vg2.refs.note', lang)}</p>
+{:else}
+<div class="se-group"><label for="vg-first-file">{t('vg2.first', lang)}</label>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px"><input id="vg-first-file" type="file" accept="image/*" aria-label={t('vg.ref.file', lang)} onchange={(e) => vgFirstFromFile((e.target as HTMLInputElement).files?.[0] || null)}><button id="vg-first-lib" class="btn btn-sm" onclick={() => vgLibLoad('first')}>{t('vg.ref.lib', lang)}</button>{#if vgFirst}<button id="vg-first-clear" class="btn btn-sm" onclick={() => { vgFirst = null; }}>{t('vg.ref.clear', lang)}</button>{/if}</div>
+{#if vgLibTarget === 'first' && vgLibList.length}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">{#each vgLibList as it}<button class="vg-ref-thumb" data-vg-ref={it.file} onclick={() => vgLibPick(it)} title={it.title}><img src="data:{it.mime};base64,{it.b64}" alt={it.title} style="width:72px;height:72px;object-fit:cover;display:block"></button>{/each}</div>{/if}
+{#if vgFirst}<div style="margin-top:8px"><img id="vg-first-preview" src="data:{vgFirst.mime};base64,{vgFirst.b64}" alt={vgFirst.label} style="max-width:220px;display:block"><span class="se-note">{vgFirst.label}</span></div>{/if}
+</div>
+<div class="se-group"><label for="vg-last-file">{t('vg2.last', lang)}</label>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px"><input id="vg-last-file" type="file" accept="image/*" aria-label={t('vg.ref.file', lang)} onchange={(e) => vgLastFromFile((e.target as HTMLInputElement).files?.[0] || null)}><button id="vg-last-lib" class="btn btn-sm" onclick={() => vgLibLoad('last')}>{t('vg.ref.lib', lang)}</button>{#if vgLast}<button id="vg-last-clear" class="btn btn-sm" onclick={() => { vgLast = null; }}>{t('vg.ref.clear', lang)}</button>{/if}</div>
+{#if vgLibTarget === 'last' && vgLibList.length}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">{#each vgLibList as it}<button class="vg-ref-thumb" data-vg-ref={it.file} onclick={() => vgLibPick(it)} title={it.title}><img src="data:{it.mime};base64,{it.b64}" alt={it.title} style="width:72px;height:72px;object-fit:cover;display:block"></button>{/each}</div>{/if}
+{#if vgLast}<div style="margin-top:8px"><img id="vg-last-preview" src="data:{vgLast.mime};base64,{vgLast.b64}" alt={vgLast.label} style="max-width:220px;display:block"><span class="se-note">{vgLast.label}</span></div>{/if}
+</div>
+<p class="se-note">{t('vg2.frames.note', lang)}</p>
+{/if}
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+<label>{t('vg.aspect', lang)} <select id="vg-aspect" bind:value={vgAspect}><option value="9:16">9:16</option><option value="16:9">16:9</option></select></label>
+<label>{t('vg.res', lang)} <select id="vg-res" bind:value={vgRes}><option value="1080p">1080p</option><option value="720p">720p</option></select></label>
+<label>{t('vg.dur', lang)} <select id="vg-dur" disabled={vgRefs.length > 0} bind:value={vgDur}><option value={8}>8</option><option value={6}>6</option><option value={4}>4</option></select></label>
+</div>
+<p class="se-note">{t('vg2.audio', lang)}</p>
+<p class="se-note">{t('vg.price', lang, { usd: veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, vgEffDur()).toFixed(2), idr: Math.round(veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, vgEffDur()) * 18148).toLocaleString('id-ID'), s: vgEffDur() })}</p>
+<button id="vg-generate" class="btn btn-primary" disabled={vgBusy} onclick={() => vgGenerate()}>{vgBusy ? t('vg.generating', lang) : t('vg.generate', lang)}</button> <button id="vg-add-timeline" class="btn btn-sm" disabled={!vgLastPath} onclick={() => vgAddToTimeline()}>{t('vg.add_timeline', lang)}</button>
+<p id="vg-status" class="se-note" style="white-space:pre-line">{vgStatus}</p>
+{#if videoSpend.videos > 0}<p class="se-note">{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</p>{/if}
+<div class="se-group"><h4>{t('vg2.summary', lang)}</h4>
+<p class="se-note">veo-3.1 · {vgAspect} · {vgEffDur()}s · {vgMode() === 'refs' ? t('vg2.mode.refs', lang) : vgMode() === 'frames' ? t('vg2.mode.frames', lang) : t('vg2.mode.text', lang)}</p>
+{#if vgLastPath}<p class="se-note">{vgLastPath}</p>{/if}
+</div>
+<div class="se-group"><label>{t('img.plan', lang)}<textarea id="ve-plan" rows="2" class="se-field" value={ve2Plan} oninput={(e) => { ve2Plan = (e.target as HTMLTextAreaElement).value; ve2SaveState(); }}></textarea></label></div>
+</div>
           <div class="se-group"><h4>{t('vg.tpl.title', lang)}</h4>
           <p class="se-note">{t('vg.tpl.note', lang)}</p>
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="se-note" style="width:110px">{t('vg.tpl.label', lang)}</span><span class="se-note" style="flex:1;min-width:180px">{t('vg.tpl.pour', lang)}</span><span class="se-note" style="flex:1;min-width:140px">{t('vg.tpl.outfit', lang)}</span></div>
@@ -1058,23 +1010,6 @@
           </div>
           <p id="vt-status" class="se-note">{vgTplStatus}</p>
           </div>
-          <div class="se-group"><label for="vg-ref-file">{t('vg.ref.title', lang)}</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
-          <input id="vg-ref-file" type="file" accept="image/*" onchange={(e) => vgRefFromFile((e.target as HTMLInputElement).files?.[0] || null)}>
-          <button id="vg-ref-lib" class="btn btn-sm" onclick={() => vgRefLoadLib()}>{t('vg.ref.lib', lang)}</button>
-          {#if vgRef}<button class="btn btn-sm" onclick={() => { vgRef = null; }}>{t('vg.ref.clear', lang)}</button>{/if}
-          </div>
-          {#if vgLibList.length}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">{#each vgLibList as it}<button class="vg-ref-thumb" data-vg-ref={it.file} onclick={() => { vgRef = { label: it.title, mime: it.mime, b64: it.b64 }; }} title={it.title}><img src="data:{it.mime};base64,{it.b64}" alt={it.title} style="width:72px;height:72px;object-fit:cover;display:block"></button>{/each}</div>{/if}
-          {#if vgRef}<div style="margin-top:8px"><img id="vg-ref-preview" src="data:{vgRef.mime};base64,{vgRef.b64}" alt={vgRef.label} style="max-width:220px;display:block"><span class="se-note">{vgRef.label}</span></div>{/if}
-          </div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
-          <label>{t('vg.tier', lang)} <select id="vg-tier" bind:value={vgTier}><option value="fast">{t('vg.tier.fast', lang)}</option><option value="standard">{t('vg.tier.standard', lang)}</option><option value="lite">{t('vg.tier.lite', lang)}</option></select></label>
-          <label>{t('vg.aspect', lang)} <select id="vg-aspect" bind:value={vgAspect}><option value="9:16">9:16</option><option value="16:9">16:9</option></select></label>
-          <label>{t('vg.res', lang)} <select id="vg-res" bind:value={vgRes}><option value="1080p">1080p</option><option value="720p">720p</option></select></label>
-          <label>{t('vg.dur', lang)} <select id="vg-dur" bind:value={vgDur}><option value={8}>8</option><option value={6}>6</option><option value={4}>4</option></select></label>
-          </div>
-          <p class="se-note">{t('vg.price', lang, { usd: veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, Number(vgDur)).toFixed(2), idr: Math.round(veoPriceUsd(vgTier as 'standard' | 'fast' | 'lite', vgRes, Number(vgDur)) * 18148).toLocaleString('id-ID'), s: Number(vgDur) })}</p>
-          <button id="vg-generate" class="btn btn-primary" disabled={vgBusy} onclick={() => vgGenerate()}>{vgBusy ? t('vg.generating', lang) : t('vg.generate', lang)}</button> <button id="vg-add-timeline" class="btn btn-sm" disabled={!vgLastPath} onclick={() => vgAddToTimeline()}>{t('vg.add_timeline', lang)}</button>
           <div class="se-group"><label for="vg-batch-lib">{t('vg.batch.title', lang)}</label>
           <p class="se-note">{t('vg.batch.note', lang)}</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
@@ -1089,8 +1024,6 @@
           <p id="vg-batch-status" class="se-note" style="white-space:pre-line">{vgBatchStatus}</p>
           {#each vgBatchResults as r}<div class="se-note">{r.ok ? '✓' : '✗'} {r.label}{r.ok ? ' — ' + r.path + ' ($' + r.usd.toFixed(2) + ')' : ' — ' + r.error}</div>{/each}
           </div>
-          <p id="vg-status" class="se-note" style="white-space:pre-line">{vgStatus}</p>
-          {#if videoSpend.videos > 0}<p class="se-note">{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</p>{/if}
           <div class="se-group"><h4>{t('hf.title', lang)}</h4>
           <p class="se-note">{t('hf.note', lang)}</p>
           <label for="hf-html">{t('hf.html', lang)}</label>
@@ -1103,7 +1036,6 @@
           <button id="hf-add-timeline" class="btn btn-sm" disabled={!hfLastPath || !hfLastDur} onclick={() => hfAddToTimeline()}>{t('hf.add_timeline', lang)}</button>
           </div>
           <p id="hf-status" class="se-note" style="white-space:pre-line">{hfStatus}</p>
-          </div>
           </div>
           <div class="ve-toolbar">
           <button id="ve2BtnCut" class="btn btn-sm" onclick={() => { ve2Cut() }}>{t('ve.cut', lang)}</button>
@@ -1175,67 +1107,6 @@
           </div>
           </div>
           </div>
-          </div>
-          <div class="ms-card">
-            <h3>{t('t1.title', lang)}</h3>
-            <p>{t('t1.note', lang)}</p>
-            <div class="t1-row ms-fields">
-              <label>{t('t1.width', lang)} <input type="number" bind:value={t1W}></label>
-              <label>{t('t1.height', lang)} <input type="number" bind:value={t1H}></label>
-              <label>{t('t1.fps', lang)} <input type="number" bind:value={t1Fps}></label>
-            </div>
-            <label>{t('t1.output', lang)} <input type="text" bind:value={t1Out} placeholder="/Users/mac/Movies/minime-t1.mp4" style="width:100%;box-sizing:border-box"></label>
-            </div>
-          <div class="ms-card">
-            <h4>{t('t1.clips', lang)}</h4>
-            {#each t1Clips as c (c.id)}
-              <div class="t1-clip">
-                <input type="text" bind:value={c.src} placeholder={t('t1.src', lang)}>
-                <select bind:value={c.kind} title={t('t1.kind', lang)}><option value="video">{t('t1.kind.video', lang)}</option><option value="audio">{t('t1.kind.audio', lang)}</option></select>
-                <input type="number" step="0.1" bind:value={c.trimIn} title={t('t1.trim', lang)}>
-                <input type="number" step="0.1" bind:value={c.dur} title={t('t1.dur', lang)}>
-                {#if c.kind === 'audio'}<select bind:value={c.track} title={t('t2.audio.track', lang)}><option value="voice">{t('t2.audio.voice', lang)}</option><option value="music">{t('t2.audio.music', lang)}</option></select><input type="number" step="0.1" bind:value={c.volume} title={t('t1.vol', lang)}>{/if}
-                <button onclick={() => t1RemoveClip(c.id)}>{t('t1.remove', lang)}</button>
-              </div>
-            {/each}
-            <button onclick={t1AddClip}>{t('t1.add', lang)}</button>
-          </div>
-          <div class="ms-card">
-            <h4>{t('t2.cap.title', lang)}</h4>
-            <p>{t('t2.cap.note', lang)}</p>
-            {#each t1Caps as cap (cap.id)}
-              <div class="t1-clip">
-                <input type="text" bind:value={cap.text} placeholder={t('t2.cap.text', lang)}>
-                <input type="number" step="0.1" bind:value={cap.start} title={t('t2.cap.start', lang)}>
-                <input type="number" step="0.1" bind:value={cap.end} title={t('t2.cap.end', lang)}>
-                <button onclick={() => t1RemoveCap(cap.id)}>{t('t1.remove', lang)}</button>
-              </div>
-            {/each}
-            <button onclick={t1AddCap}>{t('t2.cap.add', lang)}</button>
-            <button onclick={t1SaveAss} disabled={t1CapBusy}>{t('t2.cap.save', lang)}</button>
-            {#if t1CapStatus}<p id="t1CapStatus">{t1CapStatus}</p>{/if}
-            {#if t1CapAss}<div><textarea id="t1CapAss" readonly rows="8" style="width:100%;box-sizing:border-box" value={t1CapAss}></textarea></div>{/if}
-            <button onclick={t1Render} disabled={t1Busy}>{t1Busy ? t('t1.rendering', lang) : t('t1.render', lang)}</button>
-            {#if t1Status}<p id="t1Status">{t1Status}</p>{/if}
-            {#if t1Qc}<div><h4>{t('t1.qc', lang)}</h4><pre id="t1Qc">{t1Qc}</pre></div>{/if}
-            {#if t1Frame}<div><h4>{t('t1.frame', lang)}</h4><img id="t1Frame" src={t1Frame} alt=""></div>{/if}
-            {#if t1Json}<div><h4>{t('t1.json', lang)}</h4><textarea id="t1Json" readonly rows="8" style="width:100%;box-sizing:border-box" value={t1Json}></textarea></div>{/if}
-          </div>
-          <div class="ms-card">
-            <h3>{t('t2.assets.title', lang)}</h3>
-            <p>{t('t2.assets.note', lang)}</p>
-            <label>{t('t2.assets.src', lang)} <input id="t2NewSrc" type="text" bind:value={t2NewSrc} placeholder="/Users/mac/Movies/minime-t1-clip1.mp4" style="width:100%;box-sizing:border-box"></label>
-            <button onclick={t2AddAsset} disabled={t2Busy}>{t2Busy ? t('t2.assets.loading', lang) : t('t2.assets.add', lang)}</button>
-            {#if t2Status}<p id="t2Status">{t2Status}</p>{/if}
-            {#each t2Assets as a (a.id)}
-              <div class="t2-asset">
-                {#if a.thumb}<img src={a.thumb} alt="">{/if}
-                {#if !a.thumb}<span>{t('t2.assets.nothumb', lang)}</span>{/if}
-                <span>{a.name} — {a.duration.toFixed(1)}s — {t2StreamsText(a.streams)} — {a.sha256.slice(0, 12)}…</span>
-                <button onclick={() => t2RemoveAsset(a.id)}>{t('t2.assets.remove', lang)}</button>
-              </div>
-            {/each}
-            {#if t2Assets.length}<div><h4>{t('t2.assets.manifest', lang)}</h4><textarea id="t2Manifest" readonly rows="8" style="width:100%;box-sizing:border-box" value={t2Manifest()}></textarea></div>{/if}
           </div>
         </div>
       </div>

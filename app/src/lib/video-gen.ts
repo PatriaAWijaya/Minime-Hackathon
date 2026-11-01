@@ -40,6 +40,10 @@ export interface VeoOpts {
   // v168: gambar referensi (storyboard) = frame awal video
   // (image-to-video). Satu gambar; prompt menjelaskan gerakannya.
   image?: { b64: string; mime: string };
+  // v178: frame akhir (hanya berlaku bersama image) + mode referensi
+  // (maks 3 gambar ingredient; saling eksklusif dengan mode image).
+  lastFrame?: { b64: string; mime: string };
+  referenceImages?: Array<{ b64: string; mime: string }>;
 }
 
 // Tebak mime dari prefix base64 (cerminan mimeFromB64 di image-api;
@@ -65,9 +69,20 @@ export function veoPriceUsd(tier: VeoTier, resolution: string, seconds: number):
   return (VEO_RATES[tier]?.[resolution] ?? 0) * seconds;
 }
 
-export function veoRequestBody(prompt: string, aspect: string, resolution: string, duration: number, image?: { b64: string; mime: string }): unknown {
+export function veoRequestBody(prompt: string, aspect: string, resolution: string, duration: number, image?: { b64: string; mime: string }, lastFrame?: { b64: string; mime: string }, referenceImages?: Array<{ b64: string; mime: string }>): unknown {
+  // v178: mode referenceImages saling eksklusif dengan mode image /
+  // lastFrame (instances[0] hanya membawa salah satunya). Bukti live
+  // dukungan referenceImages di veo-3.1-generate-preview masih
+  // menunggu generate pertama (sumber riset saling bertentangan).
+  const inst: Record<string, unknown> = { prompt };
+  if (referenceImages?.length) {
+    inst.referenceImages = referenceImages.map((r) => ({ referenceType: 'asset', image: { bytesBase64Encoded: r.b64, mimeType: r.mime } }));
+  } else {
+    if (image) inst.image = { bytesBase64Encoded: image.b64, mimeType: image.mime };
+    if (image && lastFrame) inst.lastFrame = { bytesBase64Encoded: lastFrame.b64, mimeType: lastFrame.mime };
+  }
   return {
-    instances: [{ prompt, ...(image ? { image: { bytesBase64Encoded: image.b64, mimeType: image.mime } } : {}) }],
+    instances: [inst],
     parameters: { aspectRatio: aspect, resolution, durationSeconds: duration, sampleCount: 1 },
   };
 }
@@ -77,7 +92,7 @@ async function veoStart(key: string, o: VeoOpts): Promise<string> {
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(veoRequestBody(o.prompt, o.aspect, o.resolution, o.duration, o.image)),
+    body: JSON.stringify(veoRequestBody(o.prompt, o.aspect, o.resolution, o.duration, o.image, o.lastFrame, o.referenceImages)),
   });
   if (!r.ok) throw new Error(`Veo start HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
   const data = (await r.json()) as { name?: string };

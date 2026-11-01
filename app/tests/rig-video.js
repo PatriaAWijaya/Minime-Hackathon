@@ -123,30 +123,48 @@ try {
   const st2 = ve2State(store);
   check('v167 klip timeline dari hasil generate', (st2.clips || []).some((c) => c.src === '/Users/mac/Movies/minime-veo/veo-uji.mp4' && c.track === 'Video' && c.dur === 8), JSON.stringify(st2.clips));
 
-  // (d) v168: referensi dari Library -> preview png (sniff, bukan webp).
-  document.getElementById('vg-ref-lib').click();
+  // (d) v178: frame awal dari Library -> preview png (sniff, bukan webp).
+  document.querySelector('[data-vg-tab="frames"]').click();
+  await tick(100);
+  document.getElementById('vg-first-lib').click();
   await waitFor(() => document.querySelector('.vg-ref-thumb'), 'thumbnail Library', 100);
   document.querySelector('.vg-ref-thumb').click();
-  await waitFor(() => (document.getElementById('vg-ref-preview')?.src || '').startsWith('data:image/png;base64,'), 'preview ref png', 100);
-  check('v168 ref Library tampil + mime png', true);
+  await waitFor(() => (document.getElementById('vg-first-preview')?.src || '').startsWith('data:image/png;base64,'), 'preview first png', 100);
+  check('v178 frame awal Library tampil + mime png', true);
 
-  // (e) v168: referensi dari file -> label nama file tampil.
-  const refFile = document.getElementById('vg-ref-file');
+  // (e) v178: frame awal dari file -> label nama file tampil.
+  const refFile = document.getElementById('vg-first-file');
   const f = new dom.window.File([new Uint8Array([1, 2, 3])], 'frame-test.png', { type: 'image/png' });
   Object.defineProperty(refFile, 'files', { value: [f], configurable: true });
   refFile.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
-  await waitFor(() => (document.getElementById('vg-ref-preview')?.parentElement?.textContent || '').includes('frame-test.png'), 'preview ref file', 100);
-  check('v168 ref file tampil', true);
+  await waitFor(() => (document.getElementById('vg-first-preview')?.parentElement?.textContent || '').includes('frame-test.png'), 'preview first file', 100);
+  check('v178 frame awal file tampil', true);
 
-  // (f) v168: generate dengan referensi -> body memuat image frame awal.
+  // (f) v178: generate frame awal saja -> body image, tanpa lastFrame.
+  document.querySelector('[data-vg-tab="prompt"]').click();
+  await tick(100);
   document.getElementById('vg-prompt').value = 'gerakan kamera pelan';
   document.getElementById('vg-prompt').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
   document.getElementById('vg-generate').click();
-  await waitFor(() => (document.getElementById('vg-status')?.textContent || '').includes('veo-uji.mp4'), 'status done ref', 200);
+  await waitFor(() => (document.getElementById('vg-status')?.textContent || '').includes('veo-uji.mp4'), 'status done first', 200);
   const starts = fetchLog.filter((x) => x.url.includes('predictLongRunning'));
   let lastBody = {};
   try { lastBody = JSON.parse(starts[starts.length - 1].body); } catch { lastBody = {}; }
-  check('v168 body memuat image frame awal', lastBody?.instances?.[0]?.image?.bytesBase64Encoded === 'AQID' && lastBody?.instances?.[0]?.image?.mimeType === 'image/png', JSON.stringify(lastBody?.instances?.[0]?.image));
+  check('v178 body memuat image frame awal tanpa lastFrame', lastBody?.instances?.[0]?.image?.bytesBase64Encoded === 'AQID' && lastBody?.instances?.[0]?.image?.mimeType === 'image/png' && !lastBody?.instances?.[0]?.lastFrame, JSON.stringify(lastBody?.instances?.[0]));
+  // (f2) v178: frame akhir -> body image + lastFrame (byte beda).
+  document.querySelector('[data-vg-tab="frames"]').click();
+  await tick(100);
+  const lastFile = document.getElementById('vg-last-file');
+  const lf = new dom.window.File([new Uint8Array([4, 5, 6])], 'frame-akhir.png', { type: 'image/png' });
+  Object.defineProperty(lastFile, 'files', { value: [lf], configurable: true });
+  lastFile.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  await waitFor(() => (document.getElementById('vg-last-preview')?.parentElement?.textContent || '').includes('frame-akhir.png'), 'preview last file', 100);
+  document.getElementById('vg-generate').click();
+  await waitFor(() => (document.getElementById('vg-status')?.textContent || '').includes('veo-uji.mp4'), 'status done frames', 200);
+  const starts2 = fetchLog.filter((x) => x.url.includes('predictLongRunning'));
+  let framesBody = {};
+  try { framesBody = JSON.parse(starts2[starts2.length - 1].body); } catch { framesBody = {}; }
+  check('v178 body memuat image + lastFrame', framesBody?.instances?.[0]?.image?.bytesBase64Encoded === 'AQID' && framesBody?.instances?.[0]?.lastFrame?.bytesBase64Encoded === 'BAUG', JSON.stringify(framesBody?.instances?.[0]));
 
   // (g) v170: batch — picker dibatasi 30 walau Library berisi 31.
   document.getElementById('vg-batch-lib').click();
@@ -190,7 +208,9 @@ try {
   const hfClips = ve2State(store).clips || [];
   check('v175: klip HyperFrames masuk timeline', hfClips.some((c) => c.src === '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4' && c.name === 'HyperFrames 15s'), JSON.stringify(hfClips));
 
-  // (i) v176: template prompt Seri Harian Tuang.
+  // (i) v176: template prompt Seri Harian Tuang (kembali ke tab Prompt dulu).
+  document.querySelector('[data-vg-tab="prompt"]').click();
+  await tick(100);
   check('v176: template seri harian render (6 beat + penutup + end card)', document.querySelectorAll('[data-vt-beat]').length === 6 && !!document.getElementById('vt-close') && !!document.getElementById('vt-signoff') && !!document.getElementById('vt-endcard'));
   document.querySelector('[data-vt-beat="MONDAY"]').click();
   await tick(100);
@@ -205,6 +225,35 @@ try {
   await tick(100);
   const vtHf = document.getElementById('hf-html').value || '';
   check('v176: end card dimuat ke HyperFrames (composition + sign-off + hijau zaitun)', vtHf.includes('data-composition-id="endcard"') && vtHf.includes('see you sooooooon') && vtHf.includes('#556B2F'), vtHf.slice(0, 160));
+
+  // (j) v178: tab References 0/3 + durasi dipaksa 8 + Lite auto-pindah + contoh.
+  check('v178: tiga tab generator render', document.querySelectorAll('[data-vg-tab]').length === 3);
+  setInput(document.getElementById('vg-dur'), '4', 'change');
+  setInput(document.getElementById('vg-tier'), 'lite', 'change');
+  await tick(50);
+  document.querySelector('[data-vg-tab="refs"]').click();
+  await tick(100);
+  document.getElementById('vg-refs-lib').click();
+  await waitFor(() => document.querySelector('.vg-ref-thumb'), 'thumbnail refs', 100);
+  document.querySelectorAll('.vg-ref-thumb')[0].click();
+  document.querySelectorAll('.vg-ref-thumb')[1].click();
+  await tick(100);
+  check('v178: 2 slot referensi terisi (2/3) + Lite auto-pindah ke Cepat', document.querySelectorAll('[data-vg-refdel]').length === 2 && document.getElementById('vg-tier').value === 'fast', 'slots=' + document.querySelectorAll('[data-vg-refdel]').length + ' tier=' + document.getElementById('vg-tier').value);
+  check('v178: select durasi terkunci saat referensi aktif', document.getElementById('vg-dur').disabled === true, 'disabled=' + document.getElementById('vg-dur').disabled);
+  document.getElementById('vg-generate').click();
+  await waitFor(() => (document.getElementById('vg-status')?.textContent || '').includes('veo-uji.mp4'), 'status done refs', 200);
+  const refStarts = fetchLog.filter((x) => x.url.includes('predictLongRunning'));
+  let refBody = {};
+  try { refBody = JSON.parse(refStarts[refStarts.length - 1].body); } catch { refBody = {}; }
+  check('v178: body referenceImages 2 + durasi dipaksa 8 + tanpa image', refBody?.instances?.[0]?.referenceImages?.length === 2 && refBody?.parameters?.durationSeconds === 8 && !refBody?.instances?.[0]?.image, JSON.stringify(refBody?.instances?.[0]));
+  document.querySelector('[data-vg-tab="prompt"]').click();
+  await tick(100);
+  document.getElementById('vg-sample').click();
+  await tick(50);
+  check('v178: contoh prompt mengisi kolom', (document.getElementById('vg-prompt').value || '').includes('mobil sport merah'), document.getElementById('vg-prompt').value.slice(0, 120));
+  document.getElementById('vg-portrait').click();
+  await tick(50);
+  check('v178: portrait set rasio 9:16 + isi prompt vertikal', document.getElementById('vg-aspect').value === '9:16' && (document.getElementById('vg-prompt').value || '').includes('vertikal'), 'aspect=' + document.getElementById('vg-aspect').value);
 
 } catch (e) {
   // eslint-disable-next-line no-console
