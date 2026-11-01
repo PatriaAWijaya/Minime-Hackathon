@@ -276,6 +276,8 @@ export function initImageFlow(): void {
   bind<HTMLInputElement>('img-textfree', 'change', (e) => { state.textfree = e.checked; saveState(); renderPreview(); });
   bind<HTMLSelectElement>('img-n', 'change', (e) => { state.n = Number(e.value); saveState(); });
   bind('img-generate', 'click', () => void generate());
+  // v146: Bersihkan — hapus brief (+ tab bulk), pertahankan rasio/gaya/textfree/n.
+  bind('img-clear', 'click', () => { state.brief = ''; state.bulk = null; state.bulkActive = 0; saveState(); syncForm(); renderPreview(); renderBulkTabs(); });
   bind('img-load-script', 'click', () => {
     try {
       const raw = window.localStorage.getItem('minime.scriptEditor');

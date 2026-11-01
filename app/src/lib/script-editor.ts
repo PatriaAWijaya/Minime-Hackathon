@@ -157,6 +157,17 @@ function titleFor(st: SeState): string {
   return `Naskah ${tr('se.platform.' + st.platform)} · ${tr('se.mode.' + st.mode)} · ${fw}`;
 }
 
+// v146: Bersihkan — hapus ISI (field teks + output + note + flag), pertahankan
+// konfigurasi (menu, platform, mode, format, framework, length, genre).
+function seClear(): void {
+  state.what = state.who = state.where = state.when = state.why = state.how = '';
+  state.topic = state.audience = state.premise = state.character = '';
+  state.output = state.outputMeta = state.note = '';
+  state.copied = state.saved = state.used = false;
+  saveState();
+  renderSeMain();
+}
+
 function seSave(): void {
   const r = libAddScript(titleFor(state), state.output);
   state.note = tr(r.saveFailed ? 'lib.err.save' : (r.added ? 'se.note.saved' : 'se.note.already'));
@@ -186,7 +197,7 @@ function paneHtml(): string {
       <div class="se-group"><label>${esc(tr('se.artikel.audience'))}<input id="se-audience" class="se-field" value="${esc(state.audience)}"></label></div>
       <div class="se-group"><div>${esc(tr('se.artikel.length'))}</div>${radioRow('se-length', LENGTHS, state.length, (o) => 'se.len.' + o)}</div>
       <div class="se-group"><div>${esc(tr('se.framework.label'))}</div>${fwSelect()}</div>
-      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button></div>
+      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button></div>
       ${outputBlock()}`;
   }
   if (state.menu === 'movie') {
@@ -196,7 +207,7 @@ function paneHtml(): string {
         (g) => `<option value="${g}"${g === state.genre ? ' selected' : ''}>${esc(tr('se.genre.' + g))}</option>`,
       ).join('')}</select></label></div>
       <div class="se-group"><label>${esc(tr('se.movie.character'))}<input id="se-character" class="se-field" value="${esc(state.character)}"></label></div>
-      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button></div>
+      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button></div>
       ${outputBlock()}`;
   }
   return `<div class="se-group"><div>${esc(tr('se.platform.label'))}</div>${radioRow('se-platform', PLATFORMS, state.platform, (o) => 'se.platform.' + o)}</div>
@@ -211,7 +222,7 @@ function paneHtml(): string {
       ${wField('se-why', 'se.w.why', state.why)}
       ${wField('se-how', 'se.w.how', state.how)}
     </div>
-    <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button></div>
+    <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button></div>
     ${outputBlock()}`;
 }
 
@@ -287,6 +298,8 @@ function renderSeMain(): void {
   });
   const gen = document.getElementById('se-generate');
   if (gen) gen.addEventListener('click', () => void seGenerate());
+  const clr = document.getElementById('se-clear');
+  if (clr) clr.addEventListener('click', () => seClear());
   const saveBtn = document.getElementById('se-save');
   if (saveBtn) saveBtn.addEventListener('click', () => seSave());
   const useBtn = document.getElementById('se-use');

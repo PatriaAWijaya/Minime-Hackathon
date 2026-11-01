@@ -194,6 +194,7 @@ try {
   check('gunakan beralih ke Image Editor', document.getElementById('ms-tab-image')?.style.display !== 'none', document.getElementById('ms-tab-image')?.style.display || '');
   const useBtn126 = [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Gunakan');
   check('v126: Gunakan sudah diklik -> hijau (class done)', !!useBtn126 && useBtn126.classList.contains('done'), useBtn126?.className || '');
+
   const zoomBtn126 = document.querySelector('#view-graph .btn');
   const cs126 = zoomBtn126 ? dom.window.getComputedStyle(zoomBtn126) : null;
   check('v126: button teks rounded rectangle 10px', !!cs126 && cs126.borderRadius === '10px', cs126 ? cs126.borderRadius : '');
@@ -218,6 +219,13 @@ try {
   check('generate memanggil router (fetch chat-completions)', log.some((x) => x.includes('chat/completions')), log.join(','));
   const notes = [...document.querySelectorAll('#se-main .se-note')].map((n) => n.textContent).join(' ');
   check('footer menyebut provider meta', notes.includes('meta'), notes);
+  // v146: Bersihkan mengosongkan field + output, konfigurasi dipertahankan.
+  [...document.querySelectorAll('#se-main button')].find((b) => b.textContent.trim() === 'Bersihkan').click();
+  await tick(100);
+  check('v146: field Apa kosong setelah Bersihkan', (document.getElementById('se-what')?.value || '') === '');
+  check('v146: output hilang setelah Bersihkan', !document.getElementById('se-output'));
+  check('v146: state tersimpan kosong setelah Bersihkan', !(JSON.parse(store.get('minime.scriptEditor') || '{}').output || ''), store.get('minime.scriptEditor') || '');
+  check('v146: platform dipertahankan setelah Bersihkan', (JSON.parse(store.get('minime.scriptEditor') || '{}').platform || '') === 'instagram', store.get('minime.scriptEditor') || '');
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));
   failures.push('rig error');

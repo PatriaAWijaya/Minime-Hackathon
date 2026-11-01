@@ -221,27 +221,6 @@
   // klip gambar berurutan bersama track Video.
   interface Ve2Clip { id: string; name: string; track: 'Video' | 'B-Roll' | 'Audio' | 'Teks'; start: number; dur: number; src: string; effect: 'none' | 'fade' | 'zoom'; }
   interface Ve2Asset { id: string; name: string; icon: string; kind: 'Video' | 'B-Roll' | 'Audio' | 'Teks'; src: string; duration: number; }
-  function ve2SeedClips(): Ve2Clip[] {
-    return [
-      { id: 've2c1', name: 'Hook (0–8 dtk)', track: 'Video', start: 0, dur: 8, src: '', effect: 'none' },
-      { id: 've2c2', name: 'Isi (8–22 dtk)', track: 'Video', start: 8, dur: 14, src: '', effect: 'none' },
-      { id: 've2c3', name: 'CTA (22–30 dtk)', track: 'Video', start: 22, dur: 8, src: '', effect: 'none' },
-      { id: 've2c4', name: 'B-Roll: seduh kopi', track: 'B-Roll', start: 8, dur: 14, src: '', effect: 'none' },
-      { id: 've2c5', name: 'Voice-over promo bundling', track: 'Audio', start: 0, dur: 30, src: '', effect: 'none' },
-      { id: 've2c6', name: 'Musik: akustik ringan', track: 'Audio', start: 0, dur: 30, src: '', effect: 'none' },
-      { id: 've2c7', name: 'Overlay: TEST Kopi — Rp15.000', track: 'Teks', start: 0, dur: 9, src: '', effect: 'none' },
-      { id: 've2c8', name: 'Overlay: Pesan via WA', track: 'Teks', start: 12, dur: 9, src: '', effect: 'none' },
-    ];
-  }
-  function ve2SeedAssets(): Ve2Asset[] {
-    return [
-      { id: 've2a1', name: 'Footage: Kedai kopi pagi', icon: '🎬', kind: 'Video', src: '', duration: 0 },
-      { id: 've2a2', name: 'B-Roll: Seduh & sajikan', icon: '🎬', kind: 'B-Roll', src: '', duration: 0 },
-      { id: 've2a3', name: 'Voice-over: Promo bundling', icon: '🎙', kind: 'Audio', src: '', duration: 0 },
-      { id: 've2a4', name: 'Musik: Akustik ringan', icon: '🎵', kind: 'Audio', src: '', duration: 0 },
-      { id: 've2a5', name: 'Teks: Overlay harga', icon: '🔤', kind: 'Teks', src: '', duration: 0 },
-    ];
-  }
   function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number } | null {
     try {
       const raw = localStorage.getItem('minime.ve2');
@@ -251,15 +230,23 @@
       const tracks = ['Video', 'B-Roll', 'Audio', 'Teks'];
       const clips: Ve2Clip[] = v.clips.filter((c: any) => c && typeof c.id === 'string' && typeof c.name === 'string' && Number.isFinite(c.start) && Number.isFinite(c.dur)).map((c: any) => ({ id: c.id, name: c.name, track: (tracks.includes(c.track) ? c.track : 'Video') as Ve2Clip['track'], start: Number(c.start), dur: Number(c.dur), src: typeof c.src === 'string' ? c.src : '', effect: (['fade', 'zoom'].includes(c.effect) ? c.effect : 'none') as Ve2Clip['effect'] }));
       const assets: Ve2Asset[] = v.assets.filter((a: any) => a && typeof a.id === 'string' && typeof a.name === 'string').map((a: any) => ({ id: a.id, name: a.name, icon: typeof a.icon === 'string' ? a.icon : '🎬', kind: (tracks.includes(a.kind) ? a.kind : 'Video') as Ve2Asset['kind'], src: typeof a.src === 'string' ? a.src : '', duration: Number.isFinite(a.duration) ? Number(a.duration) : 0 }));
-      if (clips.length === 0) return null;
       return { clips, assets, out: typeof v.out === 'string' ? v.out : '', zoom: [0.5, 1, 2].includes(Number(v.zoom)) ? Number(v.zoom) : 1 };
     } catch { return null; }
   }
   const ve2Loaded = ve2Load();
-  let ve2Clips = $state<Ve2Clip[]>(ve2Loaded?.clips ?? ve2SeedClips());
-  let ve2Assets = $state<Ve2Asset[]>(ve2Loaded?.assets ?? ve2SeedAssets());
+  // v146: dummy Video Editor dihapus total (perintah Patria 1 Nov 10:59).
+  // State lama yang masih memuat klip/aset bawaan (id ve2c*/ve2a*) dianggap
+  // proyek dummy -> seluruh timeline dikosongkan sekali jalan, lalu disimpan.
+  // Klip/aset baru tidak pernah memakai id tersebut, jadi aturan ini tidak
+  // akan terpicu lagi setelah migrasi.
+  const VE2_DUMMY_CLIP_IDS = ['ve2c1', 've2c2', 've2c3', 've2c4', 've2c5', 've2c6', 've2c7', 've2c8'];
+  const VE2_DUMMY_ASSET_IDS = ['ve2a1', 've2a2', 've2a3', 've2a4', 've2a5'];
+  const ve2IsDummy = !!ve2Loaded && (ve2Loaded.clips.some((c) => VE2_DUMMY_CLIP_IDS.includes(c.id)) || ve2Loaded.assets.some((a) => VE2_DUMMY_ASSET_IDS.includes(a.id)));
+  let ve2Clips = $state<Ve2Clip[]>(ve2IsDummy ? [] : (ve2Loaded?.clips ?? []));
+  let ve2Assets = $state<Ve2Asset[]>(ve2IsDummy ? [] : (ve2Loaded?.assets ?? []));
   let ve2Out = $state(ve2Loaded?.out || '/Users/mac/Movies/minime-ve2.mp4');
   let ve2Zoom = $state(ve2Loaded?.zoom ?? 1);
+  if (ve2IsDummy) ve2SaveState();
   let ve2SelId = $state(ve2Clips[0]?.id ?? '');
   let ve2Status = $state('');
   let ve2Frame = $state('');
@@ -741,7 +728,7 @@
             <option value="1">1</option><option value="2">2</option><option value="4">4</option>
           </select></label></div>
           <div id="img-preview" class="se-note"></div>
-          <div class="se-group"><button id="img-generate" class="se-btn">{t('img.generate', lang)}</button> <button id="img-load-script" class="se-btn2">{t('img.loadscript', lang)}</button></div>
+          <div class="se-group"><button id="img-generate" class="se-btn">{t('img.generate', lang)}</button> <button id="img-load-script" class="se-btn2">{t('img.loadscript', lang)}</button> <button id="img-clear" class="se-btn2">{t('img.clear', lang)}</button></div>
           <div id="img-status" class="se-note"></div>
           <div id="img-cost" class="se-note"></div>
           <div id="img-loaded" class="img-card" style="display:none"></div>

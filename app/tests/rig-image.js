@@ -163,6 +163,16 @@ try {
   await waitFor(() => (document.getElementById('img-loaded')?.querySelector('img') ? true : false), 'gambar recall tampil', 120);
   check('recall Library memuat gambar ke panel', !!document.getElementById('img-loaded')?.querySelector('img'));
   check('recall Library mengisi brief dari prompt', (document.getElementById('img-brief')?.value || '').includes('kopi susu'));
+
+  // 7. v146: Bersihkan mengosongkan brief (+ tab bulk), tanpa mengubah rasio.
+  dom.window.imgSetBulk(['brief bulk satu', 'brief bulk dua']);
+  await tick(100);
+  check('v146: bulk 2 tab tampil sebelum dibersihkan', document.querySelectorAll('#img-bulk-tabs .img-tab').length === 2, document.querySelectorAll('#img-bulk-tabs .img-tab').length);
+  document.getElementById('img-clear').click();
+  await tick(100);
+  check('v146: brief kosong setelah Bersihkan', (document.getElementById('img-brief')?.value || '') === '');
+  check('v146: tab bulk hilang setelah Bersihkan', document.querySelectorAll('#img-bulk-tabs .img-tab').length === 0);
+  check('v146: rasio dipertahankan setelah Bersihkan', (JSON.parse(store.get('minime.imageFlow') || '{}').ratio || '') !== '', JSON.stringify(JSON.parse(store.get('minime.imageFlow') || '{}')));
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-image exception :: ' + (e && e.stack ? e.stack : e));
