@@ -676,3 +676,6 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .kb-task-pop { position: relative; width: 100%; max-width: 560px; max-height: 85vh; overflow: auto; background: var(--t-panel, #FFFFFF); color: var(--t-text, #2E1065); border-radius: 14px; padding: 20px 22px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); }
 .kb-task-x { position: absolute; top: 8px; right: 10px; width: 32px; height: 32px; border: none; border-radius: 8px; background: transparent; color: var(--t-muted, #A89AC2); font-size: 18px; line-height: 1; cursor: pointer; }
 .kb-task-x:hover { background: var(--t-panel2, #F5F0FE); color: var(--t-text, #2E1065); }
+
+/* v154: saran tindak lanjut pada jawaban agen — teks redup, bukan button. */
+.msg-recs-text { margin-top: 6px; font-size: 13px; color: var(--t-muted, #A89AC2); }

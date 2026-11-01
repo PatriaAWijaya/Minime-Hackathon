@@ -836,11 +836,20 @@ function extractRecommendations(text) {
   }
   return { options: opts, cleaned: raw.slice(0, at) + raw.slice(end) };
 }
+// v154 (perintah Patria 1 Nov 12:37 + 12:40): tombol saran tindak lanjut
+// HANYA untuk jawaban Prime (jawaban langsung Prime, verdict QC, laporan
+// alur — semuanya who === 'prime') dan pertanyaan langkah brief Kreatif
+// (flag cbAsk — itu pilihan jawaban, bukan saran). Jawaban agen lain
+// menampilkan sarannya sebagai teks biasa, tanpa button.
+// pickRecommendation otomatis hanya terjangkau dari pesan ber-button.
 function msgRecsHtml(m, options) {
   if (!options.length) return '';
-  return '<div class="msg-recs">' + options.map(function (opt, i) {
-    return '<button class="rec-btn' + (m.pickedRec === i ? ' done' : '') + '" data-act="msg-rec" data-opt="' + i + '">' + esc(opt) + '</button>';
-  }).join('') + '</div>';
+  if (m.who === 'prime' || m.cbAsk) {
+    return '<div class="msg-recs">' + options.map(function (opt, i) {
+      return '<button class="rec-btn' + (m.pickedRec === i ? ' done' : '') + '" data-act="msg-rec" data-opt="' + i + '">' + esc(opt) + '</button>';
+    }).join('') + '</div>';
+  }
+  return '<div class="msg-recs-text">' + esc(tr('chat.recs.label')) + ' ' + options.map(function (opt) { return esc(opt); }).join(' \u2022 ') + '</div>';
 }
 function pickRecommendation(el) {
   var st = chatMsgsAndSave();

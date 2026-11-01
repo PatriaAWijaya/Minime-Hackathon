@@ -86,6 +86,8 @@ async function fetchStub(url, opts) {
     content = 'NASKAH-REELS-UJI: rencana reels 30-60 detik 9:16 kopi.';
   } else if (body.includes('500 karakter')) {
     content = 'Kopi susu gula aren ini creamy banget, manisnya pas dari gula aren asli, dan aromanya langsung bikin pengin nyobain satu gelas lagi. Satu gelas cukup untuk memulai hari, apalagi diminum selagi hangat ditemani roti bakar di pagi yang masih sepi. Racikan susunya lembut, gulanya tidak bikin enek, dan aftertaste kopinya bersih tanpa rasa pahit yang mengganggu. Cocok buat yang baru mulai suka kopi, juga buat penikmat lama yang cari rasa manis legit tanpa ribet. Order sekarang selagi promo berjalan, stok gula aren asli terbatas dan tiap gelas dibuat fresh begitu pesanan masuk. Jangan sampai kehabisan, karena racikan ini cuma tersedia selama persediaan gula aren masih ada.';
+  } else if (body.includes('SARAN-UJI')) {
+    content = 'Hasil uji saran.\n\u25BARECOMMEND: Opsi A | Opsi B';
   }
   return makeResp({
     jsonData: {
@@ -512,9 +514,9 @@ try {
   const flash131 = [...document.querySelectorAll('#chatBox .msg')].find((m) => (m.textContent || '').includes('Pesan pin goto uji'));
   check('v131: klik pin menyorot pesan', !!flash131 && flash131.classList.contains('flash'), flash131?.className || 'tidak ada');
 
-  // 16. v132: tombol rekomendasi agen di window chat.
+  // 16. v132+v154: tombol rekomendasi hanya pada jawaban Prime (v154: pesan agen -> teks saja).
   // (a) Marker diubah jadi tombol (bisa lebih dari satu), marker tak tampil.
-  dom.window.postChat('riset', 'Riset', '#fff', 'Hasil riset selesai.\n►RECOMMEND: Buat naskah | Riset harga | Jadwal posting');
+  dom.window.postChat('prime', 'Prime Agent', '#EB87B4', 'Hasil riset selesai.\n►RECOMMEND: Buat naskah | Riset harga | Jadwal posting');
   await tick(100);
   let rec132 = [...document.querySelectorAll('#chatBox .msg')].pop();
   const btns132 = rec132.querySelectorAll('.rec-btn');
@@ -545,10 +547,15 @@ try {
   check('v135: menu dropdown background solid (bukan var/rgba)', /background:#2e1650/i.test(lastMenu135), lastMenu135.slice(0, 160));
   check('v135: menu dropdown teks putih', /(^|;)color:#fff/i.test(lastMenu135), lastMenu135.slice(0, 160));
 
-  dom.window.postChat('riset', 'Riset', '#fff', 'Opsi banyak.\n►RECOMMEND: Satu | Dua | Tiga | Empat | Lima | Enam');
+  dom.window.postChat('prime', 'Prime Agent', '#EB87B4', 'Opsi banyak.\n►RECOMMEND: Satu | Dua | Tiga | Empat | Lima | Enam');
   await tick(100);
   const many132 = [...document.querySelectorAll('#chatBox .msg')].pop();
   check('v132: opsi dibatasi maksimal 5 tombol', many132.querySelectorAll('.rec-btn').length === 5, String(many132.querySelectorAll('.rec-btn').length));
+  // (e) v154: pesan agen dengan marker -> teks saran saja, tanpa button.
+  dom.window.postChat('riset', 'Riset', '#fff', 'Saran agen.\n►RECOMMEND: Satu | Dua');
+  await tick(100);
+  const agen132 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  check('v154: jawaban agen tidak jadi tombol (teks saja)', !agen132.querySelector('.rec-btn') && !!agen132.querySelector('.msg-recs-text') && (agen132.textContent || '').includes('Satu'), agen132.textContent.slice(0, 150));
   // §18 v136: bubble pemilik menu naik di atas bubble berikutnya.
   const firstMsg136 = document.querySelector('#chatBox .msg');
   firstMsg136.querySelector('.msg-vbtn').click();
@@ -728,7 +735,7 @@ try {
   await waitFor(() => bodyText().includes('halo tes angka chat'), 'cb144 user bubble');
   check('v144: tetap tidak ada penghitung setelah kirim', !document.getElementById('chatCount'));
   // §29 v145: pilih opsi pendalaman Media Studio -> otomatis pindah ke Media Studio (perintah Patria 31 Okt 21:07).
-  dom.window.postChat('kreatif', 'Kreatif', '#fff', 'Hasil ini bisa saya lanjutkan di Media Studio.\n►RECOMMEND: Eksekusi video di Video Editor | Buat caption + hashtag');
+  dom.window.postChat('prime', 'Prime Agent', '#EB87B4', 'Hasil ini bisa saya lanjutkan di Media Studio.\n►RECOMMEND: Eksekusi video di Video Editor | Buat caption + hashtag');
   await tick(100);
   let rec145 = [...document.querySelectorAll('#chatBox .msg')].pop();
   let btns145 = rec145.querySelectorAll('.rec-btn');
@@ -739,7 +746,7 @@ try {
   check('v145: tab Video aktif', document.getElementById('ms-tab-video')?.style.display === 'block', document.getElementById('ms-tab-video')?.style.display || 'tidak ada');
   dom.window.showView('home');
   await tick(50);
-  dom.window.postChat('kreatif', 'Kreatif', '#fff', 'Opsi lain.\n►RECOMMEND: Buat caption + hashtag');
+  dom.window.postChat('prime', 'Prime Agent', '#EB87B4', 'Opsi lain.\n►RECOMMEND: Buat caption + hashtag');
   await tick(100);
   let rec145b = [...document.querySelectorAll('#chatBox .msg')].pop();
   rec145b.querySelector('.rec-btn').click();
@@ -814,6 +821,26 @@ try {
   await tick(500);
   const risetFetches32 = fetchRecs.slice(recsAwal32).filter((f) => (f.body.includes('Riset pasar') || f.body.includes('buatkan riset')) && !f.body.includes('Bagi brief') && !f.body.includes('QC hasil kerja agen'));
   check('v152: Brain Gemini dipakai dulu untuk Riset', risetFetches32.length > 0 && risetFetches32[0].url.includes('generativelanguage') && !risetFetches32.some((f) => f.url.includes('api.meta.ai')), JSON.stringify(risetFetches32.map((f) => f.url)));
+
+  // §33 v154: (a) jawaban agen -> saran teks saja, tanpa button.
+  // Brain Riset dikembalikan ke default (dari §32(a) masih Gemini; panggilan
+  // Gemini di stub mengembalikan format OpenAI yang diparse jadi teks kosong).
+  dom.window.AGENTS['riset'].model = '';
+  await sendMsg('riset SARAN-UJI');
+  await waitFor(() => bodyText().includes('Hasil uji saran'), 'hasil saran agen', 120);
+  await tick(200);
+  const msgsA33 = document.querySelectorAll('#chatBox .msg');
+  const lastA33 = msgsA33[msgsA33.length - 1];
+  check('v154: jawaban agen tidak menampilkan button saran', !lastA33.querySelector('.rec-btn'), lastA33.textContent.slice(0, 150));
+  check('v154: jawaban agen menampilkan saran sebagai teks', (lastA33.textContent || '').includes('Opsi A') && !!lastA33.querySelector('.msg-recs-text'), lastA33.textContent.slice(0, 150));
+  // §33 v154: (b) jawaban Prime -> button saran tetap ada.
+  await sendMsg('Halo utama SARAN-UJI');
+  await waitFor(() => bodyText().includes('Hasil uji saran'), 'hasil saran prime', 120);
+  await tick(200);
+  const msgsB33 = document.querySelectorAll('#chatBox .msg');
+  const lastB33 = msgsB33[msgsB33.length - 1];
+  const primeBtn33 = lastB33.querySelector('.rec-btn');
+  check('v154: jawaban Prime tetap menampilkan button saran', !!primeBtn33 && primeBtn33.textContent.includes('Opsi A'), primeBtn33?.textContent || lastB33.textContent.slice(0, 150));
 
 
 

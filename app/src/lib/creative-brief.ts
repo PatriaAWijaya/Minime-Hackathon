@@ -112,6 +112,15 @@ function postKreatif(text: string): void {
   postChat('kreatif', ag.name, ag.color, text);
 }
 
+/* v154: pertanyaan langkah brief (askStep) BUKAN "saran tindakan
+   berikutnya" — melainkan pilihan jawaban atas pertanyaan agen yang
+   diketuk user. Pesan ini ditandai cbAsk agar tetap dirender sebagai
+   button; hasil Kreatif lain (tanpa flag) tetap saran teks saja. */
+function postKreatifAsk(text: string): void {
+  const ag = kreatif();
+  postChat('kreatif', ag.name, ag.color, text, undefined, { cbAsk: true });
+}
+
 function askStep(st: CbState, prefix = ''): void {
   let q = '';
   let opts: string[] = [];
@@ -216,7 +225,7 @@ function askStep(st: CbState, prefix = ''): void {
       // mengirim pesan.
       return;
   }
-  postKreatif((prefix ? prefix + ' ' : '') + q + (opts.length ? '\n►RECOMMEND: ' + opts.join(' | ') : ''));
+  postKreatifAsk((prefix ? prefix + ' ' : '') + q + (opts.length ? '\n►RECOMMEND: ' + opts.join(' | ') : ''));
 }
 
 // Langkah pilihan yang tidak dikenali: tanya ulang sekali (dengan awalan),
