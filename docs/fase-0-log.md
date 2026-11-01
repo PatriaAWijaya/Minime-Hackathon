@@ -2521,6 +2521,14 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v156 — LIVE (laporan Patria 1 Nov 13:11: connector antar node Graph belum terbangun, node berdiri terpisah)
+- Diagnosis dari data live (bukan tebakan): storage MacBook membuktikan edge SUDAH benar — Prime baru52 -> Riset baru53 dan Prime baru52 -> Strategi baru54 di project coffeeshop. Yang rusak adalah render, bukan data.
+- Akar: <svg id="graphEdges"> tidak punya aturan ukuran di CSS manapun dan tanpa atribut width/height, sehingga browser memberinya kotak default 300x150 di pojok kiri atas #graphZoom. Path connector berkoordinat 0-100% kanvas jatuh di luar kotak itu dan terpotong (overflow SVG) — kanvas tampak tanpa garis. Rig tidak menangkap ini karena jsdom tanpa layout (getBoundingClientRect = 0).
+- Perbaikan (satu aturan CSS di layout-scroll.css, app.css tidak disentuh): #graphEdges { position: absolute; inset: 0; width: 100%; height: 100%; }. Node tetap di atas garis (urutan DOM tidak berubah); perilaku klik/pan tidak berubah (hanya ukuran SVG).
+- Rig-graph §25 (CSS-only, sesudah §24 yang menghapus state): aturan #graphEdges di bundle terverifikasi absolut + 100% x 100%.
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan bersih, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal e7afc0b ↔ remote 8f20bb8 (tree identik).
+
 ## v155 — LIVE (keluhan Patria 1 Nov 13:02: jawaban melebar dari coffeeshop ke pola konsumsi F&B umum)
 - Akar masalah: prompt agen/Prime TIDAK PERNAH memuat konteks project — agen hanya menerima tugas singkat ("peta sebaran per kecamatan") tanpa tahu foldernya tentang coffeeshop Surabaya Selatan. Melebarnya jawaban adalah konsekuensi langsung, bukan sekadar gaya model.
 - Perbaikan: helper scopeLine() di chat.ts menyisipkan "Konteks project aktif: <nama project>" (kunci baru chat.scope, total 962/bahasa) + konstanta GROUNDING_INSTRUCTION (3 bahasa, bukan kunci Dict) ke systemInstruction SEMUA jalur: retry agen/Prime, Alur 1, Alur 2, Prime langsung, delegasi tunggal. Isi aturan: membumi pada topik/segmen/lokasi yang diminta (+ konteks project bila ada); jangan melebar ke kategori umum; jangan tambah topik di luar brief kecuali diminta eksplisit; bila data tidak ada, katakan terus terang, jangan ditambal generalisasi. Jalur split (JSON-only) dan alur brief Kreatif TIDAK disentuh.
