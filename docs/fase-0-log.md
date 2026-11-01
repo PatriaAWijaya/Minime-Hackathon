@@ -2521,6 +2521,15 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v162 — LIVE (brief Image otomatis dari output kurasi, perintah Patria 1 Nov 14:57)
+- Keluhan: output yang sudah dikurasi tidak menjadi brief di Media Studio — Patria harus menempel manual, dan kolom Brief gambar di Image Editor tetap kosong.
+- Akar: jembatan window.imgSetBrief sudah ada (persisten ke minime.imageFlow + sinkron ke textarea) tapi hanya dipakai alur brief Kreatif dan tombol Muat dari Script — tidak ada jalur dari jawaban kurasi biasa ke editor.
+- Perbaikan: helper autoImageBrief di chat.ts — sesudah jawaban final pasca-gate + verdict diposting, bila tugas mengandung kata visual (gambar/desain/poster/visual/foto/image/infografis/banner/flyer/thumbnail), teks final mentah langsung diisikan sebagai brief Image Editor lewat imgSetBrief. Berlaku di delegasi tunggal + retry (satu jawaban, tidak ambigu). Tanpa navigasi paksa — user tetap di chat, dan menemukan brief sudah terisi saat membuka Image Editor.
+- Batas yang dicatat jujur: fan-out dikecualikan (banyak jawaban, last-wins); Prime langsung tidak di-QC sehingga bukan output kurasi; Script/Voice/Video Editor belum ikut (Script tetap lewat tombol approve dua-ketuk; Voice/Video butuh setter dari scope v160 yang masih menunggu vonis). Brief lama ditimpa — kolom brief adalah input kerja transien, hasilnya sudah aman di Library/galeri.
+- Rig-chat §37: tugas non-visual tidak mengubah brief; tugas visual mengisi brief dengan jawaban final (state minime.imageFlow).
+- Gerbang penuh lolos (13 rig, tsc, gate-test 14 grup, scan bersih, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0).
+- Push: kode lokal 56f8711 ↔ remote f827764 (tree identik).
+
 ## v161 — LIVE (mode gate QC, atas persetujuan Patria 1 Nov 14:41 atas tawaran v159)
 - Prinsip: TIDAK ADA jawaban agen yang sampai ke user sebelum QC Prime menyatakan LOLOS. Helper baru gatedAgentAnswer di chat.ts dipakai semua jalur jawaban agen (delegasi tunggal, retry agen, fan-out Alur 1/2) — tidak ada lagi panggilan agen langsung di luar helper.
 - Mekanisme: jawab → QC (instruksi 5 kriteria v159) → bila LOLOS, jawaban final + verdict final diposting; bila REVISI, agen merevisi dengan verdict sebagai panduan lalu di-QC ulang; maks 2 putaran revisi (maks 6 call per jawaban: 1 jawab + 3 QC + 2 revisi; kasus umum LOLOS di percobaan pertama tetap 2 call seperti v159). Sesudah 2 putaran masih REVISI, versi terakhir tetap tampil bersama verdict REVISI-nya — tidak disembunyikan selamanya, tidak loop tanpa batas. Verdict interim TIDAK pernah diposting sebagai bubble. Gagal QC (semua provider down) meloloskan output dengan verdict 'tidak tersedia' — gate tidak boleh memblokir output karena QC-nya sendiri mati.
