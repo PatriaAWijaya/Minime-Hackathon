@@ -2529,7 +2529,7 @@ dokumen lama yang dipakai.
 - Rig-video: §(g) batch + §(i) template DIHAPUS; §(h) ditulis ulang jadi uji pilihan model (select 2 opsi, cabang HF tampil + Veo tersembunyi, render stub + klip timeline); §(j) diawali reset model ke Veo; §(k) v179 baru (ketiadaan batch/template/ringkasan + heading Video Editor).
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0, scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal 3703090 ↔ remote 1a0f04e (tree identik).
-- LIVE: menyusul (deploy mh-build179, verifikasi PID + md5 + marker bundle, lalu entri ini diperbarui).
+- LIVE: PID 25202; md5 JS 9f7b6f3ca86daa3fa590f9cd513db9e6 lokal == MacBook; marker bundle 'vg-model' + 'Video Editor' terverifikasi di MacBook.
 
 ## v178 — hapus semua UI lama tab Video, ganti desain Veo 3.1 (perintah Patria 2 Nov 02:13 + vonis opsi 02:19)
 - Dihapus total dari tab Video (markup + fungsi, bukan disembunyikan): form Render Tier 1 (W/H/fps/output), daftar Klip manual, Caption ASS sidecar, Asset Library Tier 2. Yang diselamatkan: helper teks QC + tipenya (dipakai Ekspor ve2) + command Rust video_write_ass (dipakai tombol Subtitle timeline). Kunci i18n t1/t2 dipertahankan karena t1.output/t1.add masih melabeli editor timeline.
