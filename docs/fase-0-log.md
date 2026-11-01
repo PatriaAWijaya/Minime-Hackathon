@@ -2521,6 +2521,13 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v146 — LIVE (perintah Patria 1 Nov 10:59: menu Clear + bersihkan semua dummy Media Studio)
+- Menu Clear baru: Script Editor tombol "Bersihkan" di samping Generate (3 menu) -> seClear() mengosongkan field teks + output + note + flag, konfigurasi (menu/platform/mode/format/framework/length/genre) dipertahankan. Image Editor tombol "Bersihkan" di samping Generate -> brief + tab bulk dikosongkan, rasio/gaya/textfree/n dipertahankan. Galeri/varian tersimpan TIDAK ikut terhapus. Kunci i18n baru: se.btn.clear + img.clear (ID/EN/ZH; total 950 kunci/bahasa).
+- Dummy Video Editor dihapus total: fungsi ve2SeedClips/ve2SeedAssets DICABUT dari App.svelte; fallback state kosong; ve2Load tidak lagi mengubah state kosong jadi null (kosong = valid, tidak re-seed). Migrasi sekali jalan di app: state lama yang masih memuat id ve2c*/ve2a* dianggap proyek dummy -> seluruh timeline (14 klip + 5 aset di state live Patria) dikosongkan dan disimpan; backup state lama di luar repo: workspace/backups/ve2-2026-11-01.json (tidak ikut push).
+- Rig: rig-ve2 ditulis ulang memakai fixture sendiri (id fix*, bukan seed) + mount kedua membuktikan state kosong -> 0 klip; rig-image §7 + rig-script §akhir untuk Clear. Catatan rig-script: cek Clear dipindah ke akhir file karena outputMeta dari generate dipakai cek footer di seksi recall — Clear di tengah merusak cek itu.
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan bersih kecuali false positive kb-ask-del, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal 3118983 ↔ remote 2c5bc50 (tree identik).
+
 ## v145 — LIVE (perintah Patria 31 Okt 21:07: pilih pendalaman di Media Studio harus otomatis diarahkan, tanpa buka manual)
 - Keluhan: Patria mengklik rekomendasi "Eksekusi video di Video Editor" — Prime mendelegasikan ke Kreatif, tapi app tetap di chat; user harus membuka Media Studio sendiri.
 - Perbaikan: `pickRecommendation` kini memanggil `recStudioNav(teks opsi)` setelah mengirim opsi. Opsi yang menyebut destinasi eksplisit langsung bernavigasi: "Video Editor" -> tab Video, "Image Editor" -> tab Image, "Voice Editor" -> tab Voice, "Script Editor" -> tab Script, "Media Studio" generik -> view Media Studio tanpa ganti tab. Navigasi sinkron saat klik; pekerjaan agen tetap berjalan di latar dan chat tetap bisa dibuka kembali.
