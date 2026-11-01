@@ -2521,6 +2521,12 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v153 — LIVE (perintah Patria 1 Nov 12:28: detail kartu Kanban jadi popup, tutup via X sudut kanan atas)
+- kbTaskDetail kini merender kartu .kb-task-pop di dalam overlay #kbTaskDlg (fixed, backdrop gelap, kartu tengah max 560px) dengan tombol X .kb-task-x di sudut kanan atas; tombol Tutup bawah dicabut (data-act kb-task-close yang sama, wire kanbanWire tidak berubah). Kunci kb.detail.close kini tidak dirujuk markup lagi, sengaja dipertahankan (pola v87).
+- Rig: §31 diperbarui (display flex, cek X, ketuk X menutup). Insiden: baris markup pertama ditulis dengan backslash harfiah dari salah-baca escape ganda output tool (tr(\'...\') di luar string -> build vite gagal); diperbaiki ke kutip biasa + karakter X harfiah, pelajaran dicatat di AGENTS.md.
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan: hanya false positive 'sk-' di dalam class kb-task-x, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal dd982a0 ↔ remote fefb55e (tree identik).
+
 ## v152 — LIVE (perintah Patria 1 Nov 12:16: menu Brain jangan gimmick + respon saat model gagal)
 - Audit (read-only) membuktikan: pilihan Model/Reasoning per agen hanya tersimpan di homeState, tidak ada satu baris pun yang membacanya saat memanggil model — router selalu memakai rantai global. Reasoning bahkan tidak punya parameter di provider mana pun.
 - Perbaikan: helper callAgentModel di chat.ts — label model agen dipetakan lewat substring ID eksak (tahan label picker + string deskriptif default roster), dicoba dulu, gagal -> rantai global; dipakai di 3 titik agen (fan-out Alur 1, Alur 2, delegasi tunggal). Split/QC/Prime langsung tetap rantai global (itu kerja Prime). Footer "via provider model" membuktikan pilihan dipakai. Reasoning belum live (butuh pemetaan effort -> parameter per provider, scope menyusul).
