@@ -24,6 +24,7 @@ html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch
 
 const log = [];
 const store = new Map();
+const scriptBodies = [];
 
 function makeResp({ ok = true, status = 200, jsonData = null } = {}) {
   return {
@@ -40,8 +41,9 @@ async function invokeStub(cmd) {
   throw new Error('unexpected invoke ' + cmd);
 }
 
-async function fetchStub(url) {
+async function fetchStub(url, opts) {
   log.push('fetch:' + String(url));
+  try { scriptBodies.push(typeof opts?.body === 'string' ? JSON.parse(opts.body) : (opts?.body || {})); } catch (_) { /* abaikan body non-JSON */ }
   // Stub jawaban Meta chat-completions (bentuk yang dibaca router).
   return makeResp({
     jsonData: {
@@ -275,6 +277,42 @@ try {
   await tick(100);
   check('v166: impor Chat mengisi Hasil', (document.getElementById('se-output')?.value || '').includes('CHAT-IMPOR-UJI'), document.getElementById('se-output')?.value || '');
   check('v166: dialog tertutup setelah impor', document.getElementById('se-import-dlg')?.style.display === 'none', document.getElementById('se-import-dlg')?.style.display || '');
+
+
+  // v172: caption 3 jalur di Script Editor — tombol Caption artikel
+  // (menu Artikel) dan Caption video (menu Movie); menu Social TIDAK
+  // ditambah tombol (mode caption/both sudah jalur Sosmed).
+  // Integrasi: Gunakan pada caption langsung ke komposer Planner.
+  [...panel.querySelectorAll('.se-menubtn')].find((b) => b.getAttribute('data-se-menu') === 'artikel').click();
+  await tick(150);
+  check('v172: tombol Caption artikel ada di menu Artikel', !!document.getElementById('se-cap-artikel'));
+  check('v172: menu Artikel TIDAK punya tombol Caption video', !document.getElementById('se-cap-video'));
+  document.getElementById('se-topic').value = 'topik uji';
+  document.getElementById('se-topic').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  const bodiesBeforeArtikel = scriptBodies.length;
+  document.getElementById('se-cap-artikel').click();
+  await waitFor(() => (document.getElementById('se-output')?.value || '').includes('NASKAH-UJI'), 'output caption artikel', 120);
+  const artikelBodies = scriptBodies.slice(bodiesBeforeArtikel).map((b) => JSON.stringify(b)).join(' ');
+  check('v172: prompt caption artikel memuat frasa caption artikel', artikelBodies.includes('caption artikel'), artikelBodies.slice(0, 200));
+  [...panel.querySelectorAll('.se-menubtn')].find((b) => b.getAttribute('data-se-menu') === 'movie').click();
+  await tick(150);
+  check('v172: tombol Caption video ada di menu Movie', !!document.getElementById('se-cap-video'));
+  check('v172: menu Movie TIDAK punya tombol Caption artikel', !document.getElementById('se-cap-artikel'));
+  document.getElementById('se-premise').value = 'premis uji';
+  document.getElementById('se-premise').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(50);
+  const bodiesBeforeVideo = scriptBodies.length;
+  document.getElementById('se-cap-video').click();
+  await waitFor(() => (document.getElementById('se-output')?.value || '').includes('NASKAH-UJI'), 'output caption video', 120);
+  const videoBodies = scriptBodies.slice(bodiesBeforeVideo).map((b) => JSON.stringify(b)).join(' ');
+  check('v172: prompt caption video memuat frasa caption video', videoBodies.includes('caption video'), videoBodies.slice(0, 200));
+  document.getElementById('se-use').click();
+  await tick(150);
+  check('v172: Gunakan pada caption pindah ke view Planner', document.getElementById('view-planner')?.classList.contains('active') === true, document.getElementById('view-planner')?.className || 'tidak ada');
+  document.getElementById('socCreatePost')?.click();
+  await tick(200);
+  check('v172: caption video langsung terisi di komposer Planner (tanpa salin-tempel)', (document.getElementById('socCompText')?.value || '').includes('NASKAH-UJI'), (document.getElementById('socCompText')?.value || '').slice(0, 80));
 
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));

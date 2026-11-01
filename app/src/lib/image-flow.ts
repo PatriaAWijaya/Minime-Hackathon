@@ -30,6 +30,7 @@ import { libAddImage, libAddScript } from './v5logic.js';
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { vsSetScript } from './voicestudio.js';
 import { socSetCaption } from './social.js';
+import { captionTrackTitle, sosmedCaptionPrompt, videoCaptionPrompt } from './caption-tracks.js';
 import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, googleGenerateImage, GOOGLE_IMG_PRICE_USD, GOOGLE_IMG_ASPECT, mimeFromB64, addImgSpend, readImgSpend, readThumb, thumbCache } from './image-api.js';
 import { brandSuffix } from './brand.js';
 import { esc } from './esc.js';
@@ -428,19 +429,20 @@ async function approveDraft(): Promise<void> {
       } catch { parts.push(tr('img.approve.vofail')); }
       try {
         const cap = await modelText(
-          `Buatkan satu caption media sosial Bahasa Indonesia untuk video teaser berikut. Judul: ${title}. Brief: ${state.brief.trim()}. Caption singkat, menarik, siap posting, tanpa penjelasan tambahan.`,
+          videoCaptionPrompt(title, state.brief.trim(), state.duration, state.scenes),
           'trace-img-cap-' + Date.now());
         socSetCaption(cap);
-        libAddScript(`Caption: ${title}`, cap);
+        libAddScript(captionTrackTitle('video', title), cap);
         parts.push(tr('img.approve.caption'));
       } catch { parts.push(tr('img.approve.captionfail')); }
     } else {
       const kindLabel = state.output === 'carousel' ? `carousel ${state.slides} slide` : 'poster';
       try {
         const cap = await modelText(
-          `Buatkan satu caption media sosial Bahasa Indonesia untuk ${kindLabel} berikut. Judul: ${title}. ${state.subtitle.trim() ? `Subjudul: ${state.subtitle.trim()}. ` : ''}${state.listicle.trim() ? `Daftar: ${state.listicle.trim()}. ` : ''}Brief: ${state.brief.trim()}. Caption singkat, menarik, siap posting, tanpa penjelasan tambahan.`,
+          sosmedCaptionPrompt(kindLabel, title, state.subtitle.trim(), state.listicle.trim(), state.brief.trim()),
           'trace-img-cap-' + Date.now());
-        libAddScript(`Caption: ${title}`, cap);
+        socSetCaption(cap);
+        libAddScript(captionTrackTitle('sosmed', title), cap);
         parts.push(tr('img.approve.caption'));
       } catch { parts.push(tr('img.approve.captionfail')); }
     }

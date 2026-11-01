@@ -7,9 +7,11 @@
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { readKeys } from './chat.js';
 import { getLang, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
-import { libAddScript, mediaTab } from './v5logic.js';
+import { libAddScript, mediaTab, showView } from './v5logic.js';
 import { recordLiveCost } from './cost.js';
 import { esc } from './esc.js';
+import { artikelCaptionPrompt, captionTrackTitle, videoCaptionPrompt } from './caption-tracks.js';
+import { socSetCaption } from './social.js';
 
 export type SeMenu = 'social' | 'artikel' | 'movie';
 type SePlatform = 'instagram' | 'facebook' | 'whatsapp' | 'tiktok' | 'thread' | 'linkedin';
@@ -41,6 +43,7 @@ interface SeState {
   copied: boolean;
   saved: boolean;
   used: boolean;
+  outputKind: 'script' | 'caption-artikel' | 'caption-video';
 }
 
 const LS = 'minime.scriptEditor';
@@ -84,6 +87,7 @@ const DEFAULTS: SeState = {
   copied: false,
   saved: false,
   used: false,
+  outputKind: 'script',
 };
 
 let state: SeState = { ...DEFAULTS };
@@ -155,6 +159,8 @@ function outputBlock(): string {
 }
 
 function titleFor(st: SeState): string {
+  if (st.outputKind === 'caption-artikel') return captionTrackTitle('artikel', st.topic).slice(0, 60);
+  if (st.outputKind === 'caption-video') return captionTrackTitle('video', st.premise).slice(0, 60);
   if (st.menu === 'artikel') return `${tr('se.menu.artikel')}: ${st.topic}`.slice(0, 60);
   if (st.menu === 'movie') return `${tr('se.menu.movie')}: ${st.premise}`.slice(0, 60);
   const fw = fwLabel(st.framework).split(' — ')[0];
@@ -167,6 +173,7 @@ function seClear(): void {
   state.what = state.who = state.where = state.when = state.why = state.how = '';
   state.topic = state.audience = state.premise = state.character = '';
   state.output = state.outputMeta = state.note = '';
+  state.outputKind = 'script';
   state.copied = state.saved = state.used = false;
   wOpen = false;
   saveState();
@@ -187,12 +194,19 @@ function seUse(): void {
   state.used = true;
   saveState();
   renderSeMain();
-  // Audit v66 (overlap M1): 'Gunakan' benar-benar memakai naskah —
-  // brief tab Image diisi langsung, bukan menunggu klik kedua.
-  if (typeof (window as unknown as Record<string, unknown>).imgSetBrief === 'function') {
-    ((window as unknown as Record<string, (t: string) => void>).imgSetBrief)(state.output);
+  // v172: 'Gunakan' mengikuti jalur output — naskah ke brief Image
+  // (pola audit v66: diisi langsung, bukan menunggu klik kedua);
+  // caption langsung ke komposer posting Planner: terisolasi
+  // penulisannya, terintegrasi datanya (tanpa salin-tempel manual).
+  if (state.outputKind === 'caption-artikel' || state.outputKind === 'caption-video') {
+    socSetCaption(state.output);
+    showView('planner');
+  } else {
+    if (typeof (window as unknown as Record<string, unknown>).imgSetBrief === 'function') {
+      ((window as unknown as Record<string, (t: string) => void>).imgSetBrief)(state.output);
+    }
+    mediaTab('image');
   }
-  mediaTab('image');
 }
 
 function paneHtml(): string {
@@ -202,7 +216,7 @@ function paneHtml(): string {
       <div class="se-group"><label>${esc(tr('se.artikel.audience'))}<input id="se-audience" class="se-field" value="${esc(state.audience)}"></label></div>
       <div class="se-group"><div>${esc(tr('se.artikel.length'))}</div>${radioRow('se-length', LENGTHS, state.length, (o) => 'se.len.' + o)}</div>
       <div class="se-group"><div>${esc(tr('se.framework.label'))}</div>${fwSelect()}</div>
-      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button> <button id="se-import" class="se-btn2">${esc(tr('se.btn.import'))}</button></div>
+      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button> <button id="se-import" class="se-btn2">${esc(tr('se.btn.import'))}</button> <button id="se-cap-artikel" class="se-btn2">${esc(tr('se.btn.cap.article'))}</button></div>
       ${outputBlock()}`;
   }
   if (state.menu === 'movie') {
@@ -212,7 +226,7 @@ function paneHtml(): string {
         (g) => `<option value="${g}"${g === state.genre ? ' selected' : ''}>${esc(tr('se.genre.' + g))}</option>`,
       ).join('')}</select></label></div>
       <div class="se-group"><label>${esc(tr('se.movie.character'))}<input id="se-character" class="se-field" value="${esc(state.character)}"></label></div>
-      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button> <button id="se-import" class="se-btn2">${esc(tr('se.btn.import'))}</button></div>
+      <div class="se-group"><button id="se-generate" class="se-btn"${busy ? ' disabled' : ''}>${esc(tr(busy ? 'se.generating' : 'se.btn.generate'))}</button> <button id="se-clear" class="se-btn2">${esc(tr('se.btn.clear'))}</button> <button id="se-import" class="se-btn2">${esc(tr('se.btn.import'))}</button> <button id="se-cap-video" class="se-btn2">${esc(tr('se.btn.cap.video'))}</button></div>
       ${outputBlock()}`;
   }
   const wShow = wOpen || [state.what, state.who, state.where, state.when, state.why, state.how].some((v) => v.trim() !== '');
@@ -309,6 +323,10 @@ function renderSeMain(): void {
   if (clr) clr.addEventListener('click', () => seClear());
   const imp = document.getElementById('se-import');
   if (imp) imp.addEventListener('click', () => seImportOpen());
+  const capA = document.getElementById('se-cap-artikel');
+  if (capA) capA.addEventListener('click', () => void seCaption('artikel'));
+  const capV = document.getElementById('se-cap-video');
+  if (capV) capV.addEventListener('click', () => void seCaption('video'));
   const wTgl = document.getElementById('se-w-toggle');
   if (wTgl) wTgl.addEventListener('click', () => { wOpen = !wOpen; renderSeMain(); });
   const saveBtn = document.getElementById('se-save');
@@ -396,6 +414,52 @@ async function seGenerate(): Promise<void> {
     const r = await router.callWithFallback(buildScriptPrompt(state), 'trace-script-' + Date.now());
     recordLiveCost(r);
     state.output = r.text;
+    state.outputKind = 'script';
+    state.copied = state.saved = state.used = false;
+    state.outputMeta =
+      tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
+      (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '');
+    state.note = '';
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    state.note = tr('se.err.failed') + ' ' + msg;
+  }
+  busy = false;
+  saveState();
+  renderSeMain();
+}
+
+// v172: caption 3 jalur — tombol Caption artikel (menu Artikel) dan
+// Caption video (menu Movie). Meniru seGenerate persis (readKeys +
+// ModelRouter + callWithFallback + footer via), hanya prompt dan
+// outputKind yang membedakan jalur. Menu Social TIDAK ditambah tombol:
+// mode caption/both di sana SUDAH jalur Sosmed.
+async function seCaption(track: 'artikel' | 'video'): Promise<void> {
+  const needKey = track === 'artikel' ? 'se.err.needTopic' : 'se.err.needPremise';
+  const required = track === 'artikel' ? state.topic : state.premise;
+  if (!required.trim()) {
+    state.note = tr(needKey);
+    renderSeMain();
+    return;
+  }
+  if (busy) return;
+  busy = true;
+  state.note = tr('se.generating');
+  renderSeMain();
+  try {
+    const keys = readKeys();
+    const cfg = defaultRouterConfig();
+    cfg.geminiApiKey = keys.gemini;
+    cfg.metaApiKey = keys.meta;
+    cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()];
+    const router = new ModelRouter(cfg);
+    const prompt = track === 'artikel'
+      ? artikelCaptionPrompt(state.topic, state.output)
+      : videoCaptionPrompt(state.premise, state.output || `${state.premise}. Karakter: ${state.character || '-'}.`);
+    const r = await router.callWithFallback(prompt, 'trace-script-cap-' + Date.now());
+    recordLiveCost(r);
+    state.output = r.text;
+    state.outputKind = track === 'artikel' ? 'caption-artikel' : 'caption-video';
     state.copied = state.saved = state.used = false;
     state.outputMeta =
       tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
@@ -471,6 +535,7 @@ function seImportOpen(): void {
         const item = importCache[Number(btn.getAttribute('data-se-imp'))];
         if (item) {
           state.output = item.text;
+          state.outputKind = 'script';
           state.copied = state.saved = state.used = false;
           state.note = tr('se.import.done');
           saveState();
@@ -505,6 +570,7 @@ export function initScriptEditor(): void {
     state.topic = topic;
     state.audience = audience;
     state.output = output;
+    state.outputKind = 'script';
     state.outputMeta = '';
     state.note = '';
     state.copied = false; state.saved = false; state.used = false;
@@ -513,6 +579,7 @@ export function initScriptEditor(): void {
   };
   (window as unknown as Record<string, unknown>).seLoadOutput = (text: string) => {
     state.output = text;
+    state.outputKind = 'script';
     state.copied = state.saved = state.used = false;
     state.note = tr('se.note.loaded');
     saveState();

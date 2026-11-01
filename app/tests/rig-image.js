@@ -26,6 +26,8 @@ html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch
 const log = [];
 const googleBodies = [];
 const imgPrompts = [];
+const capPrompts = [];
+let capSeq = 0;
 const store = new Map();
 const imgFiles = new Map();
 const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -73,9 +75,10 @@ async function fetchStub(url, opts) {
   // dibedakan dari caption lewat kata 'voice over' di prompt.
   if (!u.includes('images/generations') && !u.includes('127.0.0.1') && !u.includes('localhost')) {
     const text = JSON.stringify(body);
+    capPrompts.push(text);
     return makeResp({
       jsonData: {
-        choices: [{ message: { content: text.includes('voice over') ? 'VO-UJI' : 'CAPTION-UJI' } }],
+        choices: [{ message: { content: (text.includes('voice over') ? 'VO-UJI-' : 'CAPTION-UJI-') + (++capSeq) } }],
         usage: { prompt_tokens: 42, completion_tokens: 30 },
       },
     });
@@ -390,6 +393,51 @@ try {
   const pr171 = imgPrompts[imgPrompts.length - 1];
   const ord171 = ['Header text: JUARA 3', 'Title: POSTER DESIGN', 'Subtitle: LO KREATIF 2024', 'Footer text: Nama A', 'Color palette: marun #7A1C28'].map((m) => pr171.indexOf(m));
   check('v171: prompt template urut pola (header>judul>subjudul>footer>palet)', ord171.every((v) => v >= 0) && ord171.every((v, i) => i === 0 || v > ord171[i - 1]), JSON.stringify(ord171) + ' :: ' + pr171.slice(0, 300));
+
+
+  // v172: caption 3 jalur — storyboard pakai jalur Video, poster pakai
+  // jalur Sosmed; terisolasi penulisannya, terintegrasi datanya
+  // (caption approve langsung menunggu di komposer Planner).
+  const setTxt172 = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new dom.window.Event('input', { bubbles: true })); };
+  const varNames = () => [...document.querySelectorAll('#img-variants .se-note')].map((el) => el.textContent || '').join(' ');
+  await setSel('img-provider', 'meta');
+  await setSel('img-output', 'storyboard');
+  await setSel('img-scenes', '2');
+  setTxt172('img-brief', 'cap uji video');
+  setTxt172('img-title', 'Teaser Uji');
+  await tick(100);
+  document.getElementById('img-generate').click();
+  await waitFor(() => [...document.querySelectorAll('#img-variants .se-note')].some((el) => (el.textContent || '').includes('Scene 2')), 'varian Scene 2 v172', 120);
+  const capBeforeSb = capPrompts.length;
+  document.getElementById('img-approve').click();
+  await waitFor(() => (document.getElementById('img-status')?.textContent || '').includes('disetujui'), 'note Setujui storyboard v172', 120);
+  await tick(200);
+  const sbCaps = capPrompts.slice(capBeforeSb).filter((t) => /caption/i.test(t));
+  const sbCap = sbCaps[sbCaps.length - 1] || '';
+  check('v172: storyboard memakai prompt caption VIDEO (bukan media sosial)', sbCap.includes('caption video') && !sbCap.includes('media sosial'), sbCap.slice(0, 200));
+  const libSb172 = JSON.parse(store.get('minime.library.added') || '[]');
+  check('v172: caption storyboard tersimpan sebagai Caption Video: Teaser Uji', libSb172.some((x) => x.o === 'Caption Video: Teaser Uji'), libSb172.map((x) => x.o).join('|').slice(0, 200));
+
+  // Poster: jalur Sosmed + langsung ke komposer Planner.
+  await setSel('img-output', 'poster');
+  setTxt172('img-brief', 'cap uji sosmed');
+  setTxt172('img-title', 'Poster Uji');
+  await tick(100);
+  const namesBeforePoster = varNames();
+  document.getElementById('img-generate').click();
+  await waitFor(() => varNames() !== namesBeforePoster, 'nama varian poster v172 berubah', 120);
+  const capBeforePoster = capPrompts.length;
+  document.getElementById('img-approve').click();
+  await waitFor(() => (document.getElementById('img-status')?.textContent || '').includes('disetujui'), 'note Setujui poster v172', 120);
+  await tick(200);
+  const posterCaps = capPrompts.slice(capBeforePoster).filter((t) => /caption/i.test(t));
+  const posterCap = posterCaps[posterCaps.length - 1] || '';
+  check('v172: poster memakai prompt caption media sosial', posterCap.includes('caption media sosial'), posterCap.slice(0, 200));
+  const libPoster172 = JSON.parse(store.get('minime.library.added') || '[]');
+  check('v172: caption poster tersimpan sebagai Caption Sosmed: Poster Uji', libPoster172.some((x) => x.o === 'Caption Sosmed: Poster Uji'), libPoster172.map((x) => x.o).join('|').slice(0, 200));
+  document.getElementById('socCreatePost')?.click();
+  await tick(200);
+  check('v172: caption poster langsung terisi di komposer Planner (tanpa salin-tempel)', (document.getElementById('socCompText')?.value || '').includes('CAPTION-UJI'), (document.getElementById('socCompText')?.value || '').slice(0, 80));
 
 } catch (e) {
   // eslint-disable-next-line no-console
