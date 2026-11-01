@@ -339,26 +339,16 @@ export async function retryAgentTask(idx?: number): Promise<void> {
   const trace = 'trace-retry-' + item.agent + '-' + Date.now();
   try {
     if (item.kind === 'agent' && ag) {
-      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
       setAgentPhase(item.agent, 'busy');
-      const r = await callAgentModel(router, cfg, item.agent, item.task, trace);
-      recordLiveCost(r);
-      const footer = ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms'
-        + (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '')
-        + (r.promptTokens != null || r.completionTokens != null ? ' · ' + (r.promptTokens ?? '—') + '+' + (r.completionTokens ?? '—') + ' token' : '');
-      const studio = item.agent === 'kreatif' && mediaNeeded(item.task) ? studioButton(r.text, item.agent) : '';
-      postChat(item.agent, ag.name, ag.color, esc(r.text) + footer + studio);
-      kbUpdateTaskOut(ag.name, taskShort(item.task), r.text);
-      // v159: jawaban retry agen ikut di-QC Prime (sama seperti delegasi).
-      try {
-        cfg.systemInstruction = QC_INSTRUCTION;
-        const qcInput = 'Tugas: ' + item.task + '\n\nHasil agen:\n- ' + ag.name + ': ' + r.text;
-        const q = await router.callWithFallback(qcInput, 'trace-retry-qc-' + Date.now());
-        recordLiveCost(q);
-        postChat('prime', 'Prime Agent', '#EB87B4', q.text, true);
-      } catch {
-        postChat('prime', 'Prime Agent', '#EB87B4', tr('flow.qc.unavailable'), true);
-      }
+      // v161: gate (sama seperti delegasi).
+      const g = await gatedAgentAnswer(router, cfg, item.agent, item.task, trace);
+      const footer = ' — ' + tr('chat.footer.via') + ' ' + g.r.provider + ' ' + g.r.model + ' · ' + g.r.latencyMs + 'ms'
+        + (g.r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + g.r.fallbackFrom + ')' : '')
+        + (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '');
+      const studio = item.agent === 'kreatif' && mediaNeeded(item.task) ? studioButton(g.text, item.agent) : '';
+      postChat(item.agent, ag.name, ag.color, esc(g.text) + footer + studio);
+      kbUpdateTaskOut(ag.name, taskShort(item.task), g.text);
+      postChat('prime', 'Prime Agent', '#EB87B4', g.verdictText, true);
     } else {
       cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
       const r = await router.callWithFallback(item.task, trace);
@@ -397,6 +387,58 @@ export async function retryAgentTask(idx?: number): Promise<void> {
 // delegasi tunggal, retry agen). Reasoning eksplisit 5 kriteria.
 const QC_INSTRUCTION = 'QC hasil kerja agen SEBELUM output sampai ke user. Nilai dengan reasoning eksplisit atas 5 kriteria: (1) kesesuaian brief — apakah semua poin tugas dijawab, apa yang terlewat; (2) grounding — apakah tetap pada topik, segmen, dan lokasi brief, tanpa melebar ke kategori umum; (3) konsistensi internal — apakah ada angka atau fakta yang saling bertentangan; (4) kelengkapan — apakah ada bagian yang dijanjikan tapi kosong atau dangkal; (5) fabrikasi — apakah ada angka, nama, atau URL yang tampak dikarang tanpa dasar. Balas dengan verdict per agen: LOLOS atau REVISI, diikuti satu baris alasan per kriteria yang GAGAL saja (kriteria yang lolos cukup disebut namanya), diakhiri satu kalimat simpulan. Beri REVISI bila ada satu pun kriteria gagal. Bahasa Indonesia.';
 const FLOW_AGENTS = ['riset', 'strategi', 'kreatif', 'media', 'distribusi', 'produk'];
+
+// v161 (mode gate QC, atas persetujuan Patria 14:41): jawaban agen DITAHAN
+// sampai QC Prime menyatakan LOLOS. REVISI → agen merevisi dengan verdict
+// sebagai panduan, lalu di-QC ulang; maks 2 putaran revisi. Sesudah itu
+// versi terakhir tetap tampil bersama verdict akhirnya (tidak pernah
+// disembunyikan selamanya, tidak pernah loop tanpa batas). Gagal QC
+// (semua provider down) meloloskan output dengan verdict 'tidak tersedia'
+// — gate tidak boleh memblokir output karena QC-nya sendiri mati.
+// Verdict interim TIDAK pernah diposting — hanya verdict final.
+function parseQcVerdict(qcText: string): 'LOLOS' | 'REVISI' {
+  const m = qcText.match(/\b(REVISI|LOLOS)\b/i);
+  return m ? (m[1].toUpperCase() as 'LOLOS' | 'REVISI') : 'LOLOS';
+}
+
+async function gatedAgentAnswer(
+  router: ModelRouter,
+  cfg: ReturnType<typeof defaultRouterConfig>,
+  agentKey: string,
+  taskText: string,
+  tracePrefix: string,
+): Promise<{ r: Awaited<ReturnType<typeof callAgentModel>>; text: string; verdictText: string; rounds: number }> {
+  const ag = (AGENTS as Record<string, { name: string; color: string; role: string }>)[agentKey];
+  const agentInstruction = () =>
+    (cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()]);
+  agentInstruction();
+  let r = await callAgentModel(router, cfg, agentKey, taskText, tracePrefix + '-0');
+  recordLiveCost(r);
+  let text = r.text;
+  let verdictText = '';
+  let rounds = 0;
+  for (let round = 0; round <= 2; round++) {
+    try {
+      cfg.systemInstruction = QC_INSTRUCTION;
+      const qcInput = 'Tugas: ' + taskText + '\n\nHasil agen:\n- ' + ag.name + ': ' + text;
+      const q = await router.callWithFallback(qcInput, tracePrefix + '-qc-' + round);
+      recordLiveCost(q);
+      verdictText = q.text;
+    } catch {
+      verdictText = tr('flow.qc.unavailable');
+      break;
+    }
+    if (parseQcVerdict(verdictText) === 'LOLOS' || round === 2) break;
+    rounds++;
+    agentInstruction();
+    const revPrompt =
+      'Revisi hasil berikut berdasarkan verdict QC Prime di bawah. Pertahankan bagian yang sudah benar, perbaiki hanya yang dikritik.\n\nVerdict QC:\n' + verdictText + '\n\nHasil sebelumnya:\n' + text;
+    r = await callAgentModel(router, cfg, agentKey, revPrompt, tracePrefix + '-rev-' + rounds);
+    recordLiveCost(r);
+    text = r.text;
+  }
+  return { r, text, verdictText, rounds };
+}
 async function splitBriefTasks(router: ModelRouter, cfg: ReturnType<typeof defaultRouterConfig>, brief: string): Promise<{ agent: string; task: string }[]> {
   cfg.systemInstruction = 'Bagi brief user menjadi tugas untuk agen-agen berikut (pakai kunci persis ini): riset (Riset pasar & audiens), strategi (Positioning & STP), kreatif (Naskah & Brief), media (Produksi media), distribusi (Draf distribusi), produk (Brief produk digital). Balas HANYA dengan array JSON, tanpa teks lain dan tanpa pagar kode. Format: [{"agent":"riset","task":"..."}]. Sertakan hanya agen yang benar-benar relevan dengan brief; tugas singkat, konkret, Bahasa Indonesia.';
   try {
@@ -503,21 +545,21 @@ export async function sendChatReal(): Promise<void> {
         postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
         setAgentPhase(t.agent, 'starting');
         const kbCard = kbTaskStart(ag.name, taskShort(t.task), t.task);
-        cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
         const trace = 'trace-flow1-' + t.agent + '-' + Date.now();
         let resultText: string;
         try {
           setAgentPhase(t.agent, 'busy');
           kbTaskMove(kbCard, 1);
-          const r = await callAgentModel(router, cfg, t.agent, t.task, trace);
-          recordLiveCost(r);
+          // v161: gate per-agen (verdict interim internal; verdict set
+          // tetap di QC alur di bawah).
+          const g = await gatedAgentAnswer(router, cfg, t.agent, t.task, trace);
           const footer =
-            ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
-            (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '') +
-            (r.promptTokens != null || r.completionTokens != null ? ' · ' + (r.promptTokens ?? '—') + '+' + (r.completionTokens ?? '—') + ' token' : '');
-          const studio = t.agent === 'kreatif' && mediaNeeded(t.task) ? studioButton(r.text, t.agent) : '';
-          resultText = r.text;
-          postChat(t.agent, ag.name, ag.color, esc(r.text) + footer + studio);
+            ' — ' + tr('chat.footer.via') + ' ' + g.r.provider + ' ' + g.r.model + ' · ' + g.r.latencyMs + 'ms' +
+            (g.r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + g.r.fallbackFrom + ')' : '') +
+            (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '');
+          const studio = t.agent === 'kreatif' && mediaNeeded(t.task) ? studioButton(g.text, t.agent) : '';
+          resultText = g.text;
+          postChat(t.agent, ag.name, ag.color, esc(g.text) + footer + studio);
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           resultText = tr('chat.error') + msg;
@@ -570,21 +612,21 @@ export async function sendChatReal(): Promise<void> {
       postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
       setAgentPhase(t.agent, 'starting');
       const kbCard = kbTaskStart(ag.name, taskShort(t.task), t.task);
-      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
       const trace = 'trace-flow2-' + t.agent + '-' + Date.now();
       let resultText: string;
       try {
         setAgentPhase(t.agent, 'busy');
         kbTaskMove(kbCard, 1);
-        const r = await callAgentModel(router, cfg, t.agent, t.task, trace);
-        recordLiveCost(r);
+        // v161: gate per-agen (verdict interim internal; verdict set
+        // tetap di QC alur di bawah).
+        const g = await gatedAgentAnswer(router, cfg, t.agent, t.task, trace);
         const footer =
-          ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
-          (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '') +
-          (r.promptTokens != null || r.completionTokens != null ? ' · ' + (r.promptTokens ?? '—') + '+' + (r.completionTokens ?? '—') + ' token' : '');
-        const studio = t.agent === 'kreatif' && mediaNeeded(t.task) ? studioButton(r.text, t.agent) : '';
-        resultText = r.text;
-        postChat(t.agent, ag.name, ag.color, esc(r.text) + footer + studio);
+          ' — ' + tr('chat.footer.via') + ' ' + g.r.provider + ' ' + g.r.model + ' · ' + g.r.latencyMs + 'ms' +
+          (g.r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + g.r.fallbackFrom + ')' : '') +
+          (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '');
+        const studio = t.agent === 'kreatif' && mediaNeeded(t.task) ? studioButton(g.text, t.agent) : '';
+        resultText = g.text;
+        postChat(t.agent, ag.name, ag.color, esc(g.text) + footer + studio);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         resultText = tr('chat.error') + msg;
@@ -648,34 +690,22 @@ export async function sendChatReal(): Promise<void> {
   setAgentPhase(delegate, 'starting');
   const kbCard = kbTaskStart(ag.name, taskShort(text), text);
   let kbOut = '';
-  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
   const trace = 'trace-chat-' + delegate + '-' + Date.now();
   try {
     setAgentPhase(delegate, 'busy');
     kbTaskMove(kbCard, 1);
-    const r = await callAgentModel(router, cfg, delegate, text, trace);
-    recordLiveCost(r);
+    // v161: gate — jawaban ditahan sampai LOLOS (maks 2 revisi),
+    // baru jawaban final + verdict final diposting.
+    const g = await gatedAgentAnswer(router, cfg, delegate, text, trace);
     const footer =
-      ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
-      (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '') +
-      (r.promptTokens != null || r.completionTokens != null ? ' · ' + (r.promptTokens ?? '—') + '+' + (r.completionTokens ?? '—') + ' token' : '');
+      ' — ' + tr('chat.footer.via') + ' ' + g.r.provider + ' ' + g.r.model + ' · ' + g.r.latencyMs + 'ms' +
+      (g.r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + g.r.fallbackFrom + ')' : '') +
+      (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '');
     // Tombol studio HANYA untuk Kreatif (aturan skill) + tugas media.
-    const studio = delegate === 'kreatif' && mediaNeeded(text) ? studioButton(r.text, delegate) : '';
-    kbOut = r.text;
-    postChat(delegate, ag.name, ag.color, esc(r.text) + footer + studio);
-    // v159: ulasan Prime atas jawaban delegasi tunggal. Sebelumnya QC
-    // hanya jalan di fan-out Alur 1/2, sehingga tanya-jawab lanjutan
-    // (delegasi eksplisit) tampil tanpa kurasi Prime — tidak konsisten.
-    // try/catch sendiri: gagal QC tidak boleh menjelma jadi error agen.
-    try {
-      cfg.systemInstruction = QC_INSTRUCTION;
-      const qcInput = 'Tugas: ' + text + '\n\nHasil agen:\n- ' + ag.name + ': ' + r.text;
-      const q = await router.callWithFallback(qcInput, 'trace-chat-qc-' + Date.now());
-      recordLiveCost(q);
-      postChat('prime', 'Prime Agent', '#EB87B4', q.text, true);
-    } catch {
-      postChat('prime', 'Prime Agent', '#EB87B4', tr('flow.qc.unavailable'), true);
-    }
+    const studio = delegate === 'kreatif' && mediaNeeded(text) ? studioButton(g.text, delegate) : '';
+    kbOut = g.text;
+    postChat(delegate, ag.name, ag.color, esc(g.text) + footer + studio);
+    postChat('prime', 'Prime Agent', '#EB87B4', g.verdictText, true);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     kbOut = tr('chat.error') + msg;

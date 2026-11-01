@@ -42,6 +42,7 @@ async function invokeStub(cmd) {
 }
 
 let gagalUji = 0;
+let gateUji = 0;
 const fetchRecs = [];
 async function fetchStub(url, opts) {
   log.push('fetch:' + String(url));
@@ -60,6 +61,13 @@ async function fetchStub(url, opts) {
   if (body.includes('GAGAL-UJI')) { gagalUji++; if (gagalUji <= 3) return makeResp({ ok: false, status: 500, jsonData: { error: 'GAGAL-UJI' } }); }
   if (body.includes('Bagi brief')) {
     content = (body.includes('Halo utama') || body.includes('jadwal posting') || body.includes('halo') || body.includes('brief produk digital')) ? '[]' : (body.includes('Alur 2') ? '[{"agent":"riset","task":"Riset pasar Alur 2"},{"agent":"strategi","task":"Strategi Alur 2"},{"agent":"kreatif","task":"Buat naskah Alur 2"}]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat naskah video kopi susu"}]');
+  } else if (body.includes('QC hasil kerja agen') && body.includes('GATE-UJI')) {
+    // v161: QC pertama tugas GATE-UJI = REVISI (memicu 1 putaran revisi),
+    // QC berikutnya = LOLOS. Marker membuktikan verdict interim tak bocor.
+    gateUji++;
+    content = gateUji === 1
+      ? 'REVISI \u2014 kriteria grounding gagal (GATE-UJI-MARKER): hasil melebar ke kategori umum.'
+      : 'LOLOS \u2014 semua kriteria lolos (GATE-UJI).';
   } else if (body.includes('QC hasil kerja agen')) {
     content = 'QC: riset LOLOS, kreatif LOLOS. Semua hasil siap dipakai.';
   } else if (body.includes('PART 1')) {
@@ -879,6 +887,18 @@ try {
   const stored159 = JSON.parse(dom.window.localStorage.getItem('minime.homeState') || '{}');
   const chat159 = (stored159.projects?.[pid159]?.chat || []);
   check('v159: jawaban + QC tersimpan di homeState', chat159.some((m) => (m.text || '').includes('NASKAH-UJI')) && chat159.some((m) => m.curation && m.who === 'prime'), chat159.length + ' pesan');
+
+  // §36 v161: mode gate — REVISI memicu revisi, verdict interim tak bocor.
+  const pid161 = 'gate-uji';
+  dom.window.PROJECTS[pid161] = { name: 'Riset kopi gate', agents: [{ key: 'riset', status: 'Idle', task: '—' }], chat: [], kanban: [] };
+  dom.window.switchProject(pid161);
+  await tick(100);
+  const fetchSebelum36 = fetchCount();
+  await sendMsg('riset GATE-UJI peta sebaran');
+  await waitFor(() => bodyText().includes('LOLOS \u2014 semua kriteria lolos (GATE-UJI)'), 'verdict LOLOS gate', 120);
+  await tick(200);
+  check('v161: REVISI memicu revisi (min 4 call: jawab + QC + revisi + QC)', fetchCount() - fetchSebelum36 >= 4, 'delta=' + (fetchCount() - fetchSebelum36));
+  check('v161: verdict interim REVISI tidak diposting sebagai bubble', ![...document.querySelectorAll('#chatBox .msg')].some((m) => (m.textContent || '').includes('GATE-UJI-MARKER')), [...document.querySelectorAll('#chatBox .msg')].map((m) => (m.textContent || '').slice(0, 40)).join(' | '));
 
 } catch (e) {
   // eslint-disable-next-line no-console
