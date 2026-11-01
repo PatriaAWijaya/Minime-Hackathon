@@ -11,7 +11,7 @@
 // No key -> that provider is skipped by the chain (LiveUnavailableError
 // -> fallthrough), exactly like the Node fase runners.
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
-import { AGENTS, activateAgent, clearReplyTarget, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, getReplyTarget, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, kbTaskMove, kbTaskStart, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView } from './v5logic.js';
+import { AGENTS, activateAgent, clearReplyTarget, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, getReplyTarget, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, kbTaskMove, kbTaskStart, kbUpdateTaskOut, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView } from './v5logic.js';
 import { getLang, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
@@ -284,6 +284,88 @@ export function approveStudio(idx?: number): void {
 }
 (window as unknown as Record<string, unknown>).approveStudio = approveStudio;
 
+/* v152: Brain per-agen jadi LIVE (sebelumnya gimmick: pilihan Model hanya
+   tersimpan, router selalu memakai rantai global). Label model dibaca dari
+   AGENTS[agentKey].model dan dipetakan lewat substring ID model eksak —
+   tahan terhadap label picker maupun string deskriptif default roster
+   ("Gemini (fallback dari Meta)") yang tidak mengandung ID itu. Preferensi
+   dicoba dulu; bila gagal, jatuh ke rantai global seperti sebelumnya.
+   Footer "via provider model" di bubble hasil membuktikan pilihan dipakai.
+   Reasoning/Effort belum live (tidak ada provider yang menerima field itu). */
+async function callAgentModel(router: ModelRouter, cfg: ReturnType<typeof defaultRouterConfig>, agentKey: string, prompt: string, trace: string) {
+  const label = ((AGENTS as Record<string, { model?: string }>)[agentKey]?.model || '') as string;
+  try {
+    if (label.includes('muse-spark-1.3')) return await router.callMeta(prompt, trace);
+    if (label.includes('gemini-3.1-flash-lite')) return await router.callGemini(prompt);
+    if (label.includes('deepseek-r1:1.5b')) {
+      const r2 = new ModelRouter({ ...cfg, ollamaModel: 'deepseek-r1:1.5b', ollamaFallbackModel: 'deepseek-r1:1.5b' });
+      return await r2.callOllama(prompt);
+    }
+    if (label.includes('qwen2.5:3b')) {
+      const r2 = new ModelRouter({ ...cfg, ollamaModel: 'qwen2.5:3b', ollamaFallbackModel: 'qwen2.5:3b' });
+      return await r2.callOllama(prompt);
+    }
+  } catch (_) {
+    // Preferensi gagal -> rantai global di bawah (bukan diam).
+  }
+  return router.callWithFallback(prompt, trace);
+}
+
+/* v152: tombol "Coba lagi" pada bubble error — mengulang tugas yang sama
+   (bukan sekadar menampilkan error). Pola pendingStudios: tiap tombol
+   mengikat indeksnya sendiri. */
+const pendingRetries: Array<{ agent: string; task: string; kind: 'agent' | 'prime' }> = [];
+function retryButton(agentKey: string, taskText: string, kind: 'agent' | 'prime'): string {
+  pendingRetries.push({ agent: agentKey, task: taskText, kind });
+  if (pendingRetries.length > 50) pendingRetries.shift();
+  const idx = pendingRetries.length - 1;
+  return '<br><button class="btn btn-sm chat-act" data-act="chat-retry" data-idx="' + idx + '">' + esc(tr('chat.retry')) + '</button>';
+}
+export async function retryAgentTask(idx?: number): Promise<void> {
+  const item = typeof idx === 'number' ? pendingRetries[idx] : pendingRetries[pendingRetries.length - 1];
+  if (!item) return;
+  const keys = readKeys();
+  const cfg = defaultRouterConfig();
+  cfg.geminiApiKey = keys.gemini;
+  cfg.metaApiKey = keys.meta;
+  const router = new ModelRouter(cfg);
+  const ag = (AGENTS as Record<string, { name: string; color: string; role: string }>)[item.agent];
+  const trace = 'trace-retry-' + item.agent + '-' + Date.now();
+  try {
+    if (item.kind === 'agent' && ag) {
+      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
+      setAgentPhase(item.agent, 'busy');
+      const r = await callAgentModel(router, cfg, item.agent, item.task, trace);
+      recordLiveCost(r);
+      const footer = ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms'
+        + (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '')
+        + (r.promptTokens != null || r.completionTokens != null ? ' · ' + (r.promptTokens ?? '—') + '+' + (r.completionTokens ?? '—') + ' token' : '');
+      const studio = item.agent === 'kreatif' && mediaNeeded(item.task) ? studioButton(r.text, item.agent) : '';
+      postChat(item.agent, ag.name, ag.color, esc(r.text) + footer + studio);
+      kbUpdateTaskOut(ag.name, taskShort(item.task), r.text);
+    } else {
+      cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
+      const r = await router.callWithFallback(item.task, trace);
+      recordLiveCost(r);
+      const footer = ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms'
+        + (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '')
+        + (r.promptTokens != null || r.completionTokens != null ? ' · ' + (r.promptTokens ?? '—') + '+' + (r.completionTokens ?? '—') + ' token' : '');
+      postChat('prime', 'Prime Agent', '#EB87B4', esc(r.text) + footer);
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const errText = tr('chat.error') + msg;
+    if (item.kind === 'agent' && ag) {
+      postChat(item.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint') + retryButton(item.agent, item.task, 'agent'));
+      kbUpdateTaskOut(ag.name, taskShort(item.task), errText);
+    } else {
+      postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.error') + esc(msg) + tr('chat.error.hint') + retryButton('prime', item.task, 'prime'));
+    }
+  }
+  if (item.kind === 'agent') setAgentPhase(item.agent, null);
+}
+(window as unknown as Record<string, unknown>).retryAgentTask = retryAgentTask;
+
 /**
  * Real sendChat: user bubble -> Prime ack ramah -> (delegasi bila
  * perlu: pengumuman Prime + aktivasi agen + ack agen + hasil agen) /
@@ -407,7 +489,7 @@ export async function sendChatReal(): Promise<void> {
         try {
           setAgentPhase(t.agent, 'busy');
           kbTaskMove(kbCard, 1);
-          const r = await router.callWithFallback(t.task, trace);
+          const r = await callAgentModel(router, cfg, t.agent, t.task, trace);
           recordLiveCost(r);
           const footer =
             ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
@@ -419,7 +501,7 @@ export async function sendChatReal(): Promise<void> {
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           resultText = tr('chat.error') + msg;
-          postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
+          postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint') + retryButton(t.agent, t.task, 'agent'));
         }
         setAgentPhase(t.agent, null);
         kbTaskMove(kbCard, 4, resultText);
@@ -474,7 +556,7 @@ export async function sendChatReal(): Promise<void> {
       try {
         setAgentPhase(t.agent, 'busy');
         kbTaskMove(kbCard, 1);
-        const r = await router.callWithFallback(t.task, trace);
+        const r = await callAgentModel(router, cfg, t.agent, t.task, trace);
         recordLiveCost(r);
         const footer =
           ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
@@ -486,7 +568,7 @@ export async function sendChatReal(): Promise<void> {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         resultText = tr('chat.error') + msg;
-        postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
+        postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint') + retryButton(t.agent, t.task, 'agent'));
       }
       setAgentPhase(t.agent, null);
       kbTaskMove(kbCard, 4, resultText);
@@ -525,7 +607,7 @@ export async function sendChatReal(): Promise<void> {
       postChat('prime', 'Prime Agent', '#EB87B4', esc(r.text) + footer + studio);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.error') + esc(msg) + tr('chat.error.hint'));
+      postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.error') + esc(msg) + tr('chat.error.hint') + retryButton('prime', text, 'prime'));
     }
     return;
   }
@@ -551,7 +633,7 @@ export async function sendChatReal(): Promise<void> {
   try {
     setAgentPhase(delegate, 'busy');
     kbTaskMove(kbCard, 1);
-    const r = await router.callWithFallback(text, trace);
+    const r = await callAgentModel(router, cfg, delegate, text, trace);
     recordLiveCost(r);
     const footer =
       ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
@@ -564,7 +646,7 @@ export async function sendChatReal(): Promise<void> {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     kbOut = tr('chat.error') + msg;
-    postChat(delegate, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
+    postChat(delegate, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint') + retryButton(delegate, text, 'agent'));
   }
   setAgentPhase(delegate, null);
   kbTaskMove(kbCard, 4, kbOut);

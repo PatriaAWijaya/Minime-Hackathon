@@ -41,15 +41,23 @@ async function invokeStub(cmd) {
   throw new Error('unexpected invoke ' + cmd);
 }
 
+let gagalUji = 0;
+const fetchRecs = [];
 async function fetchStub(url, opts) {
   log.push('fetch:' + String(url));
   let body = '';
   try { body = typeof opts?.body === 'string' ? opts.body : JSON.stringify(opts?.body || ''); } catch (_) { body = ''; }
   bodies.push(body);
+  fetchRecs.push({ url: String(url), body });
   // v103: stub model per jenis call — split brief (Bagi brief) mengembalikan
   // tugas JSON; sapaan 'Halo utama' dinilai bukan brief (array kosong);
   // QC mengembalikan verdict; sisanya hasil kerja agen.
   let content = 'NASKAH-UJI: Hook kopi susu, isi 5W1H, CTA order via chat.';
+  // v152: 3 panggilan GAGAL-UJI pertama gagal (Meta + Ollama primer +
+  // Ollama fallback; delegasi eksplisit tanpa split, kunci Gemini tidak
+  // diset di rig sehingga Gemini melempar tanpa fetch). Panggilan ke-4
+  // (tombol Coba lagi) sukses — membuktikan retry.
+  if (body.includes('GAGAL-UJI')) { gagalUji++; if (gagalUji <= 3) return makeResp({ ok: false, status: 500, jsonData: { error: 'GAGAL-UJI' } }); }
   if (body.includes('Bagi brief')) {
     content = (body.includes('Halo utama') || body.includes('jadwal posting') || body.includes('halo') || body.includes('brief produk digital')) ? '[]' : (body.includes('Alur 2') ? '[{"agent":"riset","task":"Riset pasar Alur 2"},{"agent":"strategi","task":"Strategi Alur 2"},{"agent":"kreatif","task":"Buat naskah Alur 2"}]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat naskah video kopi susu"}]');
   } else if (body.includes('QC hasil kerja agen')) {
@@ -778,6 +786,33 @@ try {
   dlg31.querySelector('[data-act="kb-task-close"]').click();
   await tick(50);
   check('v150: tombol Tutup menutup detail', dlg31.style.display === 'none', dlg31.style.display || '');
+
+  // §32 v152: (b) tombol Coba lagi dulu (Brain masih default -> rantai global).
+  const naskahSebelum32 = countOcc('NASKAH-UJI');
+  await sendMsg('riset GAGAL-UJI');
+  await waitFor(() => bodyText().includes('Gagal menghubungi model'), 'bubble error', 120);
+  await tick(200);
+  const retryBtn32 = document.querySelector('#chatBox [data-act="chat-retry"]');
+  check('v152: bubble error membawa tombol Coba lagi', !!retryBtn32, retryBtn32?.textContent || '');
+  retryBtn32.click();
+  await waitFor(() => countOcc('NASKAH-UJI') > naskahSebelum32, 'hasil retry', 120);
+  await tick(200);
+  const kbAll32 = JSON.parse(store.get('minime.kanban') || '{}');
+  const kbCards32 = Object.values(kbAll32.cards || {}).flat();
+  const gagalCard32 = kbCards32.find((c) => c.t === 'riset GAGAL-UJI');
+  check('v152: retry memperbarui capaian kartu Kanban', !!gagalCard32 && (gagalCard32.out || '').includes('NASKAH-UJI'), gagalCard32 ? JSON.stringify(gagalCard32).slice(0, 200) : 'tidak ada');
+  // §32 v152: (a) Brain Riset = Gemini -> panggilan agen pertama ke Gemini, bukan Meta.
+  // Kunci Gemini diset dulu (rig hanya menyetel kunci Meta; tanpa kunci,
+  // callGemini melempar sebelum fetch sehingga tidak ada yang bisa dibuktikan).
+  dom.window.localStorage.setItem('minime.geminiKey', 'rig-key');
+  dom.window.AGENTS['riset'].model = 'Gemini · gemini-3.1-flash-lite';
+  const recsAwal32 = fetchRecs.length;
+  await sendMsg('buatkan riset pasar kopi susu');
+  await waitFor(() => bodyText().includes('Saya delegasikan'), 'delegasi brain', 120);
+  await waitFor(() => bodyText().includes('NASKAH-UJI'), 'hasil brain', 120);
+  await tick(500);
+  const risetFetches32 = fetchRecs.slice(recsAwal32).filter((f) => (f.body.includes('Riset pasar') || f.body.includes('buatkan riset')) && !f.body.includes('Bagi brief') && !f.body.includes('QC hasil kerja agen'));
+  check('v152: Brain Gemini dipakai dulu untuk Riset', risetFetches32.length > 0 && risetFetches32[0].url.includes('generativelanguage') && !risetFetches32.some((f) => f.url.includes('api.meta.ai')), JSON.stringify(risetFetches32.map((f) => f.url)));
 
 
 
