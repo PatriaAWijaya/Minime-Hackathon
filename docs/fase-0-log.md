@@ -2521,6 +2521,14 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v155 — LIVE (keluhan Patria 1 Nov 13:02: jawaban melebar dari coffeeshop ke pola konsumsi F&B umum)
+- Akar masalah: prompt agen/Prime TIDAK PERNAH memuat konteks project — agen hanya menerima tugas singkat ("peta sebaran per kecamatan") tanpa tahu foldernya tentang coffeeshop Surabaya Selatan. Melebarnya jawaban adalah konsekuensi langsung, bukan sekadar gaya model.
+- Perbaikan: helper scopeLine() di chat.ts menyisipkan "Konteks project aktif: <nama project>" (kunci baru chat.scope, total 962/bahasa) + konstanta GROUNDING_INSTRUCTION (3 bahasa, bukan kunci Dict) ke systemInstruction SEMUA jalur: retry agen/Prime, Alur 1, Alur 2, Prime langsung, delegasi tunggal. Isi aturan: membumi pada topik/segmen/lokasi yang diminta (+ konteks project bila ada); jangan melebar ke kategori umum; jangan tambah topik di luar brief kecuali diminta eksplisit; bila data tidak ada, katakan terus terang, jangan ditambal generalisasi. Jalur split (JSON-only) dan alur brief Kreatif TIDAK disentuh.
+- QC diperketat (2 situs): REVISI bila hasil melebar dari topik/segmen/lokasi brief ke kategori yang lebih umum. QC sudah menerima brief sejak dulu — kini kriterianya eksplisit.
+- Rig-chat §34 membuktikan prompt yang sampai ke model memuat nama project + frasa "Jangan melebar". Batas jujur: kepatuhan model tetap hanya terbukti dari jawaban live berikutnya, bukan rig.
+- Gerbang penuh lolos (13 rig, tsc, svelte-check 0 error/26 warning, cargo 0, scan bersih, ledger md5 tetap, gate-test 14 grup).
+- Push: kode lokal a584d46 ↔ remote 8c2314b (tree identik).
+
 ## v154 — LIVE (perintah Patria 1 Nov 12:37 + 12:40: tombol saran hanya untuk jawaban kurasi Prime; mutu saran)
 - Aturan render baru di msgRecsHtml: button .rec-btn HANYA bila who === 'prime' (jawaban langsung Prime, verdict QC, laporan alur) atau flag cbAsk. Jawaban agen lain menampilkan sarannya sebagai teks redup .msg-recs-text ("Saran: ..."), tanpa button. Kunci baru chat.recs.label (total 961/bahasa).
 - Instruksi model (REPORT_FORMAT_INSTRUCTION, 3 bahasa) diperketat: tiap opsi harus mempertajam tujuan, memperjelas manfaat, dan memudahkan user mengambil keputusan; kalimat "baris itu akan diubah menjadi tombol" dikoreksi (tombol hanya pada jawaban kurasi Prime, teks pada jawaban agen). Aturan v143 (dahulukan pendalaman, tanpa pivot industri) tetap.
