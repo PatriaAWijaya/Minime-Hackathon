@@ -2521,6 +2521,16 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v187 — aset sumber klip tampil di list Aset (perintah Patria 2 Nov 13:23)
+- Latar: daftar Aset Video Editor kosong padahal timeline berisi klip "HyperFrames 10s" (state live: 1 klip, 0 aset). Akar masalah: hfAddToTimeline + vgAddToTimeline hanya menambah klip, tidak pernah mencatat file sumbernya sebagai aset — jalur generator tidak lengkap, bukan data hilang.
+- Perbaikan: helper baru ve2EnsureAsset (tambah aset bila src belum ada, tanpa probe — durasi sudah diketahui) dipakai di 2 titik: (1) jalur maju — Tambah ke Timeline HF/Omni ikut menambah aset (nama + durasi sama dengan klip); (2) backfill satu kali saat muat — klip bersrc yang belum punya aset mendapat asetnya (jenis dari ekstensi), lalu disimpan; aset yang src-nya sudah ada tidak digandakan.
+- Insiden gerbang: backfill pertama membaca $state di top-level -> +2 warning state_referenced_locally (26 -> 27, lalu sempat 2 error karena ve2Loaded bisa null). Diperbaiki dengan membaca ve2Loaded memakai `?.`/`??` persis pola init yang ada — perilaku sama, kembali 0 error/26 warning.
+- Rig-ve2 §18 baru (4 cek): Tambah ke Timeline HF ikut menambah aset; backfill klip yatim menjadi aset; aset backfill tampil di list; dedup tidak menggandakan aset.
+- Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
+- Kode lokal 2dad639 ↔ remote f8a666c (tree identik).
+- LIVE: (diisi commit log-LIVE sesudah deploy)
+
+
 ## v186 — pratinjau isi asli + rasio proporsional (perintah Patria 2 Nov 12:59 + 13:06)
 - Latar 1 (12:59): panel Preview Video Editor masih canvas dummy — video asli hanya muncul saat playback berjalan; klip gambar tidak pernah tampil isinya, hanya namanya.
 - Perbaikan 1: $effect pada klip terpilih memuat file asli lewat video_read (cap 20 MB, cache 3 entri seperti playback) — gambar tampil sebagai gambar, video sebagai video yang bisa di-play, audio sebagai pemutar audio. Tanpa klip: pesan jujur ve2.no_clip (pakai ulang kunci yang ada); file gagal dibaca: ve2.preview_fail. Kunci ve.canvas (satu-satunya rujukan statis, diverifikasi grep) DIHAPUS di 3 bahasa; i18n 1103 -> 1102/bahasa, 0 duplikat. ve2MimeFor diperbaiki: sebelumnya tidak kenal ekstensi gambar (default video/mp4) — kini png/jpeg/webp/gif/bmp + ogg/flac/aac benar.
