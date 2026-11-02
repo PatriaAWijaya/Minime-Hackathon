@@ -2562,7 +2562,10 @@ dokumen lama yang dipakai.
   svelte-check 0 error / 21 warning (sama dengan baseline v188, tanpa warning
   dari elemen baru), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
 - Kode d8b2f9b ↔ a2a50bd (tree identik).
-- LIVE menyusul di entri log-LIVE sesudah deploy.
+- LIVE 2 Nov ~18:05: deploy mh-build189.sh OK (MH_BUILD189_OK); HEAD MacBook
+  aeac734; PID 53410; md5 dist JS ec2e2c120892cf5dd70ab9f2400da2aa lokal ==
+  MacBook; marker 've2-thumb-x' ada di bundle JS+CSS MacBook, 'text/ve2-clip'
+  x5, 've2.del_asset' x4. App live = v189.
 
 ## v188 — daftar Aset thumbnail + drag-drop + hapus klip (perintah Patria 2 Nov 16:12 + 16:13)
 - Latar: baris teks "HyperFrames 10s" di daftar Aset dinilai tidak perlu tampil; daftar aset diminta berbentuk thumbnail berscrollbar; + diminta membuka pilihan Library/file; thumbnail diminta bisa drag-drop ke timeline; track timeline diminta bisa dihapus/diedit; aset yang diimpor langsung ke timeline diminta otomatis masuk daftar aset.
