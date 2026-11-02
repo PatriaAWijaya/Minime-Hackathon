@@ -31,6 +31,7 @@ const modMatch = html.match(/<script type="module"[^>]*src="([^"]+)"><\/script>/
 if (!modMatch) throw new Error('script module dist tidak ditemukan');
 html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch[1]}"></script></body>`);
 
+const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 const invokeLog = [];
 const renderArgsLog = [];
 async function invokeStub(cmd, args) {
@@ -40,7 +41,7 @@ async function invokeStub(cmd, args) {
     const isImg = /\.(png|jpe?g|webp|gif|bmp)$/i.test(pth);
     return { duration: isImg ? 0 : 12.5, size: 0, streams: [], format_name: isImg ? 'png' : 'mp4' };
   }
-  if (cmd === 'video_read') return { b64: '' };
+  if (cmd === 'video_read') return { b64: String((args && args.req && args.req.path) || '').includes('preview-uji') ? PNG_1X1 : '' };
   if (cmd === 'video_write_ass') return { path: '/tmp/ve2-test.ass' };
   if (cmd === 'video_render') { renderArgsLog.push((args && args.req && args.req.args) || []); return { success: true, output: (args && args.req && args.req.output) || '', duration_ms: 1, stderr_tail: '' }; }
   if (cmd === 'plugin:dialog|open') return ['/tmp/picker.png'];
@@ -275,6 +276,24 @@ try {
   check('v146: tanpa state tersimpan, 0 klip terrender', doc2.querySelectorAll('[data-ve2-clip]').length === 0, doc2.querySelectorAll('[data-ve2-clip]').length);
   check('v146: toolbar tetap ada di editor kosong', ['ve2BtnCut', 've2BtnText', 've2BtnSub', 've2BtnTrans'].every((id) => !!doc2.getElementById(id)));
   check('v146: tidak ada nama dummy di tab Video kosong', ![...doc2.querySelectorAll('#ms-tab-video *')].some((el) => (el.textContent || '').includes('TEST Kopi')));
+
+  // 17. v186: pratinjau menampilkan isi file asli, bukan canvas dummy.
+  setInput(document.getElementById('ve2NewSrc'), '/tmp/preview-uji.png', 'input');
+  const kindSel186 = document.getElementById('ve2NewKind');
+  kindSel186.value = 'Image';
+  kindSel186.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  document.getElementById('ve2AssetAdd').click();
+  await tick(200);
+  const assetBtns186 = [...document.querySelectorAll('[data-ve2-asset]')];
+  assetBtns186[assetBtns186.length - 1].click();
+  await waitFor(() => document.getElementById('ve2PreviewImg'), 'img pratinjau', 100);
+  const previewSrc = document.getElementById('ve2PreviewImg')?.getAttribute('src') || '';
+  check('v186: pratinjau klip gambar menampilkan file asli', previewSrc.startsWith('data:image/png;base64,') && previewSrc.includes(PNG_1X1), previewSrc.slice(0, 80));
+  check('v186: teks canvas dummy sudah tidak ada', !(document.body.textContent || '').includes('Canvas dummy'), 'masih ada dummy');
+  const imgStyle = (document.getElementById('ve2PreviewImg')?.getAttribute('style') || '').replace(/\s+/g, '');
+  check('v186: pratinjau dibatasi proporsional (max-height + contain)', imgStyle.includes('max-height') && imgStyle.includes('object-fit:contain'), imgStyle);
+  const playStyle = (document.getElementById('ve2Video')?.getAttribute('style') || '').replace(/\s+/g, '');
+  check('v186: video playback ikut dibatasi proporsional', playStyle.includes('max-height') && playStyle.includes('object-fit:contain'), playStyle);
 
 } catch (e) {
   // eslint-disable-next-line no-console

@@ -141,6 +141,28 @@
   let ve2PlayheadPct = $derived((ve2Playhead / ve2Total) * 100);
   let ve2RulerTicks = $derived(Array.from({ length: Math.floor(ve2Total / 10) + 1 }, (_, i) => i * 10));
   let ve2PreviewLabel = $derived(`Preview: ${ve2SelClip()?.name ?? '—'}`);
+  let ve2PreviewSrc = $state('');
+  let ve2PreviewFail = $state(false);
+  let ve2PreviewErr = $state('');
+  let ve2PreviewKind = $derived(ve2IsImage(ve2SelClip()?.src ?? '') ? 'image' : ve2IsAudio(ve2SelClip()?.src ?? '') ? 'audio' : 'video');
+  // v186: pratinjau idle menampilkan isi file asli klip terpilih (bukan
+  // canvas dummy). Dipicu perubahan klip terpilih; saat playback berjalan
+  // (ve2VideoOn) elemen <video> utama yang tampil, jadi cabang idle ini
+  // tidak berebut elemen dengannya.
+  $effect(() => {
+    const c = ve2Clips.find((x) => x.id === ve2SelId);
+    ve2PreviewSrc = '';
+    ve2PreviewFail = false;
+    ve2PreviewErr = '';
+    if (!c || !c.src) return;
+    let live = true;
+    ve2ReadB64(c.src).then((b64) => {
+      if (!live) return;
+      if (b64) ve2PreviewSrc = `data:${ve2MimeFor(c.src)};base64,${b64}`;
+      else ve2PreviewFail = true;
+    }).catch((e) => { if (live) { ve2PreviewFail = true; ve2PreviewErr = String(e); } });
+    return () => { live = false; };
+  });
   let ve2TimeText = $derived(`${ve2Fmt(ve2Playhead)} / ${ve2Fmt(ve2Total)}`);
   function ve2Fmt(sec: number): string {
     const s = Math.max(0, Math.floor(sec));
@@ -296,6 +318,14 @@
     if (lower.endsWith('.mp3')) return 'audio/mpeg';
     if (lower.endsWith('.wav')) return 'audio/wav';
     if (lower.endsWith('.m4a')) return 'audio/mp4';
+    if (lower.endsWith('.ogg')) return 'audio/ogg';
+    if (lower.endsWith('.flac')) return 'audio/flac';
+    if (lower.endsWith('.aac')) return 'audio/aac';
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    if (lower.endsWith('.bmp')) return 'image/bmp';
     return 'video/mp4';
   }
   function ve2StopPlayback() {
@@ -976,8 +1006,25 @@
           <div style="display:flex;gap:6px;margin-top:8px"><input id="ve2NewSrc" type="text" bind:value={ve2NewSrc} placeholder="/Users/mac/Movies/klip.mp4" style="flex:1"><select id="ve2NewKind" bind:value={ve2NewKind}><option value="Image">Image</option><option value="Video">Video</option><option value="Audio">Audio</option></select><button id="ve2AssetAdd" class="btn btn-sm" onclick={() => { ve2AddAsset() }}>{t('t1.add', lang)}</button></div>
           </div>
           <div class="ve2-preview">
-          <video id="ve2Video" bind:this={ve2VideoEl} style="width:100%;background:#000;display:{ve2VideoOn ? 'block' : 'none'}" controls></video>
-          {#if !ve2VideoOn}<div class="ve2-canvas"><div style="font-size:42px">▶</div><div id="ve2PreviewLabel">{ve2PreviewLabel}</div><small>{t('ve.canvas', lang)}</small></div>{/if}
+          <video id="ve2Video" bind:this={ve2VideoEl} style="width:100%;background:#000;display:{ve2VideoOn ? 'block' : 'none'};max-height:min(480px, 55vh);object-fit:contain" controls></video>
+          {#if !ve2VideoOn}
+            {#if ve2SelClip() && ve2PreviewSrc}
+              {#if ve2PreviewKind === 'image'}
+                <img id="ve2PreviewImg" src={ve2PreviewSrc} alt={ve2SelClip()?.name ?? ''} style="width:100%;background:#000;display:block;max-height:min(480px, 55vh);object-fit:contain">
+              {:else if ve2PreviewKind === 'audio'}
+                <div class="ve2-canvas"><div id="ve2PreviewLabel">{ve2PreviewLabel}</div><audio id="ve2PreviewAudio" src={ve2PreviewSrc} controls style="width:90%"></audio></div>
+              {:else}
+                <!-- svelte-ignore a11y_media_has_caption -->
+                <video id="ve2PreviewVideo" src={ve2PreviewSrc} style="width:100%;background:#000;display:block;max-height:min(480px, 55vh);object-fit:contain" controls></video>
+              {/if}
+            {:else if ve2SelClip() && ve2PreviewFail}
+              <div class="ve2-canvas"><div id="ve2PreviewLabel">{ve2PreviewLabel}</div><small>{t('ve2.preview_fail', lang)} {ve2PreviewErr}</small></div>
+            {:else if ve2SelClip()}
+              <div class="ve2-canvas"><div id="ve2PreviewLabel">{ve2PreviewLabel}</div></div>
+            {:else}
+              <div class="ve2-canvas"><div id="ve2PreviewLabel">{ve2PreviewLabel}</div><small>{t('ve2.no_clip', lang)}</small></div>
+            {/if}
+          {/if}
           <div class="ve2-transport"><button onclick={() => { ve2ToStart() }} title={t('title.first', lang)}>⏮</button><button onclick={() => { ve2PlayToggle() }} title={t('title.play', lang)}>{ve2Playing ? t('ve2.stop', lang) : t('ve.play', lang)}</button><button onclick={() => { ve2ToEnd() }} title={t('title.last', lang)}>⏭</button><span id="ve2Time">{ve2TimeText}</span><span style="margin-left:auto">{t('ve.zoom', lang)} <select id="ve2Zoom" value={ve2Zoom} onchange={(e) => { ve2Zoom = Number(e.currentTarget.value); ve2SaveState(); }}><option value={0.5}>50%</option><option value={1}>100%</option><option value={2}>200%</option></select></span></div>
           </div>
           <div class="ve2-inspector">
