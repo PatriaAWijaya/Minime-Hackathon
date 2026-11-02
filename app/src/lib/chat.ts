@@ -397,7 +397,7 @@ export async function retryAgentTask(idx?: number): Promise<void> {
 // v159 (perintah Patria 14:32 — QC harus kuat sebagai pembeda produk):
 // satu instruksi QC bersama untuk semua jalur (fan-out Alur 1/2,
 // delegasi tunggal, retry agen). Reasoning eksplisit 5 kriteria.
-const QC_INSTRUCTION = 'QC hasil kerja agen SEBELUM output sampai ke user. Nilai dengan reasoning eksplisit atas 5 kriteria: (1) kesesuaian brief — apakah semua poin tugas dijawab, apa yang terlewat; (2) grounding — apakah tetap pada topik, segmen, dan lokasi brief, tanpa melebar ke kategori umum; (3) konsistensi internal — apakah ada angka atau fakta yang saling bertentangan; (4) kelengkapan — apakah ada bagian yang dijanjikan tapi kosong atau dangkal; (5) fabrikasi — apakah ada angka, nama, atau URL yang tampak dikarang tanpa dasar. Balas dengan verdict per agen: LOLOS atau REVISI, diikuti satu baris alasan per kriteria yang GAGAL saja (kriteria yang lolos cukup disebut namanya), diakhiri satu kalimat simpulan. Beri REVISI bila ada satu pun kriteria gagal. Bahasa Indonesia.';
+export const QC_INSTRUCTION = 'QC hasil kerja agen SEBELUM output sampai ke user. Nilai dengan reasoning eksplisit atas 5 kriteria: (1) kesesuaian brief — apakah semua poin tugas dijawab, apa yang terlewat; (2) grounding — apakah tetap pada topik, segmen, dan lokasi brief, tanpa melebar ke kategori umum; (3) konsistensi internal — apakah ada angka atau fakta yang saling bertentangan; (4) kelengkapan — apakah ada bagian yang dijanjikan tapi kosong atau dangkal; (5) fabrikasi — apakah ada angka, nama, atau URL yang tampak dikarang tanpa dasar. Balas dengan verdict per agen: LOLOS atau REVISI, diikuti satu baris alasan per kriteria yang GAGAL saja (kriteria yang lolos cukup disebut namanya), diakhiri satu kalimat simpulan. Beri REVISI bila ada satu pun kriteria gagal. Bahasa Indonesia.';
 const FLOW_AGENTS = ['riset', 'strategi', 'kreatif', 'media', 'distribusi', 'produk'];
 
 // v161 (mode gate QC, atas persetujuan Patria 14:41): jawaban agen DITAHAN
@@ -408,7 +408,7 @@ const FLOW_AGENTS = ['riset', 'strategi', 'kreatif', 'media', 'distribusi', 'pro
 // (semua provider down) meloloskan output dengan verdict 'tidak tersedia'
 // — gate tidak boleh memblokir output karena QC-nya sendiri mati.
 // Verdict interim TIDAK pernah diposting — hanya verdict final.
-function parseQcVerdict(qcText: string): 'LOLOS' | 'REVISI' {
+export function parseQcVerdict(qcText: string): 'LOLOS' | 'REVISI' {
   const m = qcText.match(/\b(REVISI|LOLOS)\b/i);
   return m ? (m[1].toUpperCase() as 'LOLOS' | 'REVISI') : 'LOLOS';
 }

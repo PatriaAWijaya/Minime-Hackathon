@@ -66,11 +66,20 @@ async function invokeStub(cmd, args) {
   throw new Error('unexpected invoke ' + cmd);
 }
 
-async function fetchStub(url) {
+async function fetchStub(url, opts) {
   const u = String(url);
   log.push('fetch:' + u);
   // Urutan balasan model HANYA untuk panggilan model (api.meta.ai).
   if (u.includes('api.meta.ai')) {
+    const body = (opts && typeof opts.body === 'string') ? opts.body : '';
+    if (modelCalls >= MODEL_REPLIES.length) {
+      // v208: draf vs QC dibedakan dari isi body (QC memuat 'Hasil agen:').
+      modelCalls++;
+      const content = body.includes('Hasil agen:')
+        ? 'QC: LOLOS. Semua kriteria lolos.'
+        : 'Judul: Naskah Uji\nSubjudul: Subjudul uji\nBody: Body uji.';
+      return makeResp({ jsonData: { choices: [{ message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 20 } } });
+    }
     const content = MODEL_REPLIES[Math.min(modelCalls, MODEL_REPLIES.length - 1)];
     modelCalls++;
     return makeResp({ jsonData: { choices: [{ message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 20 } } });
@@ -160,6 +169,34 @@ try {
   const cardTxt = document.getElementById('plan30-main')?.textContent || '';
   check('v207: Gerbang 1 lolos (badge disetujui + Buat Tabel nonaktif)',
     cardTxt.includes('Rencana disetujui') && btn('plan-table')?.disabled === true, cardTxt.slice(0, 160));
+
+  // ===== v208: naskah per baris + QC + Gerbang 2 =====
+  check('v208: seksi naskah tampil sesudah Gerbang 1 (30 tombol Buat Ulang)',
+    !!btn('plan-scripts') && !!btn('plan-scripts-approve')
+    && document.querySelectorAll('#plan30-main [data-act="plan-regen"]').length === 30);
+  btn('plan-scripts-approve').click();
+  await tick(200);
+  check('v208: Gerbang 2 terkunci sebelum ada naskah (30 baris diblokir)',
+    (document.getElementById('p30ScriptStatus')?.textContent || '').includes('30'), document.getElementById('p30ScriptStatus')?.textContent || '');
+  btn('plan-scripts').click();
+  await waitFor(() => {
+    const tas = Array.from(document.querySelectorAll('textarea[id^="p30Script-"]'));
+    return tas.length === 30 && tas.every((t) => (t.value || '').includes('Naskah Uji')) ? true : null;
+  }, '30 naskah terisi', 400);
+  check('v208: 30 naskah terisi + badge hari 1 QC LOLOS',
+    document.getElementById('p30Badge-1')?.textContent === 'QC: LOLOS', document.getElementById('p30Badge-1')?.textContent || '');
+  const ta1 = document.getElementById('p30Script-1');
+  ta1.value = 'Judul: Edit manual';
+  ta1.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  await tick(100);
+  check('v208: edit manual menandai baris sebagai Diedit manual',
+    document.getElementById('p30Badge-1')?.textContent === 'Diedit manual', document.getElementById('p30Badge-1')?.textContent || '');
+  btn('plan-scripts-approve').click();
+  await tick(200);
+  const cardTxt2 = document.getElementById('plan30-main')?.textContent || '';
+  check('v208: Gerbang 2 lolos (badge disetujui + Buat Naskah nonaktif)',
+    cardTxt2.includes('Naskah disetujui') && btn('plan-scripts')?.disabled === true, cardTxt2.slice(0, 160));
+  check('v208: total 64 panggilan model (4 + 30 draf + 30 QC)', modelCalls === 64, 'modelCalls=' + modelCalls);
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-plan30 exception :: ' + (e && e.stack ? e.stack : e));
