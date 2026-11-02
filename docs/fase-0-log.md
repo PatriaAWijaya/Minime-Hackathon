@@ -2523,6 +2523,8 @@ dokumen lama yang dipakai.
 
 LIVE 3 Nov ~01:30 WIB: deploy mh-build207.sh — MH_BUILD207_OK; HEAD MacBook 07579e0 (commit log); PID 76082; marker 'Rencana Konten 30 Hari' x1 (JS) + 'plan30-main' x1 (CSS); md5 dist JS/CSS lokal == MacBook. App LIVE = v207. Konfirmasi live Patria untuk v207 BELUM ada (uji live yang disarankan: buka Planner -> panel Rencana 30 Hari -> isi niche/kompetitor/tanggal -> Mulai Riset -> Buat Tabel Rencana -> Setujui).
 
+LIVE 3 Nov ~01:35 WIB: deploy mh-build208.sh — MH_BUILD208_OK; HEAD MacBook 53ca857 (commit log); PID 76776; marker 'Naskah per Konten' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v208. Konfirmasi live Patria untuk v208 BELUM ada (uji live yang disarankan: sesudah Gerbang 1 lolos, klik Buat Naskah Se-batch -> periksa 30 naskah + badge QC -> edit satu baris -> Setujui Naskah).
+
 ## v208 — Skenario 2 Tahap 3: naskah per baris 3 jalur + gate QC per naskah + Gerbang 2 (lanjutan perintah Patria 3 Nov 01:11 "lanjut" atas workflow Skenario 2)
 
 Seksi Naskah muncul di panel Rencana 30 Hari sesudah Gerbang 1
