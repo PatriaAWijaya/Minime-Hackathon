@@ -2521,6 +2521,80 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v204 — Skenario 1 Tahap 4+5: Setujui poster otomatis masuk Planner + Masuk Planner dari Library (perintah Patria 2 Nov 23:19: "Lanjut ke build")
+
+Tahap 4 (otomatis, poster saja): sesudah Setujui poster dan caption sosmed
+berhasil dibuat, app membuat 2 draf Planner — 1 Instagram + 1 Threads —
+dengan gambar varian PERTAMA yang tersimpan dan caption yang sama, status
+`draft`, TANPA tanggal (scheduledAt 0). Draf tanpa tanggal tidak pernah
+diterbitkan scheduler (scheduler hanya memproses `queued` bertanggal);
+tanggal terbit ditentukan user di Planner dengan mengklik chip draf
+(komposer terbuka, default hari ini). Pengingat H-3 (v205) hanya mengawasi
+draf bertanggal. Penyesuaian desain dari alur yang disampaikan 2 Nov
+23:13: tanggal TIDAK ditanyakan lewat pertanyaan agen sesudah Setujui —
+draf dibuat tanpa tanggal dan tanggalnya ditentukan di Planner lewat
+alur edit yang sudah ada (lebih sedikit interupsi, hasil akhir sama;
+bila Patria menghendaki pertanyaan tanggal di approve, itu perintah
+terpisah). Storyboard TIDAK membuat draf otomatis: gambarnya keyframe
+video, bukan postingan sosmed; caption videonya tetap masuk slot
+komposer + Library seperti sebelumnya. Carousel dipasangkan captionnya
+tapi tidak dibuatkan draf otomatis (satu item Planner hanya membawa satu
+media; slide carousel dipilih satu per satu lewat Tahap 5).
+
+Pasangan gambar-caption: saat Setujui poster/carousel, caption dipasangkan
+ke tiap varian yang tersimpan lewat field `caption` baru di item Library
+(`libPairCaption`, dicari lewat imageFile; caption pertama menang, tidak
+menimpa). `saveVariant` kini mengembalikan nama file yang tersimpan
+('' bila gagal) sehingga pasangan dan draf tidak pernah menunjuk file
+yang gagal tersimpan. Slot `socSetCaption` dipertahankan (komposer
+berikutnya tetap ter-prefill caption).
+
+Tahap 5 (manual, dari Library): tombol "Masuk Planner" di dialog detail
+item Library bergambar berfile. Item berpasangan -> 2 draf langsung
+(IG + Threads, tanpa tanggal) lalu tampilkan Planner. Item lama tanpa
+pasangan -> komposer Planner terbuka dengan gambar terpilih sebagai
+media Library (slot `socPendingMedia`, cermin `socPendingCaption`),
+user menulis/menyesuaikan caption + tanggal di sana.
+
+Planner: `socQueueAdd` menerima draf tanpa tanggal (item `queued` tanpa
+tanggal tetap ditolak seperti sebelumnya); seksi "Belum terjadwal"
+(`.soc-unsched`, blok CSS v204) tampil di atas komposer dengan chip yang
+markup-nya sama persis dengan chip kalender sehingga binding edit/hapus
+berlaku; edit draf tak terjadwal membuka komposer dengan default hari
+ini (sebelumnya dayKey(0) = 1970). Celah terbit BELUM tertutup di v204:
+komposer tetap menolak berkas lokal untuk IG/Threads/TikTok saat simpan
+(`soc.err.file_url`) dan jalur terbit menolak hal yang sama
+(`file_url_now`) — draf v204 tidak pernah terbit sendiri, jadi aman;
+mekanisme unggah untuk Tahap 7 tetap menunggu keputusan (API Meta vs
+URL hosting). Draf dibuat untuk IG + Threads tanpa memandang status
+koneksi kanal (draf = rencana, bukan janji terbit); v205 harus menangani
+kanal yang belum terhubung saat konfirmasi H-3.
+
+i18n +4 kunci/bahasa (1139): `img.approve.planner`,
+`img.approve.plannerfail`, `lib.btn.planner`, `soc.unsched.title`.
+File: `app/src/lib/social.js` (socQueueAdd, renderUnscheduled,
+socAutoPlannerDrafts, socLibToPlanner, socPendingMedia),
+`app/src/lib/v5logic.js` (libPairCaption, tombol + wire lib-planner),
+`app/src/lib/image-flow.ts` (saveVariant, approveDraft),
+`app/src/layout-scroll.css` (blok v204), `app/src/lib/i18n.ts`.
+Rig: v204 di rig-image (4 cek: 2 draf + penunjuk varian + pasangan
+caption + storyboard tidak menambah draf) dan rig-batch (3 cek: seksi
+tak terjadwal + klik chip membuka komposer + hapus chip).
+Pelajaran rig: tutup komposer edit SELALU memunculkan konfirmasi
+(teks tak kosong = dirty) — seksi rig yang membuka komposer edit WAJIB
+menjawab Ya (socConfirmYes) agar overlay konfirmasi (kelas yang sama
+dengan overlay popup, `.soc-pop-overlay`) tidak mengacaukan seksi
+berikutnya; kegagalan rig-batch "popup tertutup saat login browser
+dimulai" pada run pertama v204 terbukti berasal dari overlay
+konfirmasi yang tertinggal, bukan dari popup channel — diperbaiki di
+rig, bukan di app (perilaku konfirmasi sudah benar).
+Gerbang lolos penuh: vite build, svelte-check 0 error / 21 warning
+(baseline), 14 rig ALL PASSED, root build + tsc, gate-test 14 grup,
+scan kredensial 0, ledger md5 tetap
+d542428fe9901fbd417e098e9249d4b6, cargo fmt + check + check --tests 0,
+Cargo.lock bersih.
+Kode: lokal 8c5a5ee ↔ remote 2cb2775.
+
 ## v203 — Skenario 1 Tahap 0+2: pemicu alur diperluas + urai IMAGE-PLAN ke field Image Editor (perintah Patria 2 Nov 23:19: "Lanjut ke build")
 
 - Keputusan yang dibangun (Patria 2 Nov 23:13): pemicu alur brief
