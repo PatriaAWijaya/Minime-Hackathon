@@ -2567,6 +2567,11 @@ dokumen lama yang dipakai.
   i18n 1135/1135/1135 0 duplikat, svelte-check 0 error / 21 warning
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock bersih.
 - Kode 65c285a ↔ 675e2e5 (tree identik).
+- LIVE 2 Nov ~23:36: deploy mh-build203.sh OK (MH_BUILD203_OK); HEAD MacBook
+  55cfc56; PID 70339; md5 dist JS e5d0b8c5b2e87a271d44ff952cfdbc93 dan CSS
+  13647ae902959d218a44d9b61a232fb3 lokal == MacBook (CSS sama dengan
+  v202/v174, v203 tidak menambah CSS); penanda 'imgSetStructured' (2x)
+  dan 'img-body' (2x) di bundle JS MacBook. App live = v203.
 
 ## v174 — struktur storyboard 7 field per panel di Image Editor (perintah Patria 2 Nov 22:13: "lakukan"; nomor reserved)
 
