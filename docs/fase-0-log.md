@@ -2565,6 +2565,11 @@ dokumen lama yang dipakai.
   i18n 1121/1121/1121 0 duplikat, svelte-check 0 error / 21 warning
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock bersih.
 - Kode 7818806 ↔ be0efc3 (tree identik).
+- LIVE 2 Nov ~22:43: deploy mh-build202.sh OK (MH_BUILD202_OK); HEAD MacBook
+  72dc97b; PID 67364; md5 dist JS 5f824d6e9c1ce97b590b1aa3ca17f8af dan CSS
+  13647ae902959d218a44d9b61a232fb3 lokal == MacBook (CSS sama dengan v201,
+  v202 tidak menambah CSS); penanda 'data-vg-cine' (2x), 'cine-title'
+  (2x), 'hutan autumn' di bundle JS MacBook. App live = v202.
 
 ## v201 — wiring video Wan 3.0 via ClassAI (perintah Patria 2 Nov 22:09: "lakukan")
 
