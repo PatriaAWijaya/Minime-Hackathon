@@ -763,3 +763,8 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
    skala yang sama dengan playhead; tanpa ini label meleset hingga 78px. */
 .ve-ruler { position: relative; display: block; height: 18px; }
 .ve-ruler span { position: absolute; top: 0; }
+/* v199: menu Campaign disembunyikan SEMENTARA (perintah Patria 2 Nov 21:38).
+   Hanya tombol rail yang disembunyikan; view + logika Campaign tetap utuh
+   (rig-audit masih bisa showView('campaign')). Untuk menampilkan lagi,
+   hapus blok ini saja. */
+.sidebar button[data-view="campaign"] { display: none; }

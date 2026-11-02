@@ -440,6 +440,14 @@ try {
   await tick(50);
   check('v125: ketuk konfirmasi setelah klik lain -> project hilang', !dom.window.PROJECTS['parm'], '');
 
+  // 22. v199: menu Campaign disembunyikan sementara (tombol rail saja).
+  const cssMatch = html.match(/href="([^"]+\.css)"/);
+  let cssText = '';
+  if (cssMatch) { try { cssText = fs.readFileSync(path.join(distDir, cssMatch[1]), 'utf-8'); } catch { cssText = ''; } }
+  check('v199: CSS build memuat aturan sembunyikan Campaign', /button\[data-view="?campaign"?\][^{]*\{[^}]*display:\s*none/.test(cssText), cssMatch ? cssMatch[1] : 'no-css-link');
+  check('v199: tombol Campaign tetap ada di DOM (disembunyikan, bukan dihapus)', !!document.querySelector('button[data-view="campaign"]'), '');
+  check('v199: tetangga Campaign (Planner + Billing) tetap ada', !!document.querySelector('button[data-view="planner"]') && !!document.querySelector('button[data-view="billing"]'), '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-home exception :: ' + (e && e.stack ? e.stack : e));
