@@ -2549,7 +2549,8 @@ dokumen lama yang dipakai.
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
   Tanpa kunci i18n baru -> tetap 1108/bahasa. (Rig jsdom tidak bisa menguji
   sintaks ffprobe asli — bukti di atas adalah uji binary langsung.)
-- Kode menyusul pasangan SHA sesudah push; LIVE menyusul sesudah deploy.
+- Kode 3d15c3f ↔ 85e1102 (tree identik).
+- LIVE menyusul di entri log-LIVE sesudah deploy.
 
 ## v193 — aset hilang: pesan probe jelas + fallback gambar + Inspector jadi tombol proyek + pratinjau 9:16 (perintah Patria 2 Nov 18:21 + screenshot)
 
