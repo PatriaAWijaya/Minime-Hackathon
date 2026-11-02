@@ -2521,6 +2521,57 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v201 — wiring video Wan 3.0 via ClassAI (perintah Patria 2 Nov 22:09: "lakukan")
+
+- Perintah Patria 22:09: wiring video Wan 3.0 via ClassAI (mesin video
+  alternatif di tab Video, di samping Omni dan HyperFrames).
+- Kontrak API (docs router.classai.id/docs, dibaca 2 Nov): base
+  https://router.classai.id/v1; auth Authorization Bearer (kunci milik
+  user, diinput sendiri di Settings — TIDAK PERNAH ditulis di kode);
+  POST /v1/videos body {model: 'wan-3.0', prompt, aspect_ratio,
+  resolution, seconds} -> job {id}; poll GET /v1/videos/{id} tiap
+  ~10 detik sampai status completed (Wan 3.0: 2-3 menit); unduh dari
+  field url atau GET /v1/videos/{id}/content. Tarif (1 miliar kredit =
+  $12,48): 480p 9,2 jt kredit/detik; 720p 18,5 jt/detik; 1080p 37
+  jt/detik; minimum 33,3 jt kredit/video. Kredit ditahan saat mulai,
+  hanya ditagih bila video jadi.
+- PELAKSANAAN: modul baru app/src/lib/classai-video.ts (wanGenerateClip
+  create -> poll -> download -> video_save -> video_probe -> spend;
+  wanPriceCredits/wanPriceUsd; spend terpisah minime.classaiSpend).
+  Panel Video: opsi model 'wan' di #vg-model (kini 3 opsi) + cabang UI
+  Wan (prompt #vg-wan-prompt, aspek 9:16/16:9, resolusi 480p/720p/1080p,
+  detik 2-30, harga live, Generate #vg-wan-generate + Tambah ke timeline
+  #vg-wan-add-timeline dengan state terakhir TERPISAH dari Omni).
+  Settings: kartu kunci ClassAI (Hubungkan + uji live GET /v1/models
+  tanpa memakan kredit; storage minime.classaiKey; KeyKind kini
+  gemini|meta|classai). Billing: kartu Wan 3.0/ClassAI sendiri bila
+  videos > 0. i18n: +6 kunci/bahasa (1110 -> 1116, 0 duplikat).
+- CATATAN JUJUR (disampaikan ke Patria): Wan 3.0 di 1080p BUKAN lebih
+  murah dari Omni — klip 10 detik 1080p = 370 jt kredit = $4,62 vs
+  Omni 1080p $1,52. Nilai wiring ini = mesin alternatif yang TIDAK
+  butuh billing Google (vonis billing Google masih terbuka); Omni
+  tetap mesin utama footage. Tagihan mengikuti detik YANG DIMINTA
+  (kontrak per detik), bukan durasi hasil probe.
+- Rig: rig-video §v201 (10 cek: 3 opsi model, form Wan tampil +
+  Omni/HF sembunyi, harga 720p 10 detik $2,31, tolak tanpa kunci
+  sebelum fetch ClassAI, POST wan-3.0 + format 9:16/720p/10 detik,
+  polling 2x sampai completed, spend $2,31, aset + klip timeline);
+  rig-settings diperbarui (ekspektasi kartu kunci 3 -> 4; 2 kegagalan
+  awal adalah ekspektasi jumlah, BUKAN bug — kartu ClassAI sah).
+  Selama pengerjaan sempat ada insiden edit i18n: skrip python pertama
+  membuang 48 baris prefix file (header + getLang/setLang) karena
+  hanya menggabungkan 3 seksi — build gagal, terdeteksi, file
+  dipulihkan dari git dan kunci disisipkan ulang dengan prefix
+  dipertahankan; diff akhir i18n persis +18 baris. Pelajaran: skrip
+  edit seksi i18n WAJIB menyertakan prefix sebelum const ID.
+- Gerbang penuh lolos (/tmp/gate-v201/): vite build, 14 rig ALL
+  PASSED, root build + tsc OK, gate-test 14 grup ALL PASSED, scan
+  kredensial 0 temuan, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6,
+  i18n 1116/1116/1116 0 duplikat, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock bersih.
+- Kode 3b5bb68 ↔ 69be4d8 (tree identik).
+- Deploy: menyusul (mh-build201.sh).
+
 ## v200 — layout Billing jadi kartu per model (perintah Patria 2 Nov 21:45 + screenshot)
 
 - Perintah Patria (dengan screenshot Billing 21:44): layout Billing dibuat
