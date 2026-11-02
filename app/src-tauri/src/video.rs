@@ -191,10 +191,14 @@ fn probe_file(ffprobe: &PathBuf, path: &str) -> Result<ProbeInfo, String> {
         .args([
             "-v",
             "error",
+            // v194: pemisah FIELD dalam satu seksi adalah koma, sedangkan titik
+            // dua memisahkan SEKSI — 'format=duration:format_name' dibaca sebagai
+            // seksi 'format' + seksi tak dikenal 'format_name' (Invalid argument).
+            // Sintaks lama terbukti gagal di ffprobe (VM + MacBook); yang baru lolos.
             "-show_entries",
-            "format=duration:format_name",
+            "format=duration,format_name",
             "-show_entries",
-            "stream=index:codec_type:codec_name:width:height",
+            "stream=index,codec_type,codec_name,width,height",
             "-of",
             "json",
             path,
