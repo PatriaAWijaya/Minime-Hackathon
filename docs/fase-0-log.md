@@ -2521,6 +2521,34 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v200 — layout Billing jadi kartu per model (perintah Patria 2 Nov 21:45 + screenshot)
+
+- Perintah Patria (dengan screenshot Billing 21:44): layout Billing dibuat
+  dalam bentuk kartu untuk tiap model, masing-masing dengan deskripsi
+  biayanya.
+- PELAKSANAAN (layout saja, NOL perubahan data/teks/angka): panel
+  "Pemakaian tercatat" kini memakai grid responsif `.bill-grid`
+  (auto-fill minmax(280px, 1fr), gap 12px); keempat entri pemakaian —
+  {#each COST_ROWS} (muse-spark-1.3, gemini-3.1-flash-lite), muse-image-1.0
+  (bila images > 0), video (bila videos > 0), pemakaian live di app
+  (bila calls > 0) — masing-masing menjadi kartu `.bill-card`
+  (panel2 + border tema, radius 10px, padding 12px 14px). Isi tiap kartu
+  PERSIS sama seperti baris lama: nama model + provider, panggilan,
+  token input/output/total, biaya USD + IDR. Baris Total tetap di luar
+  grid sebagai strip ringkasan (bukan model, jadi bukan kartu).
+  Panel Kredit & pembayaran dan Batas belanja tidak disentuh (sudah
+  berbentuk panel). app.css tidak disentuh (verbatim); CSS baru di blok
+  v200 layout-scroll.css.
+- Rig §23 baru di rig-home: kartu Billing per model ada (2 baris
+  ledger di store segar), kartu pertama muse-spark-1.3, kartu kedua
+  gemini-3.1-flash-lite, grid ada di panel Pemakaian. i18n tidak
+  berubah (tanpa teks baru) -> 1110/bahasa, 0 duplikat.
+- Gerbang penuh lolos (/tmp/gate-v200/): vite build, 14 rig, root tsc,
+  gate-test 14 grup ALL PASSED, scan 0, ledger md5 tetap
+  d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
+- Kode e48b6bf ↔ 4e82f15 (tree identik).
+
 ## v199 — menu Campaign disembunyikan sementara (perintah Patria 2 Nov 21:38)
 
 - Perintah Patria: menu Campaign (di rail, di bawah Planner dan di atas
