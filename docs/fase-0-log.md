@@ -2530,7 +2530,7 @@ dokumen lama yang dipakai.
 - Rig-ve2 §17 baru (4 cek): pratinjau gambar menampilkan file asli; teks canvas dummy hilang; pratinjau + video playback dibatasi proporsional (max-height + contain).
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal acd85c4 ↔ remote 908f63f (tree identik).
-- LIVE: (diisi commit log-LIVE sesudah deploy)
+- LIVE: PID 44752; md5 JS f4fcb02ce378cd871fee90b7d1147166 lokal == MacBook; marker 've2PreviewImg' + 'object-fit:contain' ada di bundle MacBook.
 
 
 ## v185 — deskripsi user -> tombol Generate HTML -> komposisi HyperFrames (perintah Patria 2 Nov 11:00)
