@@ -205,6 +205,31 @@ try {
   document.getElementById('vg-portrait').click();
   await tick(50);
   check('v178: portrait set rasio 9:16 + isi prompt vertikal', document.getElementById('vg-aspect').value === '9:16' && (document.getElementById('vg-prompt').value || '').includes('vertikal'), 'aspect=' + document.getElementById('vg-aspect').value);
+  // v184: tombol Bersihkan di tiap form input Omni + HyperFrames.
+  document.querySelector('[data-vg-tab="prompt"]').click();
+  await tick(50);
+  setInput(document.getElementById('vg-prompt'), 'teks uji hapus', 'input');
+  document.getElementById('vg-prompt-clear').click();
+  await tick(50);
+  check('v184: Bersihkan prompt mengosongkan kolom', (document.getElementById('vg-prompt').value || '') === '', (document.getElementById('vg-prompt').value || '').slice(0, 60));
+  document.querySelector('[data-vg-tab="refs"]').click();
+  await tick(100);
+  document.getElementById('vg-refs-lib').click();
+  await waitFor(() => document.querySelector('.vg-ref-thumb'), 'thumbnail refs v184', 100);
+  document.querySelectorAll('.vg-ref-thumb')[0].click();
+  await tick(100);
+  check('v184: slot referensi terisi sebelum dibersihkan', document.querySelectorAll('[data-vg-refdel]').length >= 1, 'slots=' + document.querySelectorAll('[data-vg-refdel]').length);
+  document.getElementById('vg-refs-clear').click();
+  await tick(50);
+  check('v184: Bersihkan referensi mengosongkan semua slot', document.querySelectorAll('[data-vg-refdel]').length === 0, 'slots=' + document.querySelectorAll('[data-vg-refdel]').length);
+  setInput(document.getElementById('vg-model'), 'hyperframes', 'change');
+  await tick(100);
+  setInput(document.getElementById('hf-html'), 'prosa uji hapus', 'input');
+  document.getElementById('hf-clear').click();
+  await tick(50);
+  check('v184: Bersihkan HyperFrames mengosongkan komposisi', (document.getElementById('hf-html').value || '') === '', (document.getElementById('hf-html').value || '').slice(0, 60));
+  setInput(document.getElementById('vg-model'), 'omni', 'change');
+  await tick(100);
   // (k) v179: penghapusan + heading Video Editor.
   check('v179: ringkasan tugas + template + batch sudah tidak ada', !document.getElementById('vg-batch-run') && document.querySelectorAll('[data-vt-beat]').length === 0 && !(document.body.textContent || '').includes('Ringkasan tugas'), 'batch=' + !!document.getElementById('vg-batch-run') + ' beats=' + document.querySelectorAll('[data-vt-beat]').length);
   check('v179: heading Video Editor tampil di atas kartu editor', (document.body.textContent || '').includes('Video Editor') && !!document.querySelector('.ve2-top'), 've2-top=' + !!document.querySelector('.ve2-top'));
