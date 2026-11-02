@@ -567,6 +567,28 @@ try {
   check('v195: playback berhenti di ujung klip terakhir', stopped8 && doc8.getElementById('ve2BtnStop').disabled === true, 'play:' + doc8.getElementById('ve2BtnPlay').disabled);
   check('v195: transport kembali ke Putar sesudah berhenti', trans8[1].textContent === '▶ Putar', trans8[1].textContent);
 
+  // §27 v196: playhead + penggaris segaris bar (offset label 78px).
+  const store27 = new Map();
+  store27.set('minime.cleaned-v84', '1');
+  store27.set('minime.cleaned-graph-v88', '1');
+  store27.set('minime.ve2', JSON.stringify({ clips: [{ id: 'al1', name: 'Align Uji', track: 'Video', start: 0, dur: 8, src: '', effect: 'none' }], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
+  const dom27 = makeDom(store27);
+  const doc27 = dom27.window.document;
+  await waitFor(() => doc27.querySelector('[data-view="media"]'), 'mount27 rail media', 100);
+  doc27.querySelector('[data-view="media"]').click();
+  await tick(100);
+  doc27.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  const trans27 = [...doc27.querySelectorAll('.ve2-transport button')];
+  trans27[2].click();
+  await tick(100);
+  const ph27 = doc27.getElementById('playhead2');
+  check('v196: playhead memakai offset label 78px', !!ph27 && String(ph27.style.left).includes('calc(') && String(ph27.style.left).includes('78px') && String(ph27.style.left).includes('100%'), ph27 ? ph27.style.left : 'no-playhead');
+  const ticks27 = [...doc27.querySelectorAll('#ve2Ruler span')];
+  check('v196: label penggaris pertama di offset 78px', ticks27.length === 4 && String(ticks27[0].style.left).includes('calc(') && String(ticks27[0].style.left).includes('78px'), ticks27.map((t) => t.style.left).join(' | '));
+  check('v196: label penggaris terakhir di ujung skala', ticks27.length === 4 && String(ticks27[3].style.left).includes('calc(') && String(ticks27[3].style.left).includes('78px') && String(ticks27[3].style.left).includes('100%'), ticks27.map((t) => t.style.left).join(' | '));
+  check('v196: tombol akhir menggerakkan playhead ke ujung', (doc27.getElementById('ve2Time') ? doc27.getElementById('ve2Time').textContent : '').includes('00:30 / 00:30'), doc27.getElementById('ve2Time') ? doc27.getElementById('ve2Time').textContent : 'no-time');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-ve2 exception :: ' + (e && e.stack ? e.stack : e));

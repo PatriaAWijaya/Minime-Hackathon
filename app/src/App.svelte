@@ -402,7 +402,8 @@
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     let start: number;
     if (rect.width > 0) {
-      const frac = (e.clientX - rect.left) / rect.width;
+      // v196: -78px (label 70 + gap 8, sama seperti ve2StartFromClientX).
+      const frac = (e.clientX - rect.left - 78) / rect.width;
       start = Math.round(Math.min(ve2Total, Math.max(0, frac * ve2Total)) * 10) / 10;
     } else {
       const onTrack = ve2Clips.filter((c) => c.track === track);
@@ -430,7 +431,9 @@
     const inner = document.querySelector('#ve2Timeline > div');
     const rect = inner?.getBoundingClientRect();
     if (!rect || rect.width <= 0) return null;
-    const frac = (clientX - rect.left) / rect.width;
+    // v196: -78px (label 70 + gap 8): posisi bar diukur dari tepi area bar,
+    // bukan tepi div dalam; tanpa ini seret mendarat 78px ke kanan target.
+    const frac = (clientX - rect.left - 78) / rect.width;
     return Math.round(Math.min(ve2Total, Math.max(0, frac * ve2Total)) * 10) / 10;
   }
   function ve2ApplyClipMove(id: string, track: Ve2Clip['track'] | null, start: number | null) {
@@ -681,7 +684,8 @@
   function ve2RulerClick(e: MouseEvent) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     if (rect.width <= 0) return;
-    const frac = (e.clientX - rect.left) / rect.width;
+    // v196: -78px (label 70 + gap 8): klik penggaris mendarat di waktu labelnya.
+    const frac = (e.clientX - rect.left - 78) / rect.width;
     ve2StopPlayback();
     ve2Playhead = Math.min(ve2Total, Math.max(0, frac * ve2Total));
   }
@@ -1331,8 +1335,8 @@
           <div class="timeline" id="ve2Timeline" style="overflow-x:auto">
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div style="position:relative;width:{ve2Zoom * 100}%" ondragover={(e) => { e.preventDefault(); }} ondrop={(e) => { ve2DropAsset(e) }}>
-          <div class="playhead" id="playhead2" style="left:{ve2PlayheadPct}%"></div>
-          <div class="ve-ruler" id="ve2Ruler" onclick={(e) => { ve2RulerClick(e) }}>{#each ve2RulerTicks as tick}<span>{ve2Fmt(tick)}</span>{/each}</div>
+          <!-- v196: +78px = label track 70 + gap 8 (app.css .track); tanpa ini playhead meleset 78px dari bar (tampak berhenti ~2 dtk lebih awal). --><div class="playhead" id="playhead2" style="left:calc(78px + {ve2PlayheadPct}%)"></div>
+          <div class="ve-ruler" id="ve2Ruler" onclick={(e) => { ve2RulerClick(e) }}>{#each ve2RulerTicks as tick}<span style="left:calc(78px + {(tick / ve2Total) * 100}%)">{ve2Fmt(tick)}</span>{/each}</div>
           <div class="track"><span class="tlabel">{t('word.video', lang)}</span>
           {#each ve2Bars('Video') as b (b.clip.id)}
           <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}<button type="button" class="ve2-resize" data-ve2-resize={b.clip.id} aria-label={t('ve2.resize', lang)} onpointerdown={(e) => { ve2ResizeStart(e, b.clip.id) }}></button></div>
