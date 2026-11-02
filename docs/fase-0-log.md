@@ -2521,6 +2521,53 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v203 — Skenario 1 Tahap 0+2: pemicu alur diperluas + urai IMAGE-PLAN ke field Image Editor (perintah Patria 2 Nov 23:19: "Lanjut ke build")
+
+- Keputusan yang dibangun (Patria 2 Nov 23:13): pemicu alur brief
+  interaktif diperluas untuk SEMUA brief kreatif; judul, subjudul,
+  body copy, dan rasio diurai otomatis dari brief/IMAGE-PLAN.
+- TAHAP 0: `cbIsFlowEntry` kini = `cbIsCreative` saja; syarat menyebut
+  kata 'Kreatif' dihapus. Konsekuensi yang dicatat, bukan
+  disembunyikan: delegasi tunggal ke Kreatif dari chat kini selalu
+  masuk alur interaktif (tidak ada lagi jawaban satu tembak Kreatif
+  dari chat); tombol Approve Studio untuk Kreatif tetap hidup lewat
+  hasil fan-out multi-agen dan retry tugas. Rig-chat §3/§10/§12
+  diperbarui mengikuti perilaku baru ini.
+- TAHAP 2: `parseImagePlan` (creative-brief.ts) mengurai IMAGE-PLAN
+  berlabel (Title:/Judul:, Subtitle:/Subjudul:, Body:/Isi:,
+  Header:, Footer:, Caption: diabaikan) menjadi field terstruktur.
+  Body dipisah dua bentuk sesuai keputusan Patria: baris daftar
+  (-, *, •, 1./1)) menjadi Listicle (marker dibuang), baris lain
+  menjadi Body paragraf (field BARU di Image Editor, textarea
+  #img-body sesudah Subjudul; prompt menempatkannya sesudah Subjudul,
+  sebelum List). Bila rencana tanpa label sama sekali, semua field
+  kosong dan brief utuh yang dipakai (perilaku lama, tanpa tebakan).
+  Rasio: rasio eksplisit di brief menang, selebihnya poster feed
+  4:5. Handoff baru `window.imgSetStructured` (brief utuh +
+  field + rasio + output poster; panel storyboard dibersihkan seperti
+  brief baru). Prompt IMAGE-PLAN diperketat meminta label persis di
+  awal baris. Bulk tetap teks mentah (field terstruktur hanya untuk
+  rencana tunggal); carousel tidak disentuh (wilayah v173).
+  i18n: +1 kunci/bahasa (1134 -> 1135, 0 duplikat).
+- RIG: rig-chat §v203 (pemicu tanpa kata Kreatif masuk alur tanpa
+  model call; IMAGE-PLAN berlabel LABEL-UJI terurai penuh ke
+  Judul/Subjudul/Body/Listicle/Header/Footer/rasio 4:5/output
+  poster/brief utuh/kolom Body). Selama pengerjaan, dua kegagalan
+  rig-chat mengungkap konsekuensi nyata perluasan pemicu: klik opsi
+  rekomendasi 'Buat naskah' (§v132) dan 'Buat caption + hashtag'
+  (§v145) kini memulai alur interaktif dan alurnya yang tak terjawab
+  menelan pesan seksi berikut sebagai jawaban alur (§20 timeout,
+  §30 timeout) — diperbaiki dengan reset state alur di rig sesudah
+  kedua klik itu (perilaku app benar sesuai perintah; yang
+  diperbaiki adalah kebersihan antar-seksi rig, bukan app).
+  Fetch count §5 disesuaikan 8 -> 6 (pesan §3 kini 0 model call).
+- Gerbang penuh lolos (/tmp/gate-v203/): vite build, 14 rig ALL
+  PASSED, root build + tsc OK, gate-test 14 grup ALL PASSED, scan
+  kredensial 0 temuan, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6,
+  i18n 1135/1135/1135 0 duplikat, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock bersih.
+- Kode 65c285a ↔ 675e2e5 (tree identik).
+
 ## v174 — struktur storyboard 7 field per panel di Image Editor (perintah Patria 2 Nov 22:13: "lakukan"; nomor reserved)
 
 - Perintah Patria 22:13: bangun struktur storyboard di app (sumber:
