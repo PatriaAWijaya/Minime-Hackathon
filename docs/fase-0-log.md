@@ -2576,7 +2576,10 @@ dokumen lama yang dipakai.
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
   Tanpa kunci i18n baru -> tetap 1108/bahasa.
 - Kode 5bf0044 ↔ 2f11880 (tree identik).
-- LIVE menyusul di entri log-LIVE sesudah deploy.
+- LIVE 2 Nov ~18:40: deploy mh-build193.sh OK (MH_BUILD193_OK); HEAD MacBook
+  d21d5c9; PID 55487; md5 dist JS 3bfc6e7580a3f05af26e0c4729d4b214 lokal ==
+  MacBook; marker 've2BtnSaveI' + 've2OutI' ada di bundle MacBook. App live
+  = v193.
 
 ## v192 — perbaiki lompat view saat pilih klip + seret klip pakai pointer (perintah Patria 2 Nov 18:14)
 
