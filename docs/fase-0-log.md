@@ -2545,6 +2545,10 @@ dokumen lama yang dipakai.
   d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
 - Kode 43965c1 ↔ 90ced9e (tree identik).
+- LIVE 2 Nov ~21:44: deploy mh-build199.sh OK (MH_BUILD199_OK); HEAD MacBook
+  1eef881; PID 64197; md5 dist CSS 2430326eddd2b8da8262323c46c5680d lokal ==
+  MacBook; penanda 'sidebar button[data-view=campaign]{display:none' di
+  bundle CSS MacBook. App live = v199.
 
 ## v198 — pause video di preview window menghentikan playhead (laporan Patria 2 Nov 21:32)
 
