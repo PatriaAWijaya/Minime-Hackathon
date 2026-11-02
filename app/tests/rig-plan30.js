@@ -252,6 +252,39 @@ try {
   const cardTxt3 = document.getElementById('plan30-main')?.textContent || '';
   check('v209: Gerbang 3 lolos (badge disetujui + Buat Visual nonaktif)',
     cardTxt3.includes('Visual + caption disetujui') && btn('plan-visuals')?.disabled === true, cardTxt3.slice(0, 160));
+
+  // ===== v210: batch 3 kanal + draf bertanggal + H-3 =====
+  check('v210: seksi batch tampil sesudah Gerbang 3', !!btn('plan-batch'));
+  btn('plan-batch').click();
+  await tick(300);
+  const q = JSON.parse(store.get('minime.socialQueue') || '[]');
+  const byPlat = { instagram: 0, threads: 0, linkedin: 0 };
+  for (const it of q) { if (byPlat[it.platform] !== undefined) byPlat[it.platform]++; }
+  const day1ig = q.find((it) => it.planDay === 1 && it.platform === 'instagram');
+  const day3ig = q.find((it) => it.planDay === 3 && it.platform === 'instagram');
+  const day23ig = q.find((it) => it.planDay === 23 && it.platform === 'instagram');
+  check('v210: 90 draf (30 baris x 3 kanal), semua status draft',
+    q.length === 90 && byPlat.instagram === 30 && byPlat.threads === 30 && byPlat.linkedin === 30
+    && q.every((it) => it.status === 'draft'), JSON.stringify(byPlat) + ' total=' + q.length);
+  check('v210: tanggal hari 1 = 2026-11-10 09:00 WIB',
+    day1ig && day1ig.scheduledAt === Date.parse('2026-11-10T02:00:00.000Z'), day1ig ? String(day1ig.scheduledAt) : 'tidak ada');
+  check('v210: image hari 1 membawa berkas; carousel hari 3 membawa 8 slide; reels hari 23 membawa 5 klip',
+    day1ig && day1ig.imageFile === 'p30-d1-1.webp'
+    && day3ig && day3ig.imageFile === 'p30-d3-1.webp' && (day3ig.imageFiles || []).length === 8
+    && day23ig && (day23ig.videoFiles || []).length === 5 && !day23ig.imageFile,
+    (day1ig?.imageFile || '') + ' / ' + (day3ig?.imageFiles?.length ?? -1) + ' / ' + (day23ig?.videoFiles?.length ?? -1));
+  check('v210: tombol batch terkunci sesudah batch (tanpa duplikat)',
+    btn('plan-batch')?.disabled === true);
+  // H-3: satu draf batch dibuat jatuh tempo -> seksi pengingat tampil.
+  const q2 = JSON.parse(store.get('minime.socialQueue') || '[]');
+  q2[0].scheduledAt = Date.now() + 86400000;
+  store.set('minime.socialQueue', JSON.stringify(q2));
+  dom.window.showView('planner');
+  dom.window.renderPlanner();
+  await tick(300);
+  const remindTxt = document.querySelector('.soc-remind')?.textContent || '';
+  check('v210: draf batch yang jatuh tempo masuk seksi pengingat H-3',
+    remindTxt.includes('Naskah Uji'), remindTxt.slice(0, 160));
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-plan30 exception :: ' + (e && e.stack ? e.stack : e));

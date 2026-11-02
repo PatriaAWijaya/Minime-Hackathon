@@ -15,6 +15,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { metaGenerateImage, IMG_PRICE_USD, IMG_USD_RATE, addImgSpend } from './image-api.js';
 import { omniGenerateClip, omniPriceUsd } from './omni-gen.js';
 import { sosmedCaptionPrompt } from './caption-tracks.js';
+import { socQueueAdd } from './social.js';
 import { esc } from './esc.js';
 
 export type PlanFormat = 'image' | 'carousel' | 'reels';
@@ -31,6 +32,7 @@ export type Plan30 = {
   researchReport: string; researchDone: boolean; researchGrounded: boolean;
   rows: PlanRow[]; approved: boolean; scriptsApproved: boolean;
   planStyle: string; visualApproved: boolean;
+  batched: boolean; batchItemIds: string[];
 };
 export const PLAN_MIX: Record<PlanFormat, number> = { image: 12, carousel: 10, reels: 8 };
 const PLAN_LS = 'minime.plan30';
@@ -55,6 +57,8 @@ export function loadPlan(): Plan30 {
       if (typeof p.scriptsApproved !== 'boolean') p.scriptsApproved = false;
       if (typeof p.planStyle !== 'string' || !p.planStyle) p.planStyle = 'product photography';
       if (typeof p.visualApproved !== 'boolean') p.visualApproved = false;
+      if (typeof p.batched !== 'boolean') p.batched = false;
+      if (!Array.isArray(p.batchItemIds)) p.batchItemIds = [];
       return p;
     }
     }
@@ -64,6 +68,7 @@ export function loadPlan(): Plan30 {
     researchReport: '', researchDone: false, researchGrounded: false,
     rows: [], approved: false, scriptsApproved: false,
     planStyle: 'product photography', visualApproved: false,
+    batched: false, batchItemIds: [],
   };
 }
 
@@ -279,6 +284,7 @@ export function renderPlan(): void {
     + renderTable(p)
     + scriptsSection(p)
     + visualSection(p)
+    + batchSection(p)
     + '</div>';
 }
 
@@ -341,6 +347,8 @@ async function doTable(): Promise<void> {
   p.approved = false;
   p.scriptsApproved = false;
   p.visualApproved = false;
+  p.batched = false;
+  p.batchItemIds = [];
   savePlan(p);
   renderPlan();
   setStatus(tr('p30.done_table') + (p.researchDone ? '' : ' ' + tr('p30.warn_noresearch')));
@@ -570,6 +578,51 @@ async function doRegen(day: number): Promise<void> {
   setScriptStatus(tr('p30.script_regen_done', { n: day }));
 }
 
+function setBatchStatus(msg: string): void {
+  const el = document.getElementById('p30BatchStatus');
+  if (el) el.textContent = msg;
+}
+
+function batchSection(p: Plan30): string {
+  if (!p.visualApproved) return '';
+  const badge = p.batched ? '<p style="color:#22c55e">' + esc(tr('p30.batch_done')) + '</p>' : '';
+  return '<h3>' + esc(tr('p30.batch_title')) + '</h3>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    + '<button class="btn btn-primary" data-act="plan-batch" ' + (p.batched ? 'disabled' : '') + '>' + esc(tr('p30.batch_run')) + '</button>'
+    + '</div>'
+    + '<p id="p30BatchStatus" style="color:#555"></p>'
+    + '<p class="se-note">' + esc(tr('p30.batch_note_ig')) + '</p>'
+    + '<p class="se-note">' + esc(tr('p30.batch_note_carousel')) + '</p>'
+    + '<p class="se-note">' + esc(tr('p30.batch_note_reels')) + '</p>'
+    + badge;
+}
+
+function doBatch(): void {
+  const p = persistForm(loadPlan());
+  if (!p.visualApproved) { setBatchStatus(tr('p30.batch_need_gate3')); return; }
+  if (p.batched) return;
+  const channels = ['instagram', 'threads', 'linkedin'];
+  const items: Array<Record<string, unknown>> = [];
+  for (const row of p.rows) {
+    const scheduledAt = Date.parse(planDateISO(p.startDate, row.day, row.hour));
+    for (const platform of channels) {
+      items.push({
+        platform, text: row.caption,
+        imageFile: row.format === 'reels' ? '' : (row.media[0] || ''),
+        imageFiles: row.format === 'reels' ? [] : row.media,
+        videoFiles: row.format === 'reels' ? row.media : [],
+        scheduledAt, status: 'draft', planDay: row.day,
+      });
+    }
+  }
+  const ids = socQueueAdd(items);
+  p.batched = true;
+  p.batchItemIds = ids;
+  savePlan(p);
+  renderPlan();
+  setBatchStatus(tr('p30.batch_summary', { rows: p.rows.length, items: items.length }));
+}
+
 export function initPlan30(): void {
   const box = document.getElementById('plan30-main');
   if (!box || (box as HTMLElement).dataset.p30Wired) return;
@@ -621,7 +674,8 @@ export function initPlan30(): void {
       savePlan(p);
       renderPlan();
       setVisualStatus(tr('p30.visual_done_approve'));
-    } else if (act === 'plan-new') {
+    } else if (act === 'plan-batch') doBatch();
+    else if (act === 'plan-new') {
       if (!newArmed) {
         newArmed = true;
         btn.textContent = tr('p30.new_arm');

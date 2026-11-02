@@ -297,6 +297,11 @@ export function socQueueAdd(items) {
     // dan pengingat H-3 (v205) hanya berlaku untuk draf bertanggal.
     // Item 'queued' tanpa tanggal tetap ditolak seperti sebelumnya.
     if (!it.scheduledAt && it.status !== 'draft') return;
+    // v210 (Skenario 2 Tahap 6): batch rencana menitipkan jejak
+    // asalnya (planDay) + daftar media lengkap (imageFiles untuk
+    // carousel multi-gambar, videoFiles untuk klip reels). Publish
+    // hari ini tetap memakai imageFile tunggal; field tambahan ini
+    // diabaikan renderer lama dan selamat melewati simpan-muat JSON.
     var row = {
       id: Date.now() + '' + Math.floor(Math.random() * 10000),
       platform: it.platform, text: it.text,
@@ -304,6 +309,9 @@ export function socQueueAdd(items) {
       imageFile: it.imageFile || '', imageUrl: it.imageUrl || '',
       scheduledAt: it.scheduledAt || 0, status: it.status || 'queued', error: '',
       repeat: it.repeat || '',
+      planDay: it.planDay || 0,
+      imageFiles: Array.isArray(it.imageFiles) ? it.imageFiles : [],
+      videoFiles: Array.isArray(it.videoFiles) ? it.videoFiles : [],
     };
     q.push(row);
     ids.push(row.id);
