@@ -15,6 +15,7 @@
   import { readVideoSpend, omniGenerateClip, omniPriceUsd, mimeForB64, b64FromBytes } from "./lib/omni-gen.js";
   import { open as pickFiles } from "@tauri-apps/plugin-dialog";
   import { HF_SAMPLE } from "./lib/hf-sample.js";
+  import { hfGenerateHtml } from "./lib/hf-gen.js";
   import { readKeys } from "./lib/chat.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtIdrNum, fmtInt, fmtUsd, readLiveCost } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
@@ -399,6 +400,8 @@
   let vgLastPath = $state('');
   let vgLastDur = $state(0);
   let hfHtml = $state('');
+  let hfDesc = $state('');
+  let hfGenBusy = $state(false);
   let hfQuality = $state('draft');
   let hfBusy = $state(false);
   let hfStatus = $state('');
@@ -513,6 +516,20 @@
     } catch (e) {
       hfStatus = String(e);
     }
+  }
+  async function hfGen() {
+    if (!hfDesc.trim()) { hfStatus = t('hf.gen_empty', lang); return; }
+    if (hfGenBusy) return;
+    hfGenBusy = true;
+    hfStatus = t('hf.generating', lang);
+    try {
+      const r = await hfGenerateHtml(hfDesc, lang);
+      hfHtml = r.html;
+      hfStatus = `${t('chat.footer.via', lang)} ${r.provider} ${r.model}`;
+    } catch (e) {
+      hfStatus = (e instanceof Error && e.message === 'HF_GEN_INVALID') ? t('hf.gen_invalid', lang) : String(e);
+    }
+    hfGenBusy = false;
   }
   async function hfRender() {
     if (!hfHtml.trim()) { hfStatus = t('hf.need_html', lang); return; }
@@ -917,6 +934,8 @@
 {#if videoSpend.videos > 0}<p class="se-note">{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</p>{/if}
 {:else}
 <div class="se-group"><h4>{t('hf.title', lang)}</h4>
+<div class="se-group"><label>{t('hf.desc', lang)}<textarea id="hf-desc" rows="3" class="se-field" bind:value={hfDesc}></textarea></label></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><button id="hf-gen-html" class="btn btn-primary" disabled={hfGenBusy} onclick={() => hfGen()}>{hfGenBusy ? t('hf.generating', lang) : t('hf.generate', lang)}</button></div>
 <label for="hf-html">{t('hf.html', lang)}</label>
 <textarea id="hf-html" rows="14" class="se-field" style="font-family:monospace" bind:value={hfHtml}></textarea>
 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">

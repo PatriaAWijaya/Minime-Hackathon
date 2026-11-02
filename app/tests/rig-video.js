@@ -22,6 +22,7 @@ async function fetchStub(url, opts) {
   fetchLog.push({ url: u, body: opts && opts.body ? String(opts.body) : '' });
   const base = { ok: true, status: 200, headers: { get: () => '' }, text: async () => '', arrayBuffer: async () => new TextEncoder().encode('FAKE-MP4').buffer };
   if (u.includes('/interactions')) return { ...base, json: async () => ({ steps: [{ type: 'model_output', content: [{ type: 'video', mime_type: 'video/mp4', data: 'RkFLRS1NUDQ=' }] }], id: 'v1_uji', status: 'completed', model: 'gemini-omni-1.1-flash', object: 'interaction' }) };
+  if (u.includes('generativelanguage')) return { ...base, json: async () => ({ candidates: [{ content: { parts: [{ text: '<!doctype html><html><head><script src="./gsap.min.js"></script></head><body><div id="root" data-composition-id="main" data-start="0" data-duration="15" data-width="1080" data-height="1920"><h1 class="clip" data-start="0" data-duration="15" data-track-index="0">UJI</h1></div><script>const tl = gsap.timeline({paused:true}); window.__timelines["main"] = tl; tl.seek(0);</script></body></html>' }] } }], usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 50 } }) };
   return { ...base, ok: false, status: 0, json: async () => ({}) };
 }
 const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -228,6 +229,16 @@ try {
   document.getElementById('hf-clear').click();
   await tick(50);
   check('v184: Bersihkan HyperFrames mengosongkan komposisi', (document.getElementById('hf-html').value || '') === '', (document.getElementById('hf-html').value || '').slice(0, 60));
+  setInput(document.getElementById('vg-model'), 'omni', 'change');
+  await tick(100);
+  // v185: deskripsi -> Generate HTML -> komposisi terisi.
+  setInput(document.getElementById('vg-model'), 'hyperframes', 'change');
+  await tick(100);
+  setInput(document.getElementById('hf-desc'), 'judul besar MINIME lalu subtitle muncul', 'input');
+  document.getElementById('hf-gen-html').click();
+  await waitFor(() => (document.getElementById('hf-html').value || '').includes('data-composition-id'), 'html hasil generate', 100);
+  check('v185: Generate HTML mengisi komposisi dari deskripsi', (document.getElementById('hf-html').value || '').includes('data-composition-id="main"') && (document.getElementById('hf-html').value || '').includes('data-duration="15"'), (document.getElementById('hf-html').value || '').slice(0, 120));
+  check('v185: generate memanggil model Gemini (bukan Omni)', fetchLog.some((f) => f.url.includes('generativelanguage')), fetchLog.map((f) => f.url).join(' '));
   setInput(document.getElementById('vg-model'), 'omni', 'change');
   await tick(100);
   // (k) v179: penghapusan + heading Video Editor.
