@@ -2521,6 +2521,59 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v206 — Browser riset teks untuk agen (perintah Patria 3 Nov 00:43 "Riset membutuhkan web browser sendiri, build untuk agen supaya bisa riset secara live"; desain teks disetujui Patria 3 Nov 00:45 via tap widget)
+
+Prasyarat Tahap 1 Skenario 2 (keputusan Q5): agen Riset kini bisa riset
+live di dalam app, bukan dari pengetahuan model saja. BUKAN browser
+visual: agen membaca teks halaman, bukan tampilannya. Dua command Rust
+baru di `app/src-tauri/src/research.rs` (tanpa dependensi HTTP baru,
+curl seperti social.rs, URL lewat argv bukan shell): `research_search`
+(GET html.duckduckgo.com/html/?q=, tanpa kunci, parse anchor
+`result__a` + snippet `result__snippet`, maks 10 hasil, href uddg=
+di-decode ke URL asli, //host/path -> https://) dan `research_fetch`
+(GET + bersih: buang blok script/style, strip tag, decode entitas
+umum + numerik, lipat whitespace, cap 12000 karakter, judul dari
+<title>). Gerbang host: hanya http(s), localhost/privat (127.0.0.1,
+10/8, 172.16/12, 192.168/16) ditolak. Kegagalan dilaporkan sebagai
+error (mesin cari tanpa hasil, HTTP non-200, halaman kosong) — tidak
+pernah dikarang isinya; halaman login-wall (mis. profil IG) akan
+gagal jujur di sini.
+Loop agen di `app/src/lib/research-browser.ts`: protokol baris
+CARI: / BUKA: / LAPORAN: di atas ModelRouter (rantai Meta -> Gemini
+-> Ollama, kunci dari readKeys, systemInstruction = lang + protokol).
+Batas desain yang disetujui: maks 10 cari + 15 buka + 14 panggilan
+model per tugas. LAPORAN: = selesai, laporan wajib mengutip URL
+sumber yang dibuka. Bila model menjawab langsung tanpa perintah
+browsing, jawabannya dipakai tapi ditandai tidak beralas browsing
+(`grounded: false`, catatan `rs.ungrounded` di panel) — jujur, bukan
+hasil riset live. Panel "Riset Live (Browser Teks)" di Search view
+(bawah hasil Search, tidak mengubah Search yang ada): input #rsQuery,
+tombol #rsRun, status #rsStatus, log langkah live #rsLog, laporan
+#rsReport; binding sekali (guard dataset.rsWired) dari
+initResearchBrowser() di onMount App.svelte. i18n +10 kunci x3 =
+1158/bahasa, 0 duplikat. CSS blok v206 (#rsLog) di layout-scroll.css.
+Rig baru rig-research.js (7 cek: panel tampil, query kosong ditolak
+tanpa fetch, CARI -> BUKA -> LAPORAN, laporan + URL sumber, log
+CARI + BUKA, grounded tanpa catatan, invoke 1+1, 3 panggilan model)
++ npm script rig:research; total rig kini 15.
+Pelajaran: (88) counter urutan balasan stub rig WAJIB dilingkupi URL
+yang dilayaninya — insiden rig pertama v206: 8 fetch mount
+VoiceStudio (127.0.0.1:3900) menggeser counter global sehingga
+panggilan model pertama mendapat balasan LAPORAN (ke-3) dan loop
+selesai tanpa browsing sama sekali (app benar, rig salah); diperbaiki
+dengan counter khusus api.meta.ai, rig lolos sesudahnya. (89) cargo
+fmt --check gagal pada file Rust baru (bukan error kompilasi) —
+jalankan `cargo fmt` sebelum gerbang; fmt tidak menyentuh file lain
+(crate sudah bersih sebelumnya).
+Gerbang v206 lolos penuh: vite build, svelte-check 0 error / 21
+warning (baseline utuh), 15 rig, root build + tsc, gate-test 14 grup,
+scan kredensial 0, ledger md5 tetap
+d542428fe9901fbd417e098e9249d4b6, i18n 1158/1158/1158 0 duplikat,
+cargo fmt + check + check --tests 0 (fmt diperbaiki dulu, lalu
+check/check --tests diulang di tree final), Cargo.lock bersih.
+Kode: lokal 02621d8 ↔ remote efd389d.
+
+
 ## v205 — Skenario 1 Tahap 6: pengingat H-3 + konfirmasi penjadwalan terbit di app (perintah Patria 2 Nov 23:19: "Lanjut ke build"; koreksi mekanisme dari laporan v204)
 
 Seksi "Menunggu konfirmasi terbit" di atas kalender Planner: draf
