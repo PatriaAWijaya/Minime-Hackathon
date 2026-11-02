@@ -14,6 +14,7 @@
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
   import { readVideoSpend, omniGenerateClip, omniPriceUsd, mimeForB64, b64FromBytes } from "./lib/omni-gen.js";
   import { wanGenerateClip, wanPriceUsd, readClassaiSpend } from "./lib/classai-video.js";
+  import { CINE_BEATS, CINE_TITLECARD_HTML } from "./lib/cine-title.js";
   import { open as pickFiles } from "@tauri-apps/plugin-dialog";
   import { HF_SAMPLE } from "./lib/hf-sample.js";
   import { hfGenerateHtml } from "./lib/hf-gen.js";
@@ -870,6 +871,17 @@
     ve2SaveState();
     vgStatus = t('vg.added_timeline', lang);
   }
+  function vgCineLoadBeat(b: { n: number; prompt: string }) {
+    if (vgModel === 'hyperframes') vgModel = 'omni';
+    vgAspect = '9:16';
+    vgPrompt = b.prompt;
+    vgStatus = t('vg2.cine.loaded', lang, { label: `${t('vg.tpl.beat', lang)} ${b.n}` });
+  }
+  function vgCineLoadTitle() {
+    vgModel = 'hyperframes';
+    hfHtml = CINE_TITLECARD_HTML;
+    hfStatus = t('vg2.cine.titlecard_loaded', lang);
+  }
   async function hfCheck() {
     try {
       const r = await invoke<{ found: boolean; version: string; method: string }>('hyperframes_check');
@@ -1260,6 +1272,9 @@
 <div class="se-group"><h4>{t('vg.title', lang)}</h4></div>
 <div class="vg-card">
 <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><label>{t('vg2.model', lang)} <select id="vg-model" bind:value={vgModel}><option value="omni">{t('vg2.model.omni', lang)}</option><option value="wan">{t('vg2.model.wan', lang)}</option><option value="hyperframes">{t('vg2.model.hf', lang)}</option></select></label>{#if vgModel === 'omni'}<span class="se-note" style="font-weight:700">{t('vg2.omni', lang)}</span>{/if}</div>
+<div class="se-group"><h4>{t('vg2.cine.title', lang)}</h4>
+<p class="se-note">{t('vg2.cine.note', lang)}</p>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn btn-sm" data-vg-cine="1" onclick={() => vgCineLoadTitle()}>{t('vg2.cine.titlecard', lang)}</button>{#each CINE_BEATS as b}<button class="btn btn-sm" data-vg-cine={b.n} onclick={() => vgCineLoadBeat(b)}>{t('vg.tpl.beat', lang)} {b.n}</button>{/each}</div></div>
 {#if vgModel === 'omni'}
 <div class="vg-tabs"><button class="vg-tab {vgTab === 'prompt' ? 'vg-tab-sel' : ''}" data-vg-tab="prompt" onclick={() => { vgTab = 'prompt'; }}>{t('vg2.tab.prompt', lang)}</button><button class="vg-tab {vgTab === 'refs' ? 'vg-tab-sel' : ''}" data-vg-tab="refs" onclick={() => { vgTab = 'refs'; }}>{t('vg2.tab.refs', lang)}</button><button class="vg-tab {vgTab === 'frames' ? 'vg-tab-sel' : ''}" data-vg-tab="frames" onclick={() => { vgTab = 'frames'; }}>{t('vg2.tab.frames', lang)}</button></div>
 {#if vgTab === 'prompt'}

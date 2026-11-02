@@ -279,6 +279,24 @@ try {
   await tick(100);
   check('v201 klip timeline dari hasil Wan', (ve2State(store).clips || []).some((c) => c.src === '/Users/mac/Movies/minime-veo/wan-uji.mp4' && c.track === 'Video'), JSON.stringify(ve2State(store).clips));
 
+  // v202: template pola sinematik — 10 tombol beat + kartu judul ke HyperFrames.
+  check('v202: 10 tombol template sinematik', document.querySelectorAll('[data-vg-cine]').length === 10);
+  setInput(document.getElementById('vg-model'), 'omni', 'change');
+  await tick(100);
+  document.querySelector('[data-vg-tab="prompt"]').click();
+  await tick(100);
+  document.querySelector('[data-vg-cine="2"]').click();
+  await tick(100);
+  check('v202: beat 2 memuat prompt hutan autumn + rasio 9:16', (document.getElementById('vg-prompt').value || '').includes('hutan autumn') && document.getElementById('vg-aspect').value === '9:16', (document.getElementById('vg-prompt').value || '').slice(0, 80));
+  document.querySelector('[data-vg-cine="1"]').click();
+  await tick(100);
+  check('v202: kartu judul pindah ke HyperFrames + komposisi terisi', document.getElementById('vg-model').value === 'hyperframes' && (document.getElementById('hf-html').value || '').includes('CINEMATIC') && (document.getElementById('hf-html').value || '').includes('data-composition-id="cine-title"'), (document.getElementById('hf-html').value || '').slice(0, 80));
+  setInput(document.getElementById('vg-model'), 'wan', 'change');
+  await tick(100);
+  document.querySelector('[data-vg-cine="3"]').click();
+  await tick(100);
+  check('v202: beat di model Wan tidak mengganti model + prompt masuk kolom Wan', document.getElementById('vg-model').value === 'wan' && (document.getElementById('vg-wan-prompt').value || '').includes('lembah sungai'), (document.getElementById('vg-wan-prompt').value || '').slice(0, 80));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL v181 rig-video :: ' + String(e && e.stack || e).slice(0, 500));
