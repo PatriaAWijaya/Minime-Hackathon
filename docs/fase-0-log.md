@@ -2559,7 +2559,8 @@ dokumen lama yang dipakai.
   gate-test 14 grup ALL PASSED, scan 0, ledger md5 tetap
   d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
-- Kode menyusul pasangan SHA sesudah push; LIVE menyusul sesudah deploy.
+- Kode c3edbee ↔ 3486ea5 (tree identik).
+- LIVE menyusul di entri log-LIVE sesudah deploy.
 
 ## v194 — perbaiki sintaks ffprobe show_entries (laporan Patria 2 Nov 18:33)
 
