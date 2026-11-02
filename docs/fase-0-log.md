@@ -2527,7 +2527,7 @@ dokumen lama yang dipakai.
 - Rig-video § v184 baru (4 cek): Bersihkan prompt mengosongkan kolom; slot referensi terisi sebelum dibersihkan; Bersihkan referensi mengosongkan semua slot; Bersihkan HyperFrames mengosongkan komposisi.
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal be3d504 ↔ remote f176173 (tree identik).
-- LIVE: (diisi commit log-LIVE sesudah deploy)
+- LIVE: PID 33508; md5 JS 9c9d6a9a6f20e785817f5b4178b3642c lokal == MacBook; marker 'vg-prompt-clear' + 'hf-clear' ada di bundle MacBook.
 
 
 ## v183 — tombol '+' aset buka pemilih file asli saat path kosong (perintah Patria 2 Nov 08:42 "cek ulang")
