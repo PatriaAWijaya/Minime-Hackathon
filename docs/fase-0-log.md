@@ -2521,6 +2521,51 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v202 — template pola sinematik VLOG CINEMATIC ke panel Video (perintah Patria 2 Nov 22:12: "Lakukan")
+
+- Perintah Patria 22:12: template pola sinematik ke panel video (sumber:
+  ~/workspace/specs-visualisasi/pola-prompt-video-reels.md — analisis frame
+  + ffprobe video referensi kiriman Patria 2 Nov 01:02: 28,3 detik,
+  720x1280 9:16, 10 beat: kartu judul 4 detik + 9 beat alam 2-3 detik +
+  fade to black; kamera lambat saja; grade golden-hour; tanpa manusia;
+  tanpa teks selain kartu judul).
+- PELAKSANAAN: modul baru app/src/lib/cine-title.ts (CINE_BEATS 9 prompt
+  footage verbatim §5 dokumen + CINE_TITLECARD_HTML komposisi HyperFrames
+  4 detik 1080x1920: baris kecil putih "VLOG", judul besar tebal emas
+  "CINEMATIC", kredit kecil putih "A Video by Your Name", fade-in dari
+  hitam). Blok template di kartu Video Generator, DI LUAR cabang model
+  (terlihat untuk Omni, Wan, maupun HyperFrames): 10 tombol
+  (data-vg-cine 1-10). Tombol beat 2-10 memuat promptnya ke kolom prompt
+  + kunci rasio 9:16 (pola mengunci 9:16); bila model sedang HyperFrames,
+  model dipindah ke Omni (kolom prompt tidak ada di cabang HF); bila
+  model sedang Wan, model TIDAK diganti (prompt masuk kolom Wan, state
+  vgPrompt dipakai bersama). Tombol kartu judul memindah model ke
+  HyperFrames + memuat komposisi ke #hf-html. i18n: +5 kunci/bahasa
+  (1116 -> 1121, 0 duplikat); label beat memakai kunci vg.tpl.beat yang
+  sudah ada (ID/EN 'Beat', ZH '节拍') — kunci itu yatim sejak v179
+  menghapus template seri harian, kini terpakai lagi dengan arti sama.
+- BATAS JUJUR (dari §6 dokumen, disampaikan ke Patria): teks di atas
+  footage BELUM bisa burn-in di app — kartu judul versi app = klip teks
+  mandiri di atas latar gelap/gradien di awal timeline, BUKAN teks
+  menempel di atas footage seperti referensi. Prompt beat menyebut
+  "8 detik" (durasi klip mentah pola); beat 2-3 detik didapat dengan
+  trim di timeline ve2, bukan dengan minta klip 2 detik. Transisi
+  dissolve/blur-wipe referensi belum ada di ve2 (aproksimasi: fade
+  per klip atau hard cut lembut).
+- Rig: rig-video §v202 (4 cek: 10 tombol template; beat 2 memuat prompt
+  hutan autumn + rasio 9:16; kartu judul pindah ke HyperFrames +
+  komposisi memuat data-composition-id="cine-title" dan teks CINEMATIC;
+  beat di model Wan tidak mengganti model + prompt masuk kolom Wan).
+  Selama pengerjaan sempat ada kegagalan rig awal: cek beat 2 membaca
+  #vg-prompt padahal tab Omni masih di 'refs' (sisa §v184) — diperbaiki
+  dengan mengklik tab prompt dulu sebelum klik beat; bukan bug app.
+- Gerbang penuh lolos (/tmp/gate-v202/): vite build, 14 rig ALL
+  PASSED, root build + tsc OK, gate-test 14 grup ALL PASSED, scan
+  kredensial 0 temuan, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6,
+  i18n 1121/1121/1121 0 duplikat, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock bersih.
+- Kode 7818806 ↔ be0efc3 (tree identik).
+
 ## v201 — wiring video Wan 3.0 via ClassAI (perintah Patria 2 Nov 22:09: "lakukan")
 
 - Perintah Patria 22:09: wiring video Wan 3.0 via ClassAI (mesin video
