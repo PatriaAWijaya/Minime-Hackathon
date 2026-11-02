@@ -2564,7 +2564,10 @@ dokumen lama yang dipakai.
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
   Tanpa kunci i18n baru -> tetap 1108/bahasa.
 - Kode 4e8fc48 ↔ ab012dc (tree identik).
-- LIVE menyusul di entri log-LIVE sesudah deploy.
+- LIVE 2 Nov ~18:25: deploy mh-build192.sh OK (MH_BUILD192_OK); HEAD MacBook
+  a11590a; PID 54755; md5 dist JS fd4a004396cc407a0ff0e9aa2cefded3 lokal ==
+  MacBook; marker 've2-preview-box' 2x (JS+CSS) + 've2TrackBar' ada di bundle
+  MacBook. App live = v192.
 
 ## v191 — bar editor track di bawah timeline + audit tombol (perintah Patria 2 Nov 18:04 + screenshot)
 
