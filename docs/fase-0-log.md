@@ -2521,6 +2521,61 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v205 — Skenario 1 Tahap 6: pengingat H-3 + konfirmasi penjadwalan terbit di app (perintah Patria 2 Nov 23:19: "Lanjut ke build"; koreksi mekanisme dari laporan v204)
+
+Seksi "Menunggu konfirmasi terbit" di atas kalender Planner: draf
+bertanggal yang waktunya <= 3 hari lagi (termasuk yang sudah lewat,
+belum ditolak) tampil dengan kanal, jadwal, tombol Jadwalkan terbit /
+Ubah / Tetap draf. Jendela dihitung dari scheduledAt (bukan dari
+tanggal dibuat): draf yang dibuat dengan tanggal < 3 hari langsung
+masuk jendela tanpa jalur khusus — seksi tampil saat Planner dirender,
+pesan chat menyusul pada tick berikutnya. Draf tanpa tanggal (v204)
+tidak masuk jendela (tidak punya jadwal untuk di-H-3-kan).
+Konfirmasi = persetujuan yang disyaratkan aturan draft-only: draf ->
+queued, scheduler menerbitkan pada waktunya (draf yang sudah lewat
+jadwalnya akan terbit pada tick berikutnya sesudah dikonfirmasi).
+Kanal belum terhubung = TIDAK dijadwalkan (tetap draf + keterangan
+per-item `remindError`, bukan penolakan diam-diam). Peringatan berkas
+lokal untuk threads/instagram/tiktok TIDAK memblokir konfirmasi —
+peringatan saja, karena memblokir membuat v205 tak berguna untuk
+kanal utama Skenario 1; user mengonfirmasi dengan sadar bahwa terbit
+bisa gagal sampai mekanisme unggah ada. Tetap draf = declined permanen
+di item (edit membuat item baru lewat jalur komposer, sehingga
+bendera declined/reminded reset otomatis). Ubah = komposer edit.
+Mekanisme pengingat (koreksi dari alur 23:13 yang menyebut "cron
+harian + pemeriksaan saat app dibuka"): pemeriksaan HANYA di dalam
+app — tick scheduler 30 detik yang sudah ada (app terbuka) memanggil
+`socCheckReminders()`; tidak ada cron VM karena status Planner hidup
+di localStorage app dan cron VM tidak bisa membacanya. Pesan chat
+sekali per item saat pertama masuk jendela, lewat window.postChat
+(Prime Agent, template `soc.remind.chat`) + bendera `reminded` di
+item; render seksi murni dari state antrean (tanpa efek samping).
+Urutan tick dijaga: cek pengingat HARUS sebelum queueLoad() blok
+terbit, agar bendera reminded yang disimpan tidak tertimpa simpanan
+antrean basi dari blok terbit (balapan simpan yang nyata: blok terbit
+memuat antrean sekali lalu menyimpan objek itu berulang kali).
+Keterbatasan jujur: pengingat butuh app terbuka (sama seperti
+scheduler); pesan chat datang paling lambat 30 detik sesudah app
+dibuka. Item queued dari batch tidak kena H-3 (persetujuan awal
+batch sudah menjadi konfirmasinya, sesuai pengecualian 24 Okt).
+i18n +9 kunci/bahasa (1148): `soc.remind.*` (title, ok, edit, keep,
+token, filewarn, overdue, done, chat). File: `app/src/lib/social.js`
+(socDueReminders, renderReminders, socRemindConfirm/Decline,
+socCheckReminders, binding, tick), `app/src/lib/v5logic.js` (bridge
+socCheckReminders untuk rig), `app/src/layout-scroll.css` (blok v205),
+`app/src/lib/i18n.ts`. Rig: v205 di rig-batch (8 cek: jendela +
+peringatan + penanda lewat + pesan chat sekali + konfirmasi terhubung
++ tolak kanal belum terhubung + tetap draf + ubah + bersih-bersih;
+trik rig: hitung item baru-ditandai dari antrean saat ini agar tahan
+terhadap tick scheduler yang mungkin sudah jalan, dan blok sinkron
+tanpa await antara hitung dan cek agar tick tidak menyela).
+Gerbang lolos penuh: vite build, svelte-check 0 error / 21 warning
+(baseline), 14 rig ALL PASSED, root build + tsc, gate-test 14 grup,
+scan kredensial 0, ledger md5 tetap
+d542428fe9901fbd417e098e9249d4b6, cargo fmt + check + check --tests 0,
+Cargo.lock bersih.
+Kode: lokal 263c9d6 ↔ remote 5c1dad6.
+
 ## v204 — Skenario 1 Tahap 4+5: Setujui poster otomatis masuk Planner + Masuk Planner dari Library (perintah Patria 2 Nov 23:19: "Lanjut ke build")
 
 Tahap 4 (otomatis, poster saja): sesudah Setujui poster dan caption sosmed
