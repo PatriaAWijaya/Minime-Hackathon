@@ -2528,7 +2528,7 @@ dokumen lama yang dipakai.
 - Rig-ve2 §16 baru (3 cek): klik '+' path kosong memanggil plugin:dialog|open, hasil pilih masuk daftar sebagai Image 5 dtk, aset 7 -> 8. Stub plugin mengembalikan ['/tmp/picker.png'].
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal e5c483a ↔ remote 268b01a (tree identik).
-- LIVE: (diisi commit log-LIVE sesudah deploy)
+- LIVE: PID 30545; md5 JS d33f86d49d0c0a1d78a89caafc761f27 lokal == MacBook; marker 'plugin:dialog|open' ada di bundle MacBook.
 - Batas jujur: pratinjau klip gambar di panel Preview masih label nama (bukan gambarnya) — belum dibangun, di luar perintah ini.
 
 
