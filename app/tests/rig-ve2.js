@@ -471,14 +471,12 @@ try {
   check('v191: tanpa seleksi -> Potong/Hapus/Transisi nonaktif', !!doc6.getElementById('ve2BtnCut') && doc6.getElementById('ve2BtnCut').disabled && doc6.getElementById('ve2ClipDel').disabled && doc6.getElementById('ve2BtnTrans').disabled, 'cut:' + doc6.getElementById('ve2BtnCut').disabled);
   check('v191: tanpa seleksi -> Tambah Teks tetap aktif', !doc6.getElementById('ve2BtnText').disabled, String(doc6.getElementById('ve2BtnText').disabled));
   check('v191: belum diputar -> Putar aktif, Berhenti nonaktif', !doc6.getElementById('ve2BtnPlay').disabled && doc6.getElementById('ve2BtnStop').disabled, 'play:' + doc6.getElementById('ve2BtnPlay').disabled + ' stop:' + doc6.getElementById('ve2BtnStop').disabled);
+  // v195: tanpa klip, Putar TIDAK memulai playback (dulu timer jalan sampai
+  // 30 dtk walau kosong). Liputan flip transport pindah ke §26/dom8.
   const trans6 = [...doc6.querySelectorAll('.ve2-transport button')];
   doc6.getElementById('ve2BtnPlay').click();
   await tick(100);
-  check('v191: klik Putar menggerakkan transport ke Berhenti', trans6[1].textContent === 'Berhenti', trans6[1].textContent);
-  check('v191: sedang diputar -> Putar nonaktif, Berhenti aktif', doc6.getElementById('ve2BtnPlay').disabled && !doc6.getElementById('ve2BtnStop').disabled, 'play:' + doc6.getElementById('ve2BtnPlay').disabled);
-  doc6.getElementById('ve2BtnStop').click();
-  await tick(100);
-  check('v191: klik Berhenti mengembalikan transport ke Putar', trans6[1].textContent === '▶ Putar', trans6[1].textContent);
+  check('v195: tanpa klip, Putar tidak memulai playback', trans6[1].textContent === '▶ Putar' && !doc6.getElementById('ve2BtnPlay').disabled && doc6.getElementById('ve2BtnStop').disabled, trans6[1].textContent);
 
   // v192 §24: kotak pratinjau tinggi tetap — memilih klip tidak mengubah
   // struktur kartu atas (tinggi distabilkan CSS; jsdom membuktikan kotak
@@ -515,6 +513,59 @@ try {
   await tick(100);
   check('v193: video gagal probe tidak masuk daftar', (ve2State(store6).assets || []).length === 1, String((ve2State(store6).assets || []).length));
   check('v193: video gagal probe menampilkan pesan jelas', (doc6.getElementById('ve2Status').textContent || '').includes('Berkas tidak ditemukan'), doc6.getElementById('ve2Status').textContent);
+
+  // v195 §26: magnet + grip geser + cap durasi Inspector (dom7) dan player
+  // berhenti di ujung klip terakhir (dom8). Snap perilaku (butuh layout)
+  // tidak bisa dibuktikan jsdom — batas yang sama seperti posisi drop.
+  const store7 = new Map();
+  store7.set('minime.cleaned-v84', '1');
+  store7.set('minime.cleaned-graph-v88', '1');
+  store7.set('minime.ve2', JSON.stringify({ clips: [{ id: 'cap1', name: 'Cap Uji', track: 'Video', start: 0, dur: 12.5, src: '/tmp/uji-cap.mp4', effect: 'none' }], assets: [{ id: 'capa1', name: 'uji-cap.mp4', icon: '🎬', kind: 'Video', src: '/tmp/uji-cap.mp4', duration: 12.5 }], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
+  const dom7 = makeDom(store7);
+  const doc7 = dom7.window.document;
+  await waitFor(() => doc7.querySelector('[data-view="media"]'), 'mount7 rail media', 100);
+  doc7.querySelector('[data-view="media"]').click();
+  await tick(100);
+  doc7.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  check('v195: tombol magnet ada dan aktif default', !!doc7.getElementById('ve2BtnSnap') && doc7.getElementById('ve2BtnSnap').getAttribute('aria-pressed') === 'true', doc7.getElementById('ve2BtnSnap') ? doc7.getElementById('ve2BtnSnap').getAttribute('aria-pressed') : 'none');
+  doc7.getElementById('ve2BtnSnap').click();
+  await tick(100);
+  check('v195: klik magnet menonaktifkan + tersimpan', doc7.getElementById('ve2BtnSnap').getAttribute('aria-pressed') === 'false' && JSON.parse(store7.get('minime.ve2') || '{}').snap === false, 'pressed:' + doc7.getElementById('ve2BtnSnap').getAttribute('aria-pressed'));
+  doc7.getElementById('ve2BtnSnap').click();
+  await tick(100);
+  check('v195: klik magnet mengaktifkan lagi', doc7.getElementById('ve2BtnSnap').getAttribute('aria-pressed') === 'true' && JSON.parse(store7.get('minime.ve2') || '{}').snap === true, 'pressed:' + doc7.getElementById('ve2BtnSnap').getAttribute('aria-pressed'));
+  check('v195: grip geser ada di tiap bar', doc7.querySelectorAll('[data-ve2-resize]').length === doc7.querySelectorAll('.bar.ve-clip').length && doc7.querySelectorAll('[data-ve2-resize]').length > 0, doc7.querySelectorAll('[data-ve2-resize]').length + '/' + doc7.querySelectorAll('.bar.ve-clip').length);
+  doc7.querySelector('[data-ve2-resize="cap1"]').dispatchEvent(new dom7.window.MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10, button: 0 }));
+  await tick(100);
+  check('v195: pointerdown grip memilih klip', !!doc7.getElementById('ve2Name') && doc7.getElementById('ve2Name').value === 'Cap Uji', doc7.getElementById('ve2Name') ? doc7.getElementById('ve2Name').value : 'no-inspector');
+  dom7.window.dispatchEvent(new dom7.window.MouseEvent('pointerup', { bubbles: true }));
+  setInput(doc7.getElementById('ve2Dur'), '99', 'change');
+  await tick(100);
+  check('v195: dur Inspector dicap ke durasi asli', ve2State(store7).clips.find((c) => c.id === 'cap1').dur === 12.5, String(ve2State(store7).clips.find((c) => c.id === 'cap1').dur));
+  setInput(doc7.getElementById('ve2Dur'), '5', 'change');
+  await tick(100);
+  check('v195: dur Inspector boleh mengecil', ve2State(store7).clips.find((c) => c.id === 'cap1').dur === 5, String(ve2State(store7).clips.find((c) => c.id === 'cap1').dur));
+  const store8 = new Map();
+  store8.set('minime.cleaned-v84', '1');
+  store8.set('minime.cleaned-graph-v88', '1');
+  store8.set('minime.ve2', JSON.stringify({ clips: [{ id: 'stop1', name: 'Stop Uji', track: 'Video', start: 0, dur: 0.3, src: '', effect: 'none' }], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
+  const dom8 = makeDom(store8);
+  const doc8 = dom8.window.document;
+  await waitFor(() => doc8.querySelector('[data-view="media"]'), 'mount8 rail media', 100);
+  doc8.querySelector('[data-view="media"]').click();
+  await tick(100);
+  doc8.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  const trans8 = [...doc8.querySelectorAll('.ve2-transport button')];
+  doc8.getElementById('ve2BtnPlay').click();
+  await tick(100);
+  check('v195: Putar memulai playback', doc8.getElementById('ve2BtnPlay').disabled === true, 'play-disabled:' + doc8.getElementById('ve2BtnPlay').disabled);
+  check('v195: transport beralih ke Berhenti saat diputar', trans8[1].textContent === 'Berhenti', trans8[1].textContent);
+  let stopped8 = false;
+  for (let i = 0; i < 30 && !stopped8; i++) { await tick(100); stopped8 = doc8.getElementById('ve2BtnPlay').disabled === false; }
+  check('v195: playback berhenti di ujung klip terakhir', stopped8 && doc8.getElementById('ve2BtnStop').disabled === true, 'play:' + doc8.getElementById('ve2BtnPlay').disabled);
+  check('v195: transport kembali ke Putar sesudah berhenti', trans8[1].textContent === '▶ Putar', trans8[1].textContent);
 
 } catch (e) {
   // eslint-disable-next-line no-console

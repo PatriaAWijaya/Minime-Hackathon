@@ -756,3 +756,6 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .ve2-inspector-acts input { width: 100%; box-sizing: border-box; }
 /* v192: teks nama klip tidak ikut terseleksi saat bar diseret pointer. */
 .bar.ve-clip { user-select: none; -webkit-user-select: none; }
+/* v195: bar relatif untuk grip geser; grip di ujung kanan bar. */
+.bar.ve-clip { position: relative; }
+.bar.ve-clip .ve2-resize { position: absolute; right: 0; top: 0; bottom: 0; width: 12px; padding: 0; border: 0; border-left: 1px solid rgba(255,255,255,0.45); border-radius: 0; background: rgba(255,255,255,0.22); cursor: ew-resize; }

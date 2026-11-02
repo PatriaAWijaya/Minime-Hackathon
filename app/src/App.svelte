@@ -83,7 +83,7 @@
   // klip gambar berurutan bersama track Video.
   interface Ve2Clip { id: string; name: string; track: 'Video' | 'B-Roll' | 'Audio' | 'Teks'; start: number; dur: number; src: string; effect: 'none' | 'fade' | 'zoom'; }
   interface Ve2Asset { id: string; name: string; icon: string; kind: 'Video' | 'B-Roll' | 'Audio' | 'Teks' | 'Image'; src: string; duration: number; }
-  function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number; plan: string } | null {
+  function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number; plan: string; snap: boolean } | null {
     try {
       const raw = localStorage.getItem('minime.ve2');
       if (!raw) return null;
@@ -93,7 +93,7 @@
       const clips: Ve2Clip[] = v.clips.filter((c: any) => c && typeof c.id === 'string' && typeof c.name === 'string' && Number.isFinite(c.start) && Number.isFinite(c.dur)).map((c: any) => ({ id: c.id, name: c.name, track: (tracks.includes(c.track) ? c.track : 'Video') as Ve2Clip['track'], start: Number(c.start), dur: Number(c.dur), src: typeof c.src === 'string' ? c.src : '', effect: (['fade', 'zoom'].includes(c.effect) ? c.effect : 'none') as Ve2Clip['effect'] }));
       const assetKinds = [...tracks, 'Image'];
       const assets: Ve2Asset[] = v.assets.filter((a: any) => a && typeof a.id === 'string' && typeof a.name === 'string').map((a: any) => ({ id: a.id, name: a.name, icon: typeof a.icon === 'string' ? a.icon : '🎬', kind: (assetKinds.includes(a.kind) ? a.kind : 'Video') as Ve2Asset['kind'], src: typeof a.src === 'string' ? a.src : '', duration: Number.isFinite(a.duration) ? Number(a.duration) : 0 }));
-      return { clips, assets, out: typeof v.out === 'string' ? v.out : '', zoom: [0.5, 1, 2].includes(Number(v.zoom)) ? Number(v.zoom) : 1, plan: typeof v.plan === 'string' ? v.plan : '' };
+      return { clips, assets, out: typeof v.out === 'string' ? v.out : '', zoom: [0.5, 1, 2].includes(Number(v.zoom)) ? Number(v.zoom) : 1, plan: typeof v.plan === 'string' ? v.plan : '', snap: typeof v.snap === 'boolean' ? v.snap : true };
     } catch { return null; }
   }
   const ve2Loaded = ve2Load();
@@ -110,6 +110,7 @@
   let ve2Out = $state(ve2Loaded?.out || '/Users/mac/Movies/minime-ve2.mp4');
   let ve2Zoom = $state(ve2Loaded?.zoom ?? 1);
   let ve2Plan = $state(ve2Loaded?.plan ?? '');
+  let ve2Snap = $state(ve2Loaded?.snap ?? true);
   if (ve2IsDummy) ve2SaveState();
   // v187: klip yang masuk timeline dari generator (HF/Omni) tidak pernah
   // menambah daftar aset — backfill satu kali saat muat: tiap klip bersrc
@@ -220,7 +221,7 @@
     return ve2Clips.find((c) => c.id === ve2SelId);
   }
   function ve2SaveState() {
-    try { localStorage.setItem('minime.ve2', JSON.stringify({ clips: ve2Clips, assets: ve2Assets, out: ve2Out, zoom: ve2Zoom, plan: ve2Plan })); } catch { /* kuota penuh: abaikan */ }
+    try { localStorage.setItem('minime.ve2', JSON.stringify({ clips: ve2Clips, assets: ve2Assets, out: ve2Out, zoom: ve2Zoom, plan: ve2Plan, snap: ve2Snap })); } catch { /* kuota penuh: abaikan */ }
   }
   function ve2SelectClip(id: string) {
     ve2SelId = id;
@@ -242,7 +243,7 @@
     if (!c) return;
     if (field === 'name') { c.name = value; ve2SaveState(); return; }
     if (field === 'start') { c.start = Number(value); ve2InspectorCommit(); return; }
-    if (field === 'dur') { c.dur = Number(value); ve2InspectorCommit(); return; }
+    if (field === 'dur') { let d = Number(value); const orig = ve2OrigDur(c); if (orig !== null) d = Math.min(d, orig); c.dur = d; ve2InspectorCommit(); return; }
     if (field === 'track') { c.track = value as Ve2Clip['track']; ve2SaveState(); return; }
     if (field === 'effect') { c.effect = value as Ve2Clip['effect']; ve2SaveState(); ve2EffectNote(); return; }
   }
@@ -436,7 +437,15 @@
     const c = ve2Clips.find((x) => x.id === id);
     if (!c) return;
     if (track) c.track = track;
-    if (start !== null) c.start = start;
+    if (start !== null) {
+      // v195: snap awal klip; bila awal tidak menempel, coba tempelkan akhir.
+      let st = ve2SnapTime(start, id, c.track);
+      if (st === start) {
+        const eSnap = ve2SnapTime(start + c.dur, id, c.track);
+        if (eSnap !== start + c.dur) st = eSnap - c.dur;
+      }
+      c.start = Math.max(0, Math.round(st * 10) / 10);
+    }
     ve2Clips = [...ve2Clips];
     ve2SelId = c.id;
     ve2SaveState();
@@ -466,6 +475,75 @@
       const row = (u.target as HTMLElement | null)?.closest?.('.track')
         ?? (document.elementFromPoint ? document.elementFromPoint(u.clientX, u.clientY)?.closest?.('.track') : null);
       ve2ApplyClipMove(d.id, row ? ve2TrackFromRow(row) : null, ve2StartFromClientX(u.clientX));
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+  function ve2End(): number {
+    // v195: ujung konten terakhir (klip apa pun, track apa pun); 0 bila kosong.
+    return ve2Clips.length ? Math.max(...ve2Clips.map((c) => c.start + c.dur)) : 0;
+  }
+  function ve2ClipKind(c: Ve2Clip): 'Video' | 'Audio' | 'Image' | 'Teks' {
+    if (c.track === 'Teks') return 'Teks';
+    const a = ve2Assets.find((x) => x.src && x.src === c.src);
+    if (a) return a.kind === 'Image' ? 'Image' : a.kind === 'Audio' ? 'Audio' : 'Video';
+    if (ve2IsImage(c.src)) return 'Image';
+    if (ve2IsAudio(c.src)) return 'Audio';
+    return 'Video';
+  }
+  function ve2OrigDur(c: Ve2Clip): number | null {
+    // v195: null = bebas (gambar/teks, atau tidak ada acuan asli: klip
+    // sintetis / asetnya sudah dihapus). Video/Audio ber-aset -> durasi aset.
+    if (c.track === 'Teks') return null;
+    const a = ve2Assets.find((x) => x.src && x.src === c.src);
+    if (a && a.kind === 'Image') return null;
+    if (ve2IsImage(c.src)) return null;
+    if (a && a.duration > 0) return a.duration;
+    return null;
+  }
+  function ve2SnapTime(t: number, selfId: string, track: Ve2Clip['track']): number {
+    // v195: magnet — tempelkan waktu ke ujung klip lain di track yang sama
+    // bila dalam ambang 0,5 dtk; nonaktif -> waktu apa adanya.
+    if (!ve2Snap) return t;
+    let best = t; let bestD = 0.5;
+    for (const o of ve2Clips) {
+      if (o.id === selfId || o.track !== track) continue;
+      for (const e of [o.start, o.start + o.dur]) {
+        const d = Math.abs(t - e);
+        if (d <= bestD) { bestD = d; best = e; }
+      }
+    }
+    return Math.round(best * 10) / 10;
+  }
+  let ve2Resize: { id: string; startX: number; startDur: number } | null = null;
+  function ve2ResizeStart(e: PointerEvent, id: string) {
+    // v195: geser ujung kanan klip untuk ubah durasi. stopPropagation
+    // supaya seret-pindah bar (v192) tidak ikut jalan; klik bar tetap memilih.
+    e.stopPropagation();
+    const c = ve2Clips.find((x) => x.id === id);
+    if (!c) return;
+    ve2SelId = id;
+    ve2Resize = { id, startX: e.clientX, startDur: c.dur };
+    const onMove = (m: PointerEvent) => {
+      if (!ve2Resize) return;
+      const cc = ve2Clips.find((x) => x.id === id);
+      if (!cc) return;
+      const inner = document.querySelector('#ve2Timeline > div');
+      const rect = inner?.getBoundingClientRect();
+      if (!rect || rect.width <= 0) return;
+      const dxTime = ((m.clientX - ve2Resize.startX) / rect.width) * ve2Total;
+      let nd = ve2Resize.startDur + dxTime;
+      nd = ve2SnapTime(cc.start + nd, id, cc.track) - cc.start;
+      const orig = ve2OrigDur(cc);
+      if (orig !== null) nd = Math.min(nd, orig);
+      nd = Math.max(0.1, Math.round(nd * 10) / 10);
+      cc.dur = nd;
+      ve2Clips = [...ve2Clips];
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      if (ve2Resize) { ve2Resize = null; ve2SaveState(); }
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -566,7 +644,14 @@
   }
   function ve2PlayToggle() {
     if (ve2Playing) { ve2StopPlayback(); return; }
-    const startAt = ve2Playhead;
+    // v195: berhenti di ujung klip terakhir, bukan di ujung skala timeline
+    // (ve2Total minimal 30 dtk — itulah sebab player terus berjalan walau
+    // klip sudah habis). Tanpa klip -> tidak jalan; playhead lewat ujung
+    // -> putar ulang dari 0.
+    const end = ve2End();
+    if (end <= 0) { ve2Status = t('ve2.no_clip', lang); return; }
+    let startAt = ve2Playhead;
+    if (startAt >= end) { startAt = 0; ve2Playhead = 0; }
     ve2Playing = true;
     const hasMedia = ve2Clips.some((c) => c.src && c.start + c.dur > startAt);
     if (!hasMedia) ve2Status = t('ve2.preview_nosrc', lang);
@@ -576,7 +661,7 @@
     const t0 = performance.now() - startAt * 1000;
     ve2Timer = setInterval(() => {
       const el = (performance.now() - t0) / 1000;
-      if (el >= ve2Total) { ve2Playhead = ve2Total; ve2StopPlayback(); return; }
+      if (el >= end) { ve2Playhead = end; ve2StopPlayback(); return; }
       ve2Playhead = el;
     }, 100);
   }
@@ -1250,22 +1335,22 @@
           <div class="ve-ruler" id="ve2Ruler" onclick={(e) => { ve2RulerClick(e) }}>{#each ve2RulerTicks as tick}<span>{ve2Fmt(tick)}</span>{/each}</div>
           <div class="track"><span class="tlabel">{t('word.video', lang)}</span>
           {#each ve2Bars('Video') as b (b.clip.id)}
-          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}<button type="button" class="ve2-resize" data-ve2-resize={b.clip.id} aria-label={t('ve2.resize', lang)} onpointerdown={(e) => { ve2ResizeStart(e, b.clip.id) }}></button></div>
           {/each}
           </div>
           <div class="track"><span class="tlabel">B-Roll</span>
           {#each ve2Bars('B-Roll') as b (b.clip.id)}
-          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}<button type="button" class="ve2-resize" data-ve2-resize={b.clip.id} aria-label={t('ve2.resize', lang)} onpointerdown={(e) => { ve2ResizeStart(e, b.clip.id) }}></button></div>
           {/each}
           </div>
           <div class="track"><span class="tlabel">{t('word.audio', lang)}</span>
           {#each ve2Bars('Audio') as b (b.clip.id)}
-          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}<button type="button" class="ve2-resize" data-ve2-resize={b.clip.id} aria-label={t('ve2.resize', lang)} onpointerdown={(e) => { ve2ResizeStart(e, b.clip.id) }}></button></div>
           {/each}
           </div>
           <div class="track"><span class="tlabel">{t('word.teks', lang)}</span>
           {#each ve2Bars('Teks') as b (b.clip.id)}
-          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}<button type="button" class="ve2-resize" data-ve2-resize={b.clip.id} aria-label={t('ve2.resize', lang)} onpointerdown={(e) => { ve2ResizeStart(e, b.clip.id) }}></button></div>
           {/each}
           </div>
           </div>
@@ -1279,6 +1364,7 @@
           <button id="ve2BtnTrans" class="btn btn-sm" disabled={!ve2SelClip()} onclick={() => { ve2Transition() }}>{t('ve.transition', lang)}</button>
           <button id="ve2BtnPlay" class="btn btn-sm" disabled={ve2Playing} onclick={() => { if (!ve2Playing) ve2PlayToggle(); }}>{t('ve.play', lang)}</button>
           <button id="ve2BtnStop" class="btn btn-sm" disabled={!ve2Playing} onclick={() => { if (ve2Playing) ve2PlayToggle(); }}>{t('ve2.stop', lang)}</button>
+          <button id="ve2BtnSnap" type="button" class="btn btn-sm" aria-pressed={ve2Snap} style:background={ve2Snap ? '#8ED694' : undefined} style:color={ve2Snap ? '#262626' : undefined} onclick={() => { ve2Snap = !ve2Snap; ve2SaveState(); }}>{t('ve2.snap', lang)}</button>
           </div>
         </div>
       </div>
