@@ -15,6 +15,7 @@ use tauri::webview::{NewWindowResponse, WebviewWindowBuilder};
 
 fn main() {
     if let Err(err) = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Jendela utama dibuat di sini (bukan dari tauri.conf.json)
             // supaya handler navigasi + jendela baru bisa dipasang.

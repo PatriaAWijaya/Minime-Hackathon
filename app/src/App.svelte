@@ -13,6 +13,7 @@
   import { readImgSpend } from "./lib/image-api.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
   import { readVideoSpend, omniGenerateClip, omniPriceUsd, mimeForB64, b64FromBytes } from "./lib/omni-gen.js";
+  import { open as pickFiles } from "@tauri-apps/plugin-dialog";
   import { HF_SAMPLE } from "./lib/hf-sample.js";
   import { readKeys } from "./lib/chat.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtIdrNum, fmtInt, fmtUsd, readLiveCost } from "./lib/cost.js";
@@ -228,20 +229,44 @@
     ve2SaveState();
     ve2Status = t('ve2.fx_fade_note', lang);
   }
-  async function ve2AddAsset() {
-    const path = ve2NewSrc.trim();
-    if (!path) { ve2Status = t('ve2.asset_empty', lang); return; }
+  async function ve2PushAsset(path: string, kind: Ve2Asset['kind'], suffix: number): Promise<boolean> {
     try {
       const probe = await invoke<{ duration: number }>('video_probe', { req: { path } });
       const name = path.split('/').pop() || path;
-      const icon = ve2NewKind === 'Image' ? '🖼️' : ve2NewKind === 'Teks' ? '🔤' : ve2NewKind === 'Audio' ? '🎵' : '🎬';
-      const duration = ve2NewKind === 'Image' && !(probe.duration > 0) ? 5 : probe.duration;
-      ve2Assets = [...ve2Assets, { id: 've2a' + Date.now(), name, icon, kind: ve2NewKind as Ve2Asset['kind'], src: path, duration }];
+      const icon = kind === 'Image' ? '🖼️' : kind === 'Teks' ? '🔤' : kind === 'Audio' ? '🎵' : '🎬';
+      const duration = kind === 'Image' && !(probe.duration > 0) ? 5 : probe.duration;
+      ve2Assets = [...ve2Assets, { id: 've2a' + (Date.now() + suffix), name, icon, kind, src: path, duration }];
+      return true;
+    } catch (e) {
+      ve2Status = `${t('ve2.asset_bad', lang)} ${String(e)}`;
+      return false;
+    }
+  }
+  async function ve2AddAsset() {
+    const path = ve2NewSrc.trim();
+    if (!path) {
+      // v183: path kosong -> buka pemilih file asli (bukan sekadar status).
+      // Batal = tidak terjadi apa-apa; jenis dari ekstensi file.
+      try {
+        const picked = await pickFiles({ multiple: true, filters: [{ name: 'Media', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'mp4', 'mov', 'webm', 'mkv', 'avi', 'mp3', 'wav', 'm4a', 'ogg', 'flac'] }] });
+        if (!picked) return;
+        const paths = Array.isArray(picked) ? picked : [picked];
+        let added = 0;
+        for (let i = 0; i < paths.length; i++) {
+          const fp = paths[i];
+          const kind = ve2IsImage(fp) ? 'Image' : ve2IsAudio(fp) ? 'Audio' : 'Video';
+          if (await ve2PushAsset(fp, kind as Ve2Asset['kind'], i)) added++;
+        }
+        if (added > 0) { ve2SaveState(); ve2Status = t('ve2.asset_added', lang); }
+      } catch (e) {
+        ve2Status = `${t('ve2.asset_bad', lang)} ${String(e)}`;
+      }
+      return;
+    }
+    if (await ve2PushAsset(path, ve2NewKind as Ve2Asset['kind'], 0)) {
       ve2NewSrc = '';
       ve2SaveState();
       ve2Status = t('ve2.asset_added', lang);
-    } catch (e) {
-      ve2Status = `${t('ve2.asset_bad', lang)} ${String(e)}`;
     }
   }
   function ve2AddAssetClip(assetId: string) {
@@ -259,6 +284,9 @@
   }
   function ve2IsImage(path: string): boolean {
     return /\.(png|jpe?g|webp|gif|bmp)$/i.test(path);
+  }
+  function ve2IsAudio(path: string): boolean {
+    return /\.(mp3|wav|m4a|ogg|flac|aac)$/i.test(path);
   }
   function ve2MimeFor(path: string): string {
     const lower = path.toLowerCase();

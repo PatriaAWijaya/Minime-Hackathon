@@ -15,6 +15,7 @@
 //  12. Zoom 200% -> lebar timeline berubah.
 //  15. v182: tombol tambah '+' saja, jenis aset Image/Video/Audio,
 //      aset gambar -> klip B-Roll 5 dtk -> ekspor pakai -loop 1.
+//  16. v183: tombol '+' dengan path kosong -> dialog pemilih file asli.
 // Jalankan: npm run rig:ve2 (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -42,6 +43,7 @@ async function invokeStub(cmd, args) {
   if (cmd === 'video_read') return { b64: '' };
   if (cmd === 'video_write_ass') return { path: '/tmp/ve2-test.ass' };
   if (cmd === 'video_render') { renderArgsLog.push((args && args.req && args.req.args) || []); return { success: true, output: (args && args.req && args.req.output) || '', duration_ms: 1, stderr_tail: '' }; }
+  if (cmd === 'plugin:dialog|open') return ['/tmp/picker.png'];
   if (cmd === 'video_qc') return { duration: 12.5, has_video: true, has_audio: false, black: [], silent: [], passed: true, notes: [] };
   if (cmd === 'video_capture') return { data_url: 'data:image/jpeg;base64,x' };
   if (cmd === 'image_save' || cmd === 'image_read' || cmd === 'image_delete') return {};
@@ -249,6 +251,17 @@ try {
   const loopIdx = baseArgs.indexOf('-loop');
   const pngIdx = baseArgs.indexOf('/tmp/gambar.png');
   check('v182: ekspor gambar pakai -loop 1 sebelum input png', loopIdx !== -1 && baseArgs[loopIdx + 1] === '1' && loopIdx < pngIdx, JSON.stringify(baseArgs.slice(0, 12)));
+
+  // 16. v183: path kosong -> dialog pemilih file -> aset gambar masuk.
+  invokeLog.length = 0;
+  setInput(document.getElementById('ve2NewSrc'), '', 'input');
+  document.getElementById('ve2AssetAdd').click();
+  await tick(200);
+  const assets183 = ve2State(store).assets || [];
+  const pickAsset = assets183.find((a) => a.src === '/tmp/picker.png');
+  check('v183: tombol + path kosong memanggil dialog file', invokeLog.includes('invoke:plugin:dialog|open'), invokeLog.join(','));
+  check('v183: hasil pilih masuk daftar sebagai Image 5 dtk', !!pickAsset && pickAsset.kind === 'Image' && pickAsset.duration === 5, JSON.stringify(pickAsset));
+  check('v183: aset 7 -> 8', assets183.length === 8, assets183.length);
 
   // 14. v146: state kosong -> editor mulai kosong (tanpa seed dummy).
   const store2 = new Map();

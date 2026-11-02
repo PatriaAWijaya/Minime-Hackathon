@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "2.8.4",
     "svelte": "^5.0.0"
   },
   "description": "MiniMe desktop app frontend (Svelte 5 + Vite). Tahap B1: scaffold + mount only; v5 views migrate into components in B2. Frontend serves app/dist (Vite build) via Tauri.",
