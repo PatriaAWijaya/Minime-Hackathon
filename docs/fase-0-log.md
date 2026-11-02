@@ -2521,6 +2521,48 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v207 — Skenario 2 Tahap 0/1/2: store rencana 30 hari + panel + tabel + Gerbang 1 (perintah Patria 3 Nov 01:11 "lanjut" atas workflow Skenario 2 yang disajikan 3 Nov 01:00)
+
+Langkah pertama build alur Skenario 2 (campuran diputuskan: 12 image +
+10 carousel + 8 reels, 1 konten/hari, kanal IG + Threads + LinkedIn,
+draf bertanggal, konfirmasi H-3). Modul baru `app/src/lib/plan30.ts`:
+store satu rencana aktif di localStorage `minime.plan30` (niche,
+kompetitor, tanggal mulai, laporan riset, 30 baris, status approved);
+`parsePlanTable` membaca baris `HARI|FORMAT|TOPIK|HOOK|PILAR|JAM`
+(prosa di luar tabel diabaikan) dengan validasi keras: tepat 30
+baris, hari 1..30 masing-masing sekali, campuran tepat 12/10/8, jam
+HH:MM valid, topik tak kosong — hook/pilar boleh kosong (dirender
+'—', ditangkap mata manusia di gerbang 1); `planDateISO` mengubah
+tanggal + jam WIB ke ISO (WIB = UTC+7, jam digeser -7; Date.UTC
+menangani jam negatif). Panel `#plan30-main` di view Planner SEBELUM
+batch (rencana mendahului batch): input niche/kompetitor/tanggal
+mulai + 4 tombol. Tahap 1 memakai `researchRun` v206 apa adanya
+(tugas: temuan per kompetitor + tren + celah/peluang, ber-URL);
+laporan tampil di textarea yang BISA DIEDIT — koreksi fakta oleh
+user disimpan via tombol Simpan Koreksi (gerbang koreksi fakta).
+Tahap 2 memanggil agen Strategi (router.callWithFallback, kunci Meta
+atau Gemini, error rs.err.key bila tak ada) dengan prompt tabel
+ketat; tanggal tiap baris = tanggal mulai + (hari-1) + jam variasi
+per format dari tabel. Gerbang 1 = tombol Setujui Rencana: tanpa
+persetujuan ini tidak ada generate tahap berikut (tombol Setujui
+nonaktif sebelum ada tabel; tombol Buat Tabel nonaktif sesudah
+disetujui; Rencana Baru memakai pola armed dua ketuk). Batasan
+jujur v207: naskah per baris + QC (gerbang 2), visual + caption
+(gerbang 3), dan batch 3 kanal + draf bertanggal BELUM dibangun —
+menyusul v208+; panel tidak mengklaimnya. i18n +32 kunci `p30.*`
+x3 -> 1190/bahasa. CSS blok v207 di layout-scroll.css (tabel
+rencana). Rig baru `app/tests/rig-plan30.js` (10 cek: panel tampil,
+Setujui nonaktif sebelum tabel, riset CARI->BUKA->LAPORAN, campuran
+12/10/8, tanggal baris 1 = tanggal mulai dan baris 23 = mulai+22
+hari, Setujui aktif sesudah tabel, 4 panggilan model, gerbang 1
+lolos + Buat Tabel nonaktif) + script npm `rig:plan30`. Total rig
+kini 16. Gerbang v207 lolos penuh: vite, svelte-check 0/21 (baseline),
+16 rig, root build+tsc, gate-test 14 grup, scan 0, ledger md5 tetap,
+i18n 1190/1190/1190 0 duplikat, cargo fmt+check+check-tests 0,
+Cargo.lock bersih. Catatan: skrip gerbang /tmp/gate-v206 hilang
+karena /tmp VM dibersihkan antar sesi — dibangun ulang sebagai
+/tmp/gate-v207/run.sh dari pola yang sama.
+
 ## v206 — Browser riset teks untuk agen (perintah Patria 3 Nov 00:43 "Riset membutuhkan web browser sendiri, build untuk agen supaya bisa riset secara live"; desain teks disetujui Patria 3 Nov 00:45 via tap widget)
 
 Prasyarat Tahap 1 Skenario 2 (keputusan Q5): agen Riset kini bisa riset
