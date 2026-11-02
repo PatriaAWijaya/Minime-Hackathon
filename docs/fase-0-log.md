@@ -2521,6 +2521,51 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v192 — perbaiki lompat view saat pilih klip + seret klip pakai pointer (perintah Patria 2 Nov 18:14)
+
+- Laporan Patria: (1) memilih aset dalam track membuat view terlempar ke
+  atas; (2) aset dalam track belum bisa digeser drag-drop.
+- DIAGNOSIS (1): tidak ada pemanggilan scroll/focus di jalur seleksi klip
+  (grep membuktikan — scrollIntoView yang ada hanya milik chat/search).
+  Akar masalahnya pergeseran layout: saat klip dipilih, pratinjau berubah
+  dari placeholder kecil menjadi media s.d. 480px TINGGI dan field Inspector
+  muncul, sehingga kartu atas tumbuh ~380px (untuk klip vertikal Patria)
+  dan timeline bergeser ke bawah; WebView live tidak punya scroll anchoring
+  sehingga viewport seolah kembali ke atas. BUKAN bug scroll, melainkan
+  layout shift di atas timeline.
+- PERBAIKAN (1): pratinjau idle dibungkus `.ve2-preview-box` tinggi tetap
+  `min(480px, 55vh)` (flex, media di tengah) sehingga tinggi kartu atas
+  konstan apa pun seleksinya; media di dalamnya tetap dibatasi nilai yang
+  sama. Pertumbuhan kolom Inspector ikut terserap karena kotak pratinjau
+  mendominasi tinggi kartu. Pergeseran saat mulai/berhenti playback tetap
+  ada (video menggantikan kotak) — itu transisi playback, bukan seleksi.
+- DIAGNOSIS (2): seret klip v189 memakai HTML5 drag (atribut draggable +
+  dataTransfer). HTML5 drag TIDAK jalan di WebView live Tauri/WKWebView,
+  sehingga klip tidak bisa digeser di app live — rig v189 lolos karena
+  jsdom tidak menguji drag native (pelajaran: rig hanya screening, hasil
+  live menang). Jalur ini diganti total, bukan ditambal.
+- PERBAIKAN (2): bar klip kini `onpointerdown` -> `ve2BarDragStart`
+  (pointerdown -> gerak gabungan > 5px -> pointerup di baris track tujuan;
+  TANPA pointer capture supaya target pointerup = elemen di bawah pointer,
+  bukan bar asal; klik biasa tanpa gerak tetap memilih lewat onclick).
+  Drop dihitung helper bersama: `ve2TrackFromRow` (label baris, tahan
+  bahasa), `ve2StartFromClientX` (skala ve2Total, null bila lebar tak
+  terbaca -> posisi lama), `ve2ApplyClipMove` (terapkan + pilih + simpan).
+  Zona drop thumbnail aset (HTML5) TIDAK diubah; dispatcher `ve2TimelineDrop`
+  + `ve2MoveClip` yang sudah mati dihapus. Teks nama klip tidak terseleksi
+  saat diseret (user-select none).
+- Rig-ve2 §20 ditulis ulang ke alur pointer (pindah track, posisi
+  dipertahankan, terpilih di Inspector, klik tanpa gerak tidak memindah,
+  drop asing tetap diabaikan) + §24 kotak pratinjau (ada, sebelum transport,
+  bertahan sesudah ganti seleksi). RIG-VE2 ALL PASSED.
+- Gerbang penuh lolos (/tmp/gate-v192/): vite build, 14 rig, root tsc,
+  gate-test 14 grup ALL PASSED, scan 0, ledger md5 tetap
+  d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
+  Tanpa kunci i18n baru -> tetap 1108/bahasa.
+- Kode 4e8fc48 ↔ ab012dc (tree identik).
+- LIVE menyusul di entri log-LIVE sesudah deploy.
+
 ## v191 — bar editor track di bawah timeline + audit tombol (perintah Patria 2 Nov 18:04 + screenshot)
 
 - Perintah: cek fungsi tombol di screenshot; bila terkait track, pindahkan ke
