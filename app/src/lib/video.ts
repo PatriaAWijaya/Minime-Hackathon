@@ -14,7 +14,7 @@
 export interface T1Clip {
   id: string;
   src: string;
-  kind: 'video' | 'audio';
+  kind: 'video' | 'audio' | 'image';
   trimIn: number;
   dur: number;
   volume: number;
@@ -50,7 +50,7 @@ export interface T1Compiled {
 // Error dikembalikan sebagai KEY i18n (t1.err.*) agar panel bisa menerjemahkan.
 export function validateSequence(seq: T1Sequence, output: string): string[] {
   const errs: string[] = [];
-  const videos = seq.clips.filter((c) => c.kind === 'video');
+  const videos = seq.clips.filter((c) => c.kind === 'video' || c.kind === 'image');
   if (videos.length === 0) errs.push('t1.err.novideo');
   if (!Number.isInteger(seq.width) || seq.width <= 0) errs.push('t1.err.size');
   if (!Number.isInteger(seq.height) || seq.height <= 0) errs.push('t1.err.size');
@@ -104,15 +104,22 @@ export function assFromCaptions(captions: T1Caption[], width: number, height: nu
 }
 
 export function compileTimeline(seq: T1Sequence, output: string): T1Compiled {
-  const videos = seq.clips.filter((c) => c.kind === 'video');
+  // v182: klip gambar ikut jalur visual (slideshow sah tanpa klip video).
+  // Input gambar di-loop (-loop 1) supaya trim bisa memotong durasi detik
+  // dari satu still; tanpa loop, ffmpeg hanya menghasilkan satu frame.
+  const videos = seq.clips.filter((c) => c.kind === 'video' || c.kind === 'image');
   if (videos.length === 0) throw new Error('t1.err.novideo');
   const audios = seq.clips.filter((c) => c.kind === 'audio');
   // Input unik sesuai urutan pemakaian pertama (video dulu, lalu audio).
+  // Flag loop per input (gambar saja; pemakaian pertama menang bila satu
+  // path dipakai sebagai video sekaligus gambar — kasus yang tidak wajar).
   const inputs: string[] = [];
-  const indexOf = (src: string): number => {
+  const inputIsImage: boolean[] = [];
+  const indexOf = (src: string, isImage: boolean): number => {
     let i = inputs.indexOf(src);
     if (i === -1) {
       inputs.push(src);
+      inputIsImage.push(isImage);
       i = inputs.length - 1;
     }
     return i;
@@ -120,7 +127,7 @@ export function compileTimeline(seq: T1Sequence, output: string): T1Compiled {
   const parts: string[] = [];
   const vlabels: string[] = [];
   videos.forEach((c, n) => {
-    const k = indexOf(c.src);
+    const k = indexOf(c.src, c.kind === 'image');
     const end = c.trimIn + c.dur;
     parts.push(
       `[${k}:v]trim=start=${c.trimIn}:end=${end},setpts=PTS-STARTPTS,` +
@@ -138,7 +145,7 @@ export function compileTimeline(seq: T1Sequence, output: string): T1Compiled {
   const music = audios.filter((c) => c.track === 'music');
   const voLabels: string[] = [];
   voice.forEach((c, n) => {
-    const k = indexOf(c.src);
+    const k = indexOf(c.src, false);
     const end = c.trimIn + c.dur;
     parts.push(
       `[${k}:a]atrim=start=${c.trimIn}:end=${end},asetpts=PTS-STARTPTS,` +
@@ -148,7 +155,7 @@ export function compileTimeline(seq: T1Sequence, output: string): T1Compiled {
   });
   const muLabels: string[] = [];
   music.forEach((c, n) => {
-    const k = indexOf(c.src);
+    const k = indexOf(c.src, false);
     const end = c.trimIn + c.dur;
     parts.push(
       `[${k}:a]atrim=start=${c.trimIn}:end=${end},asetpts=PTS-STARTPTS,` +
@@ -171,7 +178,10 @@ export function compileTimeline(seq: T1Sequence, output: string): T1Compiled {
     parts.push(`${muLabels.join('')}concat=n=${music.length}:v=0:a=1[aout]`);
   }
   const args: string[] = ['-nostdin', '-y'];
-  for (const src of inputs) args.push('-i', src);
+  inputs.forEach((src, i) => {
+    if (inputIsImage[i]) args.push('-loop', '1');
+    args.push('-i', src);
+  });
   args.push('-filter_complex', parts.join(';'));
   args.push('-map', '[vout]');
   if (audios.length > 0) args.push('-map', '[aout]');

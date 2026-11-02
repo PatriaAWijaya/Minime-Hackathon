@@ -80,7 +80,7 @@
   // pratinjau (bukan filter render). B-Roll ikut dirangkai sebagai
   // klip gambar berurutan bersama track Video.
   interface Ve2Clip { id: string; name: string; track: 'Video' | 'B-Roll' | 'Audio' | 'Teks'; start: number; dur: number; src: string; effect: 'none' | 'fade' | 'zoom'; }
-  interface Ve2Asset { id: string; name: string; icon: string; kind: 'Video' | 'B-Roll' | 'Audio' | 'Teks'; src: string; duration: number; }
+  interface Ve2Asset { id: string; name: string; icon: string; kind: 'Video' | 'B-Roll' | 'Audio' | 'Teks' | 'Image'; src: string; duration: number; }
   function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number; plan: string } | null {
     try {
       const raw = localStorage.getItem('minime.ve2');
@@ -89,7 +89,8 @@
       if (!Array.isArray(v.clips) || !Array.isArray(v.assets)) return null;
       const tracks = ['Video', 'B-Roll', 'Audio', 'Teks'];
       const clips: Ve2Clip[] = v.clips.filter((c: any) => c && typeof c.id === 'string' && typeof c.name === 'string' && Number.isFinite(c.start) && Number.isFinite(c.dur)).map((c: any) => ({ id: c.id, name: c.name, track: (tracks.includes(c.track) ? c.track : 'Video') as Ve2Clip['track'], start: Number(c.start), dur: Number(c.dur), src: typeof c.src === 'string' ? c.src : '', effect: (['fade', 'zoom'].includes(c.effect) ? c.effect : 'none') as Ve2Clip['effect'] }));
-      const assets: Ve2Asset[] = v.assets.filter((a: any) => a && typeof a.id === 'string' && typeof a.name === 'string').map((a: any) => ({ id: a.id, name: a.name, icon: typeof a.icon === 'string' ? a.icon : '🎬', kind: (tracks.includes(a.kind) ? a.kind : 'Video') as Ve2Asset['kind'], src: typeof a.src === 'string' ? a.src : '', duration: Number.isFinite(a.duration) ? Number(a.duration) : 0 }));
+      const assetKinds = [...tracks, 'Image'];
+      const assets: Ve2Asset[] = v.assets.filter((a: any) => a && typeof a.id === 'string' && typeof a.name === 'string').map((a: any) => ({ id: a.id, name: a.name, icon: typeof a.icon === 'string' ? a.icon : '🎬', kind: (assetKinds.includes(a.kind) ? a.kind : 'Video') as Ve2Asset['kind'], src: typeof a.src === 'string' ? a.src : '', duration: Number.isFinite(a.duration) ? Number(a.duration) : 0 }));
       return { clips, assets, out: typeof v.out === 'string' ? v.out : '', zoom: [0.5, 1, 2].includes(Number(v.zoom)) ? Number(v.zoom) : 1, plan: typeof v.plan === 'string' ? v.plan : '' };
     } catch { return null; }
   }
@@ -233,8 +234,9 @@
     try {
       const probe = await invoke<{ duration: number }>('video_probe', { req: { path } });
       const name = path.split('/').pop() || path;
-      const icon = ve2NewKind === 'Teks' ? '🔤' : ve2NewKind === 'Audio' ? '🎵' : '🎬';
-      ve2Assets = [...ve2Assets, { id: 've2a' + Date.now(), name, icon, kind: ve2NewKind as Ve2Asset['kind'], src: path, duration: probe.duration }];
+      const icon = ve2NewKind === 'Image' ? '🖼️' : ve2NewKind === 'Teks' ? '🔤' : ve2NewKind === 'Audio' ? '🎵' : '🎬';
+      const duration = ve2NewKind === 'Image' && !(probe.duration > 0) ? 5 : probe.duration;
+      ve2Assets = [...ve2Assets, { id: 've2a' + Date.now(), name, icon, kind: ve2NewKind as Ve2Asset['kind'], src: path, duration }];
       ve2NewSrc = '';
       ve2SaveState();
       ve2Status = t('ve2.asset_added', lang);
@@ -245,13 +247,18 @@
   function ve2AddAssetClip(assetId: string) {
     const a = ve2Assets.find((x) => x.id === assetId);
     if (!a) return;
-    const onTrack = ve2Clips.filter((c) => c.track === a.kind);
+    // v182: jenis aset (Image/Video/Audio) dipetakan ke track timeline.
+    const track = (a.kind === 'Image' ? 'B-Roll' : a.kind) as Ve2Clip['track'];
+    const onTrack = ve2Clips.filter((c) => c.track === track);
     const start = onTrack.length ? Math.max(...onTrack.map((c) => c.start + c.dur)) : 0;
-    const dur = a.duration > 0 ? Math.round(a.duration * 10) / 10 : (a.kind === 'Teks' ? 5 : 8);
-    const clip: Ve2Clip = { id: 've2c' + Date.now(), name: a.name, track: a.kind, start, dur, src: a.src, effect: 'none' };
+    const dur = a.duration > 0 ? Math.round(a.duration * 10) / 10 : (a.kind === 'Image' || a.kind === 'Teks' ? 5 : 8);
+    const clip: Ve2Clip = { id: 've2c' + Date.now(), name: a.name, track, start, dur, src: a.src, effect: 'none' };
     ve2Clips = [...ve2Clips, clip];
     ve2SelId = clip.id;
     ve2SaveState();
+  }
+  function ve2IsImage(path: string): boolean {
+    return /\.(png|jpe?g|webp|gif|bmp)$/i.test(path);
   }
   function ve2MimeFor(path: string): string {
     const lower = path.toLowerCase();
@@ -534,7 +541,7 @@
     if (vids.length === 0) { ve2Status = t('ve2.need_video', lang); return; }
     const auds = ve2Clips.filter((c) => c.track === 'Audio' && c.src);
     const clips: T1Clip[] = [
-      ...vids.map((c) => ({ id: c.id, src: c.src, kind: 'video' as const, trimIn: 0, dur: c.dur, volume: 1 })),
+      ...vids.map((c) => ({ id: c.id, src: c.src, kind: (ve2IsImage(c.src) ? 'image' : 'video') as 'image' | 'video', trimIn: 0, dur: c.dur, volume: 1 })),
       ...auds.map((c) => ({ id: c.id, src: c.src, kind: 'audio' as const, trimIn: 0, dur: c.dur, volume: 1, track: (/musik|music/i.test(c.name) ? 'music' : 'voice') as 'voice' | 'music' })),
     ];
     const seq: T1Sequence = { name: 've2', width: 1280, height: 720, fps: 30, clips };
@@ -919,7 +926,7 @@
           {#each ve2Assets as a (a.id)}
           <div class="ve2-asset"><span>{a.icon} {a.name}</span><button data-ve2-asset={a.id} onclick={() => { ve2AddAssetClip(a.id) }}>+</button></div>
           {/each}
-          <div style="display:flex;gap:6px;margin-top:8px"><input id="ve2NewSrc" type="text" bind:value={ve2NewSrc} placeholder="/Users/mac/Movies/klip.mp4" style="flex:1"><select id="ve2NewKind" bind:value={ve2NewKind}><option value="Video">Video</option><option value="B-Roll">B-Roll</option><option value="Audio">Audio</option><option value="Teks">Teks</option></select><button id="ve2AssetAdd" class="btn btn-sm" onclick={() => { ve2AddAsset() }}>{t('t1.add', lang)}</button></div>
+          <div style="display:flex;gap:6px;margin-top:8px"><input id="ve2NewSrc" type="text" bind:value={ve2NewSrc} placeholder="/Users/mac/Movies/klip.mp4" style="flex:1"><select id="ve2NewKind" bind:value={ve2NewKind}><option value="Image">Image</option><option value="Video">Video</option><option value="Audio">Audio</option></select><button id="ve2AssetAdd" class="btn btn-sm" onclick={() => { ve2AddAsset() }}>{t('t1.add', lang)}</button></div>
           </div>
           <div class="ve2-preview">
           <video id="ve2Video" bind:this={ve2VideoEl} style="width:100%;background:#000;display:{ve2VideoOn ? 'block' : 'none'}" controls></video>

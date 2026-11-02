@@ -13,6 +13,8 @@
 //  10. Tambah aset (probe stub) -> aset 6; klik aset -> klip baru (10 -> 11).
 //  11. Ekspor ber-src + fade -> video_render 2x (base + fade) + frame + status.
 //  12. Zoom 200% -> lebar timeline berubah.
+//  15. v182: tombol tambah '+' saja, jenis aset Image/Video/Audio,
+//      aset gambar -> klip B-Roll 5 dtk -> ekspor pakai -loop 1.
 // Jalankan: npm run rig:ve2 (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -29,12 +31,17 @@ if (!modMatch) throw new Error('script module dist tidak ditemukan');
 html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch[1]}"></script></body>`);
 
 const invokeLog = [];
+const renderArgsLog = [];
 async function invokeStub(cmd, args) {
   invokeLog.push('invoke:' + cmd);
-  if (cmd === 'video_probe') return { duration: 12.5, size: 0, streams: [], format_name: 'mp4' };
+  if (cmd === 'video_probe') {
+    const pth = (args && args.req && args.req.path) || '';
+    const isImg = /\.(png|jpe?g|webp|gif|bmp)$/i.test(pth);
+    return { duration: isImg ? 0 : 12.5, size: 0, streams: [], format_name: isImg ? 'png' : 'mp4' };
+  }
   if (cmd === 'video_read') return { b64: '' };
   if (cmd === 'video_write_ass') return { path: '/tmp/ve2-test.ass' };
-  if (cmd === 'video_render') return { success: true, output: (args && args.req && args.req.output) || '', duration_ms: 1, stderr_tail: '' };
+  if (cmd === 'video_render') { renderArgsLog.push((args && args.req && args.req.args) || []); return { success: true, output: (args && args.req && args.req.output) || '', duration_ms: 1, stderr_tail: '' }; }
   if (cmd === 'video_qc') return { duration: 12.5, has_video: true, has_audio: false, black: [], silent: [], passed: true, notes: [] };
   if (cmd === 'video_capture') return { data_url: 'data:image/jpeg;base64,x' };
   if (cmd === 'image_save' || cmd === 'image_read' || cmd === 'image_delete') return {};
@@ -215,6 +222,33 @@ try {
   const cssText114 = (cssLink114 ? fs.readFileSync(path.join(distDir, cssLink114[1]), 'utf-8') : '');
   check('v114: CSS ter-build membuat .ms-video fluid (width 100%, tanpa cap)', cssText114.includes('.ms-video{width:100%;max-width:none}'), '');
   check('v114: cap 880px tidak ada lagi di CSS ter-build', !cssText114.includes('880px'), '');
+
+  // 15. v182: daftar aset tiga jenis + tombol '+' + gambar ikut ekspor.
+  const kindOpts = [...document.getElementById('ve2NewKind').options].map((o) => o.value).join(',');
+  check('v182: opsi jenis aset hanya Image/Video/Audio', kindOpts === 'Image,Video,Audio', kindOpts);
+  check('v182: tombol tambah hanya tanda +', (document.getElementById('ve2AssetAdd')?.textContent || '').trim() === '+', document.getElementById('ve2AssetAdd')?.textContent);
+  setInput(document.getElementById('ve2NewSrc'), '/tmp/gambar.png', 'input');
+  const kindSel182 = document.getElementById('ve2NewKind');
+  kindSel182.value = 'Image';
+  kindSel182.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  document.getElementById('ve2AssetAdd').click();
+  await tick(200);
+  const assets182 = ve2State(store).assets || [];
+  const imgAsset = assets182.find((a) => a.src === '/tmp/gambar.png');
+  check('v182: aset gambar masuk daftar (ikon + durasi default 5)', !!imgAsset && imgAsset.kind === 'Image' && imgAsset.duration === 5 && (imgAsset.icon || '').includes('🖼'), JSON.stringify(imgAsset));
+  const assetBtns182 = [...document.querySelectorAll('[data-ve2-asset]')];
+  assetBtns182[assetBtns182.length - 1].click();
+  await tick(100);
+  const imgClip = (ve2State(store).clips || []).find((c) => c.src === '/tmp/gambar.png');
+  check('v182: klik + aset gambar -> klip B-Roll 5 dtk', !!imgClip && imgClip.track === 'B-Roll' && imgClip.dur === 5, JSON.stringify(imgClip));
+  check('v182: klip 11 -> 12', clips().length === 12, clips().length);
+  renderArgsLog.length = 0;
+  document.getElementById('ve2BtnExport').click();
+  await tick(500);
+  const baseArgs = renderArgsLog[0] || [];
+  const loopIdx = baseArgs.indexOf('-loop');
+  const pngIdx = baseArgs.indexOf('/tmp/gambar.png');
+  check('v182: ekspor gambar pakai -loop 1 sebelum input png', loopIdx !== -1 && baseArgs[loopIdx + 1] === '1' && loopIdx < pngIdx, JSON.stringify(baseArgs.slice(0, 12)));
 
   // 14. v146: state kosong -> editor mulai kosong (tanpa seed dummy).
   const store2 = new Map();
