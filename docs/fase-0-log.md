@@ -2548,6 +2548,11 @@ dokumen lama yang dipakai.
   d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
 - Kode e48b6bf ↔ 4e82f15 (tree identik).
+- LIVE 2 Nov ~21:52: deploy mh-build200.sh OK (MH_BUILD200_OK); HEAD MacBook
+  24ca03a; PID 64643; md5 dist JS 941dc88ec38f6b113d88c2cbc39763ff dan CSS
+  13647ae902959d218a44d9b61a232fb3 lokal == MacBook; penanda
+  'bill-card{background:var(--t-panel2' di bundle CSS MacBook.
+  App live = v200.
 
 ## v199 — menu Campaign disembunyikan sementara (perintah Patria 2 Nov 21:38)
 
