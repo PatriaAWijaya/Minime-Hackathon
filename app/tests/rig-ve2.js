@@ -41,6 +41,7 @@ async function invokeStub(cmd, args) {
   invokeLog.push('invoke:' + cmd);
   if (cmd === 'video_probe') {
     const pth = (args && args.req && args.req.path) || '';
+    if (pth.includes('gagal-probe')) throw new Error('Berkas tidak ditemukan: ' + pth);
     const isImg = /\.(png|jpe?g|webp|gif|bmp)$/i.test(pth);
     return { duration: isImg ? 0 : 12.5, size: 0, streams: [], format_name: isImg ? 'png' : 'mp4' };
   }
@@ -489,6 +490,31 @@ try {
   doc20.querySelector('[data-ve2-clip="fix1"]').click();
   await tick(100);
   check('v192: kotak pratinjau bertahan sesudah ganti seleksi', !!doc20.querySelector('.ve2-preview-box') && !!doc20.querySelector('.ve2-preview-box #ve2PreviewLabel'), 'box:' + !!doc20.querySelector('.ve2-preview-box'));
+
+  // v193 §25: Inspector kosong = tombol proyek (bukan placeholder); gambar
+  // tetap masuk daftar walau probe gagal; video gagal probe tidak masuk.
+  const insp25 = doc6.querySelector('.ve2-inspector');
+  check('v193: Inspector kosong menampilkan tombol proyek', !!insp25.querySelector('#ve2BtnSaveI') && !!insp25.querySelector('#ve2BtnExportI') && !!insp25.querySelector('#ve2BtnPreviewI') && !!insp25.querySelector('#ve2OutI'), 'saveI:' + !!insp25.querySelector('#ve2BtnSaveI'));
+  check('v193: placeholder pilih-klip hilang dari Inspector', !insp25.querySelector('.se-note'), 'se-note:' + !!insp25.querySelector('.se-note'));
+  check('v193: tombol proyek atas tetap ada tepat satu', doc6.querySelectorAll('#ve2BtnSave').length === 1 && doc6.querySelectorAll('#ve2BtnExport').length === 1 && doc6.querySelectorAll('#ve2BtnPreview').length === 1, 'top:' + doc6.querySelectorAll('#ve2BtnSave').length);
+  check('v193: File output Inspector terikat nilai default', doc6.getElementById('ve2OutI').value === '/Users/mac/Movies/minime-ve2.mp4', doc6.getElementById('ve2OutI').value);
+  doc6.getElementById('ve2BtnSaveI').click();
+  await tick(100);
+  check('v193: klik Simpan di Inspector menyimpan proyek', (doc6.getElementById('ve2Status').textContent || '').includes('tersimpan'), doc6.getElementById('ve2Status').textContent);
+  setInput(doc6.getElementById('ve2NewSrc'), '/tmp/gagal-probe.png', 'input');
+  doc6.getElementById('ve2NewKind').value = 'Image';
+  doc6.getElementById('ve2NewKind').dispatchEvent(new dom6.window.Event('change', { bubbles: true }));
+  doc6.getElementById('ve2AssetAdd').click();
+  await tick(100);
+  const assets25 = ve2State(store6).assets || [];
+  check('v193: gambar masuk daftar walau probe gagal', assets25.length === 1 && assets25[0].src === '/tmp/gagal-probe.png' && assets25[0].duration === 5, assets25.length + '/' + (assets25[0] ? assets25[0].duration : 'none'));
+  setInput(doc6.getElementById('ve2NewSrc'), '/tmp/gagal-probe.mp4', 'input');
+  doc6.getElementById('ve2NewKind').value = 'Video';
+  doc6.getElementById('ve2NewKind').dispatchEvent(new dom6.window.Event('change', { bubbles: true }));
+  doc6.getElementById('ve2AssetAdd').click();
+  await tick(100);
+  check('v193: video gagal probe tidak masuk daftar', (ve2State(store6).assets || []).length === 1, String((ve2State(store6).assets || []).length));
+  check('v193: video gagal probe menampilkan pesan jelas', (doc6.getElementById('ve2Status').textContent || '').includes('Berkas tidak ditemukan'), doc6.getElementById('ve2Status').textContent);
 
 } catch (e) {
   // eslint-disable-next-line no-console

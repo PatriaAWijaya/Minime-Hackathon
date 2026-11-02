@@ -180,6 +180,12 @@ pub(crate) fn unique_suffix() -> String {
 // Probe ffprobe JSON sekali, dipakai video_qc dan video_probe (tanpa duplikasi
 // parser). Mengembalikan durasi, jenis stream, daftar stream, dan nama format.
 fn probe_file(ffprobe: &PathBuf, path: &str) -> Result<ProbeInfo, String> {
+    // v193: berkas tak ada -> pesan jelas, bukan 'EOF line 1 column 0'.
+    // Sebelumnya: ffprobe gagal membuka berkas hanya menulis ke stderr,
+    // stdout kosong, dan parser JSON yang disalahkan (pesan menyesatkan).
+    if !std::path::Path::new(path).exists() {
+        return Err(format!("Berkas tidak ditemukan: {path}"));
+    }
     let mut probe_cmd = Command::new(ffprobe);
     probe_cmd
         .args([
@@ -198,8 +204,12 @@ fn probe_file(ffprobe: &PathBuf, path: &str) -> Result<ProbeInfo, String> {
         .stderr(Stdio::piped());
     let probe = output_timeout(&mut probe_cmd, 120)
         .map_err(|e| format!("gagal menjalankan ffprobe: {e}"))?;
+    if !probe.status.success() {
+        let err = String::from_utf8_lossy(&probe.stderr);
+        return Err(format!("ffprobe gagal membaca {path}: {}", tail(&err, 300)));
+    }
     let pj: serde_json::Value = serde_json::from_slice(&probe.stdout)
-        .map_err(|e| format!("ffprobe JSON tidak bisa dibaca: {e}"))?;
+        .map_err(|e| format!("ffprobe JSON tidak bisa dibaca ({path}): {e}"))?;
     let duration = pj
         .get("format")
         .and_then(|f| f.get("duration"))

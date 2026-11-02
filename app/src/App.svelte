@@ -309,6 +309,14 @@
       ve2Assets = [...ve2Assets, { id: 've2a' + (Date.now() + suffix), name, icon, kind, src: path, duration }];
       return true;
     } catch (e) {
+      // v193: gambar tidak butuh durasi ffprobe (default 5 dtk) — probe
+      // gagal tetap menambah aset supaya daftar tidak kosong. Video/Audio
+      // tetap gagal karena durasi wajib dari probe, dengan pesan Rust yang
+      // kini menyebut berkas + sebabnya (bukan lagi 'EOF line 1 column 0').
+      if (kind === 'Image') {
+        ve2Assets = [...ve2Assets, { id: 've2a' + (Date.now() + suffix), name: path.split('/').pop() || path, icon: '🖼️', kind, src: path, duration: 5 }];
+        return true;
+      }
       ve2Status = `${t('ve2.asset_bad', lang)} ${String(e)}`;
       return false;
     }
@@ -1213,15 +1221,23 @@
           <div class="ve2-transport"><button onclick={() => { ve2ToStart() }} title={t('title.first', lang)}>⏮</button><button onclick={() => { ve2PlayToggle() }} title={t('title.play', lang)}>{ve2Playing ? t('ve2.stop', lang) : t('ve.play', lang)}</button><button onclick={() => { ve2ToEnd() }} title={t('title.last', lang)}>⏭</button><span id="ve2Time">{ve2TimeText}</span><span style="margin-left:auto">{t('ve.zoom', lang)} <select id="ve2Zoom" value={ve2Zoom} onchange={(e) => { ve2Zoom = Number(e.currentTarget.value); ve2SaveState(); }}><option value={0.5}>50%</option><option value={1}>100%</option><option value={2}>200%</option></select></span></div>
           </div>
           <div class="ve2-inspector">
-          <h4 style="margin:0 0 8px">{t('ve.inspector', lang)}</h4>
           {#if ve2SelClip()}
+          <h4 style="margin:0 0 8px">{t('ve.inspector', lang)}</h4>
           <label>{t('word.nama', lang)}</label><input id="ve2Name" type="text" value={ve2SelClip()?.name ?? ''} oninput={(e) => { ve2SetField('name', e.currentTarget.value) }}>
           <label>{t('ve.start.label', lang)}</label><input id="ve2Start" type="number" step="0.1" value={ve2SelClip()?.start ?? 0} onchange={(e) => { ve2SetField('start', e.currentTarget.value) }}>
           <label>{t('ve.dur.label', lang)}</label><input id="ve2Dur" type="number" step="0.1" value={ve2SelClip()?.dur ?? 0} onchange={(e) => { ve2SetField('dur', e.currentTarget.value) }}>
           <label>{t('ve.track', lang)}</label><select id="ve2Track" value={ve2SelClip()?.track ?? 'Video'} onchange={(e) => { ve2SetField('track', e.currentTarget.value) }}><option value="Video">{t('word.video', lang)}</option><option value="B-Roll">B-Roll</option><option value="Audio">{t('word.audio', lang)}</option><option value="Teks">{t('word.teks', lang)}</option></select>
           <label>{t('ve.effect', lang)}</label><select id="ve2Fx" value={ve2SelClip()?.effect ?? 'none'} onchange={(e) => { ve2SetField('effect', e.currentTarget.value) }}><option value="none">{t('ve.fx.none', lang)}</option><option value="fade">{t('ve.fx.fade', lang)}</option><option value="zoom">{t('ve.fx.zoom', lang)}</option></select>
           {:else}
-          <p class="se-note">{t('ve2.no_clip', lang)}</p>
+          <!-- v193 (perintah Patria 18:21): placeholder 'pilih klip' dihapus,
+               diganti tombol proyek (id baru agar tidak bentrok tombol atas;
+               handler sama; File output terikat ve2Out yang sama). -->
+          <div class="ve2-inspector-acts">
+          <button id="ve2BtnSaveI" class="btn btn-sm" onclick={() => { ve2SaveProject() }}>{t('settings.saveproj', lang)}</button>
+          <button id="ve2BtnExportI" class="btn btn-sm" onclick={() => { ve2Export() }} disabled={ve2Busy}>{ve2Busy ? t('ve2.rendering', lang) : t('ve.export', lang)}</button>
+          <button id="ve2BtnPreviewI" class="btn btn-sm" onclick={() => { ve2Preview() }}>{t('ve.render', lang)}</button>
+          <label>{t('t1.output', lang)}<input id="ve2OutI" type="text" bind:value={ve2Out}></label>
+          </div>
           {/if}
           </div>
           </div>

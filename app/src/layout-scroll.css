@@ -749,6 +749,10 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 /* v192: kotak pratinjau tinggi tetap — memilih klip tidak lagi mengubah
    tinggi kartu atas sehingga timeline tidak bergeser (penyebab view
    terlempar ke atas di WebView live tanpa scroll anchoring). */
-.ve2-preview-box { height: min(480px, 55vh); display: flex; align-items: center; justify-content: center; }
+.ve2-preview-box { height: min(480px, 55vh); aspect-ratio: 9 / 16; max-width: 100%; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+/* v193: tombol proyek di kolom Inspector saat tidak ada klip terpilih. */
+.ve2-inspector-acts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.ve2-inspector-acts .btn { width: 100%; }
+.ve2-inspector-acts input { width: 100%; box-sizing: border-box; }
 /* v192: teks nama klip tidak ikut terseleksi saat bar diseret pointer. */
 .bar.ve-clip { user-select: none; -webkit-user-select: none; }
