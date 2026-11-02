@@ -80,17 +80,15 @@ export function cbIsActive(): boolean {
   return loadState() !== null;
 }
 
-// Pemicu alur: brief kreatif YANG MENYEBUT Kreatif dengan nama.
-// Brief kreatif generik (tanpa kata 'Kreatif') TIDAK masuk alur — ia
-// tetap lewat jalur lama (fan-out / delegasi satu tembak + tombol
-// Approve studio, v104/v107). Mempersempit ini disengaja: pemicu luas
-// terbukti membajak delegasi satu tembak yang sudah disetujui (rig
-// §4 'tombol studio Kreatif' gagal saat pemicu masih luas). Perluasan
-// pemicu ke semua brief kreatif adalah keputusan Patria, bukan Mimi.
+// v203 (keputusan Patria 2 Nov 23:13, Skenario 1 Tahap 0): pemicu alur
+// DIPERLUAS untuk SEMUA brief kreatif — syarat menyebut 'Kreatif'
+// dihapus. Konsekuensi yang dicatat, bukan disembunyikan: delegasi
+// tunggal ke Kreatif dari chat kini selalu masuk alur interaktif;
+// tombol Approve Studio untuk Kreatif tetap hidup lewat hasil
+// fan-out (multi-agen) dan retry tugas — rig-chat §3/§10/§12 diperbarui
+// mengikuti perilaku baru ini, bukan menutupinya.
 export function cbIsFlowEntry(text: string): boolean {
-  if (!cbIsCreative(text)) return false;
-  const low = ' ' + text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
-  return low.includes(' kreatif ');
+  return cbIsCreative(text);
 }
 
 // Detektor brief kreatif: kata MEDIA_WORDS + kata yang belum ada di sana
@@ -401,6 +399,98 @@ function setImageBrief(text: string): void {
   } catch { /* abaikan */ }
 }
 
+// v203 (Skenario 1 Tahap 2): urai IMAGE-PLAN menjadi field terstruktur
+// Image Editor — judul, subjudul, body copy, listicle, header, footer.
+// Kontrak parse: model diminta menulis label persis di awal baris
+// (Title:, Subtitle:, Body:, Header:, Footer:, Caption:). Baris label
+// dikenali tanpa peduli kapitalisasi dan marker markdown (#, **, -).
+// Body dipisah dua bentuk (keputusan Patria 23:13: listicle adalah
+// SALAH SATU bentuk body copy): baris daftar (-, *, •, 1./1)) menjadi
+// Listicle (marker dibuang), baris lain menjadi Body paragraf.
+// Caption dan elemen visual diabaikan (caption sudah punya jalurnya
+// sendiri; elemen visual tetap di brief utuh). Bila tidak ada label
+// sama sekali, semua field kosong dan brief utuh yang dipakai
+// (perilaku lama) — parse tidak menebak-nebak field.
+export type ImagePlanFields = { title: string; subtitle: string; body: string; listicle: string; header: string; footer: string };
+const PLAN_LABELS: Array<{ re: RegExp; key: keyof ImagePlanFields | 'skip' }> = [
+  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(title|judul)\s*:/i, key: 'title' },
+  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(subtitle|subjudul)\s*:/i, key: 'subtitle' },
+  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(body|isi)\s*:/i, key: 'body' },
+  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(header|kepala)\s*:/i, key: 'header' },
+  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(footer|kaki)\s*:/i, key: 'footer' },
+  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(caption|keterangan|logo|elemen visual|visual|elemen)\s*:/i, key: 'skip' },
+];
+export function parseImagePlan(text: string): ImagePlanFields {
+  const out: ImagePlanFields = { title: '', subtitle: '', body: '', listicle: '', header: '', footer: '' };
+  const sections = new Map<keyof ImagePlanFields | 'skip', string[]>();
+  let cur: keyof ImagePlanFields | 'skip' | null = null;
+  let labeled = false;
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    let matched = false;
+    for (const { re, key } of PLAN_LABELS) {
+      const m = line.match(re);
+      if (m) {
+        labeled = true;
+        cur = key;
+        matched = true;
+        const rest = line.slice(m[0].length).trim().replace(/^\*+|\*+$/g, '').trim();
+        if (rest) {
+          const arr = sections.get(key) || [];
+          arr.push(rest);
+          sections.set(key, arr);
+        }
+        break;
+      }
+    }
+    if (!matched && cur) {
+      const arr = sections.get(cur) || [];
+      arr.push(line);
+      sections.set(cur, arr);
+    }
+  }
+  if (!labeled) return out;
+  const oneLine = (k: keyof ImagePlanFields): string => (sections.get(k) || []).map((s) => s.trim()).filter(Boolean).join(' ');
+  out.title = oneLine('title');
+  out.subtitle = oneLine('subtitle');
+  out.header = oneLine('header');
+  out.footer = oneLine('footer');
+  const bodyLines = (sections.get('body') || []).map((s) => s.trim()).filter(Boolean);
+  const paras: string[] = [];
+  const items: string[] = [];
+  for (const ln of bodyLines) {
+    const lm = ln.match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
+    if (lm) items.push(lm[1].trim());
+    else paras.push(ln);
+  }
+  out.body = paras.join('\n');
+  out.listicle = items.join('\n');
+  return out;
+}
+
+// v203: rasio dari brief/IMAGE-PLAN — rasio eksplisit di brief menang;
+// format image/carousel (poster feed) -> 4:5. Reels tidak lewat sini
+// (jalur Video Editor, 9:16).
+function ratioForImagePlan(st: CbState): string {
+  const m = st.brief.match(/(1:1|4:5|9:16|16:9|3:4|3:2|2:3)/);
+  if (m) return m[1];
+  return '4:5';
+}
+
+function setImageStructured(text: string, f: ImagePlanFields, ratio: string): void {
+  try {
+    const w = window as unknown as Record<string, unknown>;
+    if (typeof w.imgSetStructured === 'function') {
+      (w.imgSetStructured as (x: { brief: string; title: string; subtitle: string; body: string; listicle: string; header: string; footer: string; ratio: string; output: string }) => void)({
+        brief: text, title: f.title, subtitle: f.subtitle, body: f.body,
+        listicle: f.listicle, header: f.header, footer: f.footer, ratio, output: 'poster',
+      });
+      return;
+    }
+  } catch { /* jatuh ke brief mentah */ }
+  setImageBrief(text);
+}
+
 function topicOf(st: CbState): string {
   return st.brief.length > 60 ? st.brief.slice(0, 60) : st.brief;
 }
@@ -658,10 +748,11 @@ async function cbGenerateImagePlan(st: CbState, bulk: boolean, count: number): P
     if (!bulk) {
       const t = await genText(
         'Buat caption + rancangan image untuk postingan sosmed (IMAGE-PLAN).\nBrief: ' + st.brief + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
-        '\nKeluarkan: caption lengkap + rancangan isi image (Title, Subtitle, Body, header, footer, logo, elemen visual lain).',
+        '\nKeluarkan: caption lengkap + rancangan isi image dengan label persis di awal baris — Title:, Subtitle:, Body:, Header:, Footer:, Caption: — disusul elemen visual lain.',
         'trace-cb-img-' + Date.now());
       postChat('kreatif', ag.name, ag.color, esc(t.text) + t.footer);
-      setImageBrief(t.text);
+      // v203: urai otomatis ke field Image Editor (bukan teks mentah saja).
+      setImageStructured(t.text, parseImagePlan(t.text), ratioForImagePlan(st));
       saveLib('Image: ' + topicOf(st), t.text);
     } else {
       const t = await genText(

@@ -38,8 +38,8 @@ import { esc } from './esc.js';
 const FLOW_LS = 'minime.imageFlow';
 
 type SbPanel = { shot: string; visual: string; action: string; vo: string; transition: string; duration: number };
-type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number; output: string; duration: number; scenes: number; slides: number; title: string; subtitle: string; listicle: string; header: string; footer: string; palette: string; provider: string; panels: SbPanel[] | null; panelsBrief: string | null };
-const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0, output: 'poster', duration: 30, scenes: 4, slides: 6, title: '', subtitle: '', listicle: '', header: '', footer: '', palette: '', provider: 'meta', panels: null, panelsBrief: null };
+type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number; output: string; duration: number; scenes: number; slides: number; title: string; subtitle: string; body: string; listicle: string; header: string; footer: string; palette: string; provider: string; panels: SbPanel[] | null; panelsBrief: string | null };
+const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0, output: 'poster', duration: 30, scenes: 4, slides: 6, title: '', subtitle: '', body: '', listicle: '', header: '', footer: '', palette: '', provider: 'meta', panels: null, panelsBrief: null };
 let state: FlowState = { ...DEFAULTS };
 
 
@@ -57,6 +57,7 @@ function sentPrompt(): string {
   if (state.header.trim()) p += '. Header text: ' + state.header.trim();
   if (state.title.trim()) p += '. Title: ' + state.title.trim();
   if (state.subtitle.trim()) p += '. Subtitle: ' + state.subtitle.trim();
+  if (state.body.trim()) p += '. Body: ' + state.body.trim();
   const items = state.listicle.split('\n').map((x) => x.trim()).filter(Boolean);
   if (items.length) p += '. List: ' + items.join('; ');
   if (state.footer.trim()) p += '. Footer text: ' + state.footer.trim();
@@ -89,6 +90,7 @@ function loadState(): void {
         slides: Number.isInteger(o.slides) && (o.slides as number) >= 6 && (o.slides as number) <= 10 ? (o.slides as number) : 6,
         title: typeof o.title === 'string' ? o.title : '',
         subtitle: typeof o.subtitle === 'string' ? o.subtitle : '',
+        body: typeof o.body === 'string' ? o.body : '',
         listicle: typeof o.listicle === 'string' ? o.listicle : '',
         header: typeof o.header === 'string' ? o.header : '',
         footer: typeof o.footer === 'string' ? o.footer : '',
@@ -600,6 +602,8 @@ function syncForm(): void {
   if (title) title.value = state.title;
   const subtitle = el('img-subtitle') as HTMLInputElement | null;
   if (subtitle) subtitle.value = state.subtitle;
+  const body = el('img-body') as HTMLTextAreaElement | null;
+  if (body) body.value = state.body;
   const listicle = el('img-listicle') as HTMLTextAreaElement | null;
   if (listicle) listicle.value = state.listicle;
   const header = el('img-header') as HTMLInputElement | null;
@@ -681,6 +685,29 @@ export function imgSetBrief(text: string): void {
   renderBulkTabs();
 }
 
+// v203 (Skenario 1 Tahap 2): handoff terstruktur dari IMAGE-PLAN —
+// brief utuh tetap disimpan, field-field terurai mengisi editor.
+// Brief baru = pekerjaan baru: panel storyboard dibersihkan (penjaga v174).
+export function imgSetStructured(f: { brief: string; title: string; subtitle: string; body: string; listicle: string; header: string; footer: string; ratio: string; output: string }): void {
+  state.brief = f.brief;
+  state.title = f.title;
+  state.subtitle = f.subtitle;
+  state.body = f.body;
+  state.listicle = f.listicle;
+  state.header = f.header;
+  state.footer = f.footer;
+  if (RATIO_SIZE[f.ratio]) state.ratio = f.ratio;
+  state.output = f.output;
+  state.bulk = null;
+  state.bulkActive = 0;
+  state.panels = null;
+  state.panelsBrief = null;
+  saveState();
+  syncForm();
+  renderPreview();
+  renderBulkTabs();
+}
+
 export function initImageFlow(): void {
   loadState();
   syncForm();
@@ -722,6 +749,7 @@ export function initImageFlow(): void {
   bind<HTMLSelectElement>('img-slides', 'change', (e) => { state.slides = Number(e.value); saveState(); });
   bind<HTMLInputElement>('img-title', 'input', (e) => { state.title = e.value; saveState(); renderPreview(); });
   bind<HTMLInputElement>('img-subtitle', 'input', (e) => { state.subtitle = e.value; saveState(); renderPreview(); });
+  bind<HTMLTextAreaElement>('img-body', 'input', (e) => { state.body = e.value; saveState(); renderPreview(); });
   bind<HTMLTextAreaElement>('img-listicle', 'input', (e) => { state.listicle = e.value; saveState(); renderPreview(); });
   bind<HTMLInputElement>('img-header', 'input', (e) => { state.header = e.value; saveState(); renderPreview(); });
   bind<HTMLTextAreaElement>('img-footer', 'input', (e) => { state.footer = e.value; saveState(); renderPreview(); });
@@ -757,6 +785,7 @@ export function initImageFlow(): void {
   (window as unknown as Record<string, unknown>).imgDropThumb = (file: string) => { thumbCache.delete(file); };
   (window as unknown as Record<string, unknown>).imgRefreshUI = imgRefreshUI;
   (window as unknown as Record<string, unknown>).imgSetBrief = imgSetBrief;
+  (window as unknown as Record<string, unknown>).imgSetStructured = imgSetStructured;
   (window as unknown as Record<string, unknown>).imgSetBulk = imgSetBulk;
   (window as unknown as Record<string, unknown>).imgLoadSaved = async (item: { content?: string; imageFile?: string; o: string }) => {
     if (item.content) { state.brief = item.content; saveState(); syncForm(); renderPreview(); }

@@ -1182,6 +1182,7 @@
           <div class="se-group"><label>{t('img.header', lang)}<input id="img-header" class="se-field" type="text"></label></div>
           <div class="se-group"><label>{t('img.title', lang)}<input id="img-title" class="se-field" type="text"></label></div>
           <div class="se-group"><label>{t('img.subtitle', lang)}<input id="img-subtitle" class="se-field" type="text"></label></div>
+          <div class="se-group"><label>{t('img.body', lang)}<textarea id="img-body" rows="3" class="se-field"></textarea></label></div>
           <div class="se-group"><label>{t('img.listicle', lang)}<textarea id="img-listicle" rows="3" class="se-field"></textarea></label></div>
           <div class="se-group"><label>{t('img.footer', lang)}<textarea id="img-footer" rows="2" class="se-field"></textarea></label></div>
           <div class="se-group"><label>{t('img.palette', lang)}<input id="img-palette" class="se-field" type="text"></label></div>

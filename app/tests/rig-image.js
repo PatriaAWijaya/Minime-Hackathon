@@ -466,6 +466,14 @@ try {
   check('v174: rencana video memuat 7 field panel', (ve2v174.plan || '').includes('Scene 1') && (ve2v174.plan || '').includes('ES, eye-level, static') && (ve2v174.plan || '').includes('Durasi: 6 detik'), (ve2v174.plan || '').slice(0, 200));
   check('v174: VO gabungan panel masuk kolom Voice Editor', (document.getElementById('vsText')?.value || '').includes('Pagi selalu dimulai dari sini.'), (document.getElementById('vsText')?.value || '').slice(0, 80));
 
+  // 14. v203: jembatan imgSetStructured mengisi field + Body + rasio.
+  check('v203: jembatan imgSetStructured tersedia', typeof dom.window.imgSetStructured === 'function', typeof dom.window.imgSetStructured);
+  dom.window.imgSetStructured({ brief: 'Rencana uji body', title: 'Judul Uji', subtitle: 'Sub Uji', body: 'Paragraf body uji.', listicle: 'Poin satu\nPoin dua', header: 'HEAD UJI', footer: 'FOOT UJI', ratio: '4:5', output: 'poster' });
+  await tick(100);
+  check('v203: imgSetStructured mengisi field editor', (document.getElementById('img-title')?.value || '') === 'Judul Uji' && (document.getElementById('img-body')?.value || '') === 'Paragraf body uji.' && (document.getElementById('img-listicle')?.value || '') === 'Poin satu\nPoin dua', (document.getElementById('img-title')?.value || '') + ' / ' + (document.getElementById('img-body')?.value || ''));
+  check('v203: imgSetStructured mengatur rasio + output', (document.getElementById('img-ratio')?.value || '') === '4:5', document.getElementById('img-ratio')?.value || '');
+  check('v203: pratinjau prompt memuat Body', (document.getElementById('img-preview')?.textContent || '').includes('Body: Paragraf body uji.'), (document.getElementById('img-preview')?.textContent || '').slice(0, 120));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-image exception :: ' + (e && e.stack ? e.stack : e));

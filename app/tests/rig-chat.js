@@ -61,6 +61,9 @@ async function fetchStub(url, opts) {
   if (body.includes('GAGAL-UJI')) { gagalUji++; if (gagalUji <= 3) return makeResp({ ok: false, status: 500, jsonData: { error: 'GAGAL-UJI' } }); }
   if (body.includes('Bagi brief')) {
     content = (body.includes('Halo utama') || body.includes('jadwal posting') || body.includes('halo') || body.includes('brief produk digital')) ? '[]' : (body.includes('Alur 2') ? '[{"agent":"riset","task":"Riset pasar Alur 2"},{"agent":"strategi","task":"Strategi Alur 2"},{"agent":"kreatif","task":"Buat naskah Alur 2"}]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat naskah video kopi susu"}]');
+  } else if (body.includes('LABEL-UJI')) {
+    // v203: rencana IMAGE-PLAN berlabel untuk uji urai terstruktur.
+    content = 'Title: Kopi Susu Gula Aren\nSubtitle: Manisnya Pas, Creamy-nya Nagih\nBody: Satu gelas cukup untuk memulai hari, racikan susu lembut berpadu gula aren asli.\n- Susu segar creamy\n- Gula aren asli\n- Es batu kristal\nHeader: KOPI PAGI\nFooter: Pesan sekarang via chat\nCaption: Kopi susu gula aren, manisnya pas!';
   } else if (body.includes('QC hasil kerja agen') && body.includes('GATE-UJI')) {
     // v161: QC pertama tugas GATE-UJI = REVISI (memicu 1 putaran revisi),
     // QC berikutnya = LOLOS. Marker membuktikan verdict interim tak bocor.
@@ -202,25 +205,24 @@ try {
   check('Riset tanpa tombol studio (bukan skill-nya)', ![...document.querySelectorAll('#chatBox button')].some((b) => b.textContent.trim() === 'Buka di Media Studio'));
   check('v159: delegasi Riset = jawaban + QC (2 model call)', fetchCount() === 4, 'fetch=' + fetchCount());
 
-  // 3. Delegasi Kreatif + studio: tombol Approve -> pindah studio.
+  // 3. v203 (Skenario 1 Tahap 0): brief kreatif TANPA kata 'Kreatif'
+  // kini masuk alur brief interaktif, bukan delegasi satu tembak.
+  // Tombol Approve Studio untuk Kreatif tetap diuji lewat fan-out
+  // (§10/§12) — bukan lewat pesan ini lagi.
   await sendMsg('buatkan naskah video kopi');
   await waitFor(() => bodyText().includes('Saya delegasikan tugas ini ke Kreatif'), 'delegasi Kreatif', 120);
-  await waitFor(() => [...document.querySelectorAll('#chatBox button')].some((b) => b.textContent.trim() === 'Buka di Media Studio'), 'tombol studio Kreatif', 120);
-  check('delegasi ke Kreatif tampil', bodyText().includes('Saya delegasikan tugas ini ke Kreatif'));
-  check('Kreatif membawa tombol studio', [...document.querySelectorAll('#chatBox button')].some((b) => b.textContent.trim() === 'Buka di Media Studio'));
-  [...document.querySelectorAll('#chatBox button')].find((b) => b.textContent.trim() === 'Buka di Media Studio').click();
-  await tick(200);
-  check('Approve pindah ke view Media', document.getElementById('view-media')?.classList.contains('active'));
-  check('Approve membuka tab Script', document.getElementById('ms-tab-script')?.style.display === 'block', document.getElementById('ms-tab-script')?.style.display || '');
-  check('Approve memuat hasil ke output Script', (document.getElementById('se-output')?.value || '').includes('NASKAH-UJI'), document.getElementById('se-output')?.value || '');
-  check('Approve dikonfirmasi di chat', bodyText().includes('Baik, saya buka Media Studio'));
-  check('v159: delegasi Kreatif = jawaban + QC (2 model call)', fetchCount() === 6, 'fetch=' + fetchCount());
+  await waitFor(() => bodyText().includes('dipergunakan untuk apa?'), 'pertanyaan purpose alur', 120);
+  check('v203: brief kreatif masuk alur (pengumuman + pertanyaan purpose)', bodyText().includes('Saya delegasikan tugas ini ke Kreatif') && bodyText().includes('dipergunakan untuk apa?'));
+  check('v203: alur interaktif tanpa model call (fetch tetap 4)', fetchCount() === 4, 'fetch=' + fetchCount());
+  // Reset alur (simulasi user membatalkan) agar seksi berikut tidak
+  // menelan pesannya sebagai jawaban alur.
+  store.delete('minime.creativeBrief');
 
   // 4. Produk tidak pernah jadi target delegasi.
   const delegBefore = countOcc('Saya delegasikan');
   dom.window.showView('home');
   await sendMsg('buatkan brief produk digital');
-  await waitFor(() => fetchCount() === 8, 'model call produk', 120);
+  await waitFor(() => fetchCount() === 6, 'model call produk', 120);
   await tick(200);
   check('produk tidak didelegasikan', countOcc('Saya delegasikan') === delegBefore, 'sebelum=' + delegBefore + ' sesudah=' + countOcc('Saya delegasikan'));
 
@@ -253,7 +255,9 @@ try {
   // 10. v107: approve Studio dengan draf terbuka memakai dua ketuk
   // (dialog native mati di WebView live — diganti arm di tombol).
   store.set('minime.scriptEditor', JSON.stringify({ output: 'DRAF LAMA UJI' }));
-  await sendMsg('buatkan naskah video kopi');
+  // v203: pemicu tombol Studio kini brief fan-out (delegasi tunggal
+  // Kreatif masuk alur interaktif, bukan hasil satu tembak).
+  await sendMsg('Brief kopi susu gula aren untuk pasar Surabaya');
   await waitFor(() => [...document.querySelectorAll('#chatBox button')].some((b) => b.textContent.trim() === 'Buka di Media Studio'), 'tombol studio v107', 120);
   const btn107 = [...document.querySelectorAll('#chatBox button')].find((b) => b.textContent.trim() === 'Buka di Media Studio');
   btn107.click();
@@ -345,7 +349,8 @@ try {
   // Tombol done diverifikasi dengan alur approve segar: residu §10 sudah
   // dihapus §6 bersama projectnya, jadi kirim ulang pemicu tombol Studio
   // (pola sama seperti §10: dua ketuk karena draf Script Editor ada).
-  await sendMsg('buatkan naskah video kopi');
+  // v203: pemicu kini brief fan-out (lihat §10).
+  await sendMsg('Brief kopi susu gula aren untuk pasar Surabaya');
   await waitFor(() => [...document.querySelectorAll('#chatBox button')].some((b) => b.textContent.trim() === 'Buka di Media Studio'), 'tombol studio v116', 120);
   const btn116 = [...document.querySelectorAll('#chatBox button')].find((b) => b.textContent.trim() === 'Buka di Media Studio');
   btn116.click();
@@ -540,6 +545,10 @@ try {
   await tick(300);
   rec132 = [...document.querySelectorAll('#chatBox .msg')].find((m) => (m.textContent || '').includes('Hasil riset selesai.'));
   check('v132: tombol dipilih berubah hijau', !!rec132 && !!rec132.querySelector('.rec-btn.done') && rec132.querySelector('.rec-btn.done').textContent.trim() === 'Buat naskah', rec132?.querySelector('.msg-recs')?.textContent || 'tidak ada');
+  // v203: klik opsi 'Buat naskah' kini memulai alur brief interaktif
+  // (brief kreatif) — reset agar seksi berikut tidak menelan pesannya
+  // sebagai jawaban alur.
+  store.delete('minime.creativeBrief');
   // (c) Bubble user dengan marker TIDAK jadi tombol.
   dom.window.postChat('user', 'Patria', '#374151', '►RECOMMEND: A | B');
   await tick(100);
@@ -760,6 +769,10 @@ try {
   rec145b.querySelector('.rec-btn').click();
   await waitFor(() => [...document.querySelectorAll('#chatBox .msg.user')].some((m) => (m.textContent || '').includes('Buat caption + hashtag')), 'rec145b terkirim');
   check('v145: opsi non-studio tidak memindahkan view', !!document.getElementById('view-home')?.classList.contains('active') && !document.getElementById('view-media')?.classList.contains('active'));
+  // v203: opsi 'Buat caption + hashtag' yang terkirim kini memulai alur
+  // brief interaktif (brief kreatif) — reset agar §30 tidak menelan
+  // pesannya sebagai jawaban alur.
+  store.delete('minime.creativeBrief');
 
   // §30 v149: tugas agen muncul di Kanban (Antrian -> Dikerjakan -> Selesai).
   dom.window.showView('home');
@@ -907,15 +920,41 @@ try {
   await tick(100);
   const imgBrief = () => { try { const raw = dom.window.localStorage.getItem('minime.imageFlow'); if (!raw) return ''; const st = JSON.parse(raw); return typeof st.brief === 'string' ? st.brief : ''; } catch (_) { return ''; } };
   check('v162: jembatan imgSetBrief tersedia di rig', typeof dom.window.imgSetBrief === 'function', typeof dom.window.imgSetBrief);
+  check('v203: jembatan imgSetStructured tersedia di rig', typeof dom.window.imgSetStructured === 'function', typeof dom.window.imgSetStructured);
   const briefSebelum = imgBrief();
   await sendMsg('riset TEKS-UJI laporan pasar');
   await waitFor(() => [...document.querySelectorAll('#chatBox .msg')].some((m) => (m.textContent || '').includes('NASKAH-UJI')), 'jawaban non-visual', 120);
   await tick(200);
   check('v162: tugas non-visual TIDAK mengubah brief Image', imgBrief() === briefSebelum, JSON.stringify(imgBrief().slice(0, 60)));
-  await sendMsg('riset VISUAL-UJI poster kopi');
-  await waitFor(() => imgBrief().includes('NASKAH-UJI'), 'brief Image terisi output kurasi', 120);
+  // v203: jalur baru tugas visual — alur interaktif IMAGE-PLAN mengurai
+  // field terstruktur (menggantikan auto-brief delegasi tunggal yang
+  // kini masuk alur). Marker LABEL-UJI membuat stub mengembalikan
+  // rencana berlabel (lihat cabang stub di atas).
+  await sendMsg('halo Kreatif, buatkan konten instagram kopi LABEL-UJI');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'v203 purpose');
+  recBtn(lastMsg(), 'Konten Sosial Media').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Platform sosmednya yang mana?'), 'v203 platform');
+  recBtn(lastMsg(), 'Instagram').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis postingannya apa?'), 'v203 format');
+  recBtn(lastMsg(), 'Image').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Tujuannya apa?'), 'v203 purpose2');
+  recBtn(lastMsg(), 'Promosional').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Pendekatannya mau yang mana?'), 'v203 approach');
+  recBtn(lastMsg(), 'Infografis').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Posting 1 per 1 atau bulk'), 'v203 count');
+  recBtn(lastMsg(), 'Satu per satu').click();
+  const imgFlow203 = () => { try { return JSON.parse(dom.window.localStorage.getItem('minime.imageFlow') || '{}'); } catch (_) { return {}; } };
+  await waitFor(() => (imgFlow203().title || '') === 'Kopi Susu Gula Aren', 'v203 field terurai', 120);
   await tick(200);
-  check('v162: tugas visual mengisi brief Image dengan jawaban final', imgBrief().includes('NASKAH-UJI'), imgBrief().slice(0, 60));
+  const f203 = imgFlow203();
+  check('v203: IMAGE-PLAN terurai ke Judul', f203.title === 'Kopi Susu Gula Aren', f203.title || '');
+  check('v203: IMAGE-PLAN terurai ke Subjudul', f203.subtitle === 'Manisnya Pas, Creamy-nya Nagih', f203.subtitle || '');
+  check('v203: Body paragraf terurai (bukan list)', (f203.body || '').includes('Satu gelas cukup'), f203.body || '');
+  check('v203: baris daftar terurai ke Listicle', (f203.listicle || '').includes('Susu segar creamy') && (f203.listicle || '').includes('Gula aren asli'), f203.listicle || '');
+  check('v203: Header/Footer terurai', f203.header === 'KOPI PAGI' && (f203.footer || '').includes('Pesan sekarang'), (f203.header || '') + ' / ' + (f203.footer || ''));
+  check('v203: rasio poster feed 4:5 + output poster', f203.ratio === '4:5' && f203.output === 'poster', (f203.ratio || '') + ' / ' + (f203.output || ''));
+  check('v203: brief utuh tetap tersimpan', (f203.brief || '').includes('Title: Kopi Susu Gula Aren'), (f203.brief || '').slice(0, 80));
+  check('v203: kolom Body tampil di editor', (document.getElementById('img-body')?.value || '').includes('Satu gelas cukup'), document.getElementById('img-body')?.value || '');
 
 } catch (e) {
   // eslint-disable-next-line no-console
