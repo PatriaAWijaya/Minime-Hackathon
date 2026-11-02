@@ -2521,6 +2521,16 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v185 — deskripsi user -> tombol Generate HTML -> komposisi HyperFrames (perintah Patria 2 Nov 11:00)
+- Latar: komposisi HTML terlalu teknis, tidak ramah user. Perintah: user mendeskripsikan keinginan, tombol Generate HTML mengubah deskripsi jadi code HTML yang bisa dipakai HyperFrames.
+- Yang dibangun: cabang HyperFrames kini diawali kolom #hf-desc ("Deskripsikan video yang kamu mau", rows=3) + tombol #hf-gen-html. Modul baru app/src/lib/hf-gen.ts: prompt kontrak ketat ke model (dokumen HTML lengkap; root data-composition-id="main"; default vertikal 1080x1920, landscape 1920x1080 bila diminta; durasi dari deskripsi atau 15, rentang 5-30; tiap elemen animasi class clip + data-start/data-duration/data-track-index; satu timeline GSAP paused + window.__timelines["main"] + seek(0); hanya CSS+GSAP, tanpa aset eksternal; teks Bahasa Indonesia; output hanya HTML) lewat rantai router standar (Meta -> Gemini -> Ollama, pola yang sama dengan seGenerate + recordLiveCost). hfExtractHtml melepas pagar markdown bila ada dan MENOLAK hasil tanpa data-composition-id (kolom lama tidak ditimpa, status hf.gen_invalid). Hasil yang sah mengisi kolom Komposisi HTML untuk diperiksa/diubah dulu sebelum Render — kolom manual tetap ada.
+- i18n: +5 kunci (hf.desc, hf.generate, hf.generating, hf.gen_empty, hf.gen_invalid) di 3 bahasa, 1098 -> 1103/bahasa, 0 duplikat. Label tombol memakai kunci baru (bukan img.clear) karena pesannya spesifik.
+- Rig-video: cabang stub generativelanguage (respons Gemini berisi komposisi sah) + § v185 baru (2 cek): Generate HTML mengisi komposisi dari deskripsi; generate memanggil model Gemini (bukan Omni).
+- Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
+- Kode lokal 117781d ↔ remote 45e800e (tree identik).
+- LIVE: (diisi commit log-LIVE sesudah deploy)
+
+
 ## v184 — tombol Bersihkan di tiap form input Omni + HyperFrames (perintah Patria 2 Nov 09:32)
 - Latar: prompt prosa yang nyangkut di kolom Komposisi HTML HyperFrames (kasus 09:25) tidak ada cara menghapusnya selain menandai manual / reload. Perintah: tiap form input di Omni maupun HyperFrames dapat tombol Bersihkan.
 - Yang dibangun (pakai kunci 'img.clear' yang sudah ada — Bersihkan/Clear/清空 — tanpa kunci i18n baru, hitungan tetap 1098/bahasa): tab Prompt Omni tombol #vg-prompt-clear (kosongkan vgPrompt + vgStatus); tab References tombol #vg-refs-clear (kosongkan semua slot vgRefs + vgStatus); tombol hapus per-frame (#vg-first-clear/#vg-last-clear) kini juga membersihkan vgStatus basi; cabang HyperFrames tombol #hf-clear di samping Render (kosongkan hfHtml + hfStatus). State $state di sesi itu juga yang dibersihkan — tidak ada simpanan persisten terpisah untuk form ini, jadi Bersihkan = hilang seketika tanpa reload.
