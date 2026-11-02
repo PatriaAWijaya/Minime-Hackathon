@@ -2527,6 +2527,8 @@ LIVE 3 Nov ~01:35 WIB: deploy mh-build208.sh — MH_BUILD208_OK; HEAD MacBook 53
 
 LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d94b03a (commit log); PID 77290; marker 'Visual + Caption per Konten' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v209. Konfirmasi live Patria untuk v209 BELUM ada (uji live yang disarankan: sesudah Gerbang 2 lolos, periksa estimasi biaya -> Buat Visual Se-batch -> periksa media per baris -> Buat Caption Se-batch -> Setujui Visual + Caption).
 
+LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
+
 ## v210 — Skenario 2 Tahap 6: batch 3 kanal + draf bertanggal ke Planner + H-3 (TAHAP TERAKHIR alur Skenario 2; lanjutan perintah Patria 3 Nov 01:11 "lanjut" atas workflow Skenario 2)
 
 Seksi Batch ke Planner muncul di panel Rencana sesudah Gerbang 3
