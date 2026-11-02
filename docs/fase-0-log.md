@@ -2572,6 +2572,11 @@ dokumen lama yang dipakai.
   i18n 1134/1134/1134 0 duplikat, svelte-check 0 error / 21 warning
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock bersih.
 - Kode 3970d66 ↔ 1e935f6 (tree identik).
+- LIVE 2 Nov ~22:57: deploy mh-build174.sh OK (MH_BUILD174_OK); HEAD MacBook
+  94a4f15; PID 68207; md5 dist JS 38cc2dd69b33b68fa98a293be6798cb1 dan CSS
+  13647ae902959d218a44d9b61a232fb3 lokal == MacBook (CSS sama dengan
+  v202, v174 tidak menambah CSS); penanda 'data-sb-panel' (2x) dan
+  'img-sb-build' (2x) di bundle JS MacBook. App live = v174.
 
 ## v202 — template pola sinematik VLOG CINEMATIC ke panel Video (perintah Patria 2 Nov 22:12: "Lakukan")
 
