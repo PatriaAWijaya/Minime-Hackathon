@@ -2521,6 +2521,36 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v194 — perbaiki sintaks ffprobe show_entries (laporan Patria 2 Nov 18:33)
+
+- Laporan Patria: aset masih gagal ditambah — pesan BARU v193: "ffprobe
+  gagal membaca /Users/mac/Downloads/drinksaints_...mp4: No match for
+  section 'format_name' / Failed to set value
+  'format=duration:format_name' for option 'show_entries': Invalid
+  argument". Pesan v193 bekerja sesuai tujuannya: langsung menunjuk sebab.
+- AKAR MASALAH: dalam satu argumen -show_entries, pemisah FIELD adalah
+  koma, sedangkan titik dua memisahkan SEKSI. 'format=duration:
+  format_name' dibaca ffprobe sebagai seksi 'format' + seksi tak dikenal
+  'format_name' -> Invalid argument. Argumen stream punya kesalahan yang
+  sama (belum sempat dilaporkan karena ffprobe gagal di argumen format
+  dulu). Satu-satunya pemakai show_entries adalah probe_file (dipakai
+  video_probe + video_qc) -> satu perbaikan mencakup keduanya.
+- BUKTI: sintaks lama direproduksi persis di VM (exit 1, stderr identik
+  dengan laporan Patria); sintaks baru lolos (exit 0, JSON lengkap).
+  Berkas Patria sendiri dites dengan sintaks baru di MacBook:
+  drinksaints_...mp4 -> h264 720x1280 + AAC, durasi 9.122585 dtk.
+- KESIMPULAN JUJUR: jalur probe (tambah aset via pemilih file/ketikan)
+  TIDAK PERNAH lolos live karena sintaks ini — aset-aset lama masuk lewat
+  jalur tanpa probe (ve2EnsureAsset/backfill). Alur tambah aset yang
+  Patria coba semalam adalah pertama kalinya jalur probe kena uji live.
+- Gerbang penuh lolos (/tmp/gate-v194/): vite build, 14 rig, root tsc,
+  gate-test 14 grup ALL PASSED, scan 0, ledger md5 tetap
+  d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
+  Tanpa kunci i18n baru -> tetap 1108/bahasa. (Rig jsdom tidak bisa menguji
+  sintaks ffprobe asli — bukti di atas adalah uji binary langsung.)
+- Kode menyusul pasangan SHA sesudah push; LIVE menyusul sesudah deploy.
+
 ## v193 — aset hilang: pesan probe jelas + fallback gambar + Inspector jadi tombol proyek + pratinjau 9:16 (perintah Patria 2 Nov 18:21 + screenshot)
 
 - Laporan Patria: (1) aset kembali tidak tampil di daftar aset; (2) hapus
