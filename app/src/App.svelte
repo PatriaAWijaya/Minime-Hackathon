@@ -604,6 +604,16 @@
     ve2Playing = false;
     ve2B64Cache.clear();
   }
+  // v198: pause bawaan video playback (#ve2Video) harus menghentikan
+  // timeline — sebelumnya video membeku tapi interval playhead jalan
+  // terus (kebalikan laporan v197). Syarat ganda: timeline sedang jalan
+  // DAN elemen benar-benar paused — ini menyaring event pause palsu
+  // (mis. pergantian src klip) yang datang saat elemen sudah kembali
+  // bermain, serta membuat pemanggilan ulang ve2StopPlayback aman
+  // (pause() pada elemen yang sudah paused tidak memicu event lagi).
+  function ve2VideoPaused() {
+    if (ve2Playing && ve2VideoEl && ve2VideoEl.paused) ve2StopPlayback();
+  }
   async function ve2PlayVideoAt(idx: number) {
     if (idx >= ve2VidList.length) return;
     const clip = ve2VidList[idx];
@@ -1295,7 +1305,7 @@
           <div style="display:flex;gap:6px;margin-top:8px"><input id="ve2NewSrc" type="text" bind:value={ve2NewSrc} placeholder="/Users/mac/Movies/klip.mp4" style="flex:1"><select id="ve2NewKind" bind:value={ve2NewKind}><option value="Image">Image</option><option value="Video">Video</option><option value="Audio">Audio</option></select><button id="ve2AssetAdd" class="btn btn-sm" onclick={() => { ve2AddAsset() }}>{t('t1.add', lang)}</button></div>
           </div>
           <div class="ve2-preview">
-          <video id="ve2Video" bind:this={ve2VideoEl} style="width:100%;background:#000;display:{ve2VideoOn ? 'block' : 'none'};max-height:min(480px, 55vh);object-fit:contain" controls></video>
+          <video id="ve2Video" bind:this={ve2VideoEl} style="width:100%;background:#000;display:{ve2VideoOn ? 'block' : 'none'};max-height:min(480px, 55vh);object-fit:contain" controls onpause={() => { ve2VideoPaused(); }}></video>
           {#if !ve2VideoOn}
           <div class="ve2-preview-box">
             {#if ve2SelClip() && ve2PreviewSrc}

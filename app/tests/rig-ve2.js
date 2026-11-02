@@ -609,6 +609,26 @@ try {
   await tick(100);
   check('v197: play pratinjau memulai playback timeline', trans28[1].textContent === 'Berhenti' && doc28.getElementById('ve2BtnPlay').disabled === true, trans28[1].textContent + ' play-disabled:' + doc28.getElementById('ve2BtnPlay').disabled);
 
+  // §29 v198: pause video playback menghentikan timeline.
+  const store29 = new Map();
+  store29.set('minime.cleaned-v84', '1');
+  store29.set('minime.cleaned-graph-v88', '1');
+  store29.set('minime.ve2', JSON.stringify({ clips: [{ id: 'pp1', name: 'Pause Uji', track: 'Video', start: 0, dur: 8, src: 'preview-uji.mp4', effect: 'none' }], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
+  const dom29 = makeDom(store29);
+  const doc29 = dom29.window.document;
+  await waitFor(() => doc29.querySelector('[data-view="media"]'), 'mount29 rail media', 100);
+  doc29.querySelector('[data-view="media"]').click();
+  await tick(100);
+  doc29.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  doc29.getElementById('ve2BtnPlay').click();
+  const trans29 = [...doc29.querySelectorAll('.ve2-transport button')];
+  await waitFor(() => trans29[1].textContent === 'Berhenti', 'playback jalan', 100);
+  check('v198: video playback tampil saat timeline jalan', doc29.getElementById('ve2Video').style.display === 'block', doc29.getElementById('ve2Video').style.display);
+  doc29.getElementById('ve2Video').dispatchEvent(new dom29.window.Event('pause', { bubbles: true }));
+  await tick(100);
+  check('v198: pause video menghentikan timeline', trans29[1].textContent === '▶ Putar' && doc29.getElementById('ve2BtnPlay').disabled === false, trans29[1].textContent + ' play-disabled:' + doc29.getElementById('ve2BtnPlay').disabled);
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-ve2 exception :: ' + (e && e.stack ? e.stack : e));
