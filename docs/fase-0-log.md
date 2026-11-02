@@ -2572,7 +2572,10 @@ dokumen lama yang dipakai.
   d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
 - Kode ed7785a ↔ 946b03d (tree identik).
-- LIVE menyusul di entri log-LIVE sesudah deploy.
+- LIVE 2 Nov ~18:15: deploy mh-build191.sh OK (MH_BUILD191_OK); HEAD MacBook
+  32a6af3; PID 54238; md5 dist JS b752fc0cb283fdc4143538948d18c436 lokal ==
+  MacBook; marker 've2TrackBar', 've2BtnPlay', 've2BtnStop' ada di bundle
+  MacBook. App live = v191.
 
 ## v190 — hapus kalimat petunjuk drag thumbnail (perintah Patria 2 Nov 18:02)
 
