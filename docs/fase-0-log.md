@@ -2521,6 +2521,49 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v189 — drag-drop klip timeline + x hapus aset per tile (perintah Patria 2 Nov 16:30 + 16:31, revisi 17:55)
+
+- Perintah 16:30: "Tambahkan tanda x pada ujung kanan list agent. jika X ditekan,
+  maka otomatis file bersangkutan akan dihapus oleh system". Investigasi menemukan
+  x SUDAH ada di tiap baris agen (tombol a-deact/g-deact, fungsinya NONAKTIFKAN,
+  bukan hapus) — ditanyakan ke Patria via opsi widget. REVISI Patria 17:55:
+  "revisi yang saya maksud adalah tanda X ada di tiap list aset yang muncul,
+  bukan agen". Maka v189 membangun x di daftar ASET, dan baris agen TIDAK diubah.
+- Perintah 16:31: "Track timeline sifatnya juga drag n drop, user bisa
+  memindahkannya kemana saja bila user menghendaki".
+- Drag klip timeline (App.svelte): tiap bar `.bar.ve-clip` (4 track) kini
+  `draggable="true"`, dragstart menaruh id klip di `text/ve2-clip` (+ cadangan
+  `text/plain`). Drop di zona timeline ditangani dispatcher baru `ve2TimelineDrop`:
+  id klip dikenal -> `ve2MoveClip`, selain itu jalur aset v188 (`ve2DropAsset`).
+  `ve2MoveClip`: posisi baru dari X drop pada skala ve2Total (dibulatkan 0,1 dtk,
+  dijepit 0..ve2Total; lebar tak terbaca -> posisi lama dipertahankan); track baru
+  dari baris tempat dijatuhkan (label `.tlabel`: B-Roll literal, sisanya dibanding
+  `t('word.video'/'word.audio'/'word.teks', lang)` sehingga tahan ganti bahasa);
+  klip pindahan langsung terpilih di Inspector (`ve2SelId`) + `ve2SaveState()`.
+  Kursor grab pada bar lewat blok v189 di layout-scroll.css.
+- Tombol x per tile aset (App.svelte): tile kini dibungkus `.ve2-thumb-wrap`
+  (position relative; `.ve2-thumb` width 100%) + tombol `.ve2-thumb-x` di pojok
+  kanan atas (data-ve2-assetdel = id aset, title kunci baru `ve2.del_asset`).
+  `ve2DelAsset(id)`: filter aset keluar dari `ve2Assets` + `ve2SaveState()`.
+  Yang TIDAK ikut terhapus, sengaja: klip timeline yang memakai sumbernya (aset
+  dan klip adalah objek terpisah; simetris dengan v188: hapus klip tidak
+  menghapus aset), dan berkas di disk TIDAK dihapus — yang dihapus hanya
+  entrinya di daftar aset. Thumbnail ikut bersih lewat $effect loader (seen-set).
+  Tombol x adalah sibling tombol tile (bukan nested) sehingga klik x tidak
+  memicu tambah klip, dan tidak menambah warning a11y.
+- i18n +1 kunci (ve2.del_asset: ID "Hapus aset", EN "Delete asset",
+  ZH "删除资产") = 1109/bahasa, 0 duplikat.
+- Rig-ve2 §20 (seret klip: tile -> klip baru -> drop di baris track tujuan ->
+  track berubah, posisi dipertahankan, Inspector ikut, drop id asing diabaikan)
+  + §21 (x aset: tiap tile punya x; klik x terakhir -> aset berkurang 1 dan
+  id-nya hilang, klip tidak berubah, tile hilang dari DOM). RIG-VE2 ALL PASSED.
+- Gerbang penuh lolos (/tmp/gate-v189/): vite build, 14 rig, root tsc, gate-test
+  14 grup ALL PASSED, scan 0, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6,
+  svelte-check 0 error / 21 warning (sama dengan baseline v188, tanpa warning
+  dari elemen baru), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
+- Kode d8b2f9b ↔ a2a50bd (tree identik).
+- LIVE menyusul di entri log-LIVE sesudah deploy.
+
 ## v188 — daftar Aset thumbnail + drag-drop + hapus klip (perintah Patria 2 Nov 16:12 + 16:13)
 - Latar: baris teks "HyperFrames 10s" di daftar Aset dinilai tidak perlu tampil; daftar aset diminta berbentuk thumbnail berscrollbar; + diminta membuka pilihan Library/file; thumbnail diminta bisa drag-drop ke timeline; track timeline diminta bisa dihapus/diedit; aset yang diimpor langsung ke timeline diminta otomatis masuk daftar aset.
 - Perbaikan: (1) baris teks aset diganti grid thumbnail 2 kolom + scrollbar (max-height 320px): gambar = bytes file, video = frame capture (video_capture), audio = ikon (tanpa byte media); label nama hanya tooltip title; klik thumbnail tetap menambah klip di akhir track (kemampuan tombol + lama); (2) + dengan path kosong membuka dialog sumber: Dari Library (gambar Library kind image + imageFile, durasi 5, tanpa probe) / Dari file (alur picker v183); path ketikan + select jenis tetap; (3) drag-drop thumbnail ke timeline: track dari jenis (Image -> B-Roll), posisi dari X drop pada skala ve2Total (pola ve2RulerClick), tarikan asing diabaikan; impor-ke-timeline ikut ve2EnsureAsset sehingga selalu tercatat di daftar aset; (4) Inspector mendapat tombol Hapus klip (klik langsung; aset tidak ikut terhapus sehingga klip bisa ditambah lagi).
