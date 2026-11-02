@@ -2552,6 +2552,10 @@ dokumen lama yang dipakai.
   d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
 - Kode 7e2c7b7 ↔ 4e87712 (tree identik).
+- LIVE 2 Nov ~21:30: deploy mh-build197.sh OK (MH_BUILD197_OK); HEAD MacBook
+  4c80aa4; PID 63268; md5 dist JS 5f8de7617fe96512feabb449959582bc lokal ==
+  MacBook; penanda event "play" 2x di bundle MacBook (handler onplay audio
+  + video pratinjau). App live = v197.
 
 ## v196 — playhead + penggaris + klik timeline segaris bar (laporan Patria 2 Nov 18:56 + screenshot: "player berhenti sendiri sebelum sampai ujung track video")
 
