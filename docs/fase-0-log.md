@@ -2530,7 +2530,7 @@ dokumen lama yang dipakai.
 - i18n +6 kunci (ve2.add_src, ve2.from_lib, ve2.from_file, ve2.lib_empty, ve2.del_clip, ve2.drag_hint) = 1108/bahasa, 0 duplikat. Kunci ve2.asset_empty sudah yatim sejak v183 (tanpa rujukan di App.svelte) — dibiarkan sesuai pelajaran v87, bukan dihapus di versi ini.
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/21 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal 6fa8369 ↔ remote c6b1f44 (tree identik).
-- LIVE: (diisi commit log-LIVE sesudah deploy)
+- LIVE: PID 52213; md5 JS 9d619f33f3be715392f4d6cb7affe988 lokal == MacBook; marker 've2-thumb' + 've2ClipDel' ada di bundle MacBook; state live utuh (1 aset, 5 klip — duplikat dari ketukan + sebelumnya, bukan dari deploy).
 
 
 ## v187 — aset sumber klip tampil di list Aset (perintah Patria 2 Nov 13:23)
