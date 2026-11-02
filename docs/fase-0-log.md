@@ -2573,6 +2573,12 @@ cargo fmt + check + check --tests 0 (fmt diperbaiki dulu, lalu
 check/check --tests diulang di tree final), Cargo.lock bersih.
 Kode: lokal 02621d8 ↔ remote efd389d.
 
+- LIVE 3 Nov ~01:00: deploy mh-build206.sh OK (MH_BUILD206_OK); HEAD MacBook
+  8ed6f6b; PID 74843; md5 dist JS d2c30676ae9abf5da3b9473176d54c43 dan CSS
+  e932e78096f798f71cb99298db251588 lokal == MacBook; penanda
+  'Riset Live' (1x) di bundle JS MacBook dan 'rsLog' (1x) di CSS MacBook.
+  App live = v206.
+
 
 ## v205 — Skenario 1 Tahap 6: pengingat H-3 + konfirmasi penjadwalan terbit di app (perintah Patria 2 Nov 23:19: "Lanjut ke build"; koreksi mekanisme dari laporan v204)
 
