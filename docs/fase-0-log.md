@@ -2521,6 +2521,58 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v174 — struktur storyboard 7 field per panel di Image Editor (perintah Patria 2 Nov 22:13: "lakukan"; nomor reserved)
+
+- Perintah Patria 22:13: bangun struktur storyboard di app (sumber:
+  ~/workspace/specs-visualisasi/struktur-prompt-storyboard.md — pola
+  wajib 3 bagian: prompt engine per panel, breakdown 7 field per panel,
+  system lock seri; penomoran Proyek_Naskah#_Adegan_Frame_01; panel
+  harus dipahami tanpa dialog).
+- PELAKSANAAN: Image Editor cabang Story Board kini punya editor panel
+  (blok #img-sb-wrap, hanya tampil untuk output storyboard): tombol
+  "Susun panel dari brief" + satu baris per scene dengan 7 field —
+  Shot (jenis, sudut, gerakan; teks bebas dari kosakata: ES/ELS/LS/MLS/
+  MS/MCU/CU/ECU, POV/OTS/two-shot, pan/tilt/zoom/dolly/truck/tracking/
+  handheld/rack focus), Visual, Aksi, Dialog/VO, Transisi (cut/fade/
+  dissolve/wipe), Durasi per panel + baris total durasi panel vs target.
+  Panel tersimpan di state imageFlow (persist localStorage) dan dirender
+  lewat delegasi input satu listener (tanpa re-render per ketik agar
+  fokus tidak hilang). Susun dari brief memakai shot list lama (parse
+  bernomor, lalu model) — satu kali hitung, tanpa panggilan model
+  ganda; Generate memakai panel yang sudah disusun untuk brief yang
+  sama (suntingan user tidak hilang), brief baru atau jumlah scene
+  berubah selalu menyusun ulang; ganti scene mengosongkan panel.
+  Prompt per panel = bible + STYLE LOCK v165 verbatim + shot + visual
+  + aksi (bila ada); brief utuh TIDAK PERNAH dikirim per panel (prinsip
+  v164 dipertahankan). Setujui: rencana perakitan Video Editor kini
+  memuat 7 field per panel; Dialog/VO gabungan per panel (dengan
+  durasi) langsung menjadi naskah Voice Editor tanpa panggilan model
+  bila ada satu saja VO terisi — bila semua VO kosong, jalur model lama
+  dipakai (kompatibilitas v163). Caption video tidak berubah.
+  i18n: +13 kunci/bahasa (1121 -> 1134, 0 duplikat).
+- PEMBATASAN JUJUR (dicatat, bukan disembunyikan): satu panel = satu
+  scene = satu shot (model app saat ini); pengelompokan multi-shot per
+  scene ala contoh dokumen (Scene 1 Shot 1 + Shot 2) TIDAK dibangun —
+  label panel "Scene N", field Shot sendiri yang membawa jenis shot.
+  Nama berkas gambar tersimpan tetap img-<ts>-<n>.ext (bukan format
+  Proyek_Naskah#_SceneN_FrameM); format dokumen dipakai di teks rencana
+  sebagai konvensi penamaan, bukan rename berkas.
+- Rig: rig-image §v174 (6 cek: panel terisi visual dari shot list;
+  7 field per panel; total durasi 6+9=15 tampil; prompt panel memuat
+  shot + visual tanpa brief utuh; rencana video memuat 7 field; VO
+  gabungan panel masuk #vsText). Selama pengerjaan sempat ada
+  kegagalan rig-image: variabel `shots` lama masih dirujuk di generate
+  sesudah refactor ke panel (ReferenceError, varian tidak tampil) —
+  diperbaiki ke visual panel; vite build tidak menangkapnya karena
+  esbuild tidak type-check — pelajaran: svelte-check WAJIB jalan
+  sebelum rig, bukan sesudah.
+- Gerbang penuh lolos (/tmp/gate-v174/): vite build, 14 rig ALL
+  PASSED, root build + tsc OK, gate-test 14 grup ALL PASSED, scan
+  kredensial 0 temuan, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6,
+  i18n 1134/1134/1134 0 duplikat, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock bersih.
+- Kode 3970d66 ↔ 1e935f6 (tree identik).
+
 ## v202 — template pola sinematik VLOG CINEMATIC ke panel Video (perintah Patria 2 Nov 22:12: "Lakukan")
 
 - Perintah Patria 22:12: template pola sinematik ke panel video (sumber:
