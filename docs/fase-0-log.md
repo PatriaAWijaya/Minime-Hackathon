@@ -2527,6 +2527,50 @@ LIVE 3 Nov ~01:35 WIB: deploy mh-build208.sh — MH_BUILD208_OK; HEAD MacBook 53
 
 LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d94b03a (commit log); PID 77290; marker 'Visual + Caption per Konten' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v209. Konfirmasi live Patria untuk v209 BELUM ada (uji live yang disarankan: sesudah Gerbang 2 lolos, periksa estimasi biaya -> Buat Visual Se-batch -> periksa media per baris -> Buat Caption Se-batch -> Setujui Visual + Caption).
 
+## v210 — Skenario 2 Tahap 6: batch 3 kanal + draf bertanggal ke Planner + H-3 (TAHAP TERAKHIR alur Skenario 2; lanjutan perintah Patria 3 Nov 01:11 "lanjut" atas workflow Skenario 2)
+
+Seksi Batch ke Planner muncul di panel Rencana sesudah Gerbang 3
+lolos. Satu klik membuat 30 baris x 3 kanal (instagram, threads,
+linkedin) = 90 item antrean Planner lewat socQueueAdd, masing-masing
+dengan caption baris itu, scheduledAt = tanggal + jam variasi dari
+tabel (planDateISO: jam WIB -> UTC), dan status 'draft' — BUKAN
+'queued' (berbeda dari batch lama yang langsung queued). Status
+draf inilah yang membuat H-3 v205 bekerja tanpa kode baru: draf
+bertanggal yang jatuh tempo dalam 3 hari muncul di seksi "Menunggu
+konfirmasi terbit" + pesan chat sekali per item; konfirmasi
+mengubahnya menjadi queued untuk diterbitkan scheduler, tanpa
+konfirmasi = tidak terbit. Media per format: image -> imageFile
+berkas tunggal; carousel -> imageFile = slide 1 + imageFiles =
+kedelapan slide; reels -> tanpa imageFile + videoFiles = klip-klip
+per shot. Agar jejak ini selamat, socQueueAdd diperluas secara
+aditif (planDay, imageFiles, videoFiles — renderer lama mengabaikan
+field baru; simpan-muat JSON meloloskannya; rig-batch lolos tanpa
+perubahan). Draf dibuat untuk ketiga kanal tanpa memandang status
+koneksi (preseden v204); konfirmasi H-3 yang memeriksa token kanal
+(v205). Tombol batch terkunci sesudah batch sukses (tidak ada
+duplikat; id item tersimpan di rencana). Batasan jujur yang tampil
+di panel (bukan disembunyikan): (1) LinkedIn bisa terbit penuh
+secara native; IG + Threads: draf + H-3 berfungsi, tapi terbit
+aktual menunggu keputusan mekanisme unggah (komposer menolak
+berkas lokal; scheduler juga memblokir file_url_now) — draf TIDAK
+diklaim sudah bisa terbit. (2) Carousel: publish hari ini memakai
+slide 1; multi-gambar menunggu dukungan publish. (3) Reels: draf
+tanpa media native; rakit + posting manual sesuai Q6 (klip sudah
+ada sebagai media baris). i18n +8 kunci `p30.*` x3 -> 1240/bahasa.
+Rig-plan30 ditambah §v210 (6 cek: seksi batch tampil, 90 draf
+semua status draft 30/kanal, tanggal hari 1 = 2026-11-10 09:00 WIB,
+jejak media per format, tombol terkunci tanpa duplikat, draf batch
+yang dibuat jatuh tempo masuk seksi pengingat H-3 lewat
+renderPlanner). Gerbang v210 lolos penuh: vite, svelte-check 0/21
+(baseline), 16 rig, root build+tsc, gate-test 14 grup, scan 0,
+ledger md5 tetap, i18n 1240/1240/1240 0 duplikat, cargo
+fmt+check+check-tests 0, Cargo.lock bersih. Dengan v210, SELURUH
+alur Skenario 2 ujung-ke-ujung SUDAH DIBANGUN (riset live v206,
+rencana + gerbang 1 v207, naskah + QC + gerbang 2 v208, visual +
+caption + gerbang 3 v209, batch + H-3 v210) — tersisa pengecualian
+yang DINYATAKAN sejak awal: rakitan reels manual (Q6), konfirmasi
+H-3 (Q3), dan terbit IG/Threads (menunggu keputusan unggah).
+
 ## v209 — Skenario 2 Tahap 4+5: visual per baris + caption per baris + Gerbang 3 (lanjutan perintah Patria 3 Nov 01:11 "lanjut" atas workflow Skenario 2)
 
 Seksi Visual + Caption muncul di panel Rencana sesudah Gerbang 2
