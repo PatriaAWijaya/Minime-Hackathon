@@ -388,6 +388,49 @@ try {
   const libAsset = (ve2State(store5).assets || []).find((a) => a.src === '/tmp/lib-uji.png');
   check('v188: pilih dari Library masuk daftar aset (Image 5 dtk)', !!libAsset && libAsset.kind === 'Image' && libAsset.duration === 5, JSON.stringify(libAsset));
 
+  // v189 §20: klip timeline bisa diseret pindah track (posisi dipertahankan
+  // bila lebar tak terbaca, seperti di jsdom).
+  const doc20 = dom.window.document;
+  const tiles20 = doc20.querySelectorAll('.ve2-thumb');
+  check('v189: tile aset ada untuk uji seret klip', tiles20.length > 0, String(tiles20.length));
+  const idsBefore20 = (ve2State(store).clips || []).map((c) => c.id);
+  tiles20[tiles20.length - 1].click();
+  await tick(100);
+  const newClip20 = (ve2State(store).clips || []).find((c) => idsBefore20.indexOf(c.id) < 0);
+  check('v189: klik tile menambah klip (bahan seret)', !!newClip20, newClip20 ? newClip20.id : 'none');
+  const trackRows20 = doc20.querySelectorAll('.track');
+  check('v189: 4 baris track tersedia', trackRows20.length === 4, String(trackRows20.length));
+  const destIdx20 = newClip20.track === 'B-Roll' ? 2 : 1;
+  const destTrack20 = destIdx20 === 1 ? 'B-Roll' : 'Audio';
+  const drop20 = new dom.window.Event('drop', { bubbles: true });
+  Object.defineProperty(drop20, 'dataTransfer', { value: { getData: (tp) => tp === 'text/ve2-clip' ? newClip20.id : '' } });
+  trackRows20[destIdx20].dispatchEvent(drop20);
+  await tick(100);
+  const moved20 = (ve2State(store).clips || []).find((c) => c.id === newClip20.id);
+  check('v189: seret klip pindah ke track tujuan', !!moved20 && moved20.track === destTrack20, moved20 ? moved20.track : 'gone');
+  check('v189: posisi klip pindahan dipertahankan', !!moved20 && moved20.start === newClip20.start, moved20 ? String(moved20.start) : 'gone');
+  check('v189: klip pindahan terpilih di Inspector', !!doc20.getElementById('ve2Track') && doc20.getElementById('ve2Track').value === destTrack20, doc20.getElementById('ve2Track') ? doc20.getElementById('ve2Track').value : 'no-inspector');
+  const nBefore20 = (ve2State(store).clips || []).length;
+  const dropX20 = new dom.window.Event('drop', { bubbles: true });
+  Object.defineProperty(dropX20, 'dataTransfer', { value: { getData: () => 'tidak-ada' } });
+  trackRows20[2].dispatchEvent(dropX20);
+  await tick(100);
+  check('v189: drop id asing tidak mengubah klip', (ve2State(store).clips || []).length === nBefore20, String((ve2State(store).clips || []).length));
+
+  // v189 §21 (revisi 17:55): x di tiap tile aset menghapus entrinya saja.
+  const tiles21 = doc20.querySelectorAll('.ve2-thumb');
+  const xBtns21 = doc20.querySelectorAll('.ve2-thumb-x');
+  check('v189: tiap tile aset punya tombol x', tiles21.length > 0 && xBtns21.length === tiles21.length, tiles21.length + '/' + xBtns21.length);
+  const assetsBefore21 = (ve2State(store).assets || []).slice();
+  const clipsBefore21 = (ve2State(store).clips || []).length;
+  const lastAsset21 = assetsBefore21[assetsBefore21.length - 1];
+  xBtns21[xBtns21.length - 1].click();
+  await tick(100);
+  const assetsAfter21 = ve2State(store).assets || [];
+  check('v189: x menghapus entri aset dari daftar', assetsAfter21.length === assetsBefore21.length - 1 && !assetsAfter21.some((a) => a.id === lastAsset21.id), String(assetsAfter21.length));
+  check('v189: hapus aset tidak menghapus klip timeline', (ve2State(store).clips || []).length === clipsBefore21, String((ve2State(store).clips || []).length));
+  check('v189: tile aset terhapus hilang dari DOM', doc20.querySelectorAll('.ve2-thumb').length === tiles21.length - 1, String(doc20.querySelectorAll('.ve2-thumb').length));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-ve2 exception :: ' + (e && e.stack ? e.stack : e));

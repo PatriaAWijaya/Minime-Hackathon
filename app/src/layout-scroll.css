@@ -739,3 +739,8 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .ve2-dlg { position:fixed; inset:0; z-index:300; background:rgba(10,5,20,0.55); display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; }
 .ve2-dlg-box { background:var(--t-panel, #1e1e1e); color:var(--t-text, #fff); border-radius:12px; padding:16px; max-width:420px; width:100%; max-height:70vh; overflow-y:auto; }
 .ve2-dlg-box button { margin-top:8px; }
+/* v189: klip timeline bisa diseret — kursor grab menandainya. */
+.bar.ve-clip { cursor: grab; }
+.ve2-thumb-wrap { position: relative; }
+.ve2-thumb-wrap .ve2-thumb { width: 100%; }
+.ve2-thumb-x { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; padding: 0; border: none; border-radius: 50%; background: rgba(0,0,0,0.65); color: #fff; font-size: 14px; line-height: 1; cursor: pointer; z-index: 1; }

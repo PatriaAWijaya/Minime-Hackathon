@@ -406,6 +406,50 @@
     ve2EnsureAsset(a.src, a.name, a.kind, a.duration);
     ve2SaveState();
   }
+  function ve2TimelineDrop(e: DragEvent) {
+    // v189: drop di timeline — klip yang diseret dipindah, thumbnail aset
+    // ditambah (alur v188). Tarikan asing diabaikan kedua jalur.
+    e.preventDefault();
+    const clipId = e.dataTransfer?.getData('text/ve2-clip') || '';
+    if (clipId && ve2Clips.some((c) => c.id === clipId)) { ve2MoveClip(e, clipId); return; }
+    ve2DropAsset(e);
+  }
+  function ve2MoveClip(e: DragEvent, clipId: string) {
+    // v189: klip timeline bisa diseret ke mana saja — posisi dari X drop
+    // (skala ve2Total), track dari baris tempat dijatuhkan; gagal baca
+    // posisi/track -> nilai lama dipertahankan.
+    const c = ve2Clips.find((x) => x.id === clipId);
+    if (!c) return;
+    let track = c.track;
+    const row = (e.target as HTMLElement | null)?.closest?.('.track');
+    if (row) {
+      const lbl = (row.querySelector('.tlabel')?.textContent || '').trim();
+      if (lbl === 'B-Roll') track = 'B-Roll';
+      else if (lbl === t('word.teks', lang)) track = 'Teks';
+      else if (lbl === t('word.video', lang)) track = 'Video';
+      else if (lbl === t('word.audio', lang)) track = 'Audio';
+    }
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    let start = c.start;
+    if (rect.width > 0) {
+      const frac = (e.clientX - rect.left) / rect.width;
+      start = Math.round(Math.min(ve2Total, Math.max(0, frac * ve2Total)) * 10) / 10;
+    }
+    c.start = start;
+    c.track = track;
+    ve2Clips = [...ve2Clips];
+    ve2SelId = c.id;
+    ve2SaveState();
+  }
+  function ve2DelAsset(id: string) {
+    // v189 (revisi Patria 17:55 — x di tiap list ASET, bukan agen):
+    // tekan x -> entri aset hilang dari daftar + tersimpan. Klip timeline
+    // yang memakai sumbernya TIDAK ikut terhapus, dan berkas di disk juga
+    // TIDAK dihapus — yang dihapus hanya entrinya di daftar aset.
+    // Thumbnail ikut bersih lewat $effect loader (seen-set).
+    ve2Assets = ve2Assets.filter((a) => a.id !== id);
+    ve2SaveState();
+  }
   function ve2DelClip() {
     // v188: hapus klip terpilih (klik langsung; klip bisa ditambah lagi
     // dari daftar aset karena asetnya tidak ikut terhapus).
@@ -1115,6 +1159,7 @@
           <h4 style="margin:0 0 8px">{t('word.aset', lang)}</h4>
           <div class="ve2-asset-grid">
           {#each ve2Assets as a (a.id)}
+          <div class="ve2-thumb-wrap">
           <button type="button" class="ve2-thumb" data-ve2-asset={a.id} title={a.name} draggable="true" ondragstart={(e) => { e.dataTransfer?.setData('text/ve2-asset', a.id); e.dataTransfer?.setData('text/plain', a.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy'; }} onclick={() => { ve2AddAssetClip(a.id) }}>
           {#if ve2Thumbs[a.id]}
           <img src={ve2Thumbs[a.id]} alt={a.name} draggable="false">
@@ -1122,6 +1167,8 @@
           <span class="ve2-thumb-icon">{a.icon}</span>
           {/if}
           </button>
+          <button type="button" class="ve2-thumb-x" data-ve2-assetdel={a.id} title={t('ve2.del_asset', lang)} onclick={() => { ve2DelAsset(a.id) }}>×</button>
+          </div>
           {/each}
           </div>
           <p class="se-note">{t('ve2.drag_hint', lang)}</p>
@@ -1167,27 +1214,27 @@
           <div class="ms-card">
           <div class="timeline" id="ve2Timeline" style="overflow-x:auto">
           <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div style="position:relative;width:{ve2Zoom * 100}%" ondragover={(e) => { e.preventDefault(); }} ondrop={(e) => { ve2DropAsset(e) }}>
+          <div style="position:relative;width:{ve2Zoom * 100}%" ondragover={(e) => { e.preventDefault(); }} ondrop={(e) => { ve2TimelineDrop(e) }}>
           <div class="playhead" id="playhead2" style="left:{ve2PlayheadPct}%"></div>
           <div class="ve-ruler" id="ve2Ruler" onclick={(e) => { ve2RulerClick(e) }}>{#each ve2RulerTicks as tick}<span>{ve2Fmt(tick)}</span>{/each}</div>
           <div class="track"><span class="tlabel">{t('word.video', lang)}</span>
           {#each ve2Bars('Video') as b (b.clip.id)}
-          <div class="bar ve-clip" class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" draggable="true" ondragstart={(e) => { e.dataTransfer?.setData('text/ve2-clip', b.clip.id); e.dataTransfer?.setData('text/plain', b.clip.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
           {/each}
           </div>
           <div class="track"><span class="tlabel">B-Roll</span>
           {#each ve2Bars('B-Roll') as b (b.clip.id)}
-          <div class="bar ve-clip" class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" draggable="true" ondragstart={(e) => { e.dataTransfer?.setData('text/ve2-clip', b.clip.id); e.dataTransfer?.setData('text/plain', b.clip.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
           {/each}
           </div>
           <div class="track"><span class="tlabel">{t('word.audio', lang)}</span>
           {#each ve2Bars('Audio') as b (b.clip.id)}
-          <div class="bar ve-clip" class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" draggable="true" ondragstart={(e) => { e.dataTransfer?.setData('text/ve2-clip', b.clip.id); e.dataTransfer?.setData('text/plain', b.clip.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
           {/each}
           </div>
           <div class="track"><span class="tlabel">{t('word.teks', lang)}</span>
           {#each ve2Bars('Teks') as b (b.clip.id)}
-          <div class="bar ve-clip" class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" draggable="true" ondragstart={(e) => { e.dataTransfer?.setData('text/ve2-clip', b.clip.id); e.dataTransfer?.setData('text/plain', b.clip.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
           {/each}
           </div>
           </div>
