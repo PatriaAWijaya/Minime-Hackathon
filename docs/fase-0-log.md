@@ -2521,6 +2521,31 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v199 — menu Campaign disembunyikan sementara (perintah Patria 2 Nov 21:38)
+
+- Perintah Patria: menu Campaign (di rail, di bawah Planner dan di atas
+  Billing) disembunyikan dulu sementara sebelum sempat diperbaiki.
+- PELAKSANAAN: satu aturan CSS di blok v199 layout-scroll.css —
+  `.sidebar button[data-view="campaign"] { display: none; }` (spesifitas
+  mengalahkan `.sidebar button` di app.css, tanpa !important; app.css
+  tidak disentuh — verbatim prototype). Yang disembunyikan HANYA tombol
+  rail: view #view-campaign + seluruh logika Campaign tetap utuh di
+  kode, tidak ada yang dihapus. Konsekuensi yang sudah diperiksa:
+  tidak ada jalur lain menuju Campaign selain tombol rail itu
+  (showView('campaign') hanya dipanggil rig-audit secara programatik,
+  dan rig-audit tetap lolos — view masih bisa dibuka lewat kode bila
+  perlu). Untuk menampilkan lagi, cukup hapus blok v199 ini.
+- Rig §22 baru di rig-home: CSS hasil build memuat aturan sembunyi
+  (regex atas berkas CSS dist, tahan minifikasi yang membuang tanda
+  kutip atribut); tombol Campaign tetap ada di DOM (disembunyikan,
+  bukan dihapus); tetangga Planner + Billing tetap ada. i18n tidak
+  berubah (tanpa teks baru) -> 1110/bahasa, 0 duplikat.
+- Gerbang penuh lolos (/tmp/gate-v199/): vite build, 14 rig, root tsc,
+  gate-test 14 grup ALL PASSED, scan 0, ledger md5 tetap
+  d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
+- Kode 43965c1 ↔ 90ced9e (tree identik).
+
 ## v198 — pause video di preview window menghentikan playhead (laporan Patria 2 Nov 21:32)
 
 - Laporan Patria: playhead terus berjalan saat video dipause melalui
