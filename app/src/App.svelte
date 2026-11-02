@@ -406,40 +406,61 @@
     ve2EnsureAsset(a.src, a.name, a.kind, a.duration);
     ve2SaveState();
   }
-  function ve2TimelineDrop(e: DragEvent) {
-    // v189: drop di timeline — klip yang diseret dipindah, thumbnail aset
-    // ditambah (alur v188). Tarikan asing diabaikan kedua jalur.
-    e.preventDefault();
-    const clipId = e.dataTransfer?.getData('text/ve2-clip') || '';
-    if (clipId && ve2Clips.some((c) => c.id === clipId)) { ve2MoveClip(e, clipId); return; }
-    ve2DropAsset(e);
+  function ve2TrackFromRow(row: Element): Ve2Clip['track'] | null {
+    // v192: petakan baris track dari labelnya (tahan ganti bahasa).
+    const lbl = (row.querySelector('.tlabel')?.textContent || '').trim();
+    if (lbl === 'B-Roll') return 'B-Roll';
+    if (lbl === t('word.teks', lang)) return 'Teks';
+    if (lbl === t('word.video', lang)) return 'Video';
+    if (lbl === t('word.audio', lang)) return 'Audio';
+    return null;
   }
-  function ve2MoveClip(e: DragEvent, clipId: string) {
-    // v189: klip timeline bisa diseret ke mana saja — posisi dari X drop
-    // (skala ve2Total), track dari baris tempat dijatuhkan; gagal baca
-    // posisi/track -> nilai lama dipertahankan.
-    const c = ve2Clips.find((x) => x.id === clipId);
+  function ve2StartFromClientX(clientX: number): number | null {
+    // v192: posisi dari X pointer pada skala ve2Total; lebar tak terbaca
+    // (jsdom) -> null = posisi lama dipertahankan.
+    const inner = document.querySelector('#ve2Timeline > div');
+    const rect = inner?.getBoundingClientRect();
+    if (!rect || rect.width <= 0) return null;
+    const frac = (clientX - rect.left) / rect.width;
+    return Math.round(Math.min(ve2Total, Math.max(0, frac * ve2Total)) * 10) / 10;
+  }
+  function ve2ApplyClipMove(id: string, track: Ve2Clip['track'] | null, start: number | null) {
+    const c = ve2Clips.find((x) => x.id === id);
     if (!c) return;
-    let track = c.track;
-    const row = (e.target as HTMLElement | null)?.closest?.('.track');
-    if (row) {
-      const lbl = (row.querySelector('.tlabel')?.textContent || '').trim();
-      if (lbl === 'B-Roll') track = 'B-Roll';
-      else if (lbl === t('word.teks', lang)) track = 'Teks';
-      else if (lbl === t('word.video', lang)) track = 'Video';
-      else if (lbl === t('word.audio', lang)) track = 'Audio';
-    }
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    let start = c.start;
-    if (rect.width > 0) {
-      const frac = (e.clientX - rect.left) / rect.width;
-      start = Math.round(Math.min(ve2Total, Math.max(0, frac * ve2Total)) * 10) / 10;
-    }
-    c.start = start;
-    c.track = track;
+    if (track) c.track = track;
+    if (start !== null) c.start = start;
     ve2Clips = [...ve2Clips];
     ve2SelId = c.id;
     ve2SaveState();
+  }
+  let ve2Drag: { id: string; x0: number; y0: number; moved: boolean } | null = null;
+  function ve2BarDragStart(e: PointerEvent, id: string) {
+    // v192: seret klip pakai pointer event, bukan HTML5 drag — HTML5 drag
+    // tidak jalan di WebView live (Tauri/WKWebView), itu sebabnya klip
+    // track tidak bisa digeser di app live padahal rig v189 lolos.
+    // Tanpa pointer capture (supaya target pointerup = elemen di bawah
+    // pointer, bukan bar asal); klik biasa (gerak < ambang) dibiarkan ke
+    // onclick yang memilih klip.
+    if (e.button !== undefined && e.button !== 0) return;
+    ve2Drag = { id, x0: e.clientX, y0: e.clientY, moved: false };
+    const onMove = (m: PointerEvent) => {
+      if (!ve2Drag) return;
+      if (Math.abs(m.clientX - ve2Drag.x0) + Math.abs(m.clientY - ve2Drag.y0) > 5) {
+        ve2Drag.moved = true;
+        m.preventDefault();
+      }
+    };
+    const onUp = (u: PointerEvent) => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      const d = ve2Drag; ve2Drag = null;
+      if (!d || !d.moved) return;
+      const row = (u.target as HTMLElement | null)?.closest?.('.track')
+        ?? (document.elementFromPoint ? document.elementFromPoint(u.clientX, u.clientY)?.closest?.('.track') : null);
+      ve2ApplyClipMove(d.id, row ? ve2TrackFromRow(row) : null, ve2StartFromClientX(u.clientX));
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   }
   function ve2DelAsset(id: string) {
     // v189 (revisi Patria 17:55 — x di tiap list ASET, bukan agen):
@@ -1170,6 +1191,7 @@
           <div class="ve2-preview">
           <video id="ve2Video" bind:this={ve2VideoEl} style="width:100%;background:#000;display:{ve2VideoOn ? 'block' : 'none'};max-height:min(480px, 55vh);object-fit:contain" controls></video>
           {#if !ve2VideoOn}
+          <div class="ve2-preview-box">
             {#if ve2SelClip() && ve2PreviewSrc}
               {#if ve2PreviewKind === 'image'}
                 <img id="ve2PreviewImg" src={ve2PreviewSrc} alt={ve2SelClip()?.name ?? ''} style="width:100%;background:#000;display:block;max-height:min(480px, 55vh);object-fit:contain">
@@ -1186,6 +1208,7 @@
             {:else}
               <div class="ve2-canvas"><div id="ve2PreviewLabel">{ve2PreviewLabel}</div><small>{t('ve2.no_clip', lang)}</small></div>
             {/if}
+          </div>
           {/if}
           <div class="ve2-transport"><button onclick={() => { ve2ToStart() }} title={t('title.first', lang)}>⏮</button><button onclick={() => { ve2PlayToggle() }} title={t('title.play', lang)}>{ve2Playing ? t('ve2.stop', lang) : t('ve.play', lang)}</button><button onclick={() => { ve2ToEnd() }} title={t('title.last', lang)}>⏭</button><span id="ve2Time">{ve2TimeText}</span><span style="margin-left:auto">{t('ve.zoom', lang)} <select id="ve2Zoom" value={ve2Zoom} onchange={(e) => { ve2Zoom = Number(e.currentTarget.value); ve2SaveState(); }}><option value={0.5}>50%</option><option value={1}>100%</option><option value={2}>200%</option></select></span></div>
           </div>
@@ -1206,27 +1229,27 @@
           <div class="ms-card">
           <div class="timeline" id="ve2Timeline" style="overflow-x:auto">
           <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div style="position:relative;width:{ve2Zoom * 100}%" ondragover={(e) => { e.preventDefault(); }} ondrop={(e) => { ve2TimelineDrop(e) }}>
+          <div style="position:relative;width:{ve2Zoom * 100}%" ondragover={(e) => { e.preventDefault(); }} ondrop={(e) => { ve2DropAsset(e) }}>
           <div class="playhead" id="playhead2" style="left:{ve2PlayheadPct}%"></div>
           <div class="ve-ruler" id="ve2Ruler" onclick={(e) => { ve2RulerClick(e) }}>{#each ve2RulerTicks as tick}<span>{ve2Fmt(tick)}</span>{/each}</div>
           <div class="track"><span class="tlabel">{t('word.video', lang)}</span>
           {#each ve2Bars('Video') as b (b.clip.id)}
-          <div class="bar ve-clip" draggable="true" ondragstart={(e) => { e.dataTransfer?.setData('text/ve2-clip', b.clip.id); e.dataTransfer?.setData('text/plain', b.clip.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
           {/each}
           </div>
           <div class="track"><span class="tlabel">B-Roll</span>
           {#each ve2Bars('B-Roll') as b (b.clip.id)}
-          <div class="bar ve-clip" draggable="true" ondragstart={(e) => { e.dataTransfer?.setData('text/ve2-clip', b.clip.id); e.dataTransfer?.setData('text/plain', b.clip.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
           {/each}
           </div>
           <div class="track"><span class="tlabel">{t('word.audio', lang)}</span>
           {#each ve2Bars('Audio') as b (b.clip.id)}
-          <div class="bar ve-clip" draggable="true" ondragstart={(e) => { e.dataTransfer?.setData('text/ve2-clip', b.clip.id); e.dataTransfer?.setData('text/plain', b.clip.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
           {/each}
           </div>
           <div class="track"><span class="tlabel">{t('word.teks', lang)}</span>
           {#each ve2Bars('Teks') as b (b.clip.id)}
-          <div class="bar ve-clip" draggable="true" ondragstart={(e) => { e.dataTransfer?.setData('text/ve2-clip', b.clip.id); e.dataTransfer?.setData('text/plain', b.clip.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
+          <div class="bar ve-clip" onpointerdown={(e) => { ve2BarDragStart(e, b.clip.id) }} class:selected={b.clip.id === ve2SelId} data-ve2-clip={b.clip.id} style="margin-left:{b.margin}%;width:{ve2BarWidth(b.clip)}%;background:{b.clip.id === ve2SelId ? '#EB87B4' : '#5b5b5b'}" onclick={() => { ve2SelectClip(b.clip.id) }}>{b.clip.name}</div>
           {/each}
           </div>
           </div>

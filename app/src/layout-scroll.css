@@ -746,3 +746,9 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .ve2-thumb-x { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; padding: 0; border: none; border-radius: 50%; background: rgba(0,0,0,0.65); color: #fff; font-size: 14px; line-height: 1; cursor: pointer; z-index: 1; }
 /* v191: bar editor track di bawah timeline. */
 .ve2-trackbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+/* v192: kotak pratinjau tinggi tetap — memilih klip tidak lagi mengubah
+   tinggi kartu atas sehingga timeline tidak bergeser (penyebab view
+   terlempar ke atas di WebView live tanpa scroll anchoring). */
+.ve2-preview-box { height: min(480px, 55vh); display: flex; align-items: center; justify-content: center; }
+/* v192: teks nama klip tidak ikut terseleksi saat bar diseret pointer. */
+.bar.ve-clip { user-select: none; -webkit-user-select: none; }

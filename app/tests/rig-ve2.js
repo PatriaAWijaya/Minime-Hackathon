@@ -388,34 +388,45 @@ try {
   const libAsset = (ve2State(store5).assets || []).find((a) => a.src === '/tmp/lib-uji.png');
   check('v188: pilih dari Library masuk daftar aset (Image 5 dtk)', !!libAsset && libAsset.kind === 'Image' && libAsset.duration === 5, JSON.stringify(libAsset));
 
-  // v189 §20: klip timeline bisa diseret pindah track (posisi dipertahankan
-  // bila lebar tak terbaca, seperti di jsdom).
+  // v192 §20 (ditulis ulang dari HTML5 drop v189): klip timeline diseret
+  // pakai pointer event — pointerdown di bar, gerak melewati ambang,
+  // pointerup di baris track tujuan.
   const doc20 = dom.window.document;
   const tiles20 = doc20.querySelectorAll('.ve2-thumb');
-  check('v189: tile aset ada untuk uji seret klip', tiles20.length > 0, String(tiles20.length));
+  check('v192: tile aset ada untuk uji seret klip', tiles20.length > 0, String(tiles20.length));
   const idsBefore20 = (ve2State(store).clips || []).map((c) => c.id);
   tiles20[tiles20.length - 1].click();
   await tick(100);
   const newClip20 = (ve2State(store).clips || []).find((c) => idsBefore20.indexOf(c.id) < 0);
-  check('v189: klik tile menambah klip (bahan seret)', !!newClip20, newClip20 ? newClip20.id : 'none');
+  check('v192: klik tile menambah klip (bahan seret)', !!newClip20, newClip20 ? newClip20.id : 'none');
   const trackRows20 = doc20.querySelectorAll('.track');
-  check('v189: 4 baris track tersedia', trackRows20.length === 4, String(trackRows20.length));
+  check('v192: 4 baris track tersedia', trackRows20.length === 4, String(trackRows20.length));
   const destIdx20 = newClip20.track === 'B-Roll' ? 2 : 1;
   const destTrack20 = destIdx20 === 1 ? 'B-Roll' : 'Audio';
-  const drop20 = new dom.window.Event('drop', { bubbles: true });
-  Object.defineProperty(drop20, 'dataTransfer', { value: { getData: (tp) => tp === 'text/ve2-clip' ? newClip20.id : '' } });
-  trackRows20[destIdx20].dispatchEvent(drop20);
+  const bar20 = doc20.querySelector('[data-ve2-clip="' + newClip20.id + '"]');
+  bar20.dispatchEvent(new dom.window.MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10, button: 0 }));
+  dom.window.dispatchEvent(new dom.window.MouseEvent('pointermove', { bubbles: true, clientX: 30, clientY: 40 }));
+  trackRows20[destIdx20].dispatchEvent(new dom.window.MouseEvent('pointerup', { bubbles: true, clientX: 30, clientY: 40 }));
   await tick(100);
   const moved20 = (ve2State(store).clips || []).find((c) => c.id === newClip20.id);
-  check('v189: seret klip pindah ke track tujuan', !!moved20 && moved20.track === destTrack20, moved20 ? moved20.track : 'gone');
-  check('v189: posisi klip pindahan dipertahankan', !!moved20 && moved20.start === newClip20.start, moved20 ? String(moved20.start) : 'gone');
-  check('v189: klip pindahan terpilih di Inspector', !!doc20.getElementById('ve2Track') && doc20.getElementById('ve2Track').value === destTrack20, doc20.getElementById('ve2Track') ? doc20.getElementById('ve2Track').value : 'no-inspector');
+  check('v192: seret pointer pindah klip ke track tujuan', !!moved20 && moved20.track === destTrack20, moved20 ? moved20.track : 'gone');
+  check('v192: posisi klip pindahan dipertahankan', !!moved20 && moved20.start === newClip20.start, moved20 ? String(moved20.start) : 'gone');
+  check('v192: klip pindahan terpilih di Inspector', !!doc20.getElementById('ve2Track') && doc20.getElementById('ve2Track').value === destTrack20, doc20.getElementById('ve2Track') ? doc20.getElementById('ve2Track').value : 'no-inspector');
+  // Tanpa gerak (klik biasa): pointerup di baris lain TIDAK memindah.
+  const fix120 = (ve2State(store).clips || []).find((c) => c.id === 'fix1');
+  const fix1Bar20 = doc20.querySelector('[data-ve2-clip="fix1"]');
+  fix1Bar20.dispatchEvent(new dom.window.MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10, button: 0 }));
+  trackRows20[1].dispatchEvent(new dom.window.MouseEvent('pointerup', { bubbles: true, clientX: 10, clientY: 10 }));
+  await tick(100);
+  const fix1After20 = (ve2State(store).clips || []).find((c) => c.id === 'fix1');
+  check('v192: klik tanpa gerak tidak memindah klip', !!fix1After20 && fix1After20.track === fix120.track, fix1After20 ? fix1After20.track : 'gone');
+  // Drop tile asing (jalur aset HTML5) tetap diabaikan.
   const nBefore20 = (ve2State(store).clips || []).length;
   const dropX20 = new dom.window.Event('drop', { bubbles: true });
   Object.defineProperty(dropX20, 'dataTransfer', { value: { getData: () => 'tidak-ada' } });
   trackRows20[2].dispatchEvent(dropX20);
   await tick(100);
-  check('v189: drop id asing tidak mengubah klip', (ve2State(store).clips || []).length === nBefore20, String((ve2State(store).clips || []).length));
+  check('v192: drop id asing tidak mengubah klip', (ve2State(store).clips || []).length === nBefore20, String((ve2State(store).clips || []).length));
 
   // v189 §21 (revisi 17:55): x di tiap tile aset menghapus entrinya saja.
   const tiles21 = doc20.querySelectorAll('.ve2-thumb');
@@ -467,6 +478,17 @@ try {
   doc6.getElementById('ve2BtnStop').click();
   await tick(100);
   check('v191: klik Berhenti mengembalikan transport ke Putar', trans6[1].textContent === '▶ Putar', trans6[1].textContent);
+
+  // v192 §24: kotak pratinjau tinggi tetap — memilih klip tidak mengubah
+  // struktur kartu atas (tinggi distabilkan CSS; jsdom membuktikan kotak
+  // ada, berada sebelum transport, dan bertahan melewati ganti seleksi).
+  const box24 = doc20.querySelector('.ve2-preview-box');
+  const trans24 = doc20.querySelector('.ve2-transport');
+  check('v192: kotak pratinjau ada di kartu Preview', !!box24, box24 ? 'ada' : 'tidak-ada');
+  check('v192: kotak pratinjau berada sebelum transport', !!box24 && !!trans24 && (box24.compareDocumentPosition(trans24) & 4) !== 0, 'box-transport-ok');
+  doc20.querySelector('[data-ve2-clip="fix1"]').click();
+  await tick(100);
+  check('v192: kotak pratinjau bertahan sesudah ganti seleksi', !!doc20.querySelector('.ve2-preview-box') && !!doc20.querySelector('.ve2-preview-box #ve2PreviewLabel'), 'box:' + !!doc20.querySelector('.ve2-preview-box'));
 
 } catch (e) {
   // eslint-disable-next-line no-console
