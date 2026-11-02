@@ -786,3 +786,8 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 /* v206: log panel Riset Live (Search view). */
 #rsLog { font-size: 13px; color: #555; }
 #rsLog div { margin: 2px 0; }
+
+/* v207: tabel rencana 30 hari */
+#plan30-main table { border-collapse: collapse; font-size: 13px; width: 100%; }
+#plan30-main th, #plan30-main td { border: 1px solid #444; padding: 4px 6px; text-align: left; }
+#plan30-main label { display: block; margin-top: 8px; }
