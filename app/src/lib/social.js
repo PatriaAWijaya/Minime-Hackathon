@@ -153,6 +153,99 @@ function renderUnscheduled() {
   return '<div class="soc-unsched"><div class="soc-unsched-head"><b>' + esc(tr('soc.unsched.title')) + '</b></div>' + chips + '</div>';
 }
 
+// v205 (Skenario 1 Tahap 6): pengingat H-3 + konfirmasi penjadwalan.
+// Jendela pengingat: draf bertanggal yang waktunya <= 3 hari lagi
+// (termasuk yang sudah lewat — tetap ditampilkan agar tidak hilang
+// diam-diam), belum ditolak (declined). Draf tanpa tanggal (v204)
+// tidak masuk jendela karena tidak punya jadwal untuk di-H-3-kan.
+// Render murni dari state antrean (tanpa efek samping); satu-satunya
+// efek samping (pesan chat sekali per item) hidup di socCheckReminders
+// yang dipanggil tick scheduler.
+var REMIND_WINDOW_MS = 3 * 86400000;
+function socDueReminders(q) {
+  var list = q || queueLoad();
+  var now = Date.now();
+  return list.filter(function (it) {
+    return it && it.status === 'draft' && it.scheduledAt > 0 && !it.declined
+      && (it.scheduledAt - now) <= REMIND_WINDOW_MS;
+  });
+}
+function renderReminders() {
+  var items = socDueReminders();
+  if (!items.length) return '';
+  var rows = items.map(function (it) {
+    var overdue = it.scheduledAt <= Date.now();
+    var head = platIconHTML(it.platform, true) + '<span class="soc-item-title">' + esc(tr('soc.draft_label') + ': ' + socItemTitle(it.text)) + '</span>';
+    var meta = '<div class="se-note">' + esc(platName(it.platform)) + ' \u00b7 ' + esc(new Date(it.scheduledAt).toLocaleString()) + (overdue ? ' \u00b7 ' + esc(tr('soc.remind.overdue')) : '') + '</div>';
+    var warn = '';
+    if (it.imageFile && (it.platform === 'threads' || it.platform === 'instagram' || it.platform === 'tiktok')) {
+      warn = '<div style="color:#f59e0b">' + esc(tr('soc.remind.filewarn')) + '</div>';
+    }
+    var err = it.remindError ? '<div style="color:#f87171">' + esc(it.remindError) + '</div>' : '';
+    return '<div class="soc-remind-item">' + head + meta + warn + err
+      + '<div class="soc-row"><button class="btn btn-sm btn-primary" data-soc-remind-ok="' + it.id + '">' + esc(tr('soc.remind.ok')) + '</button> '
+      + '<button class="btn btn-sm" data-soc-remind-edit="' + it.id + '">' + esc(tr('soc.remind.edit')) + '</button> '
+      + '<button class="btn btn-sm" data-soc-remind-keep="' + it.id + '">' + esc(tr('soc.remind.keep')) + '</button></div></div>';
+  }).join('');
+  return '<div class="soc-remind"><div class="soc-unsched-head"><b>' + esc(tr('soc.remind.title')) + '</b></div>' + rows + '</div>';
+}
+// Konfirmasi = persetujuan yang disyaratkan aturan draft-only: draf ->
+// queued, scheduler menerbitkan pada waktunya. Kanal belum terhubung =
+// TIDAK dijadwalkan (tetap draf + keterangan per item); peringatan
+// berkas lokal TIDAK memblokir (user mengonfirmasi dengan sadar bahwa
+// terbit bisa gagal sampai mekanisme unggah ada).
+function socRemindConfirm(id) {
+  var q = queueLoad();
+  var it = q.find(function (x) { return String(x.id) === String(id); });
+  if (!it || it.status !== 'draft') { renderNativePlanner(); return; }
+  var ch = socStore()[it.platform];
+  if (!tokenValid(ch)) {
+    it.remindError = tr('soc.remind.token');
+    if (!queueSave(q)) socNote(tr('soc.err.save'));
+    renderNativePlanner();
+    return;
+  }
+  it.status = 'queued';
+  delete it.remindError;
+  if (!queueSave(q)) { socNote(tr('soc.err.save')); renderNativePlanner(); return; }
+  socNote(tr('soc.remind.done', { date: new Date(it.scheduledAt).toLocaleString() }));
+  renderNativePlanner();
+}
+function socRemindDecline(id) {
+  var q = queueLoad();
+  var it = q.find(function (x) { return String(x.id) === String(id); });
+  if (!it) { renderNativePlanner(); return; }
+  it.declined = true;
+  delete it.remindError;
+  if (!queueSave(q)) socNote(tr('soc.err.save'));
+  renderNativePlanner();
+}
+// Satu pesan chat per item saat pertama kali masuk jendela (bendera
+// reminded di item mencegah spam tick 30 detik). Pesan dikirim lewat
+// window.postChat bila tersedia (bridge v5logic); tanpa bridge pun
+// bendera tetap tersimpan sehingga tidak ada pengulangan.
+export function socCheckReminders() {
+  var q = queueLoad();
+  var due = socDueReminders(q);
+  var changed = false;
+  due.forEach(function (it) {
+    if (it.reminded) return;
+    it.reminded = true;
+    changed = true;
+    try {
+      if (typeof window.postChat === 'function') {
+        var ag = (window.AGENTS && window.AGENTS.prime) || { name: 'Prime Agent', color: '#EB87B4' };
+        window.postChat('prime', ag.name, ag.color, tr('soc.remind.chat', {
+          title: socItemTitle(it.text),
+          platform: platName(it.platform),
+          date: new Date(it.scheduledAt).toLocaleString(),
+        }));
+      }
+    } catch (_) {}
+  });
+  if (changed) queueSave(q);
+}
+
 function renderCalendar() {
   var now = socCalCursor || new Date();
   var y = now.getFullYear(), m = now.getMonth();
@@ -410,7 +503,8 @@ export function renderNativePlanner() {
   var el = document.getElementById('nativePlanner');
   if (!el) return;
   el.innerHTML = '<div class="soc-wrap soc-layout">' + renderSideBar()
-    + '<div class="soc-main"><div class="soc-cal">' + renderCalendar() + '</div>'
+    + '<div class="soc-main">' + renderReminders()
+    + '<div class="soc-cal">' + renderCalendar() + '</div>'
     + renderUnscheduled()
     + socComposerHTML()
     + '</div></div>' + socPopHTML();
@@ -515,6 +609,19 @@ export function renderNativePlanner() {
       var it = queueLoad().find(function (x) { return String(x.id) === b.getAttribute('data-soc-edit'); });
       if (it) socComposerOpen(it.scheduledAt ? dayKey(it.scheduledAt) : dayKey(Date.now()), it.id);
     });
+  });
+  // v205: tombol seksi pengingat H-3.
+  el.querySelectorAll('[data-soc-remind-ok]').forEach(function (b) {
+    b.addEventListener('click', function () { socRemindConfirm(b.getAttribute('data-soc-remind-ok')); });
+  });
+  el.querySelectorAll('[data-soc-remind-edit]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var it = queueLoad().find(function (x) { return String(x.id) === b.getAttribute('data-soc-remind-edit'); });
+      if (it) socComposerOpen(dayKey(it.scheduledAt), it.id);
+    });
+  });
+  el.querySelectorAll('[data-soc-remind-keep]').forEach(function (b) {
+    b.addEventListener('click', function () { socRemindDecline(b.getAttribute('data-soc-remind-keep')); });
   });
   el.querySelectorAll('[data-soc-view]').forEach(function (b) {
     b.addEventListener('click', function (e) {
@@ -1480,6 +1587,10 @@ export function initSocialScheduler() {
   socTimer = setInterval(async function () {
     if (socTickRunning) return; // audit v66 S-M1: tick tumpang-tindih
     socTickRunning = true;      // bisa mengirim item yang sama 2x.
+    // v205: pengingat H-3 — HARUS sebelum queueLoad() blok terbit di
+    // bawah, agar bendera reminded yang disimpan di sini tidak
+    // tertimpa simpanan antrean basi dari blok terbit.
+    try { socCheckReminders(); } catch (_) {}
     try {
     var q = queueLoad();
     var due = q.filter(function (it) { return it.status === 'queued' && it.scheduledAt <= Date.now(); });

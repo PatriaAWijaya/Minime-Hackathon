@@ -777,3 +777,8 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
    jarak + pemisah dari kalender. */
 .soc-unsched { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--t-line, #e5e7eb); }
 .soc-unsched-head { margin-bottom: 6px; }
+
+/* v205: seksi pengingat H-3 di Planner (Skenario 1 Tahap 6).
+   Dipakai ulang gaya head seksi tak terjadwal; item hanya jarak. */
+.soc-remind { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--t-line, #e5e7eb); }
+.soc-remind-item { margin: 8px 0; }

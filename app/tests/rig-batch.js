@@ -245,6 +245,68 @@ try {
   const unschedLeft = q204b.some((it) => !it.scheduledAt && it.status !== 'sent');
   check('v204: hapus chip tak terjadwal menghapus draf itu', !q204b.some((it) => it.id === 'q-unsched-1') && (!!document.querySelector('.soc-unsched') === unschedLeft), 'unschedLeft=' + unschedLeft);
 
+  // v205 (Skenario 1 Tahap 6): pengingat H-3 — seksi di atas kalender,
+  // hanya draf bertanggal <=3 hari (termasuk lewat jadwal); tombol
+  // Jadwalkan (kanal terhubung -> queued, kanal belum -> tetap draf +
+  // keterangan), Tetap draf (declined, tidak muncul lagi), Ubah
+  // (komposer edit); pesan chat sekali per item via socCheckReminders.
+  store.set('minime.social', JSON.stringify({ linkedin: { accessToken: 'rig-token', expiresAt: Date.now() + 3600000 } }));
+  const now205 = Date.now();
+  const ids205 = ['q205-a', 'q205-b', 'q205-c', 'q205-d', 'q205-e'];
+  const q205 = JSON.parse(store.get('minime.socialQueue') || '[]');
+  q205.push(
+    { id: 'q205-a', platform: 'linkedin', text: 'Draf H-3 uji', imageB64: '', imageMime: '', imageFile: '', imageUrl: '', scheduledAt: now205 + 2 * 86400000, status: 'draft', error: '', repeat: '' },
+    { id: 'q205-b', platform: 'instagram', text: 'Draf jauh uji', imageB64: '', imageMime: '', imageFile: '', imageUrl: '', scheduledAt: now205 + 10 * 86400000, status: 'draft', error: '', repeat: '' },
+    { id: 'q205-c', platform: 'threads', text: 'Draf tanpa tanggal uji 205', imageB64: '', imageMime: '', imageFile: '', imageUrl: '', scheduledAt: 0, status: 'draft', error: '', repeat: '' },
+    { id: 'q205-d', platform: 'instagram', text: 'Draf berkas uji', imageB64: '', imageMime: '', imageFile: 'uji.jpg', imageUrl: '', scheduledAt: now205 + 86400000, status: 'draft', error: '', repeat: '' },
+    { id: 'q205-e', platform: 'linkedin', text: 'Draf lewat uji', imageB64: '', imageMime: '', imageFile: '', imageUrl: '', scheduledAt: now205 - 86400000, status: 'draft', error: '', repeat: '' },
+  );
+  store.set('minime.socialQueue', JSON.stringify(q205));
+  dom.window.showView('planner');
+  dom.window.renderPlanner();
+  await tick(200);
+  const remText = document.querySelector('.soc-remind')?.textContent || '';
+  check('v205: seksi pengingat tampil + hanya draf <=3 hari (termasuk lewat)', !!document.querySelector('.soc-remind') && remText.includes('Draf H-3 uji') && remText.includes('Draf berkas uji') && remText.includes('Draf lewat uji') && !remText.includes('Draf jauh uji') && !remText.includes('Draf tanpa tanggal uji 205'), remText.slice(0, 160));
+  check('v205: peringatan berkas lokal + penanda lewat jadwal tampil', remText.includes('belum didukung') && remText.includes('Lewat jadwal'), remText.slice(0, 200));
+  // Pesan chat sekali per item: hitung item yang baru ditandai dari
+  // antrean saat ini (tahan terhadap tick scheduler yang mungkin
+  // sudah jalan); blok sinkron tanpa await agar tick tidak menyela.
+  const before205 = JSON.parse(store.get('minime.socialQueue') || '[]');
+  const n0205 = before205.filter((it) => it.status === 'draft' && it.scheduledAt > 0 && !it.declined && (it.scheduledAt - Date.now()) <= 3 * 86400000 && !it.reminded).length;
+  const realPostChat = dom.window.postChat;
+  const chatCalls = [];
+  dom.window.postChat = function (who, name, color, text) { chatCalls.push(text); };
+  dom.window.socCheckReminders();
+  dom.window.socCheckReminders();
+  dom.window.postChat = realPostChat;
+  const after205 = JSON.parse(store.get('minime.socialQueue') || '[]');
+  check('v205: socCheckReminders mengirim pesan chat sekali per item baru', chatCalls.length === n0205 && chatCalls.every((t) => t.includes('H-3')) && after205.filter((it) => ids205.includes(it.id) && it.reminded).length === 3, 'calls=' + chatCalls.length + ' n0=' + n0205);
+  document.querySelector('[data-soc-remind-ok="q205-a"]')?.click();
+  await tick(200);
+  let q205b = JSON.parse(store.get('minime.socialQueue') || '[]');
+  check('v205: konfirmasi kanal terhubung -> draf jadi queued', q205b.find((it) => it.id === 'q205-a')?.status === 'queued' && !(document.querySelector('.soc-remind')?.textContent || '').includes('Draf H-3 uji'), q205b.find((it) => it.id === 'q205-a')?.status || '');
+  document.querySelector('[data-soc-remind-ok="q205-d"]')?.click();
+  await tick(200);
+  q205b = JSON.parse(store.get('minime.socialQueue') || '[]');
+  check('v205: konfirmasi kanal belum terhubung -> tetap draf + keterangan', q205b.find((it) => it.id === 'q205-d')?.status === 'draft' && (document.querySelector('.soc-remind')?.textContent || '').includes('belum terhubung'), q205b.find((it) => it.id === 'q205-d')?.status || '');
+  document.querySelector('[data-soc-remind-keep="q205-e"]')?.click();
+  await tick(200);
+  q205b = JSON.parse(store.get('minime.socialQueue') || '[]');
+  check('v205: Tetap draf -> declined + hilang dari seksi', q205b.find((it) => it.id === 'q205-e')?.declined === true && q205b.find((it) => it.id === 'q205-e')?.status === 'draft' && !(document.querySelector('.soc-remind')?.textContent || '').includes('Draf lewat uji'), '');
+  document.querySelector('[data-soc-remind-edit="q205-d"]')?.click();
+  await tick(200);
+  check('v205: Ubah membuka komposer edit draf', (document.getElementById('socCompText')?.value || '').includes('Draf berkas uji'), document.getElementById('socCompText')?.value || '');
+  document.getElementById('socComposerClose')?.click();
+  await tick(200);
+  document.getElementById('socConfirmYes')?.click();
+  await tick(200);
+  const q205c = JSON.parse(store.get('minime.socialQueue') || '[]').filter((it) => !ids205.includes(it.id));
+  store.set('minime.socialQueue', JSON.stringify(q205c));
+  dom.window.showView('planner');
+  dom.window.renderPlanner();
+  await tick(200);
+  check('v205: bersih-bersih menghapus item uji dari seksi', !['Draf H-3 uji', 'Draf berkas uji', 'Draf lewat uji'].some((t) => (document.querySelector('.soc-remind')?.textContent || '').includes(t)), '');
+
   // 8. Popup Tambah Channel: grid 8 ikon + nama, klik ikon ->
   // login browser langsung bila kredensial tersimpan, form bila
   // belum; Putuskan menyimpan kredensial (login ulang tanpa isi).
