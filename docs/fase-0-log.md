@@ -2521,6 +2521,38 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v197 — play pada monitor pratinjau menggerakkan playhead (laporan Patria 2 Nov 21:23)
+
+- Laporan Patria: playhead tidak bergerak bila menekan play pada monitor
+  pratinjau, tapi bergerak normal bila menekan tombol play pada menu di
+  bawah monitor pratinjau.
+- AKAR MASALAH: monitor pratinjau idle memakai elemen media BAWAN
+  browser (video/audio dengan controls). Tombol play bawaan itu memutar
+  elemen pratinjau itu sendiri — ia tidak tahu-menahu soal timeline,
+  sehingga interval playhead tidak pernah jalan. Tombol Putar transport
+  memanggil ve2PlayToggle sehingga playhead jalan. Dua tombol play yang
+  perilakunya berbeda.
+- PERBAIKAN: handler baru ve2PreviewPlay dipasang sebagai onplay pada
+  #ve2PreviewVideo dan #ve2PreviewAudio. Saat play bawaan ditekan,
+  elemen dijeda dulu (supaya tidak berbunyi/memutar sendiri) lalu
+  ve2PlayToggle() jalan — perilaku play pratinjau kini IDENTIK dengan
+  tombol Putar transport (mulai dari playhead, putar ulang dari 0 bila
+  playhead sudah lewat ujung). Bila timeline sudah jalan, handler hanya
+  menjeda elemen pratinjau tanpa menghentikan timeline (keadaan ini
+  mungkin bila timeline tanpa klip video: ve2VideoOn tetap false saat
+  playback). Elemen #ve2Video saat playback TIDAK diubah — tombol
+  pause bawaannya tetap perilaku browser; menghentikan timeline tetap
+  lewat tombol Berhenti transport (perilaku yang sudah dikenal).
+- Rig §28 baru: klip fixture src 'preview-uji.mp4' dipilih -> pratinjau
+  video muncul -> dispatch event play -> transport beralih ke Berhenti
+  + Putar di bar editor nonaktif (tanda ve2Playing jalan). i18n tidak
+  berubah (tanpa teks baru) -> 1110/bahasa, 0 duplikat.
+- Gerbang penuh lolos (/tmp/gate-v197/): vite build, 14 rig, root tsc,
+  gate-test 14 grup ALL PASSED, scan 0, ledger md5 tetap
+  d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
+- Kode 7e2c7b7 ↔ 4e87712 (tree identik).
+
 ## v196 — playhead + penggaris + klik timeline segaris bar (laporan Patria 2 Nov 18:56 + screenshot: "player berhenti sendiri sebelum sampai ujung track video")
 
 - Laporan Patria (screenshot 18:56): klip Video coffeeroom durasi 9,5 dtk
