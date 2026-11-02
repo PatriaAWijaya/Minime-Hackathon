@@ -2523,6 +2523,49 @@ dokumen lama yang dipakai.
 
 LIVE 3 Nov ~01:30 WIB: deploy mh-build207.sh — MH_BUILD207_OK; HEAD MacBook 07579e0 (commit log); PID 76082; marker 'Rencana Konten 30 Hari' x1 (JS) + 'plan30-main' x1 (CSS); md5 dist JS/CSS lokal == MacBook. App LIVE = v207. Konfirmasi live Patria untuk v207 BELUM ada (uji live yang disarankan: buka Planner -> panel Rencana 30 Hari -> isi niche/kompetitor/tanggal -> Mulai Riset -> Buat Tabel Rencana -> Setujui).
 
+## v208 — Skenario 2 Tahap 3: naskah per baris 3 jalur + gate QC per naskah + Gerbang 2 (lanjutan perintah Patria 3 Nov 01:11 "lanjut" atas workflow Skenario 2)
+
+Seksi Naskah muncul di panel Rencana 30 Hari sesudah Gerbang 1
+lolos. Tombol Buat Naskah Se-batch menulis naskah 30 baris BERURUTAN
+(1 baris = 1 draf + loop QC), progres "Menulis naskah N/30" di baris
+status; tiap baris tersimpan segera sesudah selesai (progres selamat
+bila app tertutup di tengah jalan). Gagal di satu baris TIDAK
+menggagalkan batch: baris itu ditandai GAGAL, batch lanjut, daftar
+hari gagal tampil di status akhir untuk dibuat ulang per baris.
+Tiga jalur naskah (kontrak label untuk tahap visual v209): image =
+Judul/Subjudul/Body (bisa diparse parseImagePlan yang sudah ada);
+carousel = 8 baris 'Slide N: judul — isi singkat'; reels = Hook +
+Beat per detik + CTA, 30-60 detik 9:16. Gate QC per naskah memakai
+mekanisme v161 (QC_INSTRUCTION 5 kriteria + parseQcVerdict, kini
+DIEKSPOR dari chat.ts agar tidak diduplikasi) dengan system
+instruction khusus naskah — TANPA format RECOMMEND, supaya naskah
+bersih dari baris rekomendasi (gatedAgentAnswer tidak dipakai karena
+system instruction-nya menempelkan REPORT_FORMAT). Aturan verdict:
+LOLOS langsung -> QC: LOLOS; LOLOS sesudah revisi -> QC: LOLOS
+sesudah revisi; REVISI sesudah 2 putaran -> QC: REVISI — periksa
+(baris tetap tampil dengan catatan QC-nya, tidak disembunyikan);
+QC mati total (semua provider down saat QC) -> lolos dengan catatan
+'QC tidak tersedia' sesuai aturan v161. Gerbang 2 = tombol Setujui
+Naskah: TERKUNCI bila ada baris kosong/gagal (klik menampilkan
+jumlah baris pemblokir); baris QC: REVISI TIDAK menghalangi gerbang
+— Patria yang memutuskan di gerbang — TAPI baris yang diedit manual
+menjadi 'Diedit manual' (listener change pada textarea, badge
+diperbarui tanpa re-render) dan ikut meloloskan gerbang. Sesudah
+Gerbang 2 lolos, naskah dikunci (textarea + tombol nonaktif). i18n
++20 kunci `p30.*` x3 -> 1210/bahasa. Rig-plan30 ditambah §v208 (7
+cek: seksi naskah + 30 tombol Buat Ulang, gerbang 2 terkunci
+sebelum naskah, 30 naskah terisi + badge QC LOLOS, edit manual ->
+Diedit manual, gerbang 2 lolos + Buat Naskah nonaktif, total 64
+panggilan model); stub fetch membedakan draf vs QC dari isi body
+(QC memuat 'Hasil agen:'). Gerbang v208 lolos penuh: vite,
+svelte-check 0/21 (baseline), 16 rig, root build+tsc, gate-test 14
+grup, scan 0, ledger md5 tetap, i18n 1210/1210/1210 0 duplikat,
+cargo fmt+check+check-tests 0, Cargo.lock bersih. Koreksi selama
+gerbang: hitungan i18n yang benar 1210 (bukan 1212 — kunci baru
+v208 berjumlah 20, bukan 22); skrip gerbang diperbaiki, kode tidak
+berubah. Batasan jujur v208: visual + caption (gerbang 3) dan batch
+3 kanal + draf bertanggal BELUM dibangun — menyusul v209+.
+
 ## v207 — Skenario 2 Tahap 0/1/2: store rencana 30 hari + panel + tabel + Gerbang 1 (perintah Patria 3 Nov 01:11 "lanjut" atas workflow Skenario 2 yang disajikan 3 Nov 01:00)
 
 Langkah pertama build alur Skenario 2 (campuran diputuskan: 12 image +
