@@ -13,6 +13,7 @@
   import { readImgSpend } from "./lib/image-api.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
   import { readVideoSpend, omniGenerateClip, omniPriceUsd, mimeForB64, b64FromBytes } from "./lib/omni-gen.js";
+  import { wanGenerateClip, wanPriceUsd, readClassaiSpend } from "./lib/classai-video.js";
   import { open as pickFiles } from "@tauri-apps/plugin-dialog";
   import { HF_SAMPLE } from "./lib/hf-sample.js";
   import { hfGenerateHtml } from "./lib/hf-gen.js";
@@ -32,6 +33,7 @@
   let imgSpend = $state(readImgSpend());
   let liveCost = $state(readLiveCost());
   let videoSpend = $state(readVideoSpend());
+  let classaiSpend = $state(readClassaiSpend());
 
   function applyLanguage(value: string) {
     const next = value === 'en' || value === 'zh' ? value : 'id';
@@ -721,6 +723,10 @@
   let vgStatus = $state('');
   let vgLastPath = $state('');
   let vgLastDur = $state(0);
+  let vgWanRes = $state('720p');
+  let vgWanSec = $state(10);
+  let vgWanLastPath = $state('');
+  let vgWanLastDur = $state(0);
   let hfHtml = $state('');
   let hfDesc = $state('');
   let hfGenBusy = $state(false);
@@ -829,6 +835,38 @@
     const start = ve2Clips.reduce((m, c) => Math.max(m, c.start + c.dur), 0);
     ve2Clips = [...ve2Clips, { id: 'omnic' + Date.now(), name: `Omni ${vgLastDur.toFixed(1)}s`, track: 'Video', start, dur: vgLastDur, src: vgLastPath, effect: 'none' }];
     ve2EnsureAsset(vgLastPath, `Omni ${vgLastDur.toFixed(1)}s`, 'Video', vgLastDur);
+    ve2SaveState();
+    vgStatus = t('vg.added_timeline', lang);
+  }
+  async function vgWanGenerate() {
+    const key = readKeys().classai;
+    if (!key) { vgStatus = t('vg.wan.need_key', lang); return; }
+    if (!vgPrompt.trim()) { vgStatus = t('vg.need_prompt', lang); return; }
+    const sec = Math.min(30, Math.max(2, Math.round(Number(vgWanSec) || 10)));
+    vgWanSec = sec;
+    vgBusy = true;
+    vgStatus = t('vg.status.start', lang);
+    try {
+      const r = await wanGenerateClip(key, { prompt: vgPrompt.trim(), aspect: vgAspect, resolution: vgWanRes, seconds: sec }, (phase, elapsed) => {
+        vgStatus = phase === 'save' ? t('vg.status.download', lang) : phase === 'generating' ? `${t('vg.status.poll', lang)} (${elapsed ?? 0}s)` : t('vg.status.start', lang);
+      });
+      ve2Assets = [...ve2Assets, { id: 'wan' + Date.now(), name: `Wan ${r.seconds.toFixed(1)}s`, icon: '🎬', kind: 'Video', src: r.path, duration: r.seconds }];
+      ve2SaveState();
+      classaiSpend = readClassaiSpend();
+      vgWanLastPath = r.path;
+      vgWanLastDur = r.seconds;
+      vgStatus = `${t('vg.done', lang)} ${r.path} ($${r.usd.toFixed(2)})`;
+    } catch (e) {
+      vgStatus = `${t('vg.fail', lang)} ${String(e)}`;
+    } finally {
+      vgBusy = false;
+    }
+  }
+  function vgWanAddToTimeline() {
+    if (!vgWanLastPath) return;
+    const start = ve2Clips.reduce((m, c) => Math.max(m, c.start + c.dur), 0);
+    ve2Clips = [...ve2Clips, { id: 'wanc' + Date.now(), name: `Wan ${vgWanLastDur.toFixed(1)}s`, track: 'Video', start, dur: vgWanLastDur, src: vgWanLastPath, effect: 'none' }];
+    ve2EnsureAsset(vgWanLastPath, `Wan ${vgWanLastDur.toFixed(1)}s`, 'Video', vgWanLastDur);
     ve2SaveState();
     vgStatus = t('vg.added_timeline', lang);
   }
@@ -1221,7 +1259,7 @@
           <div class="ms-card">
 <div class="se-group"><h4>{t('vg.title', lang)}</h4></div>
 <div class="vg-card">
-<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><label>{t('vg2.model', lang)} <select id="vg-model" bind:value={vgModel}><option value="omni">{t('vg2.model.omni', lang)}</option><option value="hyperframes">{t('vg2.model.hf', lang)}</option></select></label>{#if vgModel === 'omni'}<span class="se-note" style="font-weight:700">{t('vg2.omni', lang)}</span>{/if}</div>
+<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><label>{t('vg2.model', lang)} <select id="vg-model" bind:value={vgModel}><option value="omni">{t('vg2.model.omni', lang)}</option><option value="wan">{t('vg2.model.wan', lang)}</option><option value="hyperframes">{t('vg2.model.hf', lang)}</option></select></label>{#if vgModel === 'omni'}<span class="se-note" style="font-weight:700">{t('vg2.omni', lang)}</span>{/if}</div>
 {#if vgModel === 'omni'}
 <div class="vg-tabs"><button class="vg-tab {vgTab === 'prompt' ? 'vg-tab-sel' : ''}" data-vg-tab="prompt" onclick={() => { vgTab = 'prompt'; }}>{t('vg2.tab.prompt', lang)}</button><button class="vg-tab {vgTab === 'refs' ? 'vg-tab-sel' : ''}" data-vg-tab="refs" onclick={() => { vgTab = 'refs'; }}>{t('vg2.tab.refs', lang)}</button><button class="vg-tab {vgTab === 'frames' ? 'vg-tab-sel' : ''}" data-vg-tab="frames" onclick={() => { vgTab = 'frames'; }}>{t('vg2.tab.frames', lang)}</button></div>
 {#if vgTab === 'prompt'}
@@ -1256,6 +1294,19 @@
 <button id="vg-generate" class="btn btn-primary" disabled={vgBusy} onclick={() => vgGenerate()}>{vgBusy ? t('vg.generating', lang) : t('vg.generate', lang)}</button> <button id="vg-add-timeline" class="btn btn-sm" disabled={!vgLastPath} onclick={() => vgAddToTimeline()}>{t('vg.add_timeline', lang)}</button>
 <p id="vg-status" class="se-note" style="white-space:pre-line">{vgStatus}</p>
 {#if videoSpend.videos > 0}<p class="se-note">{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</p>{/if}
+{:else if vgModel === 'wan'}
+<label>{t('vg.prompt', lang)}<textarea id="vg-wan-prompt" rows="3" class="se-field" bind:value={vgPrompt}></textarea></label>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button id="vg-wan-prompt-clear" class="btn btn-sm" onclick={() => { vgPrompt = ''; vgStatus = ''; }}>{t('img.clear', lang)}</button></div>
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+<label>{t('vg.aspect', lang)} <select id="vg-wan-aspect" bind:value={vgAspect}><option value="9:16">9:16</option><option value="16:9">16:9</option></select></label>
+<label>{t('vg.res', lang)} <select id="vg-wan-res" bind:value={vgWanRes}><option value="480p">480p</option><option value="720p">720p</option><option value="1080p">1080p</option></select></label>
+<label>{t('vg.dur', lang)} <input id="vg-wan-sec" type="number" min="2" max="30" bind:value={vgWanSec} style="width:80px"></label>
+</div>
+<p class="se-note">{t('vg.wan.note', lang)}</p>
+<p class="se-note">{t('vg.wan.price', lang, { usd: wanPriceUsd(vgWanRes, vgWanSec).toFixed(2), idr: Math.round(wanPriceUsd(vgWanRes, vgWanSec) * 18148).toLocaleString('id-ID'), res: vgWanRes, s: vgWanSec })}</p>
+<button id="vg-wan-generate" class="btn btn-primary" disabled={vgBusy} onclick={() => vgWanGenerate()}>{vgBusy ? t('vg.generating', lang) : t('vg.generate', lang)}</button> <button id="vg-wan-add-timeline" class="btn btn-sm" disabled={!vgWanLastPath} onclick={() => vgWanAddToTimeline()}>{t('vg.add_timeline', lang)}</button>
+<p id="vg-wan-status" class="se-note" style="white-space:pre-line">{vgStatus}</p>
+{#if classaiSpend.videos > 0}<p class="se-note">{t('vg.wan.spend', lang, { n: classaiSpend.videos })} · ${classaiSpend.usd.toFixed(2)} ≈ Rp{classaiSpend.idr.toLocaleString('id-ID')}</p>{/if}
 {:else}
 <div class="se-group"><h4>{t('hf.title', lang)}</h4>
 <div class="se-group"><label>{t('hf.desc', lang)}<textarea id="hf-desc" rows="3" class="se-field" bind:value={hfDesc}></textarea></label></div>
@@ -1486,6 +1537,12 @@
             <div>{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</div>
           </div>
           {/if}
+          {#if classaiSpend.videos > 0}
+          <div class="bill-card">
+            <div><b>Wan 3.0</b> <span style="color:#a1a1a1">ClassAI</span></div>
+            <div>{t('vg.wan.spend', lang, { n: classaiSpend.videos })} · ${classaiSpend.usd.toFixed(2)} ≈ Rp{classaiSpend.idr.toLocaleString('id-ID')}</div>
+          </div>
+          {/if}
           {#if liveCost.calls > 0}
           <div class="bill-card">
             <div><b>{t('cost.live', lang)}</b> <span style="color:#a1a1a1">app</span></div>
@@ -1521,6 +1578,7 @@
         <h3>{t('settings.keys', lang)}</h3>
         <div class="key-card"><b>{t('key.gemini', lang)}</b><div class="key-row"><input type="password" id="apiKeyGemini" placeholder={t('key.ph.empty', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnGemini" onclick={() => { connectKey('gemini') }}>{t('key.connect', lang)}</button></div><span id="keyNoteGemini"></span></div>
         <div class="key-card"><b>{t('key.meta', lang)}</b><div class="key-row"><input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnMeta" onclick={() => { connectKey('meta') }}>{t('key.connect', lang)}</button></div><span id="keyNoteMeta"></span></div>
+        <div class="key-card"><b>{t('key.classai', lang)}</b><div class="key-row"><input type="password" id="apiKeyClassai" placeholder={t('key.ph.empty', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnClassai" onclick={() => { connectKey('classai') }}>{t('key.connect', lang)}</button></div><span id="keyNoteClassai"></span></div>
         <div class="key-card"><b>{t('set.ollama.url', lang)}</b><div class="key-row"><input id="ollamaUrl" placeholder="http://127.0.0.1:11434" style="width:320px"> <button class="btn btn-primary" onclick={() => { ollamaCheck() }}>{t('set.ollama.check', lang)}</button></div><span id="ollamaNote"></span></div>
       </div>
     </div>

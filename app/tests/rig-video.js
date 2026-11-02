@@ -17,18 +17,26 @@ if (!modMatch) throw new Error('script module dist tidak ditemukan');
 html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch[1]}"></script></body>`);
 
 const fetchLog = [];
+let wanPolls = 0;
 async function fetchStub(url, opts) {
   const u = String(url);
   fetchLog.push({ url: u, body: opts && opts.body ? String(opts.body) : '' });
   const base = { ok: true, status: 200, headers: { get: () => '' }, text: async () => '', arrayBuffer: async () => new TextEncoder().encode('FAKE-MP4').buffer };
   if (u.includes('/interactions')) return { ...base, json: async () => ({ steps: [{ type: 'model_output', content: [{ type: 'video', mime_type: 'video/mp4', data: 'RkFLRS1NUDQ=' }] }], id: 'v1_uji', status: 'completed', model: 'gemini-omni-1.1-flash', object: 'interaction' }) };
   if (u.includes('generativelanguage')) return { ...base, json: async () => ({ candidates: [{ content: { parts: [{ text: '<!doctype html><html><head><script src="./gsap.min.js"></script></head><body><div id="root" data-composition-id="main" data-start="0" data-duration="15" data-width="1080" data-height="1920"><h1 class="clip" data-start="0" data-duration="15" data-track-index="0">UJI</h1></div><script>const tl = gsap.timeline({paused:true}); window.__timelines["main"] = tl; tl.seek(0);</script></body></html>' }] } }], usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 50 } }) };
+  if (u.includes('router.classai.id')) {
+    if (u.endsWith('/content')) return { ...base, json: async () => ({}) };
+    if (opts && opts.method === 'POST') return { ...base, json: async () => ({ id: 'wan-job-1' }) };
+    wanPolls += 1;
+    if (wanPolls < 2) return { ...base, json: async () => ({ id: 'wan-job-1', status: 'processing' }) };
+    return { ...base, json: async () => ({ id: 'wan-job-1', status: 'completed', url: 'https://router.classai.id/v1/videos/wan-job-1/content' }) };
+  }
   return { ...base, ok: false, status: 0, json: async () => ({}) };
 }
 const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 function invokeStub(cmd, args) {
   if (cmd === 'image_read') return { b64: PNG_1X1 };
-  if (cmd === 'video_save') return { path: '/Users/mac/Movies/minime-veo/omni-uji.mp4' };
+  if (cmd === 'video_save') return { path: String(args?.req?.name || '').includes('wan') ? '/Users/mac/Movies/minime-veo/wan-uji.mp4' : '/Users/mac/Movies/minime-veo/omni-uji.mp4' };
   if (cmd === 'hyperframes_check') return { found: true, version: 'hyperframes 0.8.212', method: 'npx' };
   if (cmd === 'hyperframes_render') return { path: '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4', quality: 'draft', bytes: 107597 };
   if (cmd === 'video_probe') return { duration: String(args?.req?.path || '').includes('omni') ? 8 : 15, size: 107597, streams: [], format_name: 'mp4' };
@@ -161,7 +169,7 @@ try {
   check('v181 input frame awal + akhir + teks', Array.isArray(framesBody?.input) && framesBody.input.length === 3 && framesBody.input[0]?.data === 'AQID' && framesBody.input[1]?.data === 'BAUG' && framesBody.input[2]?.type === 'text', JSON.stringify(framesBody?.input));
 
   // (h) v179: HyperFrames sebagai pilihan model lokal (bukan panel terpisah).
-  check('v179: select model ada (Omni + HyperFrames)', !!document.getElementById('vg-model') && document.getElementById('vg-model').options.length === 2);
+  check('v179: select model ada (Omni + Wan + HyperFrames)', !!document.getElementById('vg-model') && document.getElementById('vg-model').options.length === 3);
   setInput(document.getElementById('vg-model'), 'hyperframes', 'change');
   await tick(100);
   check('v179: model HyperFrames menampilkan form HF, menyembunyikan Omni', !!document.getElementById('hf-html') && !!document.getElementById('hf-render') && !!document.getElementById('hf-quality') && !document.getElementById('vg-prompt'));
@@ -244,6 +252,32 @@ try {
   // (k) v179: penghapusan + heading Video Editor.
   check('v179: ringkasan tugas + template + batch sudah tidak ada', !document.getElementById('vg-batch-run') && document.querySelectorAll('[data-vt-beat]').length === 0 && !(document.body.textContent || '').includes('Ringkasan tugas'), 'batch=' + !!document.getElementById('vg-batch-run') + ' beats=' + document.querySelectorAll('[data-vt-beat]').length);
   check('v179: heading Video Editor tampil di atas kartu editor', (document.body.textContent || '').includes('Video Editor') && !!document.querySelector('.ve2-top'), 've2-top=' + !!document.querySelector('.ve2-top'));
+
+  // v201: Wan 3.0 via ClassAI — model ketiga + generate teks saja.
+  check('v201: select model ada 3 opsi (Omni + Wan + HyperFrames)', document.getElementById('vg-model').options.length === 3);
+  setInput(document.getElementById('vg-model'), 'wan', 'change');
+  await tick(100);
+  check('v201: model Wan menampilkan form Wan, menyembunyikan Omni + HF', !!document.getElementById('vg-wan-prompt') && !!document.getElementById('vg-wan-generate') && !!document.getElementById('vg-wan-res') && !!document.getElementById('vg-wan-sec') && !document.getElementById('vg-prompt') && !document.getElementById('hf-html'));
+  check('v201: harga Wan 720p 10 detik = $2.31', (document.body.textContent || '').includes('$2.31'));
+  const wanStatus = () => document.getElementById('vg-wan-status')?.textContent || '';
+  document.getElementById('vg-wan-generate').click();
+  await waitFor(() => wanStatus().includes('Kunci ClassAI'), 'status wan need-key', 100);
+  check('v201 tanpa kunci ditolak sebelum fetch ClassAI', !fetchLog.some((f) => f.url.includes('router.classai.id')), fetchLog.map((f) => f.url).join(' '));
+  store.set('minime.classaiKey', 'rig-key');
+  setInput(document.getElementById('vg-wan-prompt'), 'warung kopi pagi, sinematik', 'input');
+  document.getElementById('vg-wan-generate').click();
+  await waitFor(() => wanStatus().includes('wan-uji.mp4'), 'status wan done', 400);
+  const wanCreate = fetchLog.find((f) => f.url === 'https://router.classai.id/v1/videos' && f.body);
+  let wanBody = {};
+  try { wanBody = JSON.parse(wanCreate ? wanCreate.body : '{}'); } catch { wanBody = {}; }
+  check('v201 POST ClassAI model wan-3.0 + format (9:16, 720p, 10 detik)', !!wanCreate && wanBody?.model === 'wan-3.0' && wanBody?.aspect_ratio === '9:16' && wanBody?.resolution === '720p' && wanBody?.seconds === 10, JSON.stringify(wanBody));
+  check('v201 polling ClassAI 2x sampai completed', fetchLog.filter((f) => f.url === 'https://router.classai.id/v1/videos/wan-job-1').length === 2, 'polls=' + fetchLog.filter((f) => f.url === 'https://router.classai.id/v1/videos/wan-job-1').length);
+  const wanSpend = JSON.parse(store.get('minime.classaiSpend') || '{}');
+  check('v201 spend Wan 720p 10 detik = $2.31', wanSpend.videos === 1 && wanSpend.usd === 2.31, JSON.stringify(wanSpend));
+  check('v201 aset ve2 bertambah dari Wan', (ve2State(store).assets || []).some((a) => a.src === '/Users/mac/Movies/minime-veo/wan-uji.mp4'), JSON.stringify(ve2State(store).assets));
+  document.getElementById('vg-wan-add-timeline').click();
+  await tick(100);
+  check('v201 klip timeline dari hasil Wan', (ve2State(store).clips || []).some((c) => c.src === '/Users/mac/Movies/minime-veo/wan-uji.mp4' && c.track === 'Video'), JSON.stringify(ve2State(store).clips));
 
 } catch (e) {
   // eslint-disable-next-line no-console

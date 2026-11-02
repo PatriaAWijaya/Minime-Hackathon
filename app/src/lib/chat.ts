@@ -19,20 +19,22 @@ import { cbAnswer, cbIsActive, cbIsFlowEntry, cbStart } from './creative-brief.j
 
 const GEMINI_KEY_LS = 'minime.geminiKey';
 const META_KEY_LS = 'minime.metaKey';
+const CLASSAI_KEY_LS = 'minime.classaiKey';
 const VALIDATED_LS = 'minime.keyValidated';
 
-export function readKeys(): { gemini: string | null; meta: string | null } {
+export function readKeys(): { gemini: string | null; meta: string | null; classai: string | null } {
   try {
     return {
       gemini: window.localStorage.getItem(GEMINI_KEY_LS) || null,
       meta: window.localStorage.getItem(META_KEY_LS) || null,
+      classai: window.localStorage.getItem(CLASSAI_KEY_LS) || null,
     };
   } catch {
-    return { gemini: null, meta: null };
+    return { gemini: null, meta: null, classai: null };
   }
 }
 
-export type KeyKind = 'gemini' | 'meta';
+export type KeyKind = 'gemini' | 'meta' | 'classai';
 
 function savedKey(kind: KeyKind): string | null {
   return readKeys()[kind];
@@ -40,7 +42,7 @@ function savedKey(kind: KeyKind): string | null {
 
 function saveKey(kind: KeyKind, value: string): void {
   try {
-    const ls = kind === 'gemini' ? GEMINI_KEY_LS : META_KEY_LS;
+    const ls = kind === 'gemini' ? GEMINI_KEY_LS : kind === 'meta' ? META_KEY_LS : CLASSAI_KEY_LS;
     window.localStorage.setItem(ls, value);
   } catch {
     // storage unavailable: key simply stays unset for this session
@@ -77,7 +79,7 @@ function keyNoteId(kind: KeyKind): string {
 }
 
 function keyInputId(kind: KeyKind): string {
-  return kind === 'gemini' ? 'apiKeyGemini' : 'apiKeyMeta';
+  return kind === 'gemini' ? 'apiKeyGemini' : kind === 'meta' ? 'apiKeyMeta' : 'apiKeyClassai';
 }
 
 function setKeyNote(kind: KeyKind, text: string): void {
@@ -94,7 +96,7 @@ function setKeyNote(kind: KeyKind, text: string): void {
  * dengan tombol per-kunci ini.
  */
 export function renderKeyButtons(): void {
-  (['gemini', 'meta'] as KeyKind[]).forEach((kind) => {
+  (['gemini', 'meta', 'classai'] as KeyKind[]).forEach((kind) => {
     const btn = document.getElementById(keyBtnId(kind)) as HTMLButtonElement | null;
     if (!btn) return;
     // Bila input sedang berisi ketikan baru, kunci yang berlaku adalah
@@ -148,14 +150,23 @@ export async function connectKey(kind: KeyKind): Promise<void> {
   try {
     // Uji langsung ke provider itu saja (callMeta/callGemini tanpa
     // callWithFallback): satu panggilan minimal, biaya nyaris nol
-    // (Meta: puluhan token; Gemini: free tier).
-    const cfg = defaultRouterConfig();
-    cfg.geminiApiKey = kind === 'gemini' ? key : null;
-    cfg.metaApiKey = kind === 'meta' ? key : null;
-    const router = new ModelRouter(cfg);
-    if (kind === 'gemini') recordLiveCost(await router.callGemini('Jawab satu kata: OK'));
-    else recordLiveCost(await router.callMeta('Jawab satu kata: OK', 'key-test'));
-    ok = true;
+    // (Meta: puluhan token; Gemini: free tier). ClassAI: baca katalog
+    // model (GET /v1/models) — memvalidasi kunci tanpa memakan kredit.
+    if (kind === 'classai') {
+      const r = await fetch('https://router.classai.id/v1/models', {
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      if (!r.ok) throw new Error(`ClassAI HTTP ${r.status}`);
+      ok = true;
+    } else {
+      const cfg = defaultRouterConfig();
+      cfg.geminiApiKey = kind === 'gemini' ? key : null;
+      cfg.metaApiKey = kind === 'meta' ? key : null;
+      const router = new ModelRouter(cfg);
+      if (kind === 'gemini') recordLiveCost(await router.callGemini('Jawab satu kata: OK'));
+      else recordLiveCost(await router.callMeta('Jawab satu kata: OK', 'key-test'));
+      ok = true;
+    }
   } catch (e) {
     ok = false;
     note = failNote(e);

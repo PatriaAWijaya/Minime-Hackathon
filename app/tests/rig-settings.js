@@ -12,7 +12,7 @@
 //     fungsi tumpang tindih: simpan per-kunci, bukan simpan semua).
 //  4. Meta kunci salah -> fetch 401 -> tombol tetap "Hubungkan API" +
 //     catatan ditolak + flag validasi TIDAK terpasang.
-//  5. Kartu Postiz/FB/provider HILANG (v63); 3 kartu kunci tersisa
+//  5. Kartu Postiz/FB/provider HILANG (v63); 4 kartu kunci tersisa (v201: +ClassAI)
 //     (Gemini, Meta, Ollama).
 //  6. Klik dengan input kosong + tanpa kunci tersimpan -> no-op
 //     (tidak ada fetch/invoke baru).
@@ -140,9 +140,9 @@ try {
   check('meta salah -> tetap Hubungkan + catatan + tak tervalidasi', btn('meta').textContent === 'Hubungkan API' && !validated().meta && store.get('minime.metaKey') === 'bad-meta');
   metaBad = false;
 
-  // 5. Kartu Postiz/FB/provider hilang (v63); 3 kartu kunci tersisa.
+  // 5. Kartu Postiz/FB/provider hilang (v63); 4 kartu kunci tersisa (v201: +ClassAI).
   check('kartu Postiz/FB/provider hilang', !document.getElementById('fbStatusNote') && !document.getElementById('provNote') && document.querySelectorAll('.prov-card').length === 0);
-  check('3 kartu kunci tersisa (Gemini, Meta, Ollama)', document.querySelectorAll('.key-card').length === 3);
+  check('4 kartu kunci tersisa (Gemini, Meta, ClassAI, Ollama)', document.querySelectorAll('.key-card').length === 4);
 
   // 6. Klik kosong tanpa kunci tersimpan -> no-op (tanpa fetch baru).
   // (Teks tombol tidak diasersi di sini: di app nyata, state tombol
@@ -159,10 +159,10 @@ try {
 
   // 7. Kartu v53: tombol sejajar kanan input + ketikan baru membatalkan
   // hijau basi (tanpa mengubah kunci/flag tersimpan). v78: kartu kunci
-  // ber-input menjadi 3 (Gemini, Meta, Ollama) — kartu Ollama yang dulu
+  // ber-input menjadi 4 (Gemini, Meta, ClassAI, Ollama) — kartu Ollama yang dulu
   // MATI (hanya label) kini punya input URL + tombol Periksa.
   const keyRows = [...document.querySelectorAll('.key-card .key-row')].filter((row) => row.querySelector('input'));
-  check('tiap kartu kunci: input + tombol sebaris', keyRows.length === 3 && keyRows.every((row) => row.querySelector('button')));
+  check('tiap kartu kunci: input + tombol sebaris', keyRows.length === 4 && keyRows.every((row) => row.querySelector('button')));
   // 8. Ikon nav v54: wiring + isi file baru (bukti dist menyalin ikon
   // kiriman Patria, bukan ikon lama). IHDR PNG: lebar di byte 16-19,
   // tinggi di byte 20-23 (big-endian).
