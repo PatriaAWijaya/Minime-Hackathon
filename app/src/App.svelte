@@ -1137,12 +1137,6 @@
 {/if}
 <div class="se-group"><label>{t('img.plan', lang)}<textarea id="ve-plan" rows="2" class="se-field" value={ve2Plan} oninput={(e) => { ve2Plan = (e.target as HTMLTextAreaElement).value; ve2SaveState(); }}></textarea></label></div>
 </div>
-          <div class="ve-toolbar">
-          <button id="ve2BtnCut" class="btn btn-sm" onclick={() => { ve2Cut() }}>{t('ve.cut', lang)}</button>
-          <button id="ve2BtnText" class="btn btn-sm" onclick={() => { ve2AddText() }}>{t('ve.addtext', lang)}</button>
-          <button id="ve2BtnSub" class="btn btn-sm" onclick={() => { ve2Subtitle() }}>{t('ve.subtitle', lang)}</button>
-          <button id="ve2BtnTrans" class="btn btn-sm" onclick={() => { ve2Transition() }}>{t('ve.transition', lang)}</button>
-          </div>
           <p id="ve2Status" class="se-note" style="white-space:pre-line">{ve2Status ? ve2Status : t('ve2.ready', lang)}</p>
           <div class="ve2-toolbar">
           <button id="ve2BtnSave" class="btn btn-sm" onclick={() => { ve2SaveProject() }}>{t('settings.saveproj', lang)}</button>
@@ -1203,7 +1197,6 @@
           <label>{t('ve.dur.label', lang)}</label><input id="ve2Dur" type="number" step="0.1" value={ve2SelClip()?.dur ?? 0} onchange={(e) => { ve2SetField('dur', e.currentTarget.value) }}>
           <label>{t('ve.track', lang)}</label><select id="ve2Track" value={ve2SelClip()?.track ?? 'Video'} onchange={(e) => { ve2SetField('track', e.currentTarget.value) }}><option value="Video">{t('word.video', lang)}</option><option value="B-Roll">B-Roll</option><option value="Audio">{t('word.audio', lang)}</option><option value="Teks">{t('word.teks', lang)}</option></select>
           <label>{t('ve.effect', lang)}</label><select id="ve2Fx" value={ve2SelClip()?.effect ?? 'none'} onchange={(e) => { ve2SetField('effect', e.currentTarget.value) }}><option value="none">{t('ve.fx.none', lang)}</option><option value="fade">{t('ve.fx.fade', lang)}</option><option value="zoom">{t('ve.fx.zoom', lang)}</option></select>
-          <button id="ve2ClipDel" class="btn btn-sm" style="margin-top:12px" onclick={() => { ve2DelClip() }}>{t('ve2.del_clip', lang)}</button>
           {:else}
           <p class="se-note">{t('ve2.no_clip', lang)}</p>
           {/if}
@@ -1238,6 +1231,15 @@
           </div>
           </div>
           </div>
+          </div>
+          <div id="ve2TrackBar" class="ve2-trackbar">
+          <button id="ve2BtnCut" class="btn btn-sm" disabled={!ve2SelClip()} onclick={() => { ve2Cut() }}>{t('ve.cut', lang)}</button>
+          <button id="ve2ClipDel" class="btn btn-sm" disabled={!ve2SelClip()} onclick={() => { ve2DelClip() }}>{t('ve2.del_clip', lang)}</button>
+          <button id="ve2BtnText" class="btn btn-sm" onclick={() => { ve2AddText() }}>{t('ve.addtext', lang)}</button>
+          <button id="ve2BtnSub" class="btn btn-sm" onclick={() => { ve2Subtitle() }}>{t('ve.subtitle', lang)}</button>
+          <button id="ve2BtnTrans" class="btn btn-sm" disabled={!ve2SelClip()} onclick={() => { ve2Transition() }}>{t('ve.transition', lang)}</button>
+          <button id="ve2BtnPlay" class="btn btn-sm" disabled={ve2Playing} onclick={() => { if (!ve2Playing) ve2PlayToggle(); }}>{t('ve.play', lang)}</button>
+          <button id="ve2BtnStop" class="btn btn-sm" disabled={!ve2Playing} onclick={() => { if (ve2Playing) ve2PlayToggle(); }}>{t('ve2.stop', lang)}</button>
           </div>
         </div>
       </div>

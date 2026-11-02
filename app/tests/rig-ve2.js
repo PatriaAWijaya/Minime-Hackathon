@@ -435,6 +435,39 @@ try {
   check('v190: petunjuk drag thumbnail tidak tampil di kartu Aset', !doc20.querySelector('.ve2-assets .se-note'), doc20.querySelector('.ve2-assets') ? doc20.querySelector('.ve2-assets').textContent.slice(0, 80) : 'no-assets-card');
   check('v190: grid aset tetap merender tile', doc20.querySelectorAll('.ve2-thumb').length > 0, String(doc20.querySelectorAll('.ve2-thumb').length));
 
+  // v191 §23: bar editor track di bawah timeline; tombol terkait seleksi
+  // aktif hanya bila ada klip terpilih; Putar/Berhenti menggerakkan transport.
+  const bar23 = doc20.getElementById('ve2TrackBar');
+  const tl23 = doc20.getElementById('ve2Timeline');
+  check('v191: bar editor track ada di bawah timeline', !!bar23 && !!tl23 && (tl23.compareDocumentPosition(bar23) & 4) !== 0, bar23 ? 'bar-ok' : 'no-bar');
+  check('v191: toolbar lama di atas timeline sudah tidak ada', !doc20.querySelector('.ve-toolbar'), doc20.querySelector('.ve-toolbar') ? 'masih-ada' : 'hilang');
+  check('v191: 7 tombol bar masing-masing tepat satu', ['ve2BtnCut', 've2ClipDel', 've2BtnText', 've2BtnSub', 've2BtnTrans', 've2BtnPlay', 've2BtnStop'].every((id) => doc20.querySelectorAll('#' + id).length === 1), ['ve2BtnCut', 've2ClipDel', 've2BtnText', 've2BtnSub', 've2BtnTrans', 've2BtnPlay', 've2BtnStop'].map((id) => id + ':' + doc20.querySelectorAll('#' + id).length).join(' '));
+  check('v191: klip terpilih -> tombol seleksi aktif', !doc20.getElementById('ve2BtnCut').disabled && !doc20.getElementById('ve2ClipDel').disabled && !doc20.getElementById('ve2BtnTrans').disabled, 'cut:' + doc20.getElementById('ve2BtnCut').disabled + ' del:' + doc20.getElementById('ve2ClipDel').disabled + ' trans:' + doc20.getElementById('ve2BtnTrans').disabled);
+  // Dom segar tanpa klip: tombol seleksi nonaktif, Tambah Teks tetap aktif,
+  // Putar aktif + Berhenti nonaktif; klik Putar/Berhenti membalik transport.
+  const store6 = new Map();
+  store6.set('minime.cleaned-v84', '1');
+  store6.set('minime.cleaned-graph-v88', '1');
+  store6.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
+  const dom6 = makeDom(store6);
+  const doc6 = dom6.window.document;
+  await waitFor(() => doc6.querySelector('[data-view="media"]'), 'mount6 rail media', 100);
+  doc6.querySelector('[data-view="media"]').click();
+  await tick(100);
+  doc6.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  check('v191: tanpa seleksi -> Potong/Hapus/Transisi nonaktif', !!doc6.getElementById('ve2BtnCut') && doc6.getElementById('ve2BtnCut').disabled && doc6.getElementById('ve2ClipDel').disabled && doc6.getElementById('ve2BtnTrans').disabled, 'cut:' + doc6.getElementById('ve2BtnCut').disabled);
+  check('v191: tanpa seleksi -> Tambah Teks tetap aktif', !doc6.getElementById('ve2BtnText').disabled, String(doc6.getElementById('ve2BtnText').disabled));
+  check('v191: belum diputar -> Putar aktif, Berhenti nonaktif', !doc6.getElementById('ve2BtnPlay').disabled && doc6.getElementById('ve2BtnStop').disabled, 'play:' + doc6.getElementById('ve2BtnPlay').disabled + ' stop:' + doc6.getElementById('ve2BtnStop').disabled);
+  const trans6 = [...doc6.querySelectorAll('.ve2-transport button')];
+  doc6.getElementById('ve2BtnPlay').click();
+  await tick(100);
+  check('v191: klik Putar menggerakkan transport ke Berhenti', trans6[1].textContent === 'Berhenti', trans6[1].textContent);
+  check('v191: sedang diputar -> Putar nonaktif, Berhenti aktif', doc6.getElementById('ve2BtnPlay').disabled && !doc6.getElementById('ve2BtnStop').disabled, 'play:' + doc6.getElementById('ve2BtnPlay').disabled);
+  doc6.getElementById('ve2BtnStop').click();
+  await tick(100);
+  check('v191: klik Berhenti mengembalikan transport ke Putar', trans6[1].textContent === '▶ Putar', trans6[1].textContent);
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-ve2 exception :: ' + (e && e.stack ? e.stack : e));
