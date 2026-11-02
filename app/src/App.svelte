@@ -1171,7 +1171,6 @@
           </div>
           {/each}
           </div>
-          <p class="se-note">{t('ve2.drag_hint', lang)}</p>
           <div style="display:flex;gap:6px;margin-top:8px"><input id="ve2NewSrc" type="text" bind:value={ve2NewSrc} placeholder="/Users/mac/Movies/klip.mp4" style="flex:1"><select id="ve2NewKind" bind:value={ve2NewKind}><option value="Image">Image</option><option value="Video">Video</option><option value="Audio">Audio</option></select><button id="ve2AssetAdd" class="btn btn-sm" onclick={() => { ve2AddAsset() }}>{t('t1.add', lang)}</button></div>
           </div>
           <div class="ve2-preview">

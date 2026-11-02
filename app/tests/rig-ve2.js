@@ -431,6 +431,10 @@ try {
   check('v189: hapus aset tidak menghapus klip timeline', (ve2State(store).clips || []).length === clipsBefore21, String((ve2State(store).clips || []).length));
   check('v189: tile aset terhapus hilang dari DOM', doc20.querySelectorAll('.ve2-thumb').length === tiles21.length - 1, String(doc20.querySelectorAll('.ve2-thumb').length));
 
+  // v190 §22: kalimat petunjuk drag tidak lagi dimunculkan.
+  check('v190: petunjuk drag thumbnail tidak tampil di kartu Aset', !doc20.querySelector('.ve2-assets .se-note'), doc20.querySelector('.ve2-assets') ? doc20.querySelector('.ve2-assets').textContent.slice(0, 80) : 'no-assets-card');
+  check('v190: grid aset tetap merender tile', doc20.querySelectorAll('.ve2-thumb').length > 0, String(doc20.querySelectorAll('.ve2-thumb').length));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-ve2 exception :: ' + (e && e.stack ? e.stack : e));
