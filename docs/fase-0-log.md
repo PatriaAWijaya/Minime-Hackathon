@@ -2521,6 +2521,38 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v198 — pause video di preview window menghentikan playhead (laporan Patria 2 Nov 21:32)
+
+- Laporan Patria: playhead terus berjalan saat video dipause melalui
+  preview window. Ini kebalikan laporan v197 (play pratinjau tidak
+  menggerakkan playhead): saat timeline jalan, monitor menampilkan
+  elemen #ve2Video dengan controls bawaan; tombol pause bawaan itu
+  membekukan video saja, interval playhead + timer audio + timer
+  pindah klip tetap jalan.
+- PERBAIKAN: handler baru ve2VideoPaused dipasang sebagai onpause pada
+  #ve2Video (elemen playback yang selalu ada di DOM). Pause bawaan kini
+  memanggil ve2StopPlayback sehingga seluruh timeline berhenti:
+  playhead membeku, timer audio dibersihkan, elemen audio dijeda.
+  Syarat ganda di handler (timeline sedang jalan DAN elemen
+  benar-benar paused) menyaring event pause palsu — mis. pergantian
+  src klip — yang datang saat elemen sudah kembali bermain, dan
+  membuat pemanggilan ulang stop aman (pause() pada elemen yang sudah
+  paused tidak memicu event lagi). Sesudah berhenti, #ve2Video
+  disembunyikan dan cabang pratinjau idle kembali, sehingga menekan
+  play berikutnya lewat pratinjau idle masuk jalur v197 (timeline
+  jalan lagi dari playhead). Elemen pratinjau idle sendiri tidak
+  diubah; pause elemen playback saat tidak ada timeline yang jalan
+  tidak melakukan apa-apa.
+- Rig §29 baru: Putar dari bar editor -> video playback tampil (display
+  block) -> dispatch event pause -> transport kembali ke Putar +
+  Putar bar editor aktif lagi (tanda timeline berhenti). i18n tidak
+  berubah (tanpa teks baru) -> 1110/bahasa, 0 duplikat.
+- Gerbang penuh lolos (/tmp/gate-v198/): vite build, 14 rig, root tsc,
+  gate-test 14 grup ALL PASSED, scan 0, ledger md5 tetap
+  d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
+- Kode 7032f87 ↔ 18e7569 (tree identik).
+
 ## v197 — play pada monitor pratinjau menggerakkan playhead (laporan Patria 2 Nov 21:23)
 
 - Laporan Patria: playhead tidak bergerak bila menekan play pada monitor
