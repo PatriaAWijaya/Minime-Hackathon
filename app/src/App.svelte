@@ -9,9 +9,6 @@
   import { initScriptEditor, setSeMenu, seRefreshUI } from "./lib/script-editor.js";
   import { initImageFlow, imgRefreshUI } from "./lib/image-flow.js";
   import { initBrand, brandRefreshUI } from "./lib/brand.js";
-  import { initBatchFlow, batchRefreshUI } from "./lib/batch-flow.js";
-  import { initResearchBrowser } from './lib/research-browser.js';
-  import { initPlan30 } from './lib/plan30.js';
   import { readImgSpend } from "./lib/image-api.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
   import { readVideoSpend, omniGenerateClip, omniPriceUsd, mimeForB64, b64FromBytes } from "./lib/omni-gen.js";
@@ -48,7 +45,6 @@
     renderLib();
     imgRefreshUI();
     brandRefreshUI();
-    batchRefreshUI();
     renderCampaign();
     renderDetail();
     vsRefreshVoiceUI();
@@ -68,9 +64,6 @@
     initScriptEditor();
     initImageFlow();
     initBrand();
-    initBatchFlow();
-    initResearchBrowser();
-    initPlan30();
     (window as unknown as Record<string, unknown>).refreshImgSpend = () => { imgSpend = readImgSpend(); };
     (window as unknown as Record<string, unknown>).refreshLiveCost = () => { liveCost = readLiveCost(); imgSpend = readImgSpend(); videoSpend = readVideoSpend(); };
     (window as unknown as Record<string, unknown>).veSetPlan = (t: string) => { ve2Plan = t; ve2SaveState(); };
@@ -1066,17 +1059,6 @@
         <input type="text" id="searchInput" placeholder={t('search.ph', lang)} oninput={() => { doSearch() }}>
         <p id="searchCount" style="color:#555"></p>
         <div id="searchResults"></div>
-        <div class="ms-card" style="margin-top:16px">
-          <h3>{t('rs.title', lang)}</h3>
-          <p class="se-note">{t('rs.note', lang)}</p>
-          <div style="display:flex;gap:8px">
-            <input type="text" id="rsQuery" placeholder={t('rs.ph', lang)} style="flex:1">
-            <button class="btn btn-primary" id="rsRun">{t('rs.run', lang)}</button>
-          </div>
-          <p id="rsStatus" style="color:#555"></p>
-          <div id="rsLog"></div>
-          <div id="rsReport" style="white-space:pre-wrap;margin-top:8px"></div>
-        </div>
       </div>
     </div>
     <div class="view" id="view-kanban">
@@ -1499,8 +1481,6 @@
     <div class="view" id="view-planner">
       <div class="scroll">
         <h3 style="margin:0 14px 12px">{t('ms.tab.batch', lang)}</h3>
-        <div id="plan30-main" style="margin:0 14px 12px"></div>
-        <div id="batch-main" style="margin:0 14px 12px"></div>
         <div id="socNotice" style="display:none;margin:0 14px 12px;padding:10px 12px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px"></div>
         <div id="socPasteWrap" style="display:none;margin:0 14px 12px;padding:10px 12px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px"></div>
         <div id="nativePlanner"></div>

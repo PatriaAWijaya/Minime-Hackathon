@@ -15,6 +15,7 @@ import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { readKeys } from './chat.js';
 import { recordLiveCost } from './cost.js';
 import { esc } from './esc.js';
+import { AGENTS, postChat } from './v5logic.js';
 
 export type RsResult = { title: string; url: string; snippet: string };
 export type RsStep = { kind: 'search' | 'open'; query: string; ok: boolean; detail: string };
@@ -133,46 +134,23 @@ export async function researchRun(
   return { report: '', steps, grounded: false, error: tr('rs.err.noreport') };
 }
 
-// Panel Riset Live di Search view: input + tombol + status + log
-// langkah (live per langkah) + laporan. Satu binding (guard dataset).
-export function initResearchBrowser(): void {
-  const btn = document.getElementById('rsRun') as HTMLButtonElement | null;
-  if (!btn || (btn as HTMLElement).dataset.rsWired) return;
-  (btn as HTMLElement).dataset.rsWired = '1';
-  btn.addEventListener('click', async () => {
-    const qEl = document.getElementById('rsQuery') as HTMLInputElement | null;
-    const st = document.getElementById('rsStatus');
-    const logEl = document.getElementById('rsLog');
-    const repEl = document.getElementById('rsReport');
-    const q = (qEl?.value || '').trim();
-    if (!q) {
-      if (st) st.textContent = tr('rs.err.query');
-      return;
-    }
-    btn.disabled = true;
-    if (st) st.textContent = tr('rs.running');
-    if (logEl) logEl.innerHTML = '';
-    if (repEl) repEl.textContent = '';
-    const renderStep = (s: RsStep) => {
-      if (!logEl) return;
-      const row = document.createElement('div');
-      row.textContent = (s.kind === 'search' ? 'CARI ' : 'BUKA ') + s.query + ' — ' + (s.ok ? s.detail : 'GAGAL: ' + s.detail);
-      logEl.appendChild(row);
-    };
-    const r = await researchRun(q, renderStep);
-    btn.disabled = false;
-    if (r.error) {
-      if (st) st.textContent = r.error;
-    } else {
-      if (st) st.textContent = tr('rs.done');
-      if (repEl) repEl.textContent = r.report + (r.grounded ? '' : '\n\n' + tr('rs.ungrounded'));
-    }
-    // Pengaman: langkah yang tidak sempat dirender live (mis. panel
-    // dibuka sesudah loop) tetap tampil dari hasil akhir.
-    if (logEl && !logEl.children.length && r.steps.length) {
-      logEl.innerHTML = r.steps
-        .map((s) => '<div>' + esc((s.kind === 'search' ? 'CARI ' : 'BUKA ') + s.query + ' — ' + (s.ok ? s.detail : 'GAGAL: ' + s.detail)) + '</div>')
-        .join('');
-    }
-  });
+
+// v212 (vonis Patria 3 Nov 04:36): riset live TIDAK lagi punya form
+// Perintah memakai titik-dua ("riset: <topik>") agar tidak membajak brief
+// delegasi yang diawali kata 'riset' (mis. 'riset pasar ...' -> agen Riset).
+// sendiri — panel Search view dihapus. Riset jalan lewat agen di chat:
+// pesan perintah "riset: <topik>" langsung menjalankan researchRun dan
+// laporannya tampil sebagai bubble agen Riset (bukan panel).
+export function researchChatIsEntry(text: string): boolean {
+  return /^\s*(tolong\s+)?riset\s*:\s*\S+/i.test(text);
+}
+
+export async function researchChatRun(text: string): Promise<void> {
+  const q = text.trim().replace(/^\s*(tolong\s+)?riset\s*:\s*/i, '').trim();
+  const ag = (AGENTS as Record<string, { name: string; color: string }>).riset;
+  const post = (t: string): void => { postChat('riset', ag.name, ag.color, t); };
+  post(tr('pc.rs_running'));
+  const r = await researchRun(q);
+  if (r.error) { post(r.error); return; }
+  post(r.report + (r.grounded ? '' : '\n\n' + tr('p30.warn_ungrounded')));
 }

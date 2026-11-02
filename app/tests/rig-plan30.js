@@ -1,11 +1,14 @@
-// Rig Rencana 30 Hari v207 (jsdom, test-only): membuktikan panel
-// Rencana 30 Hari di Planner view + Tahap 0/1/2 Skenario 2:
-//  1. Panel render (input niche/kompetitor/tanggal + 4 tombol).
-//  2. Tombol Setujui nonaktif sebelum ada tabel.
-//  3. Riset: model stub CARI -> BUKA -> LAPORAN -> laporan tampil.
-//  4. Tabel: model stub 30 baris (12 image + 10 carousel + 8 reels)
-//     -> 30 baris ter-render, tanggal baris 1 = tanggal mulai.
-//  5. Setujui (Gerbang 1): badge disetujui + tombol Buat Tabel nonaktif.
+// Rig Alur Rencana Lewat Chat v212 (jsdom, test-only): membuktikan
+// alur rencana 30 hari Skenario 2 berjalan LEWAT CHAT (bukan form) +
+// entri riset chat + tidak ada lagi form panel/batch/riset:
+//  0. "riset: ..." -> riset live (CARI/BUKA/LAPORAN) -> laporan di chat.
+//  1. "buatkan rencana konten 30 hari" -> tanya niche/kompetitor/tanggal
+//     -> riset -> laporan -> setuju -> tabel 30 baris (12/10/8).
+//  2. Gerbang 1 (setuju) -> 30 naskah + QC -> Gerbang 2 (regen + gaya
+//     + setuju) -> visual + caption -> Gerbang 3 (setuju) -> batch.
+//  3. Batch: 90 draf bertanggal (30 x 3 kanal) + H-3.
+//  4. Resume/batal: rencana tersimpan -> lanjut -> sudah dibatch ->
+//     baru -> batal.
 // Jalankan: npm run rig:plan30 (butuh dist ter-build + jsdom).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -33,6 +36,9 @@ for (let d = 1; d <= 30; d++) {
   TABLE_LINES.push(d + '|' + fmt + '|Topik ' + d + '|Hook ' + d + '|Pilar ' + d + '|' + hr);
 }
 const MODEL_REPLIES = [
+  'CARI: kopi susu Surabaya',
+  'BUKA: https://contoh.com/kopi-susu',
+  'LAPORAN: Tren kopi susu Surabaya 2026 naik. Sumber: https://contoh.com/kopi-susu',
   'CARI: kopi susu Surabaya',
   'BUKA: https://contoh.com/kopi-susu',
   'LAPORAN: Tren kopi susu Surabaya 2026 naik. Sumber: https://contoh.com/kopi-susu',
@@ -141,141 +147,96 @@ const btn = (act) => document.querySelector('#plan30-main [data-act="' + act + '
 
 try {
   await waitFor(() => typeof dom.window.showView === 'function', 'mount showView', 120);
-  dom.window.showView('planner');
   await tick(200);
-  check('v207: panel Rencana 30 Hari tampil di Planner view',
-    !!document.getElementById('p30Niche') && !!btn('plan-research') && !!btn('plan-table') && !!btn('plan-approve') && !!btn('plan-new'));
-  check('v207: Setujui nonaktif sebelum ada tabel', btn('plan-approve')?.disabled === true);
+  const bodyTxt = () => document.body.textContent || '';
+  const plan = () => JSON.parse(store.get('minime.plan30') || '{}');
+  const say = async (msg) => {
+    const inp = document.getElementById('chatInput');
+    inp.value = msg;
+    dom.window.sendChat();
+    await tick(150);
+  };
+  const waitBubble = (needle, label, tries = 400) => waitFor(() => bodyTxt().includes(needle) ? true : null, label, tries);
+  const imgCalls = () => log.filter((l) => l.includes('images/generations')).length;
 
-  // Riset: CARI -> BUKA -> LAPORAN.
+  // Bukti form hilang (v212): tidak ada panel Rencana, form Batch, panel Riset.
+  check('v212: tidak ada lagi #plan30-main / #batch-main / #rsQuery',
+    !document.getElementById('plan30-main') && !document.getElementById('batch-main') && !document.getElementById('rsQuery'));
+
+  // 0. Entri riset chat: "riset: ..." -> laporan di chat.
   store.set('minime.metaKey', 'rig-key');
-  document.getElementById('p30Niche').value = 'kopi susu Surabaya';
-  document.getElementById('p30Comp').value = 'Kopi Kenangan, Janji Jiwa';
-  document.getElementById('p30Start').value = '2026-11-10';
-  btn('plan-research').click();
-  await waitFor(() => (document.getElementById('p30Report')?.value || '').includes('Tren kopi susu'), 'laporan riset tampil', 200);
-  const rep = document.getElementById('p30Report')?.value || '';
-  check('v207: laporan riset berisi isi LAPORAN + URL sumber',
-    rep.includes('Tren kopi susu Surabaya 2026 naik') && rep.includes('https://contoh.com/kopi-susu'), rep.slice(0, 120));
-  check('v207: invoke research_search 1x + research_fetch 1x',
+  store.set('minime.geminiKey', 'rig-key');
+  await say('riset: tren kopi susu Surabaya');
+  await waitBubble('Tren kopi susu Surabaya 2026 naik', 'laporan riset chat', 300);
+  check('v212: "riset: ..." -> laporan riset live di chat (bukan panel)',
+    bodyTxt().includes('Tren kopi susu Surabaya 2026 naik') && bodyTxt().includes('https://contoh.com/kopi-susu'));
+  check('v212: riset chat memakai research_search + research_fetch 1x',
     invokeCount('research_search') === 1 && invokeCount('research_fetch') === 1,
     'search=' + invokeCount('research_search') + ' fetch=' + invokeCount('research_fetch'));
 
-  // Tabel 30 baris.
-  btn('plan-table').click();
-  await waitFor(() => document.querySelectorAll('#p30Table tr').length === 31, 'tabel 30 baris tampil', 200);
-  const rows = Array.from(document.querySelectorAll('#p30Table tr')).slice(1);
+  // 1. Alur rencana: pemicu -> niche -> kompetitor -> tanggal -> riset -> laporan.
+  await say('buatkan rencana konten 30 hari');
+  await waitBubble('Rencana konten 30 hari dimulai', 'pertanyaan niche', 200);
+  await say('kopi susu Surabaya');
+  await waitBubble('Kompetitornya siapa?', 'pertanyaan kompetitor', 200);
+  await say('Kopi Kenangan, Janji Jiwa');
+  await waitBubble('Tanggal mulai? (format YYYY-MM-DD', 'pertanyaan tanggal', 200);
+  await say('2026-13-99');
+  await waitBubble('Tanggal tidak dikenali', 'tanggal salah ditolak', 200);
+  await say('2026-11-10');
+  await waitBubble('Tren kopi susu Surabaya 2026 naik', 'laporan riset rencana', 300);
+  check('v212: rencana tersimpan (niche/kompetitor/tanggal)',
+    plan().niche === 'kopi susu Surabaya' && plan().competitors === 'Kopi Kenangan, Janji Jiwa' && plan().startDate === '2026-11-10',
+    JSON.stringify({ niche: plan().niche, comp: plan().competitors, start: plan().startDate }));
+  await say('setuju');
+  await waitBubble('Tabel rencana (30 baris)', 'tabel rencana di chat', 300);
+  const rows = plan().rows || [];
   const fmts = { image: 0, carousel: 0, reels: 0 };
-  for (const r of rows) { const f = r.children[2]?.textContent || ''; if (fmts[f] !== undefined) fmts[f]++; }
-  const firstDate = rows[0]?.children[1]?.textContent || '';
-  const reelDate = rows[22]?.children[1]?.textContent || '';
-  check('v207: campuran tepat 12 image + 10 carousel + 8 reels',
-    fmts.image === 12 && fmts.carousel === 10 && fmts.reels === 8, JSON.stringify(fmts));
-  check('v207: tanggal baris 1 = tanggal mulai, baris 23 = mulai+22 hari',
-    firstDate === '2026-11-10' && reelDate === '2026-12-02', firstDate + ' / ' + reelDate);
-  check('v207: Setujui aktif sesudah tabel dibuat', btn('plan-approve')?.disabled === false);
-  check('v207: total 4 panggilan model (3 riset + 1 tabel)', modelCalls === 4, 'modelCalls=' + modelCalls);
+  for (const r of rows) { if (fmts[r.format] !== undefined) fmts[r.format]++; }
+  check('v212: tabel 30 baris, campuran tepat 12 image + 10 carousel + 8 reels',
+    rows.length === 30 && fmts.image === 12 && fmts.carousel === 10 && fmts.reels === 8, JSON.stringify(fmts));
+  check('v212: tanggal baris 1 = mulai, baris 23 = mulai+22 hari',
+    rows[0]?.date === '2026-11-10' && rows[22]?.date === '2026-12-02', (rows[0]?.date || '') + ' / ' + (rows[22]?.date || ''));
+  check('v212: total 7 panggilan model (2x riset 3 + 1 tabel)', modelCalls === 7, 'modelCalls=' + modelCalls);
 
-  // Gerbang 1.
-  btn('plan-approve').click();
-  await tick(200);
-  const cardTxt = document.getElementById('plan30-main')?.textContent || '';
-  check('v207: Gerbang 1 lolos (badge disetujui + Buat Tabel nonaktif)',
-    cardTxt.includes('Rencana disetujui') && btn('plan-table')?.disabled === true, cardTxt.slice(0, 160));
+  // 2. Gerbang 1 -> naskah + QC -> Gerbang 2 (regen + gaya) -> setuju.
+  await say('setuju');
+  await waitBubble('Naskah: 30 lolos', 'ringkasan naskah di chat', 600);
+  check('v212: 30 naskah terisi + semua QC LOLOS',
+    (plan().rows || []).length === 30 && (plan().rows || []).every((r) => (r.script || '').includes('Naskah Uji') && r.scriptState === 'ok'));
+  await say('buat ulang naskah hari 1');
+  await waitBubble('Naskah hari 1 dibuat ulang', 'regen naskah hari 1', 300);
+  await say('gaya: photorealistic');
+  await waitBubble('Gaya rencana diubah ke photorealistic', 'ubah gaya rencana', 200);
+  check('v212: gaya rencana tersimpan', plan().planStyle === 'photorealistic', plan().planStyle || '');
+  await say('setuju');
+  await waitBubble('Visual: 30 siap', 'ringkasan visual di chat', 600);
+  check('v212: 30 visual siap + 30 caption terisi',
+    (plan().rows || []).every((r) => r.mediaState === 'ready' && (r.caption || '').trim()));
+  check('v212: 92 panggilan gambar (12 + 80 slide)', imgCalls() === 92, 'imgCalls=' + imgCalls());
+  check('v212: total 99 panggilan model (7 + 60 naskah/QC + 2 regen + 30 caption)', modelCalls === 99, 'modelCalls=' + modelCalls);
 
-  // ===== v208: naskah per baris + QC + Gerbang 2 =====
-  check('v208: seksi naskah tampil sesudah Gerbang 1 (30 tombol Buat Ulang)',
-    !!btn('plan-scripts') && !!btn('plan-scripts-approve')
-    && document.querySelectorAll('#plan30-main [data-act="plan-regen"]').length === 30);
-  btn('plan-scripts-approve').click();
-  await tick(200);
-  check('v208: Gerbang 2 terkunci sebelum ada naskah (30 baris diblokir)',
-    (document.getElementById('p30ScriptStatus')?.textContent || '').includes('30'), document.getElementById('p30ScriptStatus')?.textContent || '');
-  btn('plan-scripts').click();
-  await waitFor(() => {
-    const tas = Array.from(document.querySelectorAll('textarea[id^="p30Script-"]'));
-    return tas.length === 30 && tas.every((t) => (t.value || '').includes('Naskah Uji')) ? true : null;
-  }, '30 naskah terisi', 400);
-  check('v208: 30 naskah terisi + badge hari 1 QC LOLOS',
-    document.getElementById('p30Badge-1')?.textContent === 'QC: LOLOS', document.getElementById('p30Badge-1')?.textContent || '');
-  const ta1 = document.getElementById('p30Script-1');
-  ta1.value = 'Judul: Edit manual';
-  ta1.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
-  await tick(100);
-  check('v208: edit manual menandai baris sebagai Diedit manual',
-    document.getElementById('p30Badge-1')?.textContent === 'Diedit manual', document.getElementById('p30Badge-1')?.textContent || '');
-  btn('plan-scripts-approve').click();
-  await tick(200);
-  const cardTxt2 = document.getElementById('plan30-main')?.textContent || '';
-  check('v208: Gerbang 2 lolos (badge disetujui + Buat Naskah nonaktif)',
-    cardTxt2.includes('Naskah disetujui') && btn('plan-scripts')?.disabled === true, cardTxt2.slice(0, 160));
-  check('v208: total 64 panggilan model (4 + 30 draf + 30 QC)', modelCalls === 64, 'modelCalls=' + modelCalls);
-
-  // ===== v209: visual + caption + Gerbang 3 =====
-  store.set('minime.geminiKey', 'rig-key');
-  check('v209: seksi visual tampil sesudah Gerbang 2 (gaya + 3 tombol)',
-    !!btn('plan-visuals') && !!btn('plan-captions') && !!btn('plan-visual-approve') && !!document.getElementById('p30Style'));
-  const cardEst = document.getElementById('plan30-main')?.textContent || '';
-  check('v209: estimasi 92 gambar + 40 klip (12 + 10x8, 8x5 beat)',
-    cardEst.includes('92 gambar') && cardEst.includes('40 klip'), cardEst.slice(0, 200));
-  btn('plan-visuals').click();
-  await waitFor(() => {
-    const b1 = document.getElementById('p30MediaBadge-1')?.textContent;
-    const b3 = document.getElementById('p30MediaBadge-3')?.textContent;
-    const b23 = document.getElementById('p30MediaBadge-23')?.textContent;
-    if (b1 !== 'Siap' || b3 !== 'Siap' || b23 !== 'Siap') return null;
-    const p23 = document.getElementById('p30MediaBadge-23')?.parentElement?.querySelector('p')?.textContent || '';
-    return (p23.match(/omni-uji\.mp4/g) || []).length === 5 ? true : null;
-  }, 'visual 30 baris Siap + 5 klip reels hari 23', 600);
-  check('v209: badge visual Siap (image/carousel/reels) + 5 klip hari 23',
-    document.getElementById('p30MediaBadge-1')?.textContent === 'Siap'
-    && document.getElementById('p30MediaBadge-3')?.textContent === 'Siap'
-    && document.getElementById('p30MediaBadge-23')?.textContent === 'Siap');
-  const imgCallsBefore = log.filter((l) => l.includes('images/generations')).length;
-  check('v209: 92 panggilan gambar (12 + 80 slide)', imgCallsBefore === 92, 'imgCalls=' + imgCallsBefore);
-  btn('plan-visuals').click();
-  await tick(500);
-  const imgCallsAfter = log.filter((l) => l.includes('images/generations')).length;
-  check('v209: batch visual kedua tidak mengulang baris Siap (tanpa bayar ulang)', imgCallsAfter === imgCallsBefore, imgCallsBefore + ' -> ' + imgCallsAfter);
-  btn('plan-captions').click();
-  await waitFor(() => {
-    const tas = Array.from(document.querySelectorAll('textarea[id^="p30Caption-"]'));
-    return tas.length === 30 && tas.every((t) => (t.value || '').trim().length > 0) ? true : null;
-  }, '30 caption terisi', 400);
-  check('v209: 30 caption terisi', document.querySelectorAll('textarea[id^="p30Caption-"]').length === 30);
-  const callsBefore = modelCalls;
-  btn('plan-captions').click();
-  await tick(500);
-  check('v209: batch caption kedua melewati baris bercaption (0 panggilan baru)', modelCalls === callsBefore, callsBefore + ' -> ' + modelCalls);
-  btn('plan-visual-approve').click();
-  await tick(200);
-  const cardTxt3 = document.getElementById('plan30-main')?.textContent || '';
-  check('v209: Gerbang 3 lolos (badge disetujui + Buat Visual nonaktif)',
-    cardTxt3.includes('Visual + caption disetujui') && btn('plan-visuals')?.disabled === true, cardTxt3.slice(0, 160));
-
-  // ===== v210: batch 3 kanal + draf bertanggal + H-3 =====
-  check('v210: seksi batch tampil sesudah Gerbang 3', !!btn('plan-batch'));
-  btn('plan-batch').click();
-  await tick(300);
+  // 3. Gerbang 3 -> batch -> antrean + H-3.
+  await say('setuju');
+  await waitBubble('Selesai — rencana masuk Planner', 'batch selesai di chat', 300);
   const q = JSON.parse(store.get('minime.socialQueue') || '[]');
   const byPlat = { instagram: 0, threads: 0, linkedin: 0 };
   for (const it of q) { if (byPlat[it.platform] !== undefined) byPlat[it.platform]++; }
   const day1ig = q.find((it) => it.planDay === 1 && it.platform === 'instagram');
   const day3ig = q.find((it) => it.planDay === 3 && it.platform === 'instagram');
   const day23ig = q.find((it) => it.planDay === 23 && it.platform === 'instagram');
-  check('v210: 90 draf (30 baris x 3 kanal), semua status draft',
+  check('v212: 90 draf (30 baris x 3 kanal), semua status draft',
     q.length === 90 && byPlat.instagram === 30 && byPlat.threads === 30 && byPlat.linkedin === 30
     && q.every((it) => it.status === 'draft'), JSON.stringify(byPlat) + ' total=' + q.length);
-  check('v210: tanggal hari 1 = 2026-11-10 09:00 WIB',
+  check('v212: tanggal hari 1 = 2026-11-10 09:00 WIB',
     day1ig && day1ig.scheduledAt === Date.parse('2026-11-10T02:00:00.000Z'), day1ig ? String(day1ig.scheduledAt) : 'tidak ada');
-  check('v210: image hari 1 membawa berkas; carousel hari 3 membawa 8 slide; reels hari 23 membawa 5 klip',
+  check('v212: image hari 1 membawa berkas; carousel hari 3 membawa 8 slide; reels hari 23 membawa 5 klip',
     day1ig && day1ig.imageFile === 'p30-d1-1.webp'
     && day3ig && day3ig.imageFile === 'p30-d3-1.webp' && (day3ig.imageFiles || []).length === 8
     && day23ig && (day23ig.videoFiles || []).length === 5 && !day23ig.imageFile,
     (day1ig?.imageFile || '') + ' / ' + (day3ig?.imageFiles?.length ?? -1) + ' / ' + (day23ig?.videoFiles?.length ?? -1));
-  check('v210: tombol batch terkunci sesudah batch (tanpa duplikat)',
-    btn('plan-batch')?.disabled === true);
-  // H-3: satu draf batch dibuat jatuh tempo -> seksi pengingat tampil.
+  check('v212: rencana ditandai batched + semua gerbang lolos',
+    plan().batched === true && plan().approved === true && plan().scriptsApproved === true && plan().visualApproved === true);
   const q2 = JSON.parse(store.get('minime.socialQueue') || '[]');
   q2[0].scheduledAt = Date.now() + 86400000;
   store.set('minime.socialQueue', JSON.stringify(q2));
@@ -283,8 +244,24 @@ try {
   dom.window.renderPlanner();
   await tick(300);
   const remindTxt = document.querySelector('.soc-remind')?.textContent || '';
-  check('v210: draf batch yang jatuh tempo masuk seksi pengingat H-3',
+  check('v212: draf batch yang jatuh tempo masuk seksi pengingat H-3',
     remindTxt.includes('Naskah Uji'), remindTxt.slice(0, 160));
+  check('v212: Planner native tetap tampil (kalender kartu)',
+    !!document.getElementById('nativePlanner') && !!document.querySelector('.soc-cal-grid'));
+
+  // 4. Resume / batal.
+  await say('buatkan rencana konten 30 hari');
+  await waitBubble('Ada rencana tersimpan', 'pertanyaan resume', 200);
+  await say('lanjut');
+  await waitBubble('Rencana ini sudah masuk Planner', 'resume rencana sudah dibatch', 200);
+  await say('buatkan rencana konten 30 hari');
+  await waitBubble('Ada rencana tersimpan', 'pertanyaan resume kedua', 200);
+  await say('baru');
+  await waitBubble('Rencana konten 30 hari dimulai', 'rencana baru -> tanya niche', 200);
+  await say('batal');
+  await waitBubble('Alur rencana dibatalkan', 'batal menutup alur', 200);
+  check('v212: sesudah batal, state alur chat bersih', !store.has('minime.planChat'));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-plan30 exception :: ' + (e && e.stack ? e.stack : e));

@@ -16,6 +16,8 @@ import { getLang, GROUNDING_INSTRUCTION, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_I
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
 import { cbAnswer, cbIsActive, cbIsFlowEntry, cbStart } from './creative-brief.js';
+import { planChatAnswer, planChatIsActive, planChatIsEntry, planChatStart } from './plan-chat.js';
+import { researchChatIsEntry, researchChatRun } from './research-browser.js';
 
 const GEMINI_KEY_LS = 'minime.geminiKey';
 const META_KEY_LS = 'minime.metaKey';
@@ -520,6 +522,33 @@ export async function sendChatReal(): Promise<void> {
     clearReplyTarget();
     input.value = '';
     await cbAnswer(text);
+    return;
+  }
+  // v212: alur rencana 30 hari lewat chat — pesan ini jawaban langkah
+  // atau pemicu alur baru (bukan brief biasa; bubble user tetap diposting).
+  if (planChatIsActive()) {
+    const rt0 = getReplyTarget();
+    postChat('user', 'Patria', '#374151', esc(text), undefined, rt0 ? { replyTo: rt0 } : undefined);
+    clearReplyTarget();
+    input.value = '';
+    await planChatAnswer(text);
+    return;
+  }
+  if (planChatIsEntry(text)) {
+    const rt0 = getReplyTarget();
+    postChat('user', 'Patria', '#374151', esc(text), undefined, rt0 ? { replyTo: rt0 } : undefined);
+    clearReplyTarget();
+    input.value = '';
+    await planChatStart(text);
+    return;
+  }
+  // v212: "riset: <topik>" langsung riset live via agen Riset di chat.
+  if (researchChatIsEntry(text)) {
+    const rt0 = getReplyTarget();
+    postChat('user', 'Patria', '#374151', esc(text), undefined, rt0 ? { replyTo: rt0 } : undefined);
+    clearReplyTarget();
+    input.value = '';
+    await researchChatRun(text);
     return;
   }
   const keys = readKeys();
