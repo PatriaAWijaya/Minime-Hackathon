@@ -2525,6 +2525,8 @@ LIVE 3 Nov ~01:30 WIB: deploy mh-build207.sh — MH_BUILD207_OK; HEAD MacBook 07
 
 LIVE 3 Nov ~01:35 WIB: deploy mh-build208.sh — MH_BUILD208_OK; HEAD MacBook 53ca857 (commit log); PID 76776; marker 'Naskah per Konten' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v208. Konfirmasi live Patria untuk v208 BELUM ada (uji live yang disarankan: sesudah Gerbang 1 lolos, klik Buat Naskah Se-batch -> periksa 30 naskah + badge QC -> edit satu baris -> Setujui Naskah).
 
+LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d94b03a (commit log); PID 77290; marker 'Visual + Caption per Konten' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v209. Konfirmasi live Patria untuk v209 BELUM ada (uji live yang disarankan: sesudah Gerbang 2 lolos, periksa estimasi biaya -> Buat Visual Se-batch -> periksa media per baris -> Buat Caption Se-batch -> Setujui Visual + Caption).
+
 ## v209 — Skenario 2 Tahap 4+5: visual per baris + caption per baris + Gerbang 3 (lanjutan perintah Patria 3 Nov 01:11 "lanjut" atas workflow Skenario 2)
 
 Seksi Visual + Caption muncul di panel Rencana sesudah Gerbang 2
