@@ -37,8 +37,9 @@ import { esc } from './esc.js';
 
 const FLOW_LS = 'minime.imageFlow';
 
-type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number; output: string; duration: number; scenes: number; slides: number; title: string; subtitle: string; listicle: string; header: string; footer: string; palette: string; provider: string };
-const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0, output: 'poster', duration: 30, scenes: 4, slides: 6, title: '', subtitle: '', listicle: '', header: '', footer: '', palette: '', provider: 'meta' };
+type SbPanel = { shot: string; visual: string; action: string; vo: string; transition: string; duration: number };
+type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number; output: string; duration: number; scenes: number; slides: number; title: string; subtitle: string; listicle: string; header: string; footer: string; palette: string; provider: string; panels: SbPanel[] | null; panelsBrief: string | null };
+const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0, output: 'poster', duration: 30, scenes: 4, slides: 6, title: '', subtitle: '', listicle: '', header: '', footer: '', palette: '', provider: 'meta', panels: null, panelsBrief: null };
 let state: FlowState = { ...DEFAULTS };
 
 
@@ -93,6 +94,15 @@ function loadState(): void {
         footer: typeof o.footer === 'string' ? o.footer : '',
         palette: typeof o.palette === 'string' ? o.palette : '',
         provider: o.provider === 'google' ? 'google' : 'meta',
+        panels: Array.isArray(o.panels) ? (o.panels as Array<Record<string, unknown>>).filter((p) => p && typeof p === 'object').map((p) => ({
+          shot: typeof p.shot === 'string' ? p.shot : '',
+          visual: typeof p.visual === 'string' ? p.visual : '',
+          action: typeof p.action === 'string' ? p.action : '',
+          vo: typeof p.vo === 'string' ? p.vo : '',
+          transition: ['cut', 'fade', 'dissolve', 'wipe'].includes(String(p.transition)) ? String(p.transition) : 'cut',
+          duration: Number.isInteger(p.duration) && (p.duration as number) >= 1 ? (p.duration as number) : 1,
+        })) : null,
+        panelsBrief: typeof o.panelsBrief === 'string' ? o.panelsBrief : null,
       };
     }
   } catch { state = { ...DEFAULTS }; }
@@ -303,17 +313,93 @@ async function modelShotList(brief: string, count: number): Promise<string[] | n
 // tiap frame: gaya terpilih ditegaskan, kolase/poster/header/border
 // dilarang eksplisit, montase dipaksa satu momen, end-card dipaksa
 // satu frame gaya sama (bukan desain poster).
-function storyboardPrompt(i: number, count: number, shots: string[] | null): string {
+// v174: struktur storyboard 7 field per panel (dokumen pola
+// struktur-prompt-storyboard.md): nomor/label, shot, visual, aksi,
+// dialog/VO, transisi, durasi per panel — menggantikan shot teks-bebas.
+// Satu panel = satu scene = satu shot (model app saat ini); label panel
+// "Scene N". Bible + STYLE LOCK v165 dipakai verbatim, hanya sumber
+// shot-nya kini panel terstruktur, bukan string bebas.
+function sbBibleLock(i: number, count: number): string {
   const bible = `Storyboard frame ${i + 1} of ${count} for one ${state.duration}-second video titled "${state.title.trim() || 'Video'}". All frames belong to the same video and share the same visual style, in story order.`;
   const sty = state.style || 'product photography';
   const lock = ` STYLE LOCK: every frame uses exactly the same ${sty} treatment — same medium, same color palette, same lighting, same lens feel. One single shot per frame: never a collage, never multiple panels in one image, never a poster layout, never a title header bar, never a decorative border. If a shot describes a montage, render ONE representative moment from it as a single frame. If a shot describes an end-card, render it as one frame of that closing moment in the same style, not as a designed poster.`;
-  const shot = shots ? shots[i] : '';
-  let p = bible + lock + (shot ? ` Shot: ${shot}` : ` Keyframe ${i + 1} of the sequence.`);
-  if (state.style) p += `, in ${state.style} style`;
-  if (state.textfree) p += ', no text, no words, no letters, no watermark';
+  return bible + lock;
+}
+
+function sbPanelPrompt(i: number, count: number, p: SbPanel): string {
+  const parts: string[] = [];
+  if (p.shot.trim()) parts.push(p.shot.trim());
+  if (p.visual.trim()) parts.push(p.visual.trim());
+  else parts.push(`Keyframe ${i + 1} of the sequence.`);
+  if (p.action.trim()) parts.push(`Action: ${p.action.trim()}`);
+  let pr = sbBibleLock(i, count) + ' ' + parts.join(' ');
+  if (state.style) pr += `, in ${state.style} style`;
+  if (state.textfree) pr += ', no text, no words, no letters, no watermark';
   const b = brandSuffix();
-  if (b) p += b;
-  return p;
+  if (b) pr += b;
+  return pr;
+}
+
+function escAttr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Bagi durasi total ke panel secara merata (sisa ke panel terakhir).
+function sbEvenDurations(count: number): number[] {
+  const base = Math.floor(state.duration / count);
+  const rem = state.duration - base * count;
+  return Array.from({ length: count }, (_, i) => base + (i === count - 1 ? rem : 0));
+}
+
+// Susun panel dari brief: shot list (parse bernomor, lalu model) jadi
+// visual tiap panel; shot/aksi/VO/transisi/durasi diisi default
+// (transisi cut, durasi merata) untuk disunting user sebelum Generate.
+async function buildSbPanels(): Promise<void> {
+  const brief = state.brief.trim();
+  if (!brief) { setNote(tr('img.err.brief')); return; }
+  const count = state.scenes;
+  let shots = parseStoryboardShots(brief, count);
+  if (!shots) {
+    try { shots = await modelShotList(brief, count); } catch { shots = null; }
+  }
+  const durs = sbEvenDurations(count);
+  state.panels = Array.from({ length: count }, (_, i) => ({
+    shot: '', visual: shots ? shots[i] : '', action: '', vo: '', transition: 'cut', duration: durs[i],
+  }));
+  state.panelsBrief = brief;
+  saveState();
+  renderSbPanels();
+  setNote(tr('img.sb.built', { n: count }));
+}
+
+function renderSbTotal(): void {
+  const t = el('img-sb-total');
+  if (!t) return;
+  if (!state.panels) { t.textContent = ''; return; }
+  const sum = state.panels.reduce((a, p) => a + (Number.isFinite(p.duration) ? p.duration : 0), 0);
+  t.textContent = tr('img.sb.total', { sum, total: state.duration });
+}
+
+function renderSbPanels(): void {
+  const box = el('img-sb-panels');
+  if (!box) return;
+  if (state.output !== 'storyboard' || !state.panels) {
+    box.innerHTML = state.output === 'storyboard' ? `<p class="se-note">${tr('img.sb.empty')}</p>` : '';
+    renderSbTotal();
+    return;
+  }
+  const trans = ['cut', 'fade', 'dissolve', 'wipe'];
+  box.innerHTML = state.panels.map((p, i) => `
+    <div class="se-group" data-sb-panel="${i}">
+      <b>${tr('img.sb.scene', { n: i + 1 })}</b>
+      <label>${tr('img.sb.shot')} <input class="se-field" type="text" data-sb-field="shot" value="${escAttr(p.shot)}" placeholder="${escAttr(tr('img.sb.shot.ph'))}"></label>
+      <label>${tr('img.sb.visual')} <textarea class="se-field" rows="2" data-sb-field="visual">${escAttr(p.visual)}</textarea></label>
+      <label>${tr('img.sb.action')} <input class="se-field" type="text" data-sb-field="action" value="${escAttr(p.action)}"></label>
+      <label>${tr('img.sb.vo')} <input class="se-field" type="text" data-sb-field="vo" value="${escAttr(p.vo)}"></label>
+      <label>${tr('img.sb.transition')} <select class="se-field" data-sb-field="transition">${trans.map((t) => `<option value="${t}"${p.transition === t ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+      <label>${tr('img.sb.duration')} <input class="se-field" type="number" min="1" data-sb-field="duration" value="${p.duration}"></label>
+    </div>`).join('');
+  renderSbTotal();
 }
 
 async function generate(): Promise<void> {
@@ -335,25 +421,42 @@ async function generate(): Promise<void> {
     genBrief = brief;
     const ts = Date.now();
     // v164: storyboard menyiapkan shot list dulu (parse, lalu model).
-    let shots: string[] | null = null;
+    // v174: shot list itu langsung menjadi panel terstruktur; panel
+    // yang sudah disusun untuk brief yang sama dipakai ulang (suntingan
+    // user tidak hilang), brief baru atau jumlah scene berubah selalu
+    // menyusun ulang — satu kali hitung shot list, tanpa panggilan
+    // model ganda.
+    let panels: SbPanel[] | null = null;
     if (state.output === 'storyboard') {
-      shots = parseStoryboardShots(brief, count);
-      if (!shots) {
-        try { shots = await modelShotList(brief, count); } catch { shots = null; }
+      if (state.panels && state.panels.length === count && state.panelsBrief === brief) {
+        panels = state.panels;
+      } else {
+        let shots = parseStoryboardShots(brief, count);
+        if (!shots) {
+          try { shots = await modelShotList(brief, count); } catch { shots = null; }
+        }
+        const durs = sbEvenDurations(count);
+        panels = Array.from({ length: count }, (_, i) => ({
+          shot: '', visual: shots ? shots[i] : '', action: '', vo: '', transition: 'cut', duration: durs[i],
+        }));
+        state.panels = panels;
+        state.panelsBrief = brief;
+        saveState();
+        renderSbPanels();
       }
-      lastShots = shots || [];
+      lastShots = panels.map((p) => p.visual).filter(Boolean);
     } else {
       lastShots = [];
     }
     const next: Variant[] = [];
     for (let i = 0; i < count; i++) {
       const prompt = state.output === 'poster' ? base
-        : state.output === 'storyboard' ? storyboardPrompt(i, count, shots)
+        : state.output === 'storyboard' ? sbPanelPrompt(i, count, (panels as SbPanel[])[i])
         : base + `, slide ${i + 1} of ${count}`;
       const label = state.output === 'poster' ? 'Poster'
         : state.output === 'storyboard' ? `Scene ${i + 1}/${count}`
         : `Slide ${i + 1}/${count}`;
-      const shot = state.output === 'storyboard' ? (shots ? shots[i] : '') : '';
+      const shot = state.output === 'storyboard' ? ((panels as SbPanel[])[i]?.visual || '') : '';
       const imgs = state.provider === 'google'
         ? await googleGenerateImage(key, prompt, GOOGLE_IMG_ASPECT[state.ratio] || '1:1')
         : (await metaGenerateImage(key, prompt, 1, RATIO_SIZE[state.ratio])).map((b64) => ({ b64, mime: 'image/webp' }));
@@ -405,9 +508,22 @@ async function approveDraft(): Promise<void> {
     const title = state.title.trim() || genBrief.slice(0, 40) || 'Draft';
     const parts: string[] = [];
     if (state.output === 'storyboard') {
-      const sceneLines = lastShots.length
-        ? lastShots.map((sh, i) => `Scene ${i + 1}: ${sh}`).join('\n')
-        : Array.from({ length: state.scenes }, (_, i) => `Scene ${i + 1}: keyframe ${i + 1} dari ${state.scenes}`).join('\n');
+      // v174: rencana dari 7 field panel (bukan lagi shot teks-bebas);
+      // VO gabungan dari Dialog/VO tiap panel mengalir ke Voice Editor
+      // tanpa panggilan model bila ada satu saja VO terisi; bila semua
+      // VO kosong, jalur model lama dipakai (kompatibilitas v163).
+      const panels = state.panels && state.panels.length === state.scenes ? state.panels : null;
+      const sceneLines = panels
+        ? panels.map((p, i) => {
+            const bits = [`Scene ${i + 1}: ${p.shot.trim() ? p.shot.trim() + ' — ' : ''}${p.visual.trim() || `Keyframe ${i + 1}`}`];
+            if (p.action.trim()) bits.push(`Aksi: ${p.action.trim()}`);
+            if (p.vo.trim()) bits.push(`Dialog/VO: ${p.vo.trim()}`);
+            bits.push(`Transisi: ${p.transition} · Durasi: ${p.duration} detik`);
+            return bits.join(' | ');
+          }).join('\n')
+        : lastShots.length
+          ? lastShots.map((sh, i) => `Scene ${i + 1}: ${sh}`).join('\n')
+          : Array.from({ length: state.scenes }, (_, i) => `Scene ${i + 1}: keyframe ${i + 1} dari ${state.scenes}`).join('\n');
       const plan = [
         `Rencana perakitan video — ${title}`,
         `Durasi: ${state.duration} detik · ${state.scenes} scene keyframe · Rasio: ${state.ratio}`,
@@ -419,7 +535,15 @@ async function approveDraft(): Promise<void> {
       const w = window as unknown as Record<string, unknown>;
       if (typeof w.veSetPlan === 'function') (w.veSetPlan as (t: string) => void)(plan);
       parts.push(tr('img.approve.video'));
-      try {
+      const panelVo = panels
+        ? panels.map((p, i) => ({ i, p })).filter(({ p }) => p.vo.trim()).map(({ i, p }) => `Scene ${i + 1} (${p.duration} detik): ${p.vo.trim()}`)
+        : [];
+      if (panelVo.length) {
+        const vo = [`Naskah VO — ${title}`, ...panelVo].join('\n');
+        vsSetScript(vo);
+        libAddScript(`Naskah VO: ${title}`, vo);
+        parts.push(tr('img.approve.voice'));
+      } else try {
         const vo = await modelText(
           `Buatkan naskah voice over Bahasa Indonesia untuk video ${state.duration} detik dengan ${state.scenes} scene keyframe. Judul: ${title}. Brief: ${state.brief.trim()}. Untuk tiap scene, tulis timing dan kalimat VO-nya. Hanya naskah, tanpa penjelasan tambahan.`,
           'trace-img-vo-' + Date.now());
@@ -487,6 +611,7 @@ function syncForm(): void {
   const provider = el('img-provider') as HTMLSelectElement | null;
   if (provider) provider.value = state.provider;
   renderImgOutput();
+  renderSbPanels();
 }
 
 // v163: blok kondisional per Output Desain — Poster: rasio + varian;
@@ -498,6 +623,7 @@ function renderImgOutput(): void {
   vis('img-n-wrap', state.output === 'poster');
   vis('img-duration-wrap', state.output === 'storyboard');
   vis('img-scenes-wrap', state.output === 'storyboard');
+  vis('img-sb-wrap', state.output === 'storyboard');
   vis('img-slides-wrap', state.output === 'carousel');
 }
 
@@ -547,6 +673,8 @@ export function imgSetBrief(text: string): void {
   state.brief = text;
   state.bulk = null;
   state.bulkActive = 0;
+  state.panels = null;
+  state.panelsBrief = null;
   saveState();
   syncForm();
   renderPreview();
@@ -567,7 +695,30 @@ export function initImageFlow(): void {
   bind<HTMLSelectElement>('img-n', 'change', (e) => { state.n = Number(e.value); saveState(); });
   bind<HTMLSelectElement>('img-output', 'change', (e) => { state.output = e.value; saveState(); renderImgOutput(); renderPreview(); });
   bind<HTMLInputElement>('img-duration', 'change', (e) => { const v = Math.round(Number(e.value)); state.duration = Number.isFinite(v) ? Math.min(60, Math.max(5, v)) : 30; saveState(); syncForm(); });
-  bind<HTMLSelectElement>('img-scenes', 'change', (e) => { state.scenes = Number(e.value); saveState(); });
+  bind<HTMLSelectElement>('img-scenes', 'change', (e) => { state.scenes = Number(e.value); state.panels = null; state.panelsBrief = null; saveState(); renderSbPanels(); });
+  bind('img-sb-build', 'click', () => void buildSbPanels());
+  // v174: delegasi input panel — satu listener di container (bukan
+  // bind per baris) agar tetap hidup melewati render ulang panel.
+  // Re-render penuh di sini akan menghilangkan fokus ketik, jadi
+  // handler hanya menyimpan + memperbarui baris total durasi.
+  const sbBox = el('img-sb-panels');
+  if (sbBox) sbBox.addEventListener('input', (ev) => {
+    const t = ev.target as HTMLElement | null;
+    const row = t ? t.closest('[data-sb-panel]') : null;
+    const field = t ? t.getAttribute('data-sb-field') : null;
+    if (!row || !field || !state.panels) return;
+    const idx = Number(row.getAttribute('data-sb-panel'));
+    const p = state.panels[idx];
+    if (!p) return;
+    if (field === 'duration') {
+      const v = Math.round(Number((t as HTMLInputElement).value));
+      p.duration = Number.isFinite(v) ? Math.max(1, v) : 1;
+    } else if (field === 'shot' || field === 'visual' || field === 'action' || field === 'vo' || field === 'transition') {
+      p[field] = (t as HTMLInputElement).value;
+    }
+    saveState();
+    renderSbTotal();
+  });
   bind<HTMLSelectElement>('img-slides', 'change', (e) => { state.slides = Number(e.value); saveState(); });
   bind<HTMLInputElement>('img-title', 'input', (e) => { state.title = e.value; saveState(); renderPreview(); });
   bind<HTMLInputElement>('img-subtitle', 'input', (e) => { state.subtitle = e.value; saveState(); renderPreview(); });
@@ -579,7 +730,7 @@ export function initImageFlow(): void {
   bind('img-provider', 'change', () => { const p = el('img-provider') as HTMLSelectElement | null; state.provider = p && p.value === 'google' ? 'google' : 'meta'; saveState(); });
   bind('img-generate', 'click', () => void generate());
   // v146: Bersihkan — hapus brief (+ tab bulk), pertahankan rasio/gaya/textfree/n.
-  bind('img-clear', 'click', () => { state.brief = ''; state.bulk = null; state.bulkActive = 0; saveState(); syncForm(); renderPreview(); renderBulkTabs(); });
+  bind('img-clear', 'click', () => { state.brief = ''; state.bulk = null; state.bulkActive = 0; state.panels = null; state.panelsBrief = null; saveState(); syncForm(); renderPreview(); renderBulkTabs(); });
   bind('img-load-script', 'click', () => {
     try {
       const raw = window.localStorage.getItem('minime.scriptEditor');
@@ -587,6 +738,8 @@ export function initImageFlow(): void {
       const out = o && typeof o.output === 'string' ? o.output : '';
       if (!out.trim()) { setNote(tr('img.note.noscript')); return; }
       state.brief = out;
+      state.panels = null;
+      state.panelsBrief = null;
       saveState();
       syncForm();
       renderPreview();

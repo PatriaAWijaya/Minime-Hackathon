@@ -1204,6 +1204,7 @@
           <div class="se-group" id="img-scenes-wrap"><label>{t('img.scenes', lang)}<select id="img-scenes" class="se-field">
             <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option>
           </select></label></div>
+          <div class="se-group" id="img-sb-wrap"><h4>{t('img.sb.title', lang)}</h4><button id="img-sb-build" class="se-btn2">{t('img.sb.build', lang)}</button><div id="img-sb-panels"></div><p class="se-note" id="img-sb-total"></p></div>
           <div class="se-group" id="img-slides-wrap"><label>{t('img.slides', lang)}<select id="img-slides" class="se-field">
             <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
           </select></label></div>

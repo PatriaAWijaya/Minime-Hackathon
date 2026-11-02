@@ -439,6 +439,33 @@ try {
   await tick(200);
   check('v172: caption poster langsung terisi di komposer Planner (tanpa salin-tempel)', (document.getElementById('socCompText')?.value || '').includes('CAPTION-UJI'), (document.getElementById('socCompText')?.value || '').slice(0, 80));
 
+  // 13. v174: struktur storyboard 7 field per panel (ganti shot teks-bebas).
+  await setSel('img-output', 'storyboard');
+  await setSel('img-scenes', '2');
+  setTxt172('img-brief', '1. Fasad kedai pagi, papan nama Selatan Seduh.\n2. Barista menuang V60, uap mengepul.');
+  await tick(100);
+  document.getElementById('img-sb-build').click();
+  await waitFor(() => document.querySelectorAll('[data-sb-panel]').length === 2, '2 panel storyboard', 120);
+  check('v174: panel terisi visual dari shot list', (document.querySelector('[data-sb-panel="0"] [data-sb-field="visual"]')?.value || '').includes('Fasad kedai') && (document.querySelector('[data-sb-panel="1"] [data-sb-field="visual"]')?.value || '').includes('menuang V60'), (document.querySelector('[data-sb-panel="0"] [data-sb-field="visual"]')?.value || '').slice(0, 60));
+  check('v174: panel punya 7 field (shot, visual, aksi, VO, transisi, durasi + label)', ['shot', 'visual', 'action', 'vo', 'transition', 'duration'].every((f) => !!document.querySelector('[data-sb-panel="0"] [data-sb-field="' + f + '"]')), [...document.querySelectorAll('[data-sb-panel="0"] [data-sb-field]')].map((e) => e.getAttribute('data-sb-field')).join(','));
+  const setSb = (idx, field, v) => { const e = document.querySelector('[data-sb-panel="' + idx + '"] [data-sb-field="' + field + '"]'); e.value = v; e.dispatchEvent(new dom.window.Event('input', { bubbles: true })); };
+  setSb(0, 'shot', 'ES, eye-level, static');
+  setSb(0, 'vo', 'Pagi selalu dimulai dari sini.');
+  setSb(0, 'duration', '6');
+  setSb(1, 'duration', '9');
+  await tick(100);
+  check('v174: total durasi panel tampil (6+9=15)', (document.getElementById('img-sb-total')?.textContent || '').includes('15'), document.getElementById('img-sb-total')?.textContent || '');
+  imgPrompts.length = 0;
+  document.getElementById('img-generate').click();
+  await waitFor(() => imgPrompts.length === 2, '2 prompt panel', 120);
+  check('v174: prompt panel memuat shot + visual (bukan brief utuh)', imgPrompts[0].includes('ES, eye-level, static') && imgPrompts[0].includes('Fasad kedai') && !imgPrompts[0].includes('menuang V60'), JSON.stringify(imgPrompts).slice(0, 300));
+  document.getElementById('img-approve').click();
+  await waitFor(() => (document.getElementById('img-status')?.textContent || '').includes('disetujui'), 'note Setujui panel', 120);
+  await tick(200);
+  const ve2v174 = JSON.parse(store.get('minime.ve2') || '{}');
+  check('v174: rencana video memuat 7 field panel', (ve2v174.plan || '').includes('Scene 1') && (ve2v174.plan || '').includes('ES, eye-level, static') && (ve2v174.plan || '').includes('Durasi: 6 detik'), (ve2v174.plan || '').slice(0, 200));
+  check('v174: VO gabungan panel masuk kolom Voice Editor', (document.getElementById('vsText')?.value || '').includes('Pagi selalu dimulai dari sini.'), (document.getElementById('vsText')?.value || '').slice(0, 80));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-image exception :: ' + (e && e.stack ? e.stack : e));
