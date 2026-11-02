@@ -16,6 +16,8 @@
 //  15. v182: tombol tambah '+' saja, jenis aset Image/Video/Audio,
 //      aset gambar -> klip B-Roll 5 dtk -> ekspor pakai -loop 1.
 //  16. v183: tombol '+' dengan path kosong -> dialog pemilih file asli.
+//  18. v187: aset sumber klip tampil di list (jalur maju HF +
+//      backfill klip yatim + dedup).
 // Jalankan: npm run rig:ve2 (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -42,6 +44,7 @@ async function invokeStub(cmd, args) {
     return { duration: isImg ? 0 : 12.5, size: 0, streams: [], format_name: isImg ? 'png' : 'mp4' };
   }
   if (cmd === 'video_read') return { b64: String((args && args.req && args.req.path) || '').includes('preview-uji') ? PNG_1X1 : '' };
+  if (cmd === 'hyperframes_render') return { path: '/tmp/hf-uji.mp4', quality: 'draft', bytes: 107597 };
   if (cmd === 'video_write_ass') return { path: '/tmp/ve2-test.ass' };
   if (cmd === 'video_render') { renderArgsLog.push((args && args.req && args.req.args) || []); return { success: true, output: (args && args.req && args.req.output) || '', duration_ms: 1, stderr_tail: '' }; }
   if (cmd === 'plugin:dialog|open') return ['/tmp/picker.png'];
@@ -294,6 +297,45 @@ try {
   check('v186: pratinjau dibatasi proporsional (max-height + contain)', imgStyle.includes('max-height') && imgStyle.includes('object-fit:contain'), imgStyle);
   const playStyle = (document.getElementById('ve2Video')?.getAttribute('style') || '').replace(/\s+/g, '');
   check('v186: video playback ikut dibatasi proporsional', playStyle.includes('max-height') && playStyle.includes('object-fit:contain'), playStyle);
+
+  // 18. v187: aset sumber klip tampil di list Aset.
+  // (a) Jalur maju: render HF -> Tambah ke Timeline ikut menambah aset.
+  setInput(document.getElementById('vg-model'), 'hyperframes', 'change');
+  await tick(100);
+  document.getElementById('hf-sample').click();
+  await tick(50);
+  document.getElementById('hf-render').click();
+  await waitFor(() => !document.getElementById('hf-add-timeline').disabled, 'tombol hf-add-timeline aktif', 100);
+  document.getElementById('hf-add-timeline').click();
+  await tick(200);
+  const hfState = ve2State(store);
+  check('v187: Tambah ke Timeline HF ikut menambah aset', (hfState.assets || []).some((a) => a.src === '/tmp/hf-uji.mp4') && (hfState.clips || []).some((c) => c.src === '/tmp/hf-uji.mp4'), JSON.stringify((hfState.assets || []).map((a) => a.src)));
+  setInput(document.getElementById('vg-model'), 'omni', 'change');
+  await tick(100);
+  // (b) Backfill: klip yatim di store lama mendapat asetnya saat muat.
+  const store3 = new Map();
+  store3.set('minime.ve2', JSON.stringify({ clips: [{ id: 'orph1', name: 'Klip yatim', track: 'Video', start: 0, dur: 7, src: '/tmp/yatim.mp4', effect: 'none' }], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
+  const dom3 = makeDom(store3);
+  const doc3 = dom3.window.document;
+  await waitFor(() => doc3.querySelector('[data-view="media"]'), 'mount3 rail media', 100);
+  doc3.querySelector('[data-view="media"]').click();
+  await tick(100);
+  doc3.getElementById('ms-tabbtn-video').click();
+  await tick(200);
+  const backfilled = ve2State(store3).assets || [];
+  check('v187: backfill klip yatim menjadi aset', backfilled.some((a) => a.src === '/tmp/yatim.mp4' && a.name === 'Klip yatim'), JSON.stringify(backfilled));
+  check('v187: aset backfill tampil di list', [...doc3.querySelectorAll('.ve2-asset')].some((el) => (el.textContent || '').includes('Klip yatim')), doc3.querySelector('.ve2-assets')?.textContent?.slice(0, 200));
+  // (c) Dedup: klip yang src-nya sudah ada di aset tidak digandakan.
+  const store4 = new Map();
+  store4.set('minime.ve2', JSON.stringify({ clips: [{ id: 'dup1', name: 'Klip ganda', track: 'Video', start: 0, dur: 7, src: '/tmp/ganda.mp4', effect: 'none' }], assets: [{ id: 've2a9', name: 'Klip ganda', icon: '🎬', kind: 'Video', src: '/tmp/ganda.mp4', duration: 7 }], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
+  const dom4 = makeDom(store4);
+  const doc4 = dom4.window.document;
+  await waitFor(() => doc4.querySelector('[data-view="media"]'), 'mount4 rail media', 100);
+  doc4.querySelector('[data-view="media"]').click();
+  await tick(100);
+  doc4.getElementById('ms-tabbtn-video').click();
+  await tick(200);
+  check('v187: dedup backfill tidak menggandakan aset', (ve2State(store4).assets || []).length === 1, JSON.stringify(ve2State(store4).assets));
 
 } catch (e) {
   // eslint-disable-next-line no-console

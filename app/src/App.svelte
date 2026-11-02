@@ -111,6 +111,18 @@
   let ve2Zoom = $state(ve2Loaded?.zoom ?? 1);
   let ve2Plan = $state(ve2Loaded?.plan ?? '');
   if (ve2IsDummy) ve2SaveState();
+  // v187: klip yang masuk timeline dari generator (HF/Omni) tidak pernah
+  // menambah daftar aset — backfill satu kali saat muat: tiap klip bersrc
+  // yang belum punya aset mendapat asetnya (jenis dari ekstensi).
+  // Dibaca dari ve2Loaded (bukan dari $state) agar tidak memicu warning
+  // state_referenced_locally — backfill memang memakai nilai awal muat.
+  const ve2InitClips = ve2IsDummy ? [] : (ve2Loaded?.clips ?? []);
+  const ve2InitAssets = ve2IsDummy ? [] : (ve2Loaded?.assets ?? []);
+  const ve2Orphans = ve2InitClips.filter((c) => c.src && !ve2InitAssets.some((a) => a.src === c.src));
+  if (ve2Orphans.length) {
+    ve2Orphans.forEach((c, i) => ve2EnsureAsset(c.src, c.name, ve2IsImage(c.src) ? 'Image' : ve2IsAudio(c.src) ? 'Audio' : 'Video', c.dur, i));
+    ve2SaveState();
+  }
   let ve2SelId = $state(ve2Clips[0]?.id ?? '');
   let ve2Status = $state('');
   let ve2Frame = $state('');
@@ -264,6 +276,15 @@
       ve2Status = `${t('ve2.asset_bad', lang)} ${String(e)}`;
       return false;
     }
+  }
+
+  // v187: tambah aset bila belum ada aset dengan src yang sama (dipakai
+  // generator masuk timeline + backfill klip yatim). Tanpa probe: durasi
+  // sudah diketahui dari generator/klip.
+  function ve2EnsureAsset(src: string, name: string, kind: Ve2Asset['kind'], duration: number, suffix = 0) {
+    if (!src || ve2Assets.some((a) => a.src === src)) return;
+    const icon = kind === 'Image' ? '🖼️' : kind === 'Teks' ? '🔤' : kind === 'Audio' ? '🎵' : '🎬';
+    ve2Assets = [...ve2Assets, { id: 've2a' + (Date.now() + suffix), name, icon, kind, src, duration }];
   }
   async function ve2AddAsset() {
     const path = ve2NewSrc.trim();
@@ -536,6 +557,7 @@
     if (!vgLastPath) return;
     const start = ve2Clips.reduce((m, c) => Math.max(m, c.start + c.dur), 0);
     ve2Clips = [...ve2Clips, { id: 'omnic' + Date.now(), name: `Omni ${vgLastDur.toFixed(1)}s`, track: 'Video', start, dur: vgLastDur, src: vgLastPath, effect: 'none' }];
+    ve2EnsureAsset(vgLastPath, `Omni ${vgLastDur.toFixed(1)}s`, 'Video', vgLastDur);
     ve2SaveState();
     vgStatus = t('vg.added_timeline', lang);
   }
@@ -589,6 +611,7 @@
     if (!hfLastPath || !hfLastDur) return;
     const start = ve2Clips.reduce((m, c) => Math.max(m, c.start + c.dur), 0);
     ve2Clips = [...ve2Clips, { id: 'hf' + Date.now(), name: `HyperFrames ${hfLastDur}s`, track: 'Video', start, dur: hfLastDur, src: hfLastPath, effect: 'none' }];
+    ve2EnsureAsset(hfLastPath, `HyperFrames ${hfLastDur}s`, 'Video', hfLastDur);
     ve2SaveState();
     hfStatus = t('hf.added_timeline', lang);
   }
