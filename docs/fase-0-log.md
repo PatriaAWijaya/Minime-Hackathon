@@ -2521,6 +2521,17 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v182 — daftar aset Video Editor berfungsi + tombol tambah '+' + jenis aset Image/Video/Audio (perintah Patria 2 Nov 07:57)
+- Tombol tambah aset (t1.add) jadi hanya '+' di 3 bahasa (kunci ini hanya dipakai tombol itu — diverifikasi grep). Tombol '+' per baris aset sudah '+' sejak lama, tidak berubah.
+- Jenis aset yang bisa ditambahkan kini persis tiga: Image, Video, Audio (select lama Video/B-Roll/Audio/Teks diganti). Pemetaan ke track timeline: Image -> B-Roll, Video -> Video, Audio -> Audio. Aset lama (kind B-Roll/Teks) tetap dimuat dan tetap jalan ke track-nya sendiri (kompatibilitas state tersimpan).
+- Celah yang diperbaiki: klip gambar selama ini ikut jalur video biasa di compiler — tanpa loop, ffmpeg hanya menghasilkan satu frame sehingga ekspor patah. video.ts kini punya kind 'image': input gambar di-loop (-loop 1) supaya trim bisa memotong durasi; slideshow tanpa klip video pun sah (validateSequence tidak lagi menuntut kind video). Aset gambar: ikon 🖼️, durasi default 5 detik (probe gambar = 0, bisa diubah di Inspector).
+- Rig-ve2 §15 baru (6 cek): opsi jenis persis tiga, tombol '+', aset gambar masuk daftar (durasi 5), klik '+' -> klip B-Roll 5 dtk, ekspor memuat '-loop 1' sebelum input png. Probe stub rig dibuat sadar path (gambar -> 0, selain itu 12,5).
+- Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
+- Kode lokal 144ac40 ↔ remote 4255e43 (tree identik).
+- LIVE: (diisi commit log-LIVE sesudah deploy)
+- Batas jujur: pratinjau klip gambar di panel Preview masih label nama (bukan gambarnya) — belum dibangun, di luar perintah ini.
+
+
 ## v181 — migrasi generator video Veo → Gemini Omni (vonis Patria 2 Nov 02:47)
 - Alasan: generate live pertama 2 Nov 02:44 gagal HTTP 404 — ketiga model preview Veo 3.1 dimatikan Google 22 Okt 2026 (dok resmi + ai.google.dev/gemini-api/docs/omni dibaca penuh sebelum build). Wiring app benar, ID modelnya yang mati. Pengganti resmi jalur Gemini API: gemini-omni-1.1-flash (GA 27 Agu 2026) lewat Interactions API, host + kunci Gemini sama.
 - Modul baru app/src/lib/omni-gen.ts; video-gen.ts DIHAPUS total (bukan disembunyikan): POST /v1beta/interactions?key=, body {model, input, response_format: {type: 'video', aspect_ratio, resolution}}; video dari steps[] model_output (data base64) — field output_video hanya milik SDK, bukan REST; satu panggilan sinkron timeout 10 menit (tanpa polling); durasi TIDAK diminta (klip hingga 10 detik, ditentukan model) — durasi aktual diukur video_probe sesudah simpan; tarif token: $17,50/1 jt token video output (360p 1931, 720p 5792, 1080p 8688, 4k 17376 token/detik; 1080p/4k = upscale); spend app = durasi aktual × tarif (input $1,50/1 jt tidak dihitung — respons REST tidak membawa usage; tanpa free tier, tetap butuh billing aktif).
