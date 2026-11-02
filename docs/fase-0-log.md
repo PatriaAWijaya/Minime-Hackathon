@@ -2525,6 +2525,54 @@ LIVE 3 Nov ~01:30 WIB: deploy mh-build207.sh — MH_BUILD207_OK; HEAD MacBook 07
 
 LIVE 3 Nov ~01:35 WIB: deploy mh-build208.sh — MH_BUILD208_OK; HEAD MacBook 53ca857 (commit log); PID 76776; marker 'Naskah per Konten' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v208. Konfirmasi live Patria untuk v208 BELUM ada (uji live yang disarankan: sesudah Gerbang 1 lolos, klik Buat Naskah Se-batch -> periksa 30 naskah + badge QC -> edit satu baris -> Setujui Naskah).
 
+## v209 — Skenario 2 Tahap 4+5: visual per baris + caption per baris + Gerbang 3 (lanjutan perintah Patria 3 Nov 01:11 "lanjut" atas workflow Skenario 2)
+
+Seksi Visual + Caption muncul di panel Rencana sesudah Gerbang 2
+lolos. Gaya visual rencana dipilih dari 5 gaya Image Editor
+(photorealistic, product photography, flat design, illustration,
+3D model; default product photography) dan menjadi "bible" rencana:
+tiap prompt gambar/klip membawa baris konsistensi gaya yang sama.
+Estimasi biaya tampil SEBELUM tombol ditekan, dihitung dari naskah
+yang sudah ada (bukan ditebak): gambar Meta $0,01 (12 image + 80
+slide carousel = 92 gambar pada campuran yang diputuskan); klip
+Omni 720p dihitung 10 detik per beat (batas atas, durasi klip
+ditentukan model 3-10 detik; 8 reels x 5 beat = 40 klip pada contoh
+rig). Gambar batch memakai Meta muse-image-1.0 ukuran 1024x1024
+(satu-satunya ukuran yang terverifikasi live) dan disimpan lewat
+image_save dengan nama deterministik p30-d{HARI}-{N}.webp (generate
+ulang menimpa berkas yang sama); spend gambar dicatat addImgSpend.
+Klip reels memakai omniGenerateClip (Gemini, 9:16, 720p, satu klip
+per baris Beat; spend dicatat modul itu sendiri). Aturan hemat
+biaya: batch visual MELEWATI baris yang sudah Siap (tidak bayar
+ulang); batch caption MELEWATI baris yang sudah bercaption; tombol
+Buat Visual per baris memaksa generate ulang baris itu. Status per
+baris: Siap / Sebagian (sebagian slide/klip gagal, sisanya tersimpan)
+/ Gagal (semua gagal atau naskah tak punya baris Slide/Beat atau
+kunci yang dibutuhkan tak ada — pesannya tampil sebagai catatan
+baris). Caption per baris memakai jalur caption sosmed v172
+(sosmedCaptionPrompt, tanpa loop QC — review manusia di gerbang 3
+yang mengawasi caption) dan bisa diedit langsung di kolomnya.
+Gerbang 3 = tombol Setujui Visual + Caption: TERKUNCI bila ada
+baris bervisual kosong/gagal atau bercaption kosong; baris
+'Sebagian' TIDAK menghalangi (keputusan manusia di gerbang).
+Sesudah Gerbang 3 lolos, visual + caption dikunci. Kontrak untuk
+tahap batch v210: tiap baris membawa media (nama berkas gambar di
+~/minime-images atau path klip Omni), caption, tanggal + jam dari
+tabel, dan ketiga gerbang lolos. i18n +22 kunci `p30.*` x3 ->
+1232/bahasa. Rig-plan30 ditambah §v209 (10 cek: seksi visual +
+pilihan gaya, estimasi 92 gambar + 40 klip, badge Siap ketiga
+format + 5 klip hari 23, 92 panggilan gambar, batch visual kedua
+tanpa panggilan baru, 30 caption terisi, batch caption kedua tanpa
+panggilan baru, Gerbang 3 lolos); stub fetch dirute gambar Meta +
+Omni dari URL-nya dan balasan draf dibuat per format (carousel 8
+baris Slide, reels Hook + 5 Beat + CTA). Gerbang v209 lolos penuh:
+vite, svelte-check 0/21 (baseline), 16 rig, root build+tsc,
+gate-test 14 grup, scan 0, ledger md5 tetap, i18n 1232/1232/1232 0
+duplikat, cargo fmt+check+check-tests 0, Cargo.lock bersih.
+Batasan jujur v209: batch 3 kanal + draf bertanggal BELUM dibangun
+— itu tahap terakhir v210; dan rakitan reels tetap manual di Video
+Editor sesuai Q6 (klip per shot sudah tersedia sebagai media baris).
+
 ## v208 — Skenario 2 Tahap 3: naskah per baris 3 jalur + gate QC per naskah + Gerbang 2 (lanjutan perintah Patria 3 Nov 01:11 "lanjut" atas workflow Skenario 2)
 
 Seksi Naskah muncul di panel Rencana 30 Hari sesudah Gerbang 1
