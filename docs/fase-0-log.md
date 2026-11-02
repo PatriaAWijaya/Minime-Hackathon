@@ -2538,7 +2538,10 @@ dokumen lama yang dipakai.
   svelte-check 0 error / 21 warning (baseline v188/v189), cargo fmt + check +
   check --tests 0, Cargo.lock tidak termutasi.
 - Kode aed574f ↔ daa1807 (tree identik).
-- LIVE menyusul di entri log-LIVE sesudah deploy.
+- LIVE 2 Nov ~18:10: deploy mh-build190.sh OK (MH_BUILD190_OK); HEAD MacBook
+  2f04fbd; PID 53837; md5 dist JS d41e4a03fe4ae41fc2234d150ea4ee47 lokal ==
+  MacBook; 'drag_hint' 0x + 'Seret thumbnail' 0x di bundle MacBook (kalimat
+  hilang terbukti), 've2-thumb-x' tetap ada (v189 utuh). App live = v190.
 
 ## v189 — drag-drop klip timeline + x hapus aset per tile (perintah Patria 2 Nov 16:30 + 16:31, revisi 17:55)
 
