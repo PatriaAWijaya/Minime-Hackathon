@@ -2521,6 +2521,59 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v191 — bar editor track di bawah timeline + audit tombol (perintah Patria 2 Nov 18:04 + screenshot)
+
+- Perintah: cek fungsi tombol di screenshot; bila terkait track, pindahkan ke
+  bawah track; bila editor track belum ada, tambahkan; Cut, Split, Delete,
+  Play, Stop; aset di track mudah diedit dengan memilihnya; track terpilih
+  dan aktif -> bisa diedit sesuai keinginan user.
+- HASIL AUDIT FUNGSI (semua dibaca dari App.svelte, bukan asumsi):
+  - Potong (ve2Cut): TERIKAT SELEKSI — membelah klip terpilih di posisi
+    playhead jadi 2 klip (klip kedua bernama + ' (2)' dan langsung terpilih);
+    tanpa klip -> status ve2.no_clip; playhead di luar klip -> ve2.split_out.
+    Ini sekaligus Cut DAN Split (satu operasi) — tidak dibuat dua tombol
+    untuk fungsi yang sama.
+  - Tambah Teks (ve2AddText): TERIKAT TRACK, tanpa perlu seleksi — menambah
+    klip Teks 5 dtk di playhead dan langsung memilihnya.
+  - Subtitle (ve2Subtitle): TERIKAT TRACK, tanpa perlu seleksi — menulis
+    file ASS dari SEMUA klip track Teks (urut start) via video_write_ass;
+    tanpa klip Teks -> ve2.no_text.
+  - Transisi (ve2Transition): TERIKAT SELEKSI — set effect klip terpilih
+    jadi 'fade'.
+  - Hapus klip (ve2DelClip, dulu di Inspector): TERIKAT SELEKSI — hapus klip
+    terpilih, kosongkan seleksi, hentikan playback bila jalan.
+  - Putar/Berhenti (ve2PlayToggle): TERIKAT TIMELINE — toggle playback dari
+    playhead (video + audio terjadwal); di ujung timeline berhenti sendiri.
+  - TIDAK TERIKAT TRACK (tetap di atas): Simpan Proyek (simpan state),
+    Ekspor MP4 (render FFmpeg penuh ke File output + QC), Render Preview
+    (playhead 0 + putar), File output (.mp4), baris status ve2Status.
+- PERUBAHAN: toolbar lama `.ve-toolbar` di atas timeline DICABUT; bar baru
+  `#ve2TrackBar` (`.ve2-trackbar`, flex wrap) ditambahkan sebagai sibling
+  di bawah kartu timeline, di dalam tab Video, berisi 7 tombol: Potong
+  (#ve2BtnCut), Hapus klip (#ve2ClipDel, pindah dari Inspector), Tambah Teks
+  (#ve2BtnText), Subtitle (#ve2BtnSub), Transisi (#ve2BtnTrans), Putar
+  (#ve2BtnPlay, BARU), Berhenti (#ve2BtnStop, BARU). Id lama dipertahankan
+  sehingga rig lama (§4 potong, §19(c) hapus) tetap jalan tanpa ubahan.
+- ATURAN SELEKSI (kalimat Patria "terpilih dan aktif -> bisa diedit"):
+  Potong/Hapus/Transisi `disabled` bila tidak ada klip terpilih; Tambah Teks
+  + Subtitle TIDAK di-disable (fungsinya memang tidak butuh seleksi —
+  men-disable-nya akan merusak perilaku lama); Putar disabled saat sedang
+  diputar, Berhenti disabled saat tidak diputar. Klik bar klip tetap memilih
+  klip (Inspector field Nama/Start/Dur/Track/Effect tetap di tempatnya dan
+  tetap bisa diedit). Tanpa kunci i18n baru (semua label pakai kunci lama:
+  ve.cut, ve2.del_clip, ve.addtext, ve.subtitle, ve.transition, ve.play,
+  ve2.stop) -> tetap 1108/bahasa, 0 duplikat.
+- Rig-ve2 §23 baru: bar ada di bawah timeline (compareDocumentPosition),
+  toolbar lama hilang, 7 tombol masing-masing tepat satu, tombol seleksi
+  aktif saat ada klip terpilih, dom segar tanpa klip membuktikan status
+  disabled + wiring Putar/Berhenti membalik teks transport. RIG-VE2 ALL PASSED.
+- Gerbang penuh lolos (/tmp/gate-v191/): vite build, 14 rig, root tsc,
+  gate-test 14 grup ALL PASSED, scan 0, ledger md5 tetap
+  d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
+- Kode ed7785a ↔ 946b03d (tree identik).
+- LIVE menyusul di entri log-LIVE sesudah deploy.
+
 ## v190 — hapus kalimat petunjuk drag thumbnail (perintah Patria 2 Nov 18:02)
 
 - Perintah persis: kalimat "Seret thumbnail ke timeline, atau klik untuk
