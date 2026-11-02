@@ -2521,6 +2521,63 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v193 — aset hilang: pesan probe jelas + fallback gambar + Inspector jadi tombol proyek + pratinjau 9:16 (perintah Patria 2 Nov 18:21 + screenshot)
+
+- Laporan Patria: (1) aset kembali tidak tampil di daftar aset; (2) hapus
+  placeholder Inspector ("Inspector — klip terpilih / Pilih klip di
+  timeline untuk mengedit.") ganti tombol render/simpan/ekspor/render
+  preview/file output; (3) pratinjau default rasio 9:16 seimbang dengan
+  keseluruhan timeline editor.
+- DIAGNOSIS (1): state ve2 live tersimpan KOSONG (0 aset, 0 klip —
+  diverifikasi DUA salinan LocalStorage berselang 20 detik) sementara 28
+  kunci lain utuh (homeState 221KB, library 61KB, kanban 68KB, graphState
+  ada) -> BUKAN wipe profil dan bukan kehilangan data umum. Berkas render
+  HF-1793593163508/out.mp4 MASIH ADA di disk (345KB); yang hilang hanya
+  entri timeline. Tidak ada cadangan entri ini (backup v146 adalah state
+  dummy pra-v146, bukan klip ini) -> pemulihan = tambah ulang dari berkas
+  yang masih ada. Mekanisme pengosongan persisnya tidak bisa dibuktikan
+  post-hoc (tidak ada jejak klik); yang pasti: tidak ada penghapus otomatis
+  di v189–v192 (hapus hanya lewat x aset / Hapus klip / purge dummy v146
+  yang mensyaratkan id ve2c*/ve2a*), dan filter ve2Load jinak.
+- DIAGNOSIS error screenshot ("ffprobe JSON tidak bisa dibaca: EOF while
+  parsing a value at line 1 column 0"): pesan MENYESATKAN. probe_file
+  mengabaikan exit status + stderr dan menyalahkan parser JSON; padahal
+  stdout kosong = ffprobe gagal MEMBUKA berkas (bukan JSON rusak). ffprobe
+  sendiri ADA di /opt/homebrew/bin dan find_tool sudah mencakupnya, jadi
+  bukan soal binary hilang — melainkan berkas yang coba ditambah tidak bisa
+  dibuka (alias Finder, placeholder iCloud, path salah, izin). Kolom path
+  di screenshot kosong -> alur yang dipakai adalah pemilih file, bukan
+  ketikan path.
+- PERBAIKAN (1a) Rust probe_file: berkas tak ada -> "Berkas tidak
+  ditemukan: <path>"; ffprobe gagal -> "ffprobe gagal membaca <path>:
+  <stderr>"; JSON gagal -> menyebut path. Kegagalan berikutnya langsung
+  bisa ditindaklanjuti, bukan tebak-tebakan.
+- PERBAIKAN (1b) fallback gambar: probe gagal untuk kind Image TETAP
+  menambah aset durasi 5 dtk (gambar tidak butuh durasi ffprobe; thumbnail
+  baca byte langsung). Video/Audio tetap gagal dengan pesan jelas (durasi
+  wajib dari probe).
+- PERBAIKAN (2): cabang kosong Inspector kini tombol proyek (id baru
+  ve2BtnSaveI/ve2BtnExportI/ve2BtnPreviewI + input ve2OutI terikat ve2Out
+  yang sama; handler sama). Tombol proyek di atas TIDAK dihapus — perintah
+  Patria menghapus placeholder, bukan tombol atas, dan menghapus tombol
+  atas akan menghilangkan fungsi. Saat klip terpilih, Inspector tetap
+  field klip + heading. "Button render" diartikan sebagai Ekspor MP4
+  (render FFmpeg ke berkas); bila maksudnya tombol render lain, kabari.
+- PERBAIKAN (3): .ve2-preview-box kini aspect-ratio 9/16 + margin auto
+  (tinggi tetap min(480px, 55vh)); media horizontal tetap letterbox di
+  tengah kotak. Video playback tidak diubah (menampilkan media apa adanya).
+- Rig-ve2 §25 (stub probe lempar untuk path 'gagal-probe'; pelajaran:
+  setInput WAJIB evName 'input' eksplisit — tanpa itu event bertipe
+  'undefined' tidak memicu bind:value Svelte sehingga path tetap kosong
+  dan dialog yang terbuka, bukan tambah aset). RIG-VE2 ALL PASSED.
+- Gerbang penuh lolos (/tmp/gate-v193/): vite build, 14 rig, root tsc,
+  gate-test 14 grup ALL PASSED, scan 0, ledger md5 tetap
+  d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
+  Tanpa kunci i18n baru -> tetap 1108/bahasa.
+- Kode 5bf0044 ↔ 2f11880 (tree identik).
+- LIVE menyusul di entri log-LIVE sesudah deploy.
+
 ## v192 — perbaiki lompat view saat pilih klip + seret klip pakai pointer (perintah Patria 2 Nov 18:14)
 
 - Laporan Patria: (1) memilih aset dalam track membuat view terlempar ke
