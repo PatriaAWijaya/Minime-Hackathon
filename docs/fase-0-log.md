@@ -2550,7 +2550,9 @@ dokumen lama yang dipakai.
   Tanpa kunci i18n baru -> tetap 1108/bahasa. (Rig jsdom tidak bisa menguji
   sintaks ffprobe asli — bukti di atas adalah uji binary langsung.)
 - Kode 3d15c3f ↔ 85e1102 (tree identik).
-- LIVE menyusul di entri log-LIVE sesudah deploy.
+- LIVE 2 Nov ~18:45: deploy mh-build194.sh OK (MH_BUILD194_OK); HEAD MacBook
+  45fca92; PID 55792; biner live memuat literal baru 'duration,format_name'
+  dan TIDAK lagi memuat 'duration:format_name'. App live = v194.
 
 ## v193 — aset hilang: pesan probe jelas + fallback gambar + Inspector jadi tombol proyek + pratinjau 9:16 (perintah Patria 2 Nov 18:21 + screenshot)
 
