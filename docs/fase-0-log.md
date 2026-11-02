@@ -2528,7 +2528,7 @@ dokumen lama yang dipakai.
 - Rig-video: cabang stub generativelanguage (respons Gemini berisi komposisi sah) + § v185 baru (2 cek): Generate HTML mengisi komposisi dari deskripsi; generate memanggil model Gemini (bukan Omni).
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal 117781d ↔ remote 45e800e (tree identik).
-- LIVE: (diisi commit log-LIVE sesudah deploy)
+- LIVE: PID 38077; md5 JS 0164d8e049ada8c4a8eefbfc4eb90d4b lokal == MacBook; marker 'hf-gen-html' + 'hf-desc' ada di bundle MacBook.
 
 
 ## v184 — tombol Bersihkan di tiap form input Omni + HyperFrames (perintah Patria 2 Nov 09:32)
