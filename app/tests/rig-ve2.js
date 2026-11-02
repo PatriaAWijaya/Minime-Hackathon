@@ -18,6 +18,7 @@
 //  16. v183: tombol '+' dengan path kosong -> dialog pemilih file asli.
 //  18. v187: aset sumber klip tampil di list (jalur maju HF +
 //      backfill klip yatim + dedup).
+//  19. v188: grid thumbnail + drag-drop + hapus klip + sumber Library.
 // Jalankan: npm run rig:ve2 (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -257,9 +258,12 @@ try {
   check('v182: ekspor gambar pakai -loop 1 sebelum input png', loopIdx !== -1 && baseArgs[loopIdx + 1] === '1' && loopIdx < pngIdx, JSON.stringify(baseArgs.slice(0, 12)));
 
   // 16. v183: path kosong -> dialog pemilih file -> aset gambar masuk.
+  // v188: + path kosong membuka dialog sumber dulu, baru "Dari file".
   invokeLog.length = 0;
   setInput(document.getElementById('ve2NewSrc'), '', 'input');
   document.getElementById('ve2AssetAdd').click();
+  await waitFor(() => document.getElementById('ve2-src-file'), 'dialog sumber', 100);
+  document.getElementById('ve2-src-file').click();
   await tick(200);
   const assets183 = ve2State(store).assets || [];
   const pickAsset = assets183.find((a) => a.src === '/tmp/picker.png');
@@ -324,7 +328,7 @@ try {
   await tick(200);
   const backfilled = ve2State(store3).assets || [];
   check('v187: backfill klip yatim menjadi aset', backfilled.some((a) => a.src === '/tmp/yatim.mp4' && a.name === 'Klip yatim'), JSON.stringify(backfilled));
-  check('v187: aset backfill tampil di list', [...doc3.querySelectorAll('.ve2-asset')].some((el) => (el.textContent || '').includes('Klip yatim')), doc3.querySelector('.ve2-assets')?.textContent?.slice(0, 200));
+  check('v187: aset backfill tampil di list', [...doc3.querySelectorAll('.ve2-thumb')].some((el) => (el.getAttribute('title') || '') === 'Klip yatim'), doc3.querySelector('.ve2-assets')?.textContent?.slice(0, 200));
   // (c) Dedup: klip yang src-nya sudah ada di aset tidak digandakan.
   const store4 = new Map();
   store4.set('minime.ve2', JSON.stringify({ clips: [{ id: 'dup1', name: 'Klip ganda', track: 'Video', start: 0, dur: 7, src: '/tmp/ganda.mp4', effect: 'none' }], assets: [{ id: 've2a9', name: 'Klip ganda', icon: '🎬', kind: 'Video', src: '/tmp/ganda.mp4', duration: 7 }], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
@@ -336,6 +340,53 @@ try {
   doc4.getElementById('ms-tabbtn-video').click();
   await tick(200);
   check('v187: dedup backfill tidak menggandakan aset', (ve2State(store4).assets || []).length === 1, JSON.stringify(ve2State(store4).assets));
+
+  // 19. v188: grid thumbnail + drag-drop + hapus klip + sumber Library.
+  // (a) Thumbnail: aset gambar preview-uji (b64 stub) tampil sebagai <img>.
+  await waitFor(() => [...document.querySelectorAll('.ve2-thumb')].some((el) => (el.getAttribute('title') || '').includes('preview-uji') && el.querySelector('img')), 'thumbnail preview-uji', 100);
+  check('v188: aset gambar tampil sebagai thumbnail <img>', true);
+  check('v188: label teks aset tidak lagi tampil', ![...document.querySelectorAll('.ve2-thumb')].some((el) => (el.textContent || '').includes('HyperFrames 10s')), document.querySelector('.ve2-assets')?.textContent?.slice(0, 200));
+  // (b) Drag-drop thumbnail HF ke timeline (jsdom tanpa layout -> cabang
+  // fallback tambah-di-akhir-track; drop X tidak bisa dibuktikan jsdom).
+  const hfAsset = (ve2State(store).assets || []).find((a) => a.src === '/tmp/hf-uji.mp4');
+  const idsBeforeDrop = new Set((ve2State(store).clips || []).map((c) => c.id));
+  const clipsBefore = idsBeforeDrop.size;
+  const dropEv = new dom.window.Event('drop', { bubbles: true });
+  Object.defineProperty(dropEv, 'dataTransfer', { value: { getData: () => hfAsset.id } });
+  Object.defineProperty(dropEv, 'clientX', { value: 0 });
+  document.querySelector('#ve2Timeline > div').dispatchEvent(dropEv);
+  await tick(200);
+  const dropped = (ve2State(store).clips || []).find((c) => !idsBeforeDrop.has(c.id));
+  check('v188: drop thumbnail menambah klip di timeline', (ve2State(store).clips || []).length === clipsBefore + 1 && !!dropped, (ve2State(store).clips || []).length);
+  check('v188: klip hasil drop ikut tercatat sebagai aset', (ve2State(store).assets || []).some((a) => a.src === '/tmp/hf-uji.mp4'), JSON.stringify((ve2State(store).assets || []).map((a) => a.src)));
+  // (c) Hapus klip hasil drop dari Inspector.
+  document.querySelector(`[data-ve2-clip="${dropped.id}"]`).click();
+  await tick(100);
+  document.getElementById('ve2ClipDel').click();
+  await tick(100);
+  check('v188: hapus klip menghilangkan klip terpilih', (ve2State(store).clips || []).length === clipsBefore && !(ve2State(store).clips || []).some((c) => c.id === dropped.id), (ve2State(store).clips || []).length);
+  check('v188: aset tidak ikut terhapus', (ve2State(store).assets || []).some((a) => a.src === '/tmp/hf-uji.mp4'), '');
+  // (d) Dialog sumber -> Library: gambar Library masuk daftar aset.
+  const store5 = new Map();
+  store5.set('minime.cleaned-v84', '1');
+  store5.set('minime.cleaned-graph-v88', '1');
+  store5.set('minime.library.added', JSON.stringify([{ o: 'Gambar Library Uji', kind: 'image', imageFile: '/tmp/lib-uji.png' }]));
+  store5.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
+  const dom5 = makeDom(store5);
+  const doc5 = dom5.window.document;
+  await waitFor(() => doc5.querySelector('[data-view="media"]'), 'mount5 rail media', 100);
+  doc5.querySelector('[data-view="media"]').click();
+  await tick(100);
+  doc5.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  doc5.getElementById('ve2AssetAdd').click();
+  await waitFor(() => doc5.getElementById('ve2-src-lib'), 'dialog sumber 5', 100);
+  doc5.getElementById('ve2-src-lib').click();
+  await waitFor(() => doc5.querySelector('[data-ve2-libpick]'), 'daftar Library 5', 100);
+  doc5.querySelector('[data-ve2-libpick]').click();
+  await tick(100);
+  const libAsset = (ve2State(store5).assets || []).find((a) => a.src === '/tmp/lib-uji.png');
+  check('v188: pilih dari Library masuk daftar aset (Image 5 dtk)', !!libAsset && libAsset.kind === 'Image' && libAsset.duration === 5, JSON.stringify(libAsset));
 
 } catch (e) {
   // eslint-disable-next-line no-console

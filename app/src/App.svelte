@@ -133,6 +133,42 @@
   let ve2VideoEl = $state<HTMLVideoElement>();
   let ve2NewSrc = $state('');
   let ve2NewKind = $state('Video');
+  let ve2Thumbs = $state<Record<string, string>>({});
+  const ve2ThumbFailed = new Set<string>();
+  const ve2ThumbLoading = new Set<string>();
+  let ve2AssetDlg = $state(false);
+  let ve2LibDlg = $state(false);
+  let ve2LibList = $state<{ title: string; file: string }[]>([]);
+  $effect(() => {
+    // v188: thumbnail daftar aset — gambar dibaca langsung, video dari
+    // frame capture, audio cukup ikon (tanpa byte media).
+    const seen = new Set<string>();
+    for (const a of ve2Assets) {
+      seen.add(a.id);
+      if (!a.src || a.kind === 'Audio' || ve2Thumbs[a.id] || ve2ThumbFailed.has(a.id) || ve2ThumbLoading.has(a.id)) continue;
+      ve2ThumbLoading.add(a.id);
+      (async () => {
+        try {
+          if (a.kind === 'Image' || ve2IsImage(a.src)) {
+            const r = await invoke<{ b64: string }>('video_read', { req: { path: a.src } });
+            if (!r.b64) throw new Error('empty');
+            const ext = a.src.split('.').pop()?.toLowerCase();
+            const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : ext === 'bmp' ? 'image/bmp' : 'image/jpeg';
+            ve2Thumbs[a.id] = `data:${mime};base64,${r.b64}`;
+          } else {
+            const cap = await invoke<{ data_url: string }>('video_capture', { req: { path: a.src, at: 0.5 } });
+            if (!cap.data_url) throw new Error('empty');
+            ve2Thumbs[a.id] = cap.data_url;
+          }
+        } catch {
+          ve2ThumbFailed.add(a.id);
+        } finally {
+          ve2ThumbLoading.delete(a.id);
+        }
+      })();
+    }
+    for (const id of Object.keys(ve2Thumbs)) if (!seen.has(id)) delete ve2Thumbs[id];
+  });
   let ve2Timer: ReturnType<typeof setInterval> | null = null;
   let ve2AudioTimers: ReturnType<typeof setTimeout>[] = [];
   let ve2AudioEls: HTMLAudioElement[] = [];
@@ -286,25 +322,28 @@
     const icon = kind === 'Image' ? '🖼️' : kind === 'Teks' ? '🔤' : kind === 'Audio' ? '🎵' : '🎬';
     ve2Assets = [...ve2Assets, { id: 've2a' + (Date.now() + suffix), name, icon, kind, src, duration }];
   }
+  async function ve2AddAssetFiles() {
+    // v188: isi lama cabang path kosong v183 — dipilih dari dialog sumber.
+    try {
+      const picked = await pickFiles({ multiple: true, filters: [{ name: 'Media', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'mp4', 'mov', 'webm', 'mkv', 'avi', 'mp3', 'wav', 'm4a', 'ogg', 'flac'] }] });
+      if (!picked) return;
+      const paths = Array.isArray(picked) ? picked : [picked];
+      let added = 0;
+      for (let i = 0; i < paths.length; i++) {
+        const fp = paths[i];
+        const kind = ve2IsImage(fp) ? 'Image' : ve2IsAudio(fp) ? 'Audio' : 'Video';
+        if (await ve2PushAsset(fp, kind as Ve2Asset['kind'], i)) added++;
+      }
+      if (added > 0) { ve2SaveState(); ve2Status = t('ve2.asset_added', lang); }
+    } catch (e) {
+      ve2Status = `${t('ve2.asset_bad', lang)} ${String(e)}`;
+    }
+  }
   async function ve2AddAsset() {
     const path = ve2NewSrc.trim();
     if (!path) {
-      // v183: path kosong -> buka pemilih file asli (bukan sekadar status).
-      // Batal = tidak terjadi apa-apa; jenis dari ekstensi file.
-      try {
-        const picked = await pickFiles({ multiple: true, filters: [{ name: 'Media', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'mp4', 'mov', 'webm', 'mkv', 'avi', 'mp3', 'wav', 'm4a', 'ogg', 'flac'] }] });
-        if (!picked) return;
-        const paths = Array.isArray(picked) ? picked : [picked];
-        let added = 0;
-        for (let i = 0; i < paths.length; i++) {
-          const fp = paths[i];
-          const kind = ve2IsImage(fp) ? 'Image' : ve2IsAudio(fp) ? 'Audio' : 'Video';
-          if (await ve2PushAsset(fp, kind as Ve2Asset['kind'], i)) added++;
-        }
-        if (added > 0) { ve2SaveState(); ve2Status = t('ve2.asset_added', lang); }
-      } catch (e) {
-        ve2Status = `${t('ve2.asset_bad', lang)} ${String(e)}`;
-      }
+      // v188: path kosong -> dialog sumber (Library / file), bukan langsung picker.
+      ve2AssetDlg = true;
       return;
     }
     if (await ve2PushAsset(path, ve2NewKind as Ve2Asset['kind'], 0)) {
@@ -312,6 +351,22 @@
       ve2SaveState();
       ve2Status = t('ve2.asset_added', lang);
     }
+  }
+  function ve2LibLoad() {
+    // v188: daftar gambar Library (kind image + imageFile) untuk dialog sumber.
+    try {
+      const raw = localStorage.getItem('minime.library.added');
+      const items = raw ? JSON.parse(raw) : [];
+      ve2LibList = (Array.isArray(items) ? items : []).filter((it) => it && it.kind === 'image' && it.imageFile).map((it) => ({ title: it.o || it.imageFile, file: it.imageFile }));
+    } catch { ve2LibList = []; }
+    ve2AssetDlg = false;
+    ve2LibDlg = true;
+  }
+  function ve2LibPick(file: string, title: string) {
+    ve2EnsureAsset(file, title, 'Image', 5);
+    ve2SaveState();
+    ve2Status = t('ve2.asset_added', lang);
+    ve2LibDlg = false;
   }
   function ve2AddAssetClip(assetId: string) {
     const a = ve2Assets.find((x) => x.id === assetId);
@@ -324,6 +379,41 @@
     const clip: Ve2Clip = { id: 've2c' + Date.now(), name: a.name, track, start, dur, src: a.src, effect: 'none' };
     ve2Clips = [...ve2Clips, clip];
     ve2SelId = clip.id;
+    ve2SaveState();
+  }
+  function ve2DropAsset(e: DragEvent) {
+    // v188: thumbnail diseret ke timeline — posisi dari X drop (skala
+    // ve2Total, pola ve2RulerClick); tarikan asing diabaikan. Impor
+    // langsung ke timeline ikut masuk daftar aset (ve2EnsureAsset).
+    e.preventDefault();
+    const id = e.dataTransfer?.getData('text/ve2-asset') || e.dataTransfer?.getData('text/plain') || '';
+    const a = ve2Assets.find((x) => x.id === id);
+    if (!a) return;
+    const track = (a.kind === 'Image' ? 'B-Roll' : a.kind) as Ve2Clip['track'];
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    let start: number;
+    if (rect.width > 0) {
+      const frac = (e.clientX - rect.left) / rect.width;
+      start = Math.round(Math.min(ve2Total, Math.max(0, frac * ve2Total)) * 10) / 10;
+    } else {
+      const onTrack = ve2Clips.filter((c) => c.track === track);
+      start = onTrack.length ? Math.max(...onTrack.map((c) => c.start + c.dur)) : 0;
+    }
+    const dur = a.duration > 0 ? Math.round(a.duration * 10) / 10 : (a.kind === 'Image' ? 5 : 8);
+    const clip: Ve2Clip = { id: 've2c' + Date.now(), name: a.name, track, start, dur, src: a.src, effect: 'none' };
+    ve2Clips = [...ve2Clips, clip];
+    ve2SelId = clip.id;
+    ve2EnsureAsset(a.src, a.name, a.kind, a.duration);
+    ve2SaveState();
+  }
+  function ve2DelClip() {
+    // v188: hapus klip terpilih (klik langsung; klip bisa ditambah lagi
+    // dari daftar aset karena asetnya tidak ikut terhapus).
+    const c = ve2SelClip();
+    if (!c) return;
+    if (ve2VideoOn) ve2StopPlayback();
+    ve2Clips = ve2Clips.filter((x) => x.id !== c.id);
+    ve2SelId = '';
     ve2SaveState();
   }
   function ve2IsImage(path: string): boolean {
@@ -1023,9 +1113,18 @@
           <div class="ve2-top">
           <div class="ve2-assets">
           <h4 style="margin:0 0 8px">{t('word.aset', lang)}</h4>
+          <div class="ve2-asset-grid">
           {#each ve2Assets as a (a.id)}
-          <div class="ve2-asset"><span>{a.icon} {a.name}</span><button data-ve2-asset={a.id} onclick={() => { ve2AddAssetClip(a.id) }}>+</button></div>
+          <button type="button" class="ve2-thumb" data-ve2-asset={a.id} title={a.name} draggable="true" ondragstart={(e) => { e.dataTransfer?.setData('text/ve2-asset', a.id); e.dataTransfer?.setData('text/plain', a.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy'; }} onclick={() => { ve2AddAssetClip(a.id) }}>
+          {#if ve2Thumbs[a.id]}
+          <img src={ve2Thumbs[a.id]} alt={a.name} draggable="false">
+          {:else}
+          <span class="ve2-thumb-icon">{a.icon}</span>
+          {/if}
+          </button>
           {/each}
+          </div>
+          <p class="se-note">{t('ve2.drag_hint', lang)}</p>
           <div style="display:flex;gap:6px;margin-top:8px"><input id="ve2NewSrc" type="text" bind:value={ve2NewSrc} placeholder="/Users/mac/Movies/klip.mp4" style="flex:1"><select id="ve2NewKind" bind:value={ve2NewKind}><option value="Image">Image</option><option value="Video">Video</option><option value="Audio">Audio</option></select><button id="ve2AssetAdd" class="btn btn-sm" onclick={() => { ve2AddAsset() }}>{t('t1.add', lang)}</button></div>
           </div>
           <div class="ve2-preview">
@@ -1058,6 +1157,7 @@
           <label>{t('ve.dur.label', lang)}</label><input id="ve2Dur" type="number" step="0.1" value={ve2SelClip()?.dur ?? 0} onchange={(e) => { ve2SetField('dur', e.currentTarget.value) }}>
           <label>{t('ve.track', lang)}</label><select id="ve2Track" value={ve2SelClip()?.track ?? 'Video'} onchange={(e) => { ve2SetField('track', e.currentTarget.value) }}><option value="Video">{t('word.video', lang)}</option><option value="B-Roll">B-Roll</option><option value="Audio">{t('word.audio', lang)}</option><option value="Teks">{t('word.teks', lang)}</option></select>
           <label>{t('ve.effect', lang)}</label><select id="ve2Fx" value={ve2SelClip()?.effect ?? 'none'} onchange={(e) => { ve2SetField('effect', e.currentTarget.value) }}><option value="none">{t('ve.fx.none', lang)}</option><option value="fade">{t('ve.fx.fade', lang)}</option><option value="zoom">{t('ve.fx.zoom', lang)}</option></select>
+          <button id="ve2ClipDel" class="btn btn-sm" style="margin-top:12px" onclick={() => { ve2DelClip() }}>{t('ve2.del_clip', lang)}</button>
           {:else}
           <p class="se-note">{t('ve2.no_clip', lang)}</p>
           {/if}
@@ -1066,7 +1166,8 @@
           </div>
           <div class="ms-card">
           <div class="timeline" id="ve2Timeline" style="overflow-x:auto">
-          <div style="position:relative;width:{ve2Zoom * 100}%">
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div style="position:relative;width:{ve2Zoom * 100}%" ondragover={(e) => { e.preventDefault(); }} ondrop={(e) => { ve2DropAsset(e) }}>
           <div class="playhead" id="playhead2" style="left:{ve2PlayheadPct}%"></div>
           <div class="ve-ruler" id="ve2Ruler" onclick={(e) => { ve2RulerClick(e) }}>{#each ve2RulerTicks as tick}<span>{ve2Fmt(tick)}</span>{/each}</div>
           <div class="track"><span class="tlabel">{t('word.video', lang)}</span>
@@ -1095,6 +1196,27 @@
         </div>
       </div>
     </div>
+    {#if ve2AssetDlg}
+    <div class="ve2-dlg"><div class="ve2-dlg-box">
+    <h4 style="margin:0 0 12px">{t('ve2.add_src', lang)}</h4>
+    <button id="ve2-src-lib" class="btn btn-sm" onclick={() => { ve2LibLoad() }}>{t('ve2.from_lib', lang)}</button>
+    <button id="ve2-src-file" class="btn btn-sm" onclick={() => { ve2AssetDlg = false; ve2AddAssetFiles(); }}>{t('ve2.from_file', lang)}</button>
+    <button class="btn btn-sm" onclick={() => { ve2AssetDlg = false; }}>{t('se.import.close', lang)}</button>
+    </div></div>
+    {/if}
+    {#if ve2LibDlg}
+    <div class="ve2-dlg"><div class="ve2-dlg-box">
+    <h4 style="margin:0 0 12px">{t('ve2.from_lib', lang)}</h4>
+    {#if ve2LibList.length}
+    {#each ve2LibList as it}
+    <button data-ve2-libpick={it.file} class="btn btn-sm" style="display:block;width:100%;text-align:left" onclick={() => { ve2LibPick(it.file, it.title) }}>🖼️ {it.title}</button>
+    {/each}
+    {:else}
+    <p class="se-note">{t('ve2.lib_empty', lang)}</p>
+    {/if}
+    <button class="btn btn-sm" onclick={() => { ve2LibDlg = false; }}>{t('se.import.close', lang)}</button>
+    </div></div>
+    {/if}
     <div class="view" id="view-planner">
       <div class="scroll">
         <h3 style="margin:0 14px 12px">{t('ms.tab.batch', lang)}</h3>

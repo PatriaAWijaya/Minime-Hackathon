@@ -730,3 +730,12 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 .vg-refslot { position: relative; width: 96px; }
 .vg-refslot img { width: 96px; height: 96px; object-fit: cover; display: block; border-radius: 8px; }
 .vg-refslot-x { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; border-radius: 11px; border: none; background: #262626; color: #fff; cursor: pointer; }
+
+/* v188: daftar aset thumbnail + dialog sumber. */
+.ve2-asset-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; max-height:320px; overflow-y:auto; padding-right:4px; margin-top:8px; }
+.ve2-thumb { aspect-ratio:16/9; background:#0a0a0a; border:0; padding:0; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:grab; overflow:hidden; }
+.ve2-thumb img { width:100%; height:100%; object-fit:contain; display:block; }
+.ve2-thumb-icon { font-size:28px; }
+.ve2-dlg { position:fixed; inset:0; z-index:300; background:rgba(10,5,20,0.55); display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; }
+.ve2-dlg-box { background:var(--t-panel, #1e1e1e); color:var(--t-text, #fff); border-radius:12px; padding:16px; max-width:420px; width:100%; max-height:70vh; overflow-y:auto; }
+.ve2-dlg-box button { margin-top:8px; }
