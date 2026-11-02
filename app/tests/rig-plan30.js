@@ -58,6 +58,9 @@ async function invokeStub(cmd, args) {
   if (cmd === 'research_fetch') {
     return { url: (args && args.url) || '', title: 'Kopi Susu', text: 'Tren kopi susu Surabaya 2026 naik pesat.' };
   }
+  if (cmd === 'image_save') return {};
+  if (cmd === 'video_save') return { path: '/tmp/omni-uji.mp4' };
+  if (cmd === 'video_probe') return { duration: 8 };
   if (cmd === 'open_external_url') return {};
   if (cmd === 'social_oauth_listen') return new Promise(() => {});
   if (cmd === 'social_meta_exchange') return '{"access_token":"rig-meta-tok","expires_in":3600}';
@@ -69,15 +72,25 @@ async function invokeStub(cmd, args) {
 async function fetchStub(url, opts) {
   const u = String(url);
   log.push('fetch:' + u);
+  // v209: gambar Meta + klip Omni dirute dari URL-nya dulu.
+  if (u.includes('images/generations')) {
+    return makeResp({ jsonData: { data: [{ b64_json: 'AAAA' }] } });
+  }
+  if (u.includes('generativelanguage.googleapis.com')) {
+    return makeResp({ jsonData: { steps: [{ type: 'model_output', content: [{ type: 'video', data: 'FAKEVIDEO' }] }] } });
+  }
   // Urutan balasan model HANYA untuk panggilan model (api.meta.ai).
   if (u.includes('api.meta.ai')) {
     const body = (opts && typeof opts.body === 'string') ? opts.body : '';
     if (modelCalls >= MODEL_REPLIES.length) {
-      // v208: draf vs QC dibedakan dari isi body (QC memuat 'Hasil agen:').
+      // v208/v209: draf vs QC dibedakan dari isi body (QC memuat
+      // 'Hasil agen:'); draf dibedakan per format dari promptnya.
       modelCalls++;
-      const content = body.includes('Hasil agen:')
-        ? 'QC: LOLOS. Semua kriteria lolos.'
-        : 'Judul: Naskah Uji\nSubjudul: Subjudul uji\nBody: Body uji.';
+      let content;
+      if (body.includes('Hasil agen:')) content = 'QC: LOLOS. Semua kriteria lolos.';
+      else if (body.includes('carousel')) content = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => 'Slide ' + n + ': Naskah Uji ' + n + ' \u2014 isi singkat').join('\n');
+      else if (body.includes('reels')) content = 'Hook: Naskah Uji\n' + [1, 2, 3, 4, 5].map((n) => 'Beat: detik ' + n + ' Naskah Uji').join('\n') + '\nCTA: Naskah Uji';
+      else content = 'Judul: Naskah Uji\nSubjudul: Subjudul uji\nBody: Body uji.';
       return makeResp({ jsonData: { choices: [{ message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 20 } } });
     }
     const content = MODEL_REPLIES[Math.min(modelCalls, MODEL_REPLIES.length - 1)];
@@ -197,6 +210,48 @@ try {
   check('v208: Gerbang 2 lolos (badge disetujui + Buat Naskah nonaktif)',
     cardTxt2.includes('Naskah disetujui') && btn('plan-scripts')?.disabled === true, cardTxt2.slice(0, 160));
   check('v208: total 64 panggilan model (4 + 30 draf + 30 QC)', modelCalls === 64, 'modelCalls=' + modelCalls);
+
+  // ===== v209: visual + caption + Gerbang 3 =====
+  store.set('minime.geminiKey', 'rig-key');
+  check('v209: seksi visual tampil sesudah Gerbang 2 (gaya + 3 tombol)',
+    !!btn('plan-visuals') && !!btn('plan-captions') && !!btn('plan-visual-approve') && !!document.getElementById('p30Style'));
+  const cardEst = document.getElementById('plan30-main')?.textContent || '';
+  check('v209: estimasi 92 gambar + 40 klip (12 + 10x8, 8x5 beat)',
+    cardEst.includes('92 gambar') && cardEst.includes('40 klip'), cardEst.slice(0, 200));
+  btn('plan-visuals').click();
+  await waitFor(() => {
+    const b1 = document.getElementById('p30MediaBadge-1')?.textContent;
+    const b3 = document.getElementById('p30MediaBadge-3')?.textContent;
+    const b23 = document.getElementById('p30MediaBadge-23')?.textContent;
+    if (b1 !== 'Siap' || b3 !== 'Siap' || b23 !== 'Siap') return null;
+    const p23 = document.getElementById('p30MediaBadge-23')?.parentElement?.querySelector('p')?.textContent || '';
+    return (p23.match(/omni-uji\.mp4/g) || []).length === 5 ? true : null;
+  }, 'visual 30 baris Siap + 5 klip reels hari 23', 600);
+  check('v209: badge visual Siap (image/carousel/reels) + 5 klip hari 23',
+    document.getElementById('p30MediaBadge-1')?.textContent === 'Siap'
+    && document.getElementById('p30MediaBadge-3')?.textContent === 'Siap'
+    && document.getElementById('p30MediaBadge-23')?.textContent === 'Siap');
+  const imgCallsBefore = log.filter((l) => l.includes('images/generations')).length;
+  check('v209: 92 panggilan gambar (12 + 80 slide)', imgCallsBefore === 92, 'imgCalls=' + imgCallsBefore);
+  btn('plan-visuals').click();
+  await tick(500);
+  const imgCallsAfter = log.filter((l) => l.includes('images/generations')).length;
+  check('v209: batch visual kedua tidak mengulang baris Siap (tanpa bayar ulang)', imgCallsAfter === imgCallsBefore, imgCallsBefore + ' -> ' + imgCallsAfter);
+  btn('plan-captions').click();
+  await waitFor(() => {
+    const tas = Array.from(document.querySelectorAll('textarea[id^="p30Caption-"]'));
+    return tas.length === 30 && tas.every((t) => (t.value || '').trim().length > 0) ? true : null;
+  }, '30 caption terisi', 400);
+  check('v209: 30 caption terisi', document.querySelectorAll('textarea[id^="p30Caption-"]').length === 30);
+  const callsBefore = modelCalls;
+  btn('plan-captions').click();
+  await tick(500);
+  check('v209: batch caption kedua melewati baris bercaption (0 panggilan baru)', modelCalls === callsBefore, callsBefore + ' -> ' + modelCalls);
+  btn('plan-visual-approve').click();
+  await tick(200);
+  const cardTxt3 = document.getElementById('plan30-main')?.textContent || '';
+  check('v209: Gerbang 3 lolos (badge disetujui + Buat Visual nonaktif)',
+    cardTxt3.includes('Visual + caption disetujui') && btn('plan-visuals')?.disabled === true, cardTxt3.slice(0, 160));
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-plan30 exception :: ' + (e && e.stack ? e.stack : e));

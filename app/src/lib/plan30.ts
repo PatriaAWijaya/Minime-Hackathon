@@ -11,19 +11,26 @@ import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { readKeys, QC_INSTRUCTION, parseQcVerdict } from './chat.js';
 import { recordLiveCost } from './cost.js';
 import { researchRun } from './research-browser.js';
+import { invoke } from '@tauri-apps/api/core';
+import { metaGenerateImage, IMG_PRICE_USD, IMG_USD_RATE, addImgSpend } from './image-api.js';
+import { omniGenerateClip, omniPriceUsd } from './omni-gen.js';
+import { sosmedCaptionPrompt } from './caption-tracks.js';
 import { esc } from './esc.js';
 
 export type PlanFormat = 'image' | 'carousel' | 'reels';
 export type ScriptState = 'empty' | 'ok' | 'revised' | 'flagged' | 'failed' | 'edited';
+export type MediaState = 'empty' | 'ready' | 'partial' | 'failed';
 export type PlanRow = {
   day: number; date: string; format: PlanFormat;
   topic: string; hook: string; pillar: string; hour: string;
   script: string; scriptState: ScriptState; qcNote: string;
+  media: string[]; mediaState: MediaState; mediaNote: string; caption: string;
 };
 export type Plan30 = {
   niche: string; competitors: string; startDate: string;
   researchReport: string; researchDone: boolean; researchGrounded: boolean;
   rows: PlanRow[]; approved: boolean; scriptsApproved: boolean;
+  planStyle: string; visualApproved: boolean;
 };
 export const PLAN_MIX: Record<PlanFormat, number> = { image: 12, carousel: 10, reels: 8 };
 const PLAN_LS = 'minime.plan30';
@@ -40,8 +47,14 @@ export function loadPlan(): Plan30 {
         script: typeof r.script === 'string' ? r.script : '',
         scriptState: ['ok', 'revised', 'flagged', 'failed', 'edited'].includes(String(r.scriptState)) ? (r.scriptState as ScriptState) : 'empty',
         qcNote: typeof r.qcNote === 'string' ? r.qcNote : '',
+        media: Array.isArray(r.media) ? (r.media as string[]) : [],
+        mediaState: ['ready', 'partial', 'failed'].includes(String(r.mediaState)) ? (r.mediaState as MediaState) : 'empty',
+        mediaNote: typeof r.mediaNote === 'string' ? r.mediaNote : '',
+        caption: typeof r.caption === 'string' ? r.caption : '',
       })) as PlanRow[];
       if (typeof p.scriptsApproved !== 'boolean') p.scriptsApproved = false;
+      if (typeof p.planStyle !== 'string' || !p.planStyle) p.planStyle = 'product photography';
+      if (typeof p.visualApproved !== 'boolean') p.visualApproved = false;
       return p;
     }
     }
@@ -50,6 +63,7 @@ export function loadPlan(): Plan30 {
     niche: '', competitors: '', startDate: '',
     researchReport: '', researchDone: false, researchGrounded: false,
     rows: [], approved: false, scriptsApproved: false,
+    planStyle: 'product photography', visualApproved: false,
   };
 }
 
@@ -87,6 +101,7 @@ export function parsePlanTable(text: string): { rows: PlanRow[]; error: string }
       day, date: '', format: m[2] as PlanFormat,
       topic: m[3].trim(), hook: m[4].trim(), pillar: m[5].trim(), hour,
       script: '', scriptState: 'empty', qcNote: '',
+      media: [], mediaState: 'empty', mediaNote: '', caption: '',
     });
   }
   if (rows.length !== 30) return { rows: [], error: tr('p30.err_parse') };
@@ -215,6 +230,31 @@ function scriptsSection(p: Plan30): string {
     + badge + blocks;
 }
 
+function visualSection(p: Plan30): string {
+  if (!p.scriptsApproved) return '';
+  const est = visualEstimate(p);
+  const estLine = tr('p30.visual_est', { images: est.images, clips: est.clips, usd: est.usd.toFixed(2), idr: est.idr.toLocaleString('id-ID') });
+  const badge = p.visualApproved ? '<p style="color:#22c55e">' + esc(tr('p30.visual_approved')) + '</p>' : '';
+  const opts = PLAN_STYLES.map((st) => '<option value="' + esc(st) + '"' + (st === p.planStyle ? ' selected' : '') + '>' + esc(st) + '</option>').join('');
+  const blocks = p.rows.map((r) => '<div style="margin-top:10px"><strong>Hari ' + r.day + ' \u00b7 ' + esc(r.format) + ' \u00b7 ' + esc(r.topic) + '</strong> '
+    + '<span id="p30MediaBadge-' + r.day + '">' + esc(mediaLabel(r)) + '</span><br>'
+    + '<p style="margin:2px 0">' + esc(r.media.length ? r.media.join(', ') : tr('p30.media_list_empty')) + '</p>'
+    + (r.mediaNote ? '<p style="color:#b45309">' + esc(r.mediaNote) + '</p>' : '')
+    + '<button class="btn" data-act="plan-visual-regen" data-day="' + r.day + '" ' + (p.visualApproved ? 'disabled' : '') + '>' + esc(tr('p30.visual_regen')) + '</button><br>'
+    + '<textarea id="p30Caption-' + r.day + '" rows="3" style="width:100%;margin-top:6px" ' + (p.visualApproved ? 'disabled' : '') + '>' + esc(r.caption) + '</textarea></div>').join('');
+  return '<h3>' + esc(tr('p30.visual_title')) + '</h3>'
+    + '<label>' + esc(tr('p30.visual_style')) + ' <select id="p30Style">' + opts + '</select></label>'
+    + '<p>' + esc(estLine) + '</p>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    + '<button class="btn btn-primary" data-act="plan-visuals" ' + (p.visualApproved ? 'disabled' : '') + '>' + esc(tr('p30.visual_run')) + '</button>'
+    + '<button class="btn btn-primary" data-act="plan-captions" ' + (p.visualApproved ? 'disabled' : '') + '>' + esc(tr('p30.caption_run')) + '</button>'
+    + '<button class="btn btn-primary" data-act="plan-visual-approve" ' + (p.visualApproved || !p.rows.length ? 'disabled' : '') + '>' + esc(tr('p30.visual_approve')) + '</button>'
+    + '</div>'
+    + '<p id="p30VisualStatus" style="color:#555"></p>'
+    + '<p class="se-note">' + esc(tr('p30.caption_note')) + '</p>'
+    + badge + blocks;
+}
+
 export function renderPlan(): void {
   const box = document.getElementById('plan30-main');
   if (!box) return;
@@ -238,6 +278,7 @@ export function renderPlan(): void {
     + researchArea
     + renderTable(p)
     + scriptsSection(p)
+    + visualSection(p)
     + '</div>';
 }
 
@@ -299,9 +340,181 @@ async function doTable(): Promise<void> {
   p.rows = parsed.rows.map((r) => ({ ...r, date: planDateISO(p.startDate, r.day, r.hour).slice(0, 10) }));
   p.approved = false;
   p.scriptsApproved = false;
+  p.visualApproved = false;
   savePlan(p);
   renderPlan();
   setStatus(tr('p30.done_table') + (p.researchDone ? '' : ' ' + tr('p30.warn_noresearch')));
+}
+
+export const PLAN_STYLES = ['photorealistic', 'product photography', 'flat design', 'illustration', '3D model'];
+
+function parseCarouselSlides(script: string): string[] {
+  const out: string[] = [];
+  for (const line of script.split('\n')) {
+    const m = line.trim().match(/^Slide\s+\d+\s*:\s*(.+)$/);
+    if (m) out.push(m[1].trim());
+  }
+  return out;
+}
+
+function parseReelsBeats(script: string): string[] {
+  const out: string[] = [];
+  for (const line of script.split('\n')) {
+    const m = line.trim().match(/^Beat:\s*(.+)$/);
+    if (m) out.push(m[1].trim());
+  }
+  return out;
+}
+
+function setVisualStatus(msg: string): void {
+  const el = document.getElementById('p30VisualStatus');
+  if (el) el.textContent = msg;
+}
+
+function mediaLabel(r: PlanRow): string {
+  if (r.mediaState === 'ready') return tr('p30.media_state_ready');
+  if (r.mediaState === 'partial') return tr('p30.media_state_partial');
+  if (r.mediaState === 'failed') return tr('p30.media_state_failed');
+  return tr('p30.media_state_empty');
+}
+
+/// Estimasi biaya visual dari naskah yang sudah ada (dihitung, bukan
+/// ditebak): gambar Meta $0,01; klip Omni 720p dihitung 10 detik
+/// (batas atas, karena durasi klip ditentukan model 3-10 detik).
+function visualEstimate(p: Plan30): { images: number; clips: number; usd: number; idr: number } {
+  let images = 0;
+  let clips = 0;
+  for (const r of p.rows) {
+    if (r.format === 'image') images += 1;
+    else if (r.format === 'carousel') images += parseCarouselSlides(r.script).length;
+    else clips += parseReelsBeats(r.script).length;
+  }
+  const usd = Math.round((images * IMG_PRICE_USD + clips * omniPriceUsd('720p', 10)) * 100) / 100;
+  return { images, clips, usd, idr: Math.round(usd * IMG_USD_RATE) };
+}
+
+async function generateRowVisual(row: PlanRow, plan: Plan30): Promise<{ media: string[]; state: MediaState; note: string }> {
+  const keys = readKeys();
+  const styleLine = ', in ' + plan.planStyle + ' style. Semua gambar/klip dalam rencana ini memakai gaya ' + plan.planStyle + ' yang sama.';
+  if (row.format === 'image') {
+    if (!keys.meta) throw new Error(tr('rs.err.key'));
+    const b64s = await metaGenerateImage(keys.meta, row.script + styleLine, 1, '1024x1024');
+    if (!b64s.length) throw new Error('gambar kosong');
+    const name = 'p30-d' + row.day + '-1.webp';
+    await invoke('image_save', { req: { name, b64: b64s[0] } });
+    addImgSpend(1);
+    return { media: [name], state: 'ready', note: '' };
+  }
+  if (row.format === 'carousel') {
+    if (!keys.meta) throw new Error(tr('rs.err.key'));
+    const slides = parseCarouselSlides(row.script);
+    if (!slides.length) throw new Error('tidak ada baris Slide di naskah');
+    const media: string[] = [];
+    for (let i = 0; i < slides.length; i++) {
+      try {
+        const b64s = await metaGenerateImage(keys.meta, slides[i] + styleLine, 1, '1024x1024');
+        if (!b64s.length) continue;
+        const name = 'p30-d' + row.day + '-' + (i + 1) + '.webp';
+        await invoke('image_save', { req: { name, b64: b64s[0] } });
+        addImgSpend(1);
+        media.push(name);
+      } catch { /* satu slide gagal tidak menggagalkan carousel */ }
+    }
+    if (!media.length) throw new Error('semua slide gagal');
+    return { media, state: media.length === slides.length ? 'ready' : 'partial', note: '' };
+  }
+  if (!keys.gemini) throw new Error(tr('rs.err.key'));
+  const beats = parseReelsBeats(row.script);
+  if (!beats.length) throw new Error('tidak ada baris Beat di naskah');
+  const media: string[] = [];
+  for (const beat of beats) {
+    try {
+      const clip = await omniGenerateClip(keys.gemini, { prompt: beat + styleLine, aspect: '9:16', resolution: '720p' });
+      media.push(clip.path);
+    } catch { /* satu klip gagal tidak menggagalkan reels */ }
+  }
+  if (!media.length) throw new Error('semua klip gagal');
+  return { media, state: media.length === beats.length ? 'ready' : 'partial', note: '' };
+}
+
+let visualsRunning = false;
+
+async function doVisuals(): Promise<void> {
+  if (visualsRunning) { setVisualStatus(tr('p30.visual_running')); return; }
+  const p = persistForm(loadPlan());
+  if (!p.scriptsApproved) { setVisualStatus(tr('p30.visual_need_gate2')); return; }
+  if (p.visualApproved) return;
+  visualsRunning = true;
+  const failedDays: number[] = [];
+  for (const row of p.rows) {
+    if (row.mediaState === 'ready') continue;
+    setVisualStatus(tr('p30.visual_progress', { n: row.day }));
+    try {
+      const g = await generateRowVisual(row, p);
+      row.media = g.media;
+      row.mediaState = g.state;
+      row.mediaNote = g.note;
+    } catch (e) {
+      row.mediaState = 'failed';
+      row.mediaNote = e instanceof Error ? e.message : String(e);
+      failedDays.push(row.day);
+    }
+    savePlan(p);
+  }
+  visualsRunning = false;
+  renderPlan();
+  setVisualStatus(tr('p30.visual_done') + (failedDays.length ? ' ' + tr('p30.visual_failed', { days: failedDays.join(', ') }) : ''));
+}
+
+async function doVisualRegen(day: number): Promise<void> {
+  if (visualsRunning) { setVisualStatus(tr('p30.visual_running')); return; }
+  const p = persistForm(loadPlan());
+  if (!p.scriptsApproved || p.visualApproved) return;
+  const row = p.rows.find((x) => x.day === day);
+  if (!row) return;
+  setVisualStatus(tr('p30.visual_progress', { n: day }));
+  try {
+    const g = await generateRowVisual(row, p);
+    row.media = g.media;
+    row.mediaState = g.state;
+    row.mediaNote = g.note;
+  } catch (e) {
+    row.mediaState = 'failed';
+    row.mediaNote = e instanceof Error ? e.message : String(e);
+  }
+  savePlan(p);
+  renderPlan();
+  setVisualStatus(tr('p30.visual_done'));
+}
+
+async function doCaptions(): Promise<void> {
+  if (visualsRunning) { setVisualStatus(tr('p30.visual_running')); return; }
+  const p = persistForm(loadPlan());
+  if (!p.scriptsApproved) { setVisualStatus(tr('p30.visual_need_gate2')); return; }
+  if (p.visualApproved) return;
+  const keys = readKeys();
+  if (!keys.meta && !keys.gemini) { setVisualStatus(tr('rs.err.key')); return; }
+  const cfg = defaultRouterConfig();
+  cfg.geminiApiKey = keys.gemini;
+  cfg.metaApiKey = keys.meta;
+  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()];
+  const router = new ModelRouter(cfg);
+  let made = 0;
+  for (const row of p.rows) {
+    if (row.caption.trim()) continue;
+    setVisualStatus(tr('p30.visual_progress', { n: row.day }));
+    try {
+      const kindLabel = row.format === 'image' ? 'gambar' : row.format;
+      const prompt = sosmedCaptionPrompt(kindLabel, row.topic, row.hook, '', row.script);
+      const r = await router.callWithFallback(prompt, 'trace-p30-caption-' + row.day);
+      recordLiveCost(r);
+      row.caption = (r.text || '').trim();
+      if (row.caption) made++;
+    } catch { /* caption gagal: baris dilewati, bisa dicoba lagi */ }
+    savePlan(p);
+  }
+  renderPlan();
+  setVisualStatus(tr('p30.caption_done', { n: made }));
 }
 
 let scriptsRunning = false;
@@ -394,6 +607,20 @@ export function initPlan30(): void {
       savePlan(p);
       renderPlan();
       setScriptStatus(tr('p30.scripts_done_approve'));
+    } else if (act === 'plan-visuals') await doVisuals();
+    else if (act === 'plan-visual-regen') {
+      const day = Number(btn.dataset.day || 0);
+      if (day) await doVisualRegen(day);
+    } else if (act === 'plan-captions') await doCaptions();
+    else if (act === 'plan-visual-approve') {
+      const p = persistForm(loadPlan());
+      if (!p.scriptsApproved || p.visualApproved) return;
+      const blocking = p.rows.filter((r) => (r.mediaState !== 'ready' && r.mediaState !== 'partial') || !r.caption.trim());
+      if (blocking.length) { setVisualStatus(tr('p30.visual_blocked', { n: blocking.length })); return; }
+      p.visualApproved = true;
+      savePlan(p);
+      renderPlan();
+      setVisualStatus(tr('p30.visual_done_approve'));
     } else if (act === 'plan-new') {
       if (!newArmed) {
         newArmed = true;
@@ -407,7 +634,24 @@ export function initPlan30(): void {
     }
   });
   box.addEventListener('change', (ev) => {
-    const ta = ev.target as HTMLElement;
+    const el = ev.target as HTMLElement;
+    if (el.id === 'p30Style') {
+      const p = loadPlan();
+      p.planStyle = (el as HTMLSelectElement).value;
+      savePlan(p);
+      return;
+    }
+    if (el.id && el.id.startsWith('p30Caption-')) {
+      const day = Number(el.id.slice('p30Caption-'.length));
+      const p = loadPlan();
+      if (p.visualApproved) return;
+      const row = p.rows.find((x) => x.day === day);
+      if (!row) return;
+      row.caption = (el as HTMLTextAreaElement).value;
+      savePlan(p);
+      return;
+    }
+    const ta = el;
     if (!ta.id || !ta.id.startsWith('p30Script-')) return;
     const day = Number(ta.id.slice('p30Script-'.length));
     const p = loadPlan();
