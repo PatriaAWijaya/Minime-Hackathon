@@ -26,10 +26,10 @@ import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
 import { fmtIdrNum, recordLiveCost } from './cost.js';
 import { readKeys } from './chat.js';
-import { libAddImage, libAddScript } from './v5logic.js';
+import { libAddImage, libAddScript, libPairCaption } from './v5logic.js';
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { vsSetScript } from './voicestudio.js';
-import { socSetCaption } from './social.js';
+import { socSetCaption, socAutoPlannerDrafts } from './social.js';
 import { captionTrackTitle, sosmedCaptionPrompt, videoCaptionPrompt } from './caption-tracks.js';
 import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, googleGenerateImage, GOOGLE_IMG_PRICE_USD, GOOGLE_IMG_ASPECT, mimeFromB64, addImgSpend, readImgSpend, readThumb, thumbCache } from './image-api.js';
 import { brandSuffix } from './brand.js';
@@ -202,19 +202,23 @@ async function renderGallery(): Promise<void> {
   });
 }
 
-async function saveVariant(i: number): Promise<void> {
+// v204: mengembalikan nama file yang tersimpan ('' bila gagal) agar
+// approveDraft hanya memasangkan/meneruskan varian yang benar-benar
+// tersimpan — draf Planner tidak boleh menunjuk file yang tak ada.
+async function saveVariant(i: number): Promise<string> {
   const v = variants[i];
-  if (!v) return;
+  if (!v) return '';
   try {
     await invoke('image_save', { req: { name: v.name, b64: v.b64 } });
   } catch (e) {
     setNote(tr('img.err.save') + ' ' + (e instanceof Error ? e.message : String(e)));
-    return;
+    return '';
   }
   const title = `Gambar: ${genBrief.slice(0, 40)}`;
   libAddImage(title, genBrief, v.name, IMG_PRICE_USD);
   setNote(tr('img.saved'));
   await renderGallery();
+  return v.name;
 }
 
 // v163: round-trip Canva per varian, pola batch-flow (handoff browser,
@@ -506,7 +510,8 @@ async function approveDraft(): Promise<void> {
   const btn = el('img-approve') as HTMLButtonElement | null;
   if (btn) btn.disabled = true;
   try {
-    for (let i = 0; i < variants.length; i++) await saveVariant(i);
+    const savedNames: string[] = [];
+    for (let i = 0; i < variants.length; i++) { const n = await saveVariant(i); if (n) savedNames.push(n); }
     const title = state.title.trim() || genBrief.slice(0, 40) || 'Draft';
     const parts: string[] = [];
     if (state.output === 'storyboard') {
@@ -570,6 +575,16 @@ async function approveDraft(): Promise<void> {
         socSetCaption(cap);
         libAddScript(captionTrackTitle('sosmed', title), cap);
         parts.push(tr('img.approve.caption'));
+        // v204 (Skenario 1 Tahap 4+5): pasangkan caption ke varian
+        // poster/carousel yang tersimpan; draf Planner otomatis
+        // (IG + Threads, tanpa tanggal) hanya untuk poster —
+        // storyboard tidak ikut (gambarnya keyframe video, bukan
+        // postingan sosmed; caption videonya tetap ke slot komposer).
+        savedNames.forEach((n) => libPairCaption(n, cap));
+        if (state.output === 'poster' && savedNames.length) {
+          const pids = socAutoPlannerDrafts(savedNames[0], cap);
+          parts.push(tr(pids.length ? 'img.approve.planner' : 'img.approve.plannerfail'));
+        }
       } catch { parts.push(tr('img.approve.captionfail')); }
     }
     setNote(tr('img.approve.done') + ' ' + parts.join(' '));

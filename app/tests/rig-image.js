@@ -278,6 +278,14 @@ try {
   await tick(200);
   const libAfterPoster = JSON.parse(store.get('minime.library.added') || '[]');
   check('v163: Setujui poster menyimpan gambar + caption ke Library', libRows() >= rowsBeforeApprove + 3 && libAfterPoster.some((x) => (x.content || '').includes('CAPTION-UJI')), 'rows=' + libRows() + '/' + rowsBeforeApprove + ' cap=' + libAfterPoster.some((x) => (x.content || '').includes('CAPTION-UJI')));
+  // v204 (Skenario 1 Tahap 4+5): Setujui poster -> 2 draf Planner
+  // (IG + Threads, tanpa tanggal) + caption terpasang di gambar.
+  const q204 = JSON.parse(store.get('minime.socialQueue') || '[]');
+  const d204 = q204.filter((it) => it.status === 'draft' && !it.scheduledAt);
+  const img204 = libAfterPoster.filter((x) => x.kind === 'image' && (x.content || '').includes('poster uji'));
+  check('v204: Setujui poster membuat draf Planner IG + Threads tanpa tanggal', d204.length === 2 && d204.some((it) => it.platform === 'instagram') && d204.some((it) => it.platform === 'threads') && d204.every((it) => (it.text || '').includes('CAPTION-UJI') && !!it.imageFile), 'drafts=' + d204.length + ' ' + d204.map((it) => it.platform + ':' + (it.imageFile || '')).join('|'));
+  check('v204: draf Planner menunjuk varian poster yang tersimpan', d204.every((it) => img204.some((x) => x.imageFile === it.imageFile)), 'img=' + img204.map((x) => x.imageFile).join('|'));
+  check('v204: caption terpasang di item Library gambar poster', img204.length === 3 && img204.every((x) => (x.caption || '').includes('CAPTION-UJI')), 'img=' + img204.length + ' cap=' + img204.map((x) => (x.caption || '').slice(0, 12)).join('|'));
 
   // Story Board: generate 2 scene -> Setujui -> plan Video + VO Voice + caption.
   await setSel('img-output', 'storyboard');
@@ -297,6 +305,10 @@ try {
   check('v163: storyboard menyimpan VO + caption ke Library', libAfterSb.some((x) => (x.content || '').includes('VO-UJI')) && libAfterSb.some((x) => (x.content || '').includes('CAPTION-UJI')), libAfterSb.map((x) => (x.content || '').slice(0, 20)).join('|').slice(0, 200));
   check('v163: rencana video masuk ke state Video Editor', (ve2.plan || '').includes('story uji'), (ve2.plan || '').slice(0, 120));
   check('v163: naskah VO masuk ke kolom teks Voice Editor', (document.getElementById('vsText')?.value || '').includes('VO-UJI'), (document.getElementById('vsText')?.value || '').slice(0, 60));
+  // v204: Setujui storyboard TIDAK membuat draf Planner (gambarnya
+  // keyframe video, bukan postingan sosmed) — jumlah draf tetap 2.
+  const q204b = JSON.parse(store.get('minime.socialQueue') || '[]');
+  check('v204: storyboard tidak menambah draf Planner', q204b.filter((it) => it.status === 'draft' && !it.scheduledAt).length === 2, 'drafts=' + q204b.filter((it) => it.status === 'draft' && !it.scheduledAt).length);
 
 
   // 10. v164: storyboard = sequence (satu shot per frame, bukan tema).

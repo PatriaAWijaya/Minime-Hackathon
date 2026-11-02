@@ -134,6 +134,25 @@ function socItemTitle(text) {
   return first.length > 36 ? first.slice(0, 36) + '…' : first;
 }
 
+// v204 (Skenario 1 Tahap 4+5): draf tanpa tanggal — cermin chip
+// kalender (markup sama persis agar binding edit/hapus di
+// renderNativePlanner berlaku), dikelompokkan di atas komposer
+// supaya tidak hilang dari pandangan. Item 'sent' tanpa tanggal
+// tidak mungkin ada (terbit hanya dari 'queued' bertanggal).
+function renderUnscheduled() {
+  var items = queueLoad().filter(function (it) { return !it.scheduledAt && it.status !== 'sent'; });
+  if (!items.length) return '';
+  var chips = items.map(function (it) {
+    var fail = it.status === 'failed' ? ' <span class="soc-item-fail">' + tr('soc.status.failed') + '</span>' : '';
+    var cls = it.status === 'draft' ? ' soc-item-draft' : '';
+    var title = tr('soc.draft_label') + ': ' + socItemTitle(it.text);
+    var editAttr = (it.status === 'draft' || it.status === 'queued' || it.status === 'failed') ? ' data-soc-edit="' + it.id + '"' : '';
+    var viewAttr = it.status === 'sent' ? ' data-soc-view="' + it.id + '"' : '';
+    return '<div class="soc-item' + cls + '"' + editAttr + viewAttr + ' title="' + esc(it.text || '') + '">' + platIconHTML(it.platform, true) + '<span class="soc-item-title">' + esc(title) + '</span>' + fail + '<button class="soc-del" data-soc-del="' + it.id + '" title="' + tr('soc.delete') + '">\u2212</button></div>';
+  }).join('');
+  return '<div class="soc-unsched"><div class="soc-unsched-head"><b>' + esc(tr('soc.unsched.title')) + '</b></div>' + chips + '</div>';
+}
+
 function renderCalendar() {
   var now = socCalCursor || new Date();
   var y = now.getFullYear(), m = now.getMonth();
@@ -178,13 +197,19 @@ export function socQueueAdd(items) {
   var q = queueLoad();
   var ids = [];
   items.forEach(function (it) {
-    if (!it || !it.platform || !it.text || !it.scheduledAt) return;
+    if (!it || !it.platform || !it.text) return;
+    // v204 (Skenario 1 Tahap 4+5): draf BOLEH tanpa tanggal
+    // (disimpan scheduledAt 0) — status 'draft' tidak pernah
+    // diterbitkan scheduler; tanggal ditentukan user di Planner,
+    // dan pengingat H-3 (v205) hanya berlaku untuk draf bertanggal.
+    // Item 'queued' tanpa tanggal tetap ditolak seperti sebelumnya.
+    if (!it.scheduledAt && it.status !== 'draft') return;
     var row = {
       id: Date.now() + '' + Math.floor(Math.random() * 10000),
       platform: it.platform, text: it.text,
       imageB64: '', imageMime: it.imageMime || '',
       imageFile: it.imageFile || '', imageUrl: it.imageUrl || '',
-      scheduledAt: it.scheduledAt, status: it.status || 'queued', error: '',
+      scheduledAt: it.scheduledAt || 0, status: it.status || 'queued', error: '',
       repeat: it.repeat || '',
     };
     q.push(row);
@@ -386,6 +411,7 @@ export function renderNativePlanner() {
   if (!el) return;
   el.innerHTML = '<div class="soc-wrap soc-layout">' + renderSideBar()
     + '<div class="soc-main"><div class="soc-cal">' + renderCalendar() + '</div>'
+    + renderUnscheduled()
     + socComposerHTML()
     + '</div></div>' + socPopHTML();
   // Bind sidebar: pilih kanal -> kartu koneksinya muncul di sidebar.
@@ -487,7 +513,7 @@ export function renderNativePlanner() {
     b.addEventListener('click', function (e) {
       e.stopPropagation();
       var it = queueLoad().find(function (x) { return String(x.id) === b.getAttribute('data-soc-edit'); });
-      if (it) socComposerOpen(dayKey(it.scheduledAt), it.id);
+      if (it) socComposerOpen(it.scheduledAt ? dayKey(it.scheduledAt) : dayKey(Date.now()), it.id);
     });
   });
   el.querySelectorAll('[data-soc-view]').forEach(function (b) {
@@ -1100,8 +1126,39 @@ async function socConnectCreds(platform, clientId, clientSecret) {
 // menghilangkan draf yang sedang diketik.
 var socComposer = null; // {date, editId, orig, text, plats, src, media, when, repeat, mediaOpen}
 var socPendingCaption = '';
+var socPendingMedia = null; // v204: media Library yang menanti komposer (Tahap 5 fallback)
 export function socSetCaption(text) {
   if (typeof text === 'string' && text.trim()) socPendingCaption = text;
+}
+
+// v204 (Skenario 1 Tahap 4): buat 2 draf Planner (Instagram +
+// Threads) untuk satu gambar + caption, TANPA tanggal. Draf tidak
+// pernah diterbitkan scheduler — user menentukan tanggalnya di
+// Planner (klik chip draf), dan H-3 (v205) hanya mengawasi draf
+// bertanggal. Mengembalikan id draf yang dibuat (kosong bila gagal).
+export function socAutoPlannerDrafts(imageFile, caption) {
+  if (!imageFile || !caption || !String(caption).trim()) return [];
+  var items = ['instagram', 'threads'].map(function (pl) {
+    return { platform: pl, text: String(caption).trim(), imageFile: imageFile, imageMime: socMimeFromExt(imageFile), scheduledAt: 0, status: 'draft', repeat: '' };
+  });
+  try { return socQueueAdd(items); } catch (_) { return []; }
+}
+
+// v204 (Skenario 1 Tahap 5): item Library gambar -> Planner.
+// Berpasangan (caption tersimpan saat Setujui) -> 2 draf langsung.
+// Tanpa pasangan -> komposer Planner terbuka dengan gambar terpilih
+// (media Library), user menulis/menyesuaikan caption + tanggal di
+// sana. Mengembalikan 'drafts' | 'composer' | '' (tidak jalan).
+// Navigasi ke Planner dilakukan pemanggil (v5logic).
+export function socLibToPlanner(item) {
+  if (!item || !item.imageFile) return '';
+  if (item.caption && String(item.caption).trim()) {
+    var ids = socAutoPlannerDrafts(item.imageFile, item.caption);
+    return ids.length ? 'drafts' : '';
+  }
+  socPendingMedia = { kind: 'lib', imageFile: item.imageFile, mime: socMimeFromExt(item.imageFile) };
+  socComposerOpen(dayKey(Date.now()), null);
+  return 'composer';
 }
 var socComposerConfirm = false;
 
@@ -1120,6 +1177,7 @@ function socComposerOpen(dateStr, editId) {
   var connected = PLATFORMS.filter(function (p) { return tokenValid(s[p.id]); }).map(function (p) { return p.id; });
   var st = { date: dateStr, editId: editId || null, orig: null, text: '', plats: connected.slice(), src: 'library', media: null, when: base, repeat: '', mediaOpen: true };
   if (!editId && socPendingCaption) { st.text = socPendingCaption; socPendingCaption = ''; }
+  if (!editId && socPendingMedia) { st.media = socPendingMedia; socPendingMedia = null; }
   if (editId) {
     var it = queueLoad().find(function (x) { return String(x.id) === String(editId); });
     if (it) {

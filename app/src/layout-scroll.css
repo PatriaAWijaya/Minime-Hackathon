@@ -771,3 +771,9 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 /* v200: kartu Billing per model — grid responsif di panel Pemakaian. */
 .bill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 12px; }
 .bill-card { background: var(--t-panel2, #262626); border: 1px solid var(--t-border, #404040); border-radius: 10px; padding: 12px 14px; }
+
+/* v204: seksi draf Planner tanpa tanggal (Skenario 1 Tahap 4+5).
+   Chip memakai gaya .soc-item yang sudah ada; wrapper hanya memberi
+   jarak + pemisah dari kalender. */
+.soc-unsched { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--t-line, #e5e7eb); }
+.soc-unsched-head { margin-bottom: 6px; }

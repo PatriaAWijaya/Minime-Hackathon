@@ -1,4 +1,4 @@
-import { renderNativePlanner, initSocialScheduler, socNextRepeat } from './social.js';
+import { renderNativePlanner, initSocialScheduler, socNextRepeat, socLibToPlanner } from './social.js';
 import { invoke } from '@tauri-apps/api/core';
 
 /* v109 (perintah Patria 30 Okt 19:23): tema — default mengikuti setelan
@@ -263,6 +263,7 @@ function libWire() {
     var act = el.getAttribute("data-act"), idx = parseInt(el.getAttribute("data-idx") || "0", 10);
     if (act === "lib-close") libDetailClose();
     else if (act === "lib-close-media") { libDetailClose(); libMedia(idx); }
+    else if (act === "lib-planner") { libDetailClose(); socLibToPlanner(libAll()[idx]); showView("planner"); }
     else if (act === "lib-delete") libDelete(idx);
     else if (act === "lib-close-revise") { libDetailClose(); libRevise(idx); }
   });
@@ -1755,6 +1756,7 @@ export function libDetail(i, ev) {
     + preview
     + "<div class='lib-actions'>"
     + "<button class='btn btn-sm' data-act='lib-close-media' data-idx='" + i + "'>" + esc(tr('lib.btn.media')) + "</button>"
+    + (item.kind === "image" && item.imageFile ? "<button class='btn btn-sm' data-act='lib-planner' data-idx='" + i + "'>" + esc(tr('lib.btn.planner')) + "</button>" : "")
     + "<button class='btn btn-sm' data-act='lib-delete' data-idx='" + i + "'>" + esc(tr('lib.btn.delete')) + "</button>"
     + "<button class='btn btn-sm' data-act='lib-close-revise' data-idx='" + i + "'>" + esc(tr('lib.btn.revise')) + "</button>"
     + "<button class='btn btn-sm' data-act='lib-close'>" + esc(tr('lib.detail.close')) + "</button>"
@@ -1854,6 +1856,20 @@ export function libAddImage(title, prompt, imageFile, costUsd) {
   if (!saveLibAdded()) { LIB_ADDED.pop(); renderLib(); return { index: -1, added: false, saveFailed: true }; }
   renderLib();
   return { index: all.length, added: true };
+}
+
+// v204 (Skenario 1 Tahap 4+5): pasangkan caption ke item Library
+// gambar (ditemukan lewat imageFile) — dipakai approveDraft sesudah
+// caption poster/carousel berhasil dibuat, agar aksi Masuk Planner
+// dari Library bisa membuat draf langsung tanpa tanya caption lagi.
+// Caption pertama menang (tidak menimpa pasangan yang sudah ada);
+// gagal simpan = best-effort (fallback Tahap 5 = komposer).
+export function libPairCaption(imageFile, caption) {
+  if (!imageFile || !caption) return false;
+  var hit = false;
+  LIB_ADDED.forEach(function (it) { if (it.imageFile === imageFile && !it.caption) { it.caption = caption; hit = true; } });
+  if (hit) saveLibAdded();
+  return hit;
 }
 
 export function libMedia(i) {

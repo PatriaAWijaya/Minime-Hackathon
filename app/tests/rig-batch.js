@@ -219,6 +219,32 @@ try {
   check('klik baris LinkedIn -> tombol Putuskan muncul', !!document.getElementById('socDisc-linkedin'), '');
   check('setiap kartu tanggal punya tombol +', document.querySelectorAll('[data-soc-add]').length > 0, document.querySelectorAll('[data-soc-add]').length);
 
+  // v204 (Skenario 1 Tahap 4+5): draf tanpa tanggal tampil di seksi
+  // "Belum terjadwal" (bukan hilang dari kalender); klik chip membuka
+  // komposer (default hari ini); tombol hapus menghapus draf itu.
+  const q204 = JSON.parse(store.get('minime.socialQueue') || '[]');
+  q204.push({ id: 'q-unsched-1', platform: 'instagram', text: 'Draf tanpa tanggal uji', imageB64: '', imageMime: '', imageFile: 'uji.jpg', imageUrl: '', scheduledAt: 0, status: 'draft', error: '', repeat: '' });
+  store.set('minime.socialQueue', JSON.stringify(q204));
+  dom.window.showView('planner');
+  dom.window.renderPlanner();
+  await tick(200);
+  check('v204: seksi Belum terjadwal tampil + chip draf tanpa tanggal', !!document.querySelector('.soc-unsched') && [...document.querySelectorAll('.soc-unsched .soc-item')].some((el) => (el.textContent || '').includes('Draf tanpa tanggal uji')), document.querySelector('.soc-unsched')?.textContent?.slice(0, 80) || '');
+  document.querySelector('.soc-unsched [data-soc-edit]')?.click();
+  await tick(200);
+  check('v204: klik chip tak terjadwal membuka komposer + teks draf', (document.getElementById('socCompText')?.value || '').includes('Draf tanpa tanggal uji'), document.getElementById('socCompText')?.value || '');
+  document.getElementById('socComposerClose')?.click();
+  await tick(200);
+  // Tutup komposer edit SELALU memunculkan konfirmasi (teks tak kosong
+  // = dirty) — jawab Ya agar tidak ada overlay konfirmasi tersisa
+  // yang mengacaukan seksi popup berikutnya.
+  document.getElementById('socConfirmYes')?.click();
+  await tick(200);
+  document.querySelector('.soc-unsched [data-soc-del]')?.click();
+  await tick(200);
+  const q204b = JSON.parse(store.get('minime.socialQueue') || '[]');
+  const unschedLeft = q204b.some((it) => !it.scheduledAt && it.status !== 'sent');
+  check('v204: hapus chip tak terjadwal menghapus draf itu', !q204b.some((it) => it.id === 'q-unsched-1') && (!!document.querySelector('.soc-unsched') === unschedLeft), 'unschedLeft=' + unschedLeft);
+
   // 8. Popup Tambah Channel: grid 8 ikon + nama, klik ikon ->
   // login browser langsung bila kredensial tersimpan, form bila
   // belum; Putuskan menyimpan kredensial (login ulang tanpa isi).
