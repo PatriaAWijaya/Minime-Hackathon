@@ -448,6 +448,13 @@ try {
   check('v199: tombol Campaign tetap ada di DOM (disembunyikan, bukan dihapus)', !!document.querySelector('button[data-view="campaign"]'), '');
   check('v199: tetangga Campaign (Planner + Billing) tetap ada', !!document.querySelector('button[data-view="planner"]') && !!document.querySelector('button[data-view="billing"]'), '');
 
+  // 23. v200: Billing tampil sebagai kartu per model.
+  const billCards = [...document.querySelectorAll('#view-billing .bill-card')];
+  check('v200: kartu Billing per model ada (2 baris ledger)', billCards.length === 2, String(billCards.length));
+  check('v200: kartu pertama muse-spark-1.3', billCards.length === 2 && (billCards[0].querySelector('b') ? billCards[0].querySelector('b').textContent : '') === 'muse-spark-1.3', billCards.length ? billCards[0].textContent.slice(0, 40) : 'no-card');
+  check('v200: kartu kedua gemini-3.1-flash-lite', billCards.length === 2 && (billCards[1].querySelector('b') ? billCards[1].querySelector('b').textContent : '') === 'gemini-3.1-flash-lite', billCards.length > 1 ? billCards[1].textContent.slice(0, 40) : 'no-card');
+  check('v200: grid kartu ada di panel Pemakaian', !!document.querySelector('#view-billing .bill-grid'), '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-home exception :: ' + (e && e.stack ? e.stack : e));

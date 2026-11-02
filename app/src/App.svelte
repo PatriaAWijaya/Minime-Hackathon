@@ -1466,31 +1466,33 @@
       <div class="scroll">
         <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px">
           <h3 style="margin:0 0 12px">{t('billing.usage', lang)}</h3>
+          <div class="bill-grid">
           {#each COST_ROWS as r}
-          <div style="margin-bottom:12px">
+          <div class="bill-card">
             <div><b>{r.model}</b> <span style="color:#a1a1a1">{r.provider}</span></div>
             <div style="color:#a1a1a1;font-size:13px">{t('cost.col.calls', lang)}: {r.calls} · {t('cost.col.input', lang)}: {r.input === null ? '—' : fmtInt(r.input, lang)} · {t('cost.col.output', lang)}: {r.output === null ? '—' : fmtInt(r.output, lang)} · {t('cost.col.tokens', lang)}: {fmtInt(r.tokens, lang)}</div>
             <div>{t('cost.col.usd', lang)}: {fmtUsd(r, lang)} · {t('cost.col.idr', lang)}: {fmtIdr(r, lang)}</div>
           </div>
           {/each}
           {#if imgSpend.images > 0}
-          <div style="margin-bottom:12px">
+          <div class="bill-card">
             <div><b>muse-image-1.0</b> <span style="color:#a1a1a1">Meta</span></div>
             <div>{t('img.billing', lang, { n: imgSpend.images })} · ${imgSpend.usd.toFixed(2)} ≈ Rp{imgSpend.idr.toLocaleString('id-ID')}</div>
           </div>
           {/if}
           {#if videoSpend.videos > 0}
-          <div style="margin-bottom:12px">
+          <div class="bill-card">
             <div><b>Veo 3.1</b> <span style="color:#a1a1a1">Google</span></div>
             <div>{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</div>
           </div>
           {/if}
           {#if liveCost.calls > 0}
-          <div style="margin-bottom:12px">
+          <div class="bill-card">
             <div><b>{t('cost.live', lang)}</b> <span style="color:#a1a1a1">app</span></div>
             <div>{liveCost.calls} {t('cost.col.calls', lang)} · {fmtInt(liveCost.tokens, lang)} {t('cost.col.tokens', lang)} · ${liveCost.usd.toFixed(5)}</div>
           </div>
           {/if}
+          </div>
           <div style="border-top:1px solid #2a2a2a;padding-top:12px"><b>{t('cost.total', lang)}</b>: {COST_TOTAL.calls} {t('cost.col.calls', lang)} · {fmtInt(COST_TOTAL.tokens, lang)} {t('cost.col.tokens', lang)} · {fmtUsd(COST_TOTAL, lang)} · {fmtIdr(COST_TOTAL, lang)}</div>
         </div>
         <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px">

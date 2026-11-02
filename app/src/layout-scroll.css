@@ -768,3 +768,6 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
    (rig-audit masih bisa showView('campaign')). Untuk menampilkan lagi,
    hapus blok ini saja. */
 .sidebar button[data-view="campaign"] { display: none; }
+/* v200: kartu Billing per model — grid responsif di panel Pemakaian. */
+.bill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.bill-card { background: var(--t-panel2, #262626); border: 1px solid var(--t-border, #404040); border-radius: 10px; padding: 12px 14px; }
