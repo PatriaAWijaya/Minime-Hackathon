@@ -2521,6 +2521,15 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v184 — tombol Bersihkan di tiap form input Omni + HyperFrames (perintah Patria 2 Nov 09:32)
+- Latar: prompt prosa yang nyangkut di kolom Komposisi HTML HyperFrames (kasus 09:25) tidak ada cara menghapusnya selain menandai manual / reload. Perintah: tiap form input di Omni maupun HyperFrames dapat tombol Bersihkan.
+- Yang dibangun (pakai kunci 'img.clear' yang sudah ada — Bersihkan/Clear/清空 — tanpa kunci i18n baru, hitungan tetap 1098/bahasa): tab Prompt Omni tombol #vg-prompt-clear (kosongkan vgPrompt + vgStatus); tab References tombol #vg-refs-clear (kosongkan semua slot vgRefs + vgStatus); tombol hapus per-frame (#vg-first-clear/#vg-last-clear) kini juga membersihkan vgStatus basi; cabang HyperFrames tombol #hf-clear di samping Render (kosongkan hfHtml + hfStatus). State $state di sesi itu juga yang dibersihkan — tidak ada simpanan persisten terpisah untuk form ini, jadi Bersihkan = hilang seketika tanpa reload.
+- Rig-video § v184 baru (4 cek): Bersihkan prompt mengosongkan kolom; slot referensi terisi sebelum dibersihkan; Bersihkan referensi mengosongkan semua slot; Bersihkan HyperFrames mengosongkan komposisi.
+- Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
+- Kode lokal be3d504 ↔ remote f176173 (tree identik).
+- LIVE: (diisi commit log-LIVE sesudah deploy)
+
+
 ## v183 — tombol '+' aset buka pemilih file asli saat path kosong (perintah Patria 2 Nov 08:42 "cek ulang")
 - Temuan cek ulang: tombolnya TIDAK mati — dengan path kosong, klik '+' v182 hanya menampilkan status "Isi path aset dulu." di baris status kartu atas (mudah terlewat), dan memang belum ada pemilih file sama sekali. Itulah yang terlihat seperti "tidak merespon".
 - Perilaku baru: path kosong -> klik '+' membuka dialog pemilih file asli macOS (plugin Tauri dialog 2.8.4, izin capability dialog:allow-open saja). Pilih banyak file sekaligus; jenis aset ditebak dari ekstensi (gambar -> Image, mp3/wav/m4a/ogg/flac -> Audio, sisanya Video); gambar tetap durasi default 5 detik. Batal = tidak terjadi apa-apa. Path yang sudah diketik tetap ditambah dari ketikan seperti v182 (helper ve2PushAsset dipakai kedua jalur; id unik per file dalam satu batch).
