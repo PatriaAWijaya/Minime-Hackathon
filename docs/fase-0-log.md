@@ -2528,7 +2528,7 @@ dokumen lama yang dipakai.
 - Rig-ve2 §15 baru (6 cek): opsi jenis persis tiga, tombol '+', aset gambar masuk daftar (durasi 5), klik '+' -> klip B-Roll 5 dtk, ekspor memuat '-loop 1' sebelum input png. Probe stub rig dibuat sadar path (gambar -> 0, selain itu 12,5).
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal 144ac40 ↔ remote 4255e43 (tree identik).
-- LIVE: (diisi commit log-LIVE sesudah deploy)
+- LIVE: PID 29418; md5 JS 8754fbfd7bfc7521a2a9042d21ba2782 lokal == MacBook; marker '-loop' + ikon 🖼️ ada di bundle MacBook. (Deploy sempat tertahan 08:03-08:36 karena SSH putus saat handshake; percobaan ulang 08:36 berhasil, tidak ada deploy setengah jalan sebelumnya.)
 - Batas jujur: pratinjau klip gambar di panel Preview masih label nama (bukan gambarnya) — belum dibangun, di luar perintah ini.
 
 
