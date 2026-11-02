@@ -2521,6 +2521,25 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v190 — hapus kalimat petunjuk drag thumbnail (perintah Patria 2 Nov 18:02)
+
+- Perintah persis: kalimat "Seret thumbnail ke timeline, atau klik untuk
+  menambah di akhir track." tidak perlu dimunculkan.
+- Perubahan: paragraf `<p class="se-note">{t('ve2.drag_hint', lang)}</p>` di bawah
+  grid aset (App.svelte) dicabut; kunci i18n `ve2.drag_hint` ikut dicabut dari
+  ketiga bahasa karena v190 melepas satu-satunya rujukan statisnya (grep
+  membuktikan aman — preseden hf.note v180, ve.canvas v186) -> 1108/bahasa,
+  0 duplikat. Perilaku drag/klik thumbnail TIDAK berubah, hanya kalimatnya
+  yang hilang; grid aset tetap merender tile seperti biasa.
+- Rig-ve2 §22 baru: petunjuk tidak tampil di kartu Aset, grid tetap merender
+  tile. RIG-VE2 ALL PASSED.
+- Gerbang penuh lolos (/tmp/gate-v190/): vite build, 14 rig, root tsc, gate-test
+  14 grup ALL PASSED, scan 0, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6,
+  svelte-check 0 error / 21 warning (baseline v188/v189), cargo fmt + check +
+  check --tests 0, Cargo.lock tidak termutasi.
+- Kode aed574f ↔ daa1807 (tree identik).
+- LIVE menyusul di entri log-LIVE sesudah deploy.
+
 ## v189 — drag-drop klip timeline + x hapus aset per tile (perintah Patria 2 Nov 16:30 + 16:31, revisi 17:55)
 
 - Perintah 16:30: "Tambahkan tanda x pada ujung kanan list agent. jika X ditekan,
