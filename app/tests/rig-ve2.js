@@ -589,6 +589,26 @@ try {
   check('v196: label penggaris terakhir di ujung skala', ticks27.length === 4 && String(ticks27[3].style.left).includes('calc(') && String(ticks27[3].style.left).includes('78px') && String(ticks27[3].style.left).includes('100%'), ticks27.map((t) => t.style.left).join(' | '));
   check('v196: tombol akhir menggerakkan playhead ke ujung', (doc27.getElementById('ve2Time') ? doc27.getElementById('ve2Time').textContent : '').includes('00:30 / 00:30'), doc27.getElementById('ve2Time') ? doc27.getElementById('ve2Time').textContent : 'no-time');
 
+  // §28 v197: play pada monitor pratinjau idle menggerakkan playhead.
+  const store28 = new Map();
+  store28.set('minime.cleaned-v84', '1');
+  store28.set('minime.cleaned-graph-v88', '1');
+  store28.set('minime.ve2', JSON.stringify({ clips: [{ id: 'pv1', name: 'Preview Uji', track: 'Video', start: 0, dur: 8, src: 'preview-uji.mp4', effect: 'none' }], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
+  const dom28 = makeDom(store28);
+  const doc28 = dom28.window.document;
+  await waitFor(() => doc28.querySelector('[data-view="media"]'), 'mount28 rail media', 100);
+  doc28.querySelector('[data-view="media"]').click();
+  await tick(100);
+  doc28.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  doc28.querySelector('[data-ve2-clip="pv1"]').click();
+  await waitFor(() => doc28.getElementById('ve2PreviewVideo'), 'preview video muncul', 100);
+  const trans28 = [...doc28.querySelectorAll('.ve2-transport button')];
+  check('v197: sebelum play pratinjau, transport masih Putar', trans28[1].textContent === '▶ Putar', trans28[1].textContent);
+  doc28.getElementById('ve2PreviewVideo').dispatchEvent(new dom28.window.Event('play', { bubbles: true }));
+  await tick(100);
+  check('v197: play pratinjau memulai playback timeline', trans28[1].textContent === 'Berhenti' && doc28.getElementById('ve2BtnPlay').disabled === true, trans28[1].textContent + ' play-disabled:' + doc28.getElementById('ve2BtnPlay').disabled);
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-ve2 exception :: ' + (e && e.stack ? e.stack : e));

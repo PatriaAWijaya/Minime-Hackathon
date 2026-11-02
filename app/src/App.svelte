@@ -668,6 +668,15 @@
       ve2Playhead = el;
     }, 100);
   }
+  // v197: tombol play bawaan monitor pratinjau idle (video/audio) harus
+  // menggerakkan playhead seperti tombol Putar transport — sebelumnya ia
+  // memutar elemen pratinjau itu sendiri sehingga playhead diam. Elemen
+  // dijeda dulu supaya tidak berbunyi sendiri, lalu timeline yang jalan.
+  function ve2PreviewPlay(e: Event) {
+    const el = e.currentTarget as HTMLMediaElement | null;
+    try { el?.pause(); } catch { /* noop */ }
+    if (!ve2Playing) ve2PlayToggle();
+  }
   function ve2Preview() {
     ve2StopPlayback();
     ve2Playhead = 0;
@@ -1293,10 +1302,10 @@
               {#if ve2PreviewKind === 'image'}
                 <img id="ve2PreviewImg" src={ve2PreviewSrc} alt={ve2SelClip()?.name ?? ''} style="width:100%;background:#000;display:block;max-height:min(480px, 55vh);object-fit:contain">
               {:else if ve2PreviewKind === 'audio'}
-                <div class="ve2-canvas"><div id="ve2PreviewLabel">{ve2PreviewLabel}</div><audio id="ve2PreviewAudio" src={ve2PreviewSrc} controls style="width:90%"></audio></div>
+                <div class="ve2-canvas"><div id="ve2PreviewLabel">{ve2PreviewLabel}</div><audio id="ve2PreviewAudio" src={ve2PreviewSrc} controls style="width:90%" onplay={(e) => { ve2PreviewPlay(e); }}></audio></div>
               {:else}
                 <!-- svelte-ignore a11y_media_has_caption -->
-                <video id="ve2PreviewVideo" src={ve2PreviewSrc} style="width:100%;background:#000;display:block;max-height:min(480px, 55vh);object-fit:contain" controls></video>
+                <video id="ve2PreviewVideo" src={ve2PreviewSrc} style="width:100%;background:#000;display:block;max-height:min(480px, 55vh);object-fit:contain" controls onplay={(e) => { ve2PreviewPlay(e); }}></video>
               {/if}
             {:else if ve2SelClip() && ve2PreviewFail}
               <div class="ve2-canvas"><div id="ve2PreviewLabel">{ve2PreviewLabel}</div><small>{t('ve2.preview_fail', lang)} {ve2PreviewErr}</small></div>
