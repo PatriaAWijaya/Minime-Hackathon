@@ -2521,6 +2521,17 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v183 — tombol '+' aset buka pemilih file asli saat path kosong (perintah Patria 2 Nov 08:42 "cek ulang")
+- Temuan cek ulang: tombolnya TIDAK mati — dengan path kosong, klik '+' v182 hanya menampilkan status "Isi path aset dulu." di baris status kartu atas (mudah terlewat), dan memang belum ada pemilih file sama sekali. Itulah yang terlihat seperti "tidak merespon".
+- Perilaku baru: path kosong -> klik '+' membuka dialog pemilih file asli macOS (plugin Tauri dialog 2.8.4, izin capability dialog:allow-open saja). Pilih banyak file sekaligus; jenis aset ditebak dari ekstensi (gambar -> Image, mp3/wav/m4a/ogg/flac -> Audio, sisanya Video); gambar tetap durasi default 5 detik. Batal = tidak terjadi apa-apa. Path yang sudah diketik tetap ditambah dari ketikan seperti v182 (helper ve2PushAsset dipakai kedua jalur; id unik per file dalam satu batch).
+- Dependensi baru (disengaja, ikut commit): @tauri-apps/plugin-dialog 2.8.4 (JS) + tauri-plugin-dialog 2 (Rust, menarik rfd + tauri-plugin-fs); main.rs registrasi plugin; Cargo.lock + package-lock.json ikut commit.
+- Rig-ve2 §16 baru (3 cek): klik '+' path kosong memanggil plugin:dialog|open, hasil pilih masuk daftar sebagai Image 5 dtk, aset 7 -> 8. Stub plugin mengembalikan ['/tmp/picker.png'].
+- Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
+- Kode lokal e5c483a ↔ remote 268b01a (tree identik).
+- LIVE: (diisi commit log-LIVE sesudah deploy)
+- Batas jujur: pratinjau klip gambar di panel Preview masih label nama (bukan gambarnya) — belum dibangun, di luar perintah ini.
+
+
 ## v182 — daftar aset Video Editor berfungsi + tombol tambah '+' + jenis aset Image/Video/Audio (perintah Patria 2 Nov 07:57)
 - Tombol tambah aset (t1.add) jadi hanya '+' di 3 bahasa (kunci ini hanya dipakai tombol itu — diverifikasi grep). Tombol '+' per baris aset sudah '+' sejak lama, tidak berubah.
 - Jenis aset yang bisa ditambahkan kini persis tiga: Image, Video, Audio (select lama Video/B-Roll/Audio/Teks diganti). Pemetaan ke track timeline: Image -> B-Roll, Video -> Video, Audio -> Audio. Aset lama (kind B-Roll/Teks) tetap dimuat dan tetap jalan ke track-nya sendiri (kompatibilitas state tersimpan).
