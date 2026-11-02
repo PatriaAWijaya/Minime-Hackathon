@@ -2560,7 +2560,10 @@ dokumen lama yang dipakai.
   d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
 - Kode c3edbee ↔ 3486ea5 (tree identik).
-- LIVE menyusul di entri log-LIVE sesudah deploy.
+- LIVE 2 Nov ~19:00: deploy mh-build195.sh OK (MH_BUILD195_OK); HEAD MacBook
+  0cede6a; PID 56990; md5 dist JS 3812810501aa46c0cab50cbca05d41de lokal ==
+  MacBook; marker 've2BtnSnap' 1x + 've2-resize' 6x (JS+CSS) di bundle
+  MacBook. App live = v195.
 
 ## v194 — perbaiki sintaks ffprobe show_entries (laporan Patria 2 Nov 18:33)
 
