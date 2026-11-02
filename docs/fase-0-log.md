@@ -2521,6 +2521,49 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v196 — playhead + penggaris + klik timeline segaris bar (laporan Patria 2 Nov 18:56 + screenshot: "player berhenti sendiri sebelum sampai ujung track video")
+
+- Laporan Patria (screenshot 18:56): klip Video coffeeroom durasi 9,5 dtk
+  (dipotong dari 13,8 dtk asli), transport berhenti di 00:09, garis
+  playhead tampak berhenti SEBELUM ujung bar klip. Keadaan live
+  terverifikasi: 1 klip (start 0, dur 9,5), aset Video durasi probe
+  13,822708 dtk, berkas 1.020.019 byte (jauh di bawah cap video_read
+  20 MB — bukan soal berkas terpotong); timer v195 sendiri BENAR
+  (berhenti tepat di 9,5; tampilan 00:09 adalah floor dari 9,5).
+- AKAR MASALAH (bukan timer, tapi koordinat): bar klip duduk di dalam
+  baris .track flex — sesudah label 70px + gap 8px — sehingga ujung bar
+  selalu 78px di kanan posisi persen yang sama; playhead memakai
+  left:{pct}% terhadap div dalam TANPA offset itu, jadi di semua waktu
+  playhead tertinggal 78px dari bar (di skala 100% setara ~2,1 dtk —
+  persis kesan "berhenti lebih awal"). Bukti ukur dari screenshot:
+  bar 774..1474 device-px, garis playhead di 1325 — selisih 149
+  device-px = 74,5 CSS px ≈ 78px label+gap. Penggaris ikut meleset
+  (flex space-between + padding-left 78px tidak sama dengan skala bar),
+  dan pemetaan klik/seret (ve2RulerClick, ve2StartFromClientX,
+  ve2DropAsset) memakai koordinat div dalam tanpa offset — seret/drop
+  mendarat 78px ke kanan target, klik label penggaris meleset waktunya.
+- PERBAIKAN (satu sistem koordinat, berlaku di semua zoom karena 78px
+  label tidak ikut membesar saat zoom): (1) playhead ->
+  left:calc(78px + pct%); (2) tiap label penggaris absolut di
+  calc(78px + pct%) dengan .ve-ruler position:relative + tinggi 18px
+  (blok v196 di layout-scroll.css; app.css tidak disentuh — verbatim
+  prototype); (3) ve2RulerClick, ve2StartFromClientX, ve2DropAsset
+  mengurangi 78px dari clientX sebelum dibagi lebar (clamp lama tetap
+  menjaga klik di area label -> 0). Snap (waktu, bukan piksel) dan
+  geser grip (delta piksel) tidak tersentuh — sudah benar.
+- Rig §27 baru (playhead berisi calc(78px + 100%) sesudah tombol akhir;
+  label penggaris pertama 78px + 0%, terakhir 78px + 100%; waktu
+  transport 00:30 / 00:30). Penyelarasan piksel sejati tetap butuh
+  layout live (batas yang sama seperti snap v195) — yang teruji di rig
+  adalah rumus offsetnya, bukan posisi pikselnya. Jalur jsdom tidak
+  berubah (rect lebar 0 -> null/fallback seperti sebelumnya).
+- i18n tidak berubah (tanpa teks baru) -> 1110/bahasa, 0 duplikat.
+- Gerbang penuh lolos (/tmp/gate-v196/): vite build, 14 rig, root tsc,
+  gate-test 14 grup ALL PASSED, scan 0, ledger md5 tetap
+  d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
+- Kode 02d17d8 ↔ a00ec1c (tree identik).
+
 ## v195 — player berhenti di ujung klip terakhir + geser durasi + snap magnet (perintah Patria 2 Nov 18:38 + screenshot)
 
 - Laporan Patria: (1) player harus otomatis berhenti di ujung track
