@@ -2528,7 +2528,7 @@ dokumen lama yang dipakai.
 - Rig-ve2 §18 baru (4 cek): Tambah ke Timeline HF ikut menambah aset; backfill klip yatim menjadi aset; aset backfill tampil di list; dedup tidak menggandakan aset.
 - Gerbang penuh lolos: vite build, 14 rig ALL PASSED, root build + gate-test 14 grup, svelte-check 0 error/26 warning, cargo fmt+check+check --tests 0 (0 warning/error), scan kredensial nihil, ledger md5 tetap d542428fe9901fbd417e098e9249d4b6.
 - Kode lokal 2dad639 ↔ remote f8a666c (tree identik).
-- LIVE: (diisi commit log-LIVE sesudah deploy)
+- LIVE: PID 46013; md5 JS 158df6fba9f6f52a96d76c5b055a377f lokal == MacBook; bukti backfill di state live: ASSETS 0 -> 1 ('HyperFrames 10s', Video, dur 10, src hf-1793593163508/out.mp4).
 
 
 ## v186 — pratinjau isi asli + rasio proporsional (perintah Patria 2 Nov 12:59 + 13:06)
