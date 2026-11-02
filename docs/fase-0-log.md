@@ -2521,6 +2521,46 @@ dokumen lama yang dipakai.
 - Gerbang: vite build lolos, 13 rig lolos, root tsc bersih, gate-test 14 grup lolos, scan kredensial lolos (hanya false positive kb-ask-del), ledger md5 tetap d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error (26 warning a11y pra-ada), cargo fmt/check/check --tests 0 warning/error.
 - Push kode: lokal aa2f208 ↔ remote 476092b (tree identik).
 
+## v195 — player berhenti di ujung klip terakhir + geser durasi + snap magnet (perintah Patria 2 Nov 18:38 + screenshot)
+
+- Laporan Patria: (1) player harus otomatis berhenti di ujung track
+  terakhir (sekarang terus berjalan walau sudah tidak ada track); (2)
+  geser durasi dari ujung track — kiri mengecilkan, kanan memanjangkan
+  kembali sampai durasi asli; gambar/tulisan tanpa batas maksimal/minimal;
+  (3) snap antar track menempel ke ujung track sebelumnya, on/off lewat
+  tombol magnet.
+- PERBAIKAN (1): ve2PlayToggle kini berhenti di ve2End (ujung klip
+  terakhir, track apa pun), bukan di ve2Total yang minimal 30 dtk.
+  Itulah sebab kasus live: klip 13,8 dtk, playhead jalan sampai 30 dtk.
+  Tanpa klip -> Putar tidak jalan; playhead sudah lewat ujung -> putar
+  ulang dari 0. §23 rig diperbarui ke perilaku baru.
+- PERBAIKAN (2): grip di ujung kanan tiap bar (kursor ew-resize, pointer
+  event, stopPropagation dari seret-pindah v192; menekan grip juga memilih
+  klip). Cap = durasi aset dari probe; gambar/teks bebas; klip sintetis
+  atau asetnya sudah dihapus juga bebas (tidak ada acuan asli). Lantai
+  teknis 0,1 dtk supaya bar tidak hilang/tidak bisa dipilih; kolom
+  Inspector tetap memakai lantai 0,5 dtk yang sudah ada. Cap yang sama
+  berlaku di kolom Durasi Inspector (§3 rig tetap lolos karena klip
+  fixture tanpa aset -> bebas).
+- PERBAIKAN (3): tombol magnet di bar editor track (aktif default,
+  tersimpan di state ve2, aria-pressed + hijau saat aktif; warna lewat
+  style inline supaya tidak dikacaukan btn-done yang menempel permanen).
+  Aktif -> awal/akhir klip yang digeser/dipindah menempel ke ujung klip
+  lain di TRACK YANG SAMA dalam ambang 0,5 dtk (keputusan: lintas track
+  tidak ikut — track yang tumpang tindih waktu memang normal berdampingan;
+  bila Patria mau snap lintas track, kabari). Snap perilaku butuh layout
+  sehingga tidak bisa dibuktikan jsdom — batas yang sama seperti posisi
+  drop v188/v189; yang teruji di rig: tombol + persistensi + grip + cap
+  + berhenti playback (klip 0,3 dtk berhenti sendiri, bukan di 30 dtk).
+- i18n +2 (ve2.snap, ve2.resize) -> 1110/bahasa, 0 duplikat. svelte 0/21
+  (grip button tanpa aria-label sempat +4 warning a11y_consider_explicit
+  _label -> diperbaiki dengan aria-label, bukan svelte-ignore).
+- Gerbang penuh lolos (/tmp/gate-v195/): vite build, 14 rig, root tsc,
+  gate-test 14 grup ALL PASSED, scan 0, ledger md5 tetap
+  d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
+  (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
+- Kode menyusul pasangan SHA sesudah push; LIVE menyusul sesudah deploy.
+
 ## v194 — perbaiki sintaks ffprobe show_entries (laporan Patria 2 Nov 18:33)
 
 - Laporan Patria: aset masih gagal ditambah — pesan BARU v193: "ffprobe
