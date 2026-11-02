@@ -2563,7 +2563,7 @@ dokumen lama yang dipakai.
   d542428fe9901fbd417e098e9249d4b6, svelte-check 0 error / 21 warning
   (baseline), cargo fmt + check + check --tests 0, Cargo.lock tidak termutasi.
 - Kode 02d17d8 ↔ a00ec1c (tree identik).
-- LIVE 2 Nov ~19:20: deploy mh-build196.sh OK (MH_BUILD196_OK); HEAD MacBook
+- LIVE 2 Nov ~19:13: deploy mh-build196.sh OK (MH_BUILD196_OK); HEAD MacBook
   508a518; PID 58233; md5 dist JS f2fbc451b914d176eff5c2719990fdbb lokal ==
   MacBook; marker 'calc(78px' 2x di bundle MacBook. App live = v196.
 
