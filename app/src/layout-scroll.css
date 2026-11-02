@@ -782,3 +782,7 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
    Dipakai ulang gaya head seksi tak terjadwal; item hanya jarak. */
 .soc-remind { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--t-line, #e5e7eb); }
 .soc-remind-item { margin: 8px 0; }
+
+/* v206: log panel Riset Live (Search view). */
+#rsLog { font-size: 13px; color: #555; }
+#rsLog div { margin: 2px 0; }

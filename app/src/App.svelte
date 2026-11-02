@@ -10,6 +10,7 @@
   import { initImageFlow, imgRefreshUI } from "./lib/image-flow.js";
   import { initBrand, brandRefreshUI } from "./lib/brand.js";
   import { initBatchFlow, batchRefreshUI } from "./lib/batch-flow.js";
+  import { initResearchBrowser } from './lib/research-browser.js';
   import { readImgSpend } from "./lib/image-api.js";
   import { assFromCaptions, compileTimeline, validateSequence } from "./lib/video.js";
   import { readVideoSpend, omniGenerateClip, omniPriceUsd, mimeForB64, b64FromBytes } from "./lib/omni-gen.js";
@@ -67,6 +68,7 @@
     initImageFlow();
     initBrand();
     initBatchFlow();
+    initResearchBrowser();
     (window as unknown as Record<string, unknown>).refreshImgSpend = () => { imgSpend = readImgSpend(); };
     (window as unknown as Record<string, unknown>).refreshLiveCost = () => { liveCost = readLiveCost(); imgSpend = readImgSpend(); videoSpend = readVideoSpend(); };
     (window as unknown as Record<string, unknown>).veSetPlan = (t: string) => { ve2Plan = t; ve2SaveState(); };
@@ -1062,6 +1064,17 @@
         <input type="text" id="searchInput" placeholder={t('search.ph', lang)} oninput={() => { doSearch() }}>
         <p id="searchCount" style="color:#555"></p>
         <div id="searchResults"></div>
+        <div class="ms-card" style="margin-top:16px">
+          <h3>{t('rs.title', lang)}</h3>
+          <p class="se-note">{t('rs.note', lang)}</p>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="rsQuery" placeholder={t('rs.ph', lang)} style="flex:1">
+            <button class="btn btn-primary" id="rsRun">{t('rs.run', lang)}</button>
+          </div>
+          <p id="rsStatus" style="color:#555"></p>
+          <div id="rsLog"></div>
+          <div id="rsReport" style="white-space:pre-wrap;margin-top:8px"></div>
+        </div>
       </div>
     </div>
     <div class="view" id="view-kanban">

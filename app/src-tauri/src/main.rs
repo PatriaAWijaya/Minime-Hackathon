@@ -4,6 +4,7 @@ mod audio;
 mod browser;
 mod hyperframes;
 mod image;
+mod research;
 mod sherpa;
 mod social;
 mod video;
@@ -67,6 +68,8 @@ fn main() {
             image::image_save,
             image::image_read,
             image::image_delete,
+            research::research_search,
+            research::research_fetch,
             audio::audio_save,
             audio::audio_read,
             audio::audio_delete,

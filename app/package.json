@@ -32,7 +32,8 @@
     "rig:graph": "node tests/rig-graph.js",
     "rig:audit": "node tests/rig-audit.js",
     "rig:ve2": "node tests/rig-ve2.js",
-    "rig:video": "node tests/rig-video.js"
+    "rig:video": "node tests/rig-video.js",
+    "rig:research": "node tests/rig-research.js"
   },
   "type": "module",
   "version": "0.1.0"
