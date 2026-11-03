@@ -2551,7 +2551,7 @@ Perbaikan alur lain (temuan audit subagent, semua diimplementasikan di v235):
 - TIDAK masuk v235 (menunggu vonis): tampilkan sampel caption di ringkasan gerbang 3 plan30 (perubahan UI); perluasan aturan tombol ke jalur utama — DIPUTUSKAN Patria 14:16 ("perluas ke jalur utama juga") → v236.
 
 SHA: kode lokal ac11ae3 ↔ remote 54fc71f (tree identik). Gate 9/9; loop 14 rig exit=0; svelte-check 0 error/21 warning (baseline); i18n 1277/bahasa, 0 duplikat; ledger md5 tidak berubah (d542428fe9901fbd417e098e9249d4b6); cargo 0 warning.
-LIVE 3 Nov ~14:25 WIB: deploy mh-build235.sh — MH_BUILD235_OK; HEAD MacBook <LOG_SHA> (commit log); PID <PID>; md5 dist JS/CSS lokal == MacBook. App LIVE = v235. Konfirmasi live Patria untuk v235 BELUM ada (uji live yang disarankan: ulangi alur cafe yang sama — judul harus tetap "cafe", Body terisi paragraf, tombol hasil hanya di bubble Prime; lalu ulangi generate soc yang gagal → tombol Coba lagi mengulang tanpa kehilangan state).
+LIVE 3 Nov ~14:25 WIB: deploy mh-build235.sh — MH_BUILD235_OK; HEAD MacBook 3715bbc (commit log); PID 16448; md5 dist JS/CSS lokal == MacBook. App LIVE = v235. Konfirmasi live Patria untuk v235 BELUM ada (uji live yang disarankan: ulangi alur cafe yang sama — judul harus tetap "cafe", Body terisi paragraf, tombol hasil hanya di bubble Prime; lalu ulangi generate soc yang gagal → tombol Coba lagi mengulang tanpa kehilangan state).
 
 ## v234 — Tombol opsi chat yang dipilih jadi hijau di tema terang (perintah Patria 13:40; v233 DITAHAN — lihat bawah)
 
