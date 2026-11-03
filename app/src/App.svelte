@@ -1200,6 +1200,7 @@
           <div class="se-group" id="img-slides-wrap"><label>{t('img.slides', lang)}<select id="img-slides" class="se-field">
             <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
           </select></label></div>
+          <div class="se-group" id="img-tpl-wrap"><label><input type="checkbox" id="img-tpl-mh"> {t('img.tpl.mh', lang)}</label><p class="se-note">{t('img.tpl.mh.note', lang)}</p></div>
           <div class="se-group"><label><input type="checkbox" id="img-textfree" checked> {t('img.textfree', lang)}</label></div>
           <div id="img-preview" class="se-note"></div>
           <div class="se-group"><button id="img-generate" class="se-btn">{t('img.generate', lang)}</button> <button id="img-approve" class="se-btn2">{t('img.approve', lang)}</button> <button id="img-load-script" class="se-btn2">{t('img.loadscript', lang)}</button> <button id="img-clear" class="se-btn2">{t('img.clear', lang)}</button></div>

@@ -38,8 +38,8 @@ import { esc } from './esc.js';
 const FLOW_LS = 'minime.imageFlow';
 
 type SbPanel = { shot: string; visual: string; action: string; vo: string; transition: string; duration: number };
-type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number; output: string; duration: number; scenes: number; slides: number; title: string; subtitle: string; body: string; listicle: string; header: string; footer: string; palette: string; provider: string; panels: SbPanel[] | null; panelsBrief: string | null };
-const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0, output: 'poster', duration: 30, scenes: 4, slides: 6, title: '', subtitle: '', body: '', listicle: '', header: '', footer: '', palette: '', provider: 'meta', panels: null, panelsBrief: null };
+type FlowState = { brief: string; ratio: string; style: string; textfree: boolean; n: number; bulk: string[] | null; bulkActive: number; output: string; duration: number; scenes: number; slides: number; title: string; subtitle: string; body: string; listicle: string; header: string; footer: string; palette: string; provider: string; panels: SbPanel[] | null; panelsBrief: string | null; mhTpl: boolean };
+const DEFAULTS: FlowState = { brief: '', ratio: '1:1', style: 'product photography', textfree: true, n: 1, bulk: null, bulkActive: 0, output: 'poster', duration: 30, scenes: 4, slides: 6, title: '', subtitle: '', body: '', listicle: '', header: '', footer: '', palette: '', provider: 'meta', panels: null, panelsBrief: null, mhTpl: false };
 let state: FlowState = { ...DEFAULTS };
 
 
@@ -105,6 +105,7 @@ function loadState(): void {
           duration: Number.isInteger(p.duration) && (p.duration as number) >= 1 ? (p.duration as number) : 1,
         })) : null,
         panelsBrief: typeof o.panelsBrief === 'string' ? o.panelsBrief : null,
+        mhTpl: o.mhTpl === true,
       };
     }
   } catch { state = { ...DEFAULTS }; }
@@ -408,6 +409,19 @@ function renderSbPanels(): void {
   renderSbTotal();
 }
 
+// v173: system lock pola carousel @marketingharry (vonis Patria 3 Nov 08:18:
+// pola saja, bukan salinan mentah 11 slide — peran slide mengikuti jumlah
+// slide app 6-10; rasio pola 4:5; text overlay WAJIB sehingga klausa
+// tanpa-teks dibuang saat preset aktif).
+const MH_LOCK = 'same extra-bold sans typography, same bright red accent, same black/white base, same recurring motif, portrait 4:5, editorial social media style, pure black cover background on the cover slide, clean white background on content and closing slides, red keywords, white words on red badges, grey handwritten annotations with lines and dots, recurring retro CRT TV and close-up eye, spiral notebook and phone mockup motifs';
+function mhSlideSuffix(i: number, count: number): string {
+  if (!state.mhTpl) return '';
+  const role = i === 0 ? 'cover slide: bold hook statement with metaphor visual'
+    : i === count - 1 ? 'closing slide: restate thesis with SHARE button'
+    : 'content slide';
+  return ', ' + MH_LOCK + ', ' + role;
+}
+
 async function generate(): Promise<void> {
   const brief = state.brief.trim();
   if (!brief) { setNote(tr('img.err.brief')); return; }
@@ -421,7 +435,13 @@ async function generate(): Promise<void> {
   // pakai slides. Tiap gambar diminta terpisah (n=1) agar prompt
   // scene/slide-nya berbeda — bukan n varian dari satu prompt.
   const count = state.output === 'poster' ? state.n : state.output === 'storyboard' ? state.scenes : state.slides;
-  const base = sentPrompt();
+  const baseRaw = sentPrompt();
+  // v173: preset pola marketingharry — paksa rasio 4:5 + buang klausa
+  // tanpa-teks (pola WAJIB text overlay) hanya untuk carousel preset.
+  const base = state.output === 'carousel' && state.mhTpl
+    ? baseRaw.replace(', no text, no words, no letters, no watermark', '')
+    : baseRaw;
+  const ratio = state.output === 'carousel' && state.mhTpl ? '4:5' : state.ratio;
   setNote(tr('img.status.gen', { n: count }));
   try {
     genBrief = brief;
@@ -458,14 +478,14 @@ async function generate(): Promise<void> {
     for (let i = 0; i < count; i++) {
       const prompt = state.output === 'poster' ? base
         : state.output === 'storyboard' ? sbPanelPrompt(i, count, (panels as SbPanel[])[i])
-        : base + `, slide ${i + 1} of ${count}`;
+        : base + mhSlideSuffix(i, count) + `, slide ${i + 1} of ${count}`;
       const label = state.output === 'poster' ? 'Poster'
         : state.output === 'storyboard' ? `Scene ${i + 1}/${count}`
         : `Slide ${i + 1}/${count}`;
       const shot = state.output === 'storyboard' ? ((panels as SbPanel[])[i]?.visual || '') : '';
       const imgs = state.provider === 'google'
-        ? await googleGenerateImage(key, prompt, GOOGLE_IMG_ASPECT[state.ratio] || '1:1')
-        : (await metaGenerateImage(key, prompt, 1, RATIO_SIZE[state.ratio])).map((b64) => ({ b64, mime: 'image/webp' }));
+        ? await googleGenerateImage(key, prompt, GOOGLE_IMG_ASPECT[ratio] || '1:1')
+        : (await metaGenerateImage(key, prompt, 1, RATIO_SIZE[ratio])).map((b64) => ({ b64, mime: 'image/webp' }));
       for (const it of imgs) {
         const ext = it.mime === 'image/png' ? 'png' : it.mime === 'image/jpeg' ? 'jpg' : 'webp';
         next.push({ b64: it.b64, url: 'data:' + it.mime + ';base64,' + it.b64, name: `img-${ts}-${next.length}.${ext}`, label, prompt, shot });
@@ -613,6 +633,8 @@ function syncForm(): void {
   if (scenes) scenes.value = String(state.scenes);
   const slides = el('img-slides') as HTMLSelectElement | null;
   if (slides) slides.value = String(state.slides);
+  const tpl = el('img-tpl-mh') as HTMLInputElement | null;
+  if (tpl) tpl.checked = state.mhTpl;
   const title = el('img-title') as HTMLInputElement | null;
   if (title) title.value = state.title;
   const subtitle = el('img-subtitle') as HTMLInputElement | null;
@@ -644,6 +666,7 @@ function renderImgOutput(): void {
   vis('img-scenes-wrap', state.output === 'storyboard');
   vis('img-sb-wrap', state.output === 'storyboard');
   vis('img-slides-wrap', state.output === 'carousel');
+  vis('img-tpl-wrap', state.output === 'carousel');
 }
 
 function bind<T extends HTMLElement>(id: string, ev: string, fn: (e: T) => void): void {
@@ -762,6 +785,7 @@ export function initImageFlow(): void {
     renderSbTotal();
   });
   bind<HTMLSelectElement>('img-slides', 'change', (e) => { state.slides = Number(e.value); saveState(); });
+  bind<HTMLInputElement>('img-tpl-mh', 'change', (e) => { state.mhTpl = e.checked; if (state.mhTpl) { state.textfree = false; const tf = el('img-textfree') as HTMLInputElement | null; if (tf) tf.checked = false; } saveState(); });
   bind<HTMLInputElement>('img-title', 'input', (e) => { state.title = e.value; saveState(); renderPreview(); });
   bind<HTMLInputElement>('img-subtitle', 'input', (e) => { state.subtitle = e.value; saveState(); renderPreview(); });
   bind<HTMLTextAreaElement>('img-body', 'input', (e) => { state.body = e.value; saveState(); renderPreview(); });

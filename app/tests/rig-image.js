@@ -486,6 +486,34 @@ try {
   check('v203: imgSetStructured mengatur rasio + output', (document.getElementById('img-ratio')?.value || '') === '4:5', document.getElementById('img-ratio')?.value || '');
   check('v203: pratinjau prompt memuat Body', (document.getElementById('img-preview')?.textContent || '').includes('Body: Paragraf body uji.'), (document.getElementById('img-preview')?.textContent || '').slice(0, 120));
 
+  // 15. v173: preset pola carousel @marketingharry (pola saja, cap tetap 6-10).
+  await setSel('img-output', 'carousel');
+  check('v173: toggle template tampil di Carousel', disp('img-tpl-wrap') !== 'none', disp('img-tpl-wrap'));
+  const tpl = document.getElementById('img-tpl-mh');
+  check('v173: preset default mati', tpl && tpl.checked === false, String(tpl?.checked));
+  await setSel('img-slides', '8');
+  document.getElementById('img-brief').value = 'uji pola mh';
+  document.getElementById('img-brief').dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(100);
+  tpl.checked = true;
+  tpl.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  await tick(100);
+  check('v173: mengaktifkan preset mematikan Tanpa teks', document.getElementById('img-textfree').checked === false, String(document.getElementById('img-textfree').checked));
+  const promptsBefore = imgPrompts.length;
+  document.getElementById('img-generate').click();
+  await waitFor(() => imgPrompts.length >= promptsBefore + 8, '8 prompt carousel preset', 120);
+  const mh = imgPrompts.slice(promptsBefore);
+  check('v173: 8 prompt sesuai jumlah slide (bukan 11)', mh.length === 8, String(mh.length));
+  check('v173: prompt slide 1 memuat lock + peran cover + 4:5', mh[0].includes('bright red accent') && mh[0].includes('cover slide') && mh[0].includes('portrait 4:5') && mh[0].includes('slide 1 of 8'), mh[0].slice(0, 200));
+  check('v173: prompt slide tengah memuat peran content', mh[3].includes('content slide') && mh[3].includes('slide 4 of 8'), mh[3].slice(0, 200));
+  check('v173: prompt slide akhir memuat peran closing + SHARE', mh[7].includes('closing slide') && mh[7].includes('SHARE') && mh[7].includes('slide 8 of 8'), mh[7].slice(0, 200));
+  check('v173: preset tidak memuat klausa tanpa-teks', mh.every((x) => !x.includes('no text, no words')), mh[0].slice(0, 200));
+  tpl.checked = false;
+  tpl.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  await tick(100);
+  await setSel('img-output', 'poster');
+  check('v173: toggle template sembunyi di Poster', disp('img-tpl-wrap') === 'none', disp('img-tpl-wrap'));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-image exception :: ' + (e && e.stack ? e.stack : e));
