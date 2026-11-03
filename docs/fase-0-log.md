@@ -2544,6 +2544,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - Rig: rig-vs cek embed v226 (tagName BUTTON + btn-connected saat Terhubung); rig-sherpa cek sesudah 'status Sherpa ada' (klik Periksa status -> BUTTON + btn-connected + teks persis 'Terhubung'); rig-audit §6 Ollama 2 cek (sukses BUTTON+btn-connected, gagal badge); rig-audit §8 Planner (klik baris kanal LinkedIn terseed -> detail sidebar memuat button.btn-connected 'Terhubung'). Loop 14 rig ALL PASSED (~/workspace/riglogs-v226/loop.log); gerbang GATE-V226 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271).
 - SHA: kode lokal 9b1f5a9 <-> remote da37b15 (tree identik, pola push_rebased.py).
 - Catatan live: BELUM dikonfirmasi live (uji disarankan: buka tab Voice — status VoiceStudio + Sherpa tampil tombol hijau 'Terhubung'; Settings — kunci terhubung sudah hijau; Planner — pilih kanal terhubung di sidebar, statusnya tombol hijau).
+- LIVE 3 Nov 2026 ~11:01 WIB: deploy mh-build226 OK, HEAD MacBook b451e63 (= remote log), PID 4584, md5 dist JS lokal == MacBook (cbfee86862d1c931ef44cb969afe95df, byte-identik), marker: 'btn-connected' 4 kemunculan di bundle JS live + aturan '.vs-bar #vsEmbedStatus.btn-connected' di CSS dist. Konfirmasi ketuk live Patria BELUM ada.
 
 ## v225 — Hapus paragraf Sherpa + daftar Model lokal (perintah Patria 10:39)
 
