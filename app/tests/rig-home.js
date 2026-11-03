@@ -484,11 +484,25 @@ try {
   const lightBlock = (cssText.match(/\[data-theme=light\]\{([^}]*)\}/) || [])[1] || '';
   const darkBlock = (cssText.match(/\[data-theme=dark\]\{([^}]*)\}/) || [])[1] || '';
   check('v221: light bg kaca putih kebiruan', lightBlock.includes('--t-bg: #F4F8FF'), lightBlock.slice(0, 80));
-  check('v221: light aksen bluish white + teks aksen gelap', lightBlock.includes('--t-accent: #8FB8E8') && lightBlock.includes('--t-accent-grad: linear-gradient(135deg, #C9E0F7, #8FB8E8)') && lightBlock.includes('--t-accent-text: #1E3A5F'), lightBlock.slice(0, 200));
+  check('v227: light aksen bluish white + teks aksen HITAM (ganti v221)', lightBlock.includes('--t-accent: #8FB8E8') && lightBlock.includes('--t-accent-grad: linear-gradient(135deg, #C9E0F7, #8FB8E8)') && lightBlock.includes('--t-accent-text: #000000'), lightBlock.slice(0, 200));
   check('v221: ungu hilang dari blok light', !lightBlock.includes('#9333EA') && !lightBlock.includes('#D946EF') && !lightBlock.includes('#FBF5FF'), lightBlock.slice(0, 120));
   check('v221: blok gelap TIDAK berubah (violet glass)', darkBlock.includes('--t-bg: #0E0718') && darkBlock.includes('--t-accent: #8E7CC3'), darkBlock.slice(0, 80));
   check('v221: tombol gradien di light bertinta gelap', /\[data-theme=light\] \.btn:not\(\.btn-done\):not\(\.btn-connected\)[^{]*\{color:var\(--t-accent-text\)\}/.test(cssText), '');
-  check('v221: panah kirim putih di light', /\[data-theme=light\] \.pill-send svg\{stroke:#fff\}/.test(cssText), '');
+  check('v227: panah kirim HITAM di light (ganti v221)', /\[data-theme=light\] \.pill-send svg\{stroke:#000\}/.test(cssText), '');
+
+  // 26. v227: tema terang — ikon & teks HITAM kontras + gradient
+  // bluish white tetap. Variabel light hitam; teks inline hardcode
+  // jadi hitam (blanket !important, hanya light); ikon SVG abu-abu
+  // jadi hitam; .msg-menu light putih + teks hitam; teks nyaris-
+  // hitam tombol hijau/bubble jadi hitam; tema gelap tetap utuh.
+  check('v227: variabel light text/muted/faint hitam', lightBlock.includes('--t-text: #000000') && lightBlock.includes('--t-muted: #000000') && lightBlock.includes('--t-faint: #000000'), lightBlock.slice(0, 200));
+  check('v227: gradient bluish white TIDAK berubah', lightBlock.includes('--t-accent-grad: linear-gradient(135deg, #C9E0F7, #8FB8E8)'), '');
+  check('v227: teks inline hardcode jadi hitam di light', /\[data-theme=light\] \[style\*="color:#a1a1a1"\][^{]*\{color:#000!important\}/.test(cssText), '');
+  check('v227: ikon SVG abu-abu jadi hitam di light', /\[stroke="#a1a1a1"\]\{stroke:#000\}/.test(cssText), '');
+  check('v227: teks abu stylesheet jadi hitam di light', /\[data-theme=light\] \.lib-meta,[\s\S]*?\.banner b,[^{]*\{color:#000\}/.test(cssText), '');
+  check('v227: tombol hijau/bubble user teks hitam di light', /\[data-theme=light\] \.btn-done,[^{]*\{color:#000\}/.test(cssText), '');
+  check('v227: msg-menu light putih + teks hitam', /\[data-theme=light\] \.msg-menu\{background:#fff;color:#000/.test(cssText), '');
+  check('v227: blok gelap tetap TIDAK berubah', darkBlock.includes('--t-text: #E9E2F2') && darkBlock.includes('--t-accent-text: #FFFFFF'), darkBlock.slice(0, 80));
 
 
 } catch (e) {

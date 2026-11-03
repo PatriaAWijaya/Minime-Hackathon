@@ -536,10 +536,10 @@ h3 { font-size: 18px; }
   --t-panel: rgba(255, 255, 255, 0.72); --t-panel2: #EDF3FC;
   --t-glass: rgba(255, 255, 255, 0.72);
   --t-border: #DCE8F7; --t-border-strong: #B9D2F0;
-  --t-text: #1E2A3A; --t-muted: #5B6B82; --t-faint: #9FB3CC;
+  --t-text: #000000; --t-muted: #000000; --t-faint: #000000;
   --t-accent: #8FB8E8; --t-accent2: #C9E0F7; --t-accent-strong: #4A7FC1; --t-accent-soft: #E4EEFB;
   --t-accent-grad: linear-gradient(135deg, #C9E0F7, #8FB8E8);
-  --t-accent-text: #1E3A5F;
+  --t-accent-text: #000000;
   --t-canvas-bg: #EAF1FB; --t-dot: rgba(143, 184, 232, 0.28);
   --t-input-bg: #FFFFFF; --t-hover-bg: #E4EEFB;
 }
@@ -806,11 +806,14 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
    DIKECUALIKAN supaya hijau selesai + teks gelapnya tidak berubah.
    .msg-menu (popup ungu gelap + teks putih) SENGAJA tidak diubah:
    masih terbaca dan bukan gradien. Panah kirim (SVG stroke #262626)
-   dipaksa putih di light supaya terbaca di atas biru accent-strong. */
+   dipaksa putih di light supaya terbaca di atas biru accent-strong.
+   CATATAN v227: panah itu diubah jadi hitam (lihat blok v227) +
+   .msg-menu di light jadi putih + teks hitam, per perintah ikon &
+   teks hitam di tema terang. */
 [data-theme="light"] .btn:not(.btn-done):not(.btn-connected), [data-theme="light"] .se-btn, [data-theme="light"] .se-btn2, [data-theme="light"] .filters button:not(.active), [data-theme="light"] [data-kbtab]:not(.active), [data-theme="light"] button[id^="ms-tabbtn-"]:not(.active), [data-theme="light"] button[id^="cp-tabbtn-"]:not(.active), [data-theme="light"] .rec-btn, [data-theme="light"] .chat-act, [data-theme="light"] .img-tab.active { color: var(--t-accent-text); }
 [data-theme="light"] .btn-primary { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 14px rgba(74, 127, 193, 0.30); }
 [data-theme="light"] .soc-composer .btn-primary, [data-theme="light"] #socCreatePost { background: var(--t-accent-strong); border-color: var(--t-accent-strong); color: var(--t-accent-text); }
-[data-theme="light"] .pill-send svg { stroke: #FFFFFF; }
+[data-theme="light"] .pill-send svg { stroke: #000000; }
 
 /* v226: status koneksi yang terhubung = tombol hijau (perintah Patria).
    Override ini perlu spesifisitas lebih tinggi karena .vs-bar
@@ -820,3 +823,64 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
    sengaja TANPA class btn supaya btnDoneWire tidak menandainya
    btn-done permanen (yang akan salah saat status berubah). */
 .vs-bar #vsEmbedStatus.btn-connected { color: #262626; }
+
+/* v227: tema terang — ikon & teks HITAM kontras (perintah Patria
+   3 Nov 2026 11:31) + perhatikan gradient bluish white (11:33).
+   Variabel light --t-text/--t-muted/--t-faint/--t-accent-text sudah
+   jadi #000000 di blok [data-theme="light"] — itu memperbaiki semua
+   teks berbasis variabel (sidebar, label, meta, badge, placeholder)
+   dan SEMUA teks di atas gradient bluish white (gradien TIDAK diubah:
+   tetap linear-gradient(135deg, #C9E0F7, #8FB8E8); teks hitam di
+   atasnya kontras, termasuk tombol komposer yang latarnya
+   accent-strong #4A7FC1).
+   Blok ini menangani sisanya yang hardcode (tidak ikut variabel):
+   - teks inline App.svelte (style="color:#...") TIDAK bisa dikalahkan
+     aturan stylesheet biasa — pakai !important, HANYA di light,
+     tema gelap TIDAK tersentuh. background:#EB87B4 (avatar) TIDAK
+     kena karena selektornya mensyaratkan "color:#EB87B4".
+   - ikon SVG ber-stroke abu-abu (atribut presentasi kalah oleh CSS).
+   - teks abu-abu stylesheet (.lib-*, picker agen baru, Graph, Kanban).
+   - .conn/.cur-label/.banner b (teks aksen pink/biru pucat).
+   - teks nyaris-hitam #262626 di tombol hijau/bubble user -> hitam.
+   - .msg-menu di light jadi putih + teks hitam (menggantikan ungu
+     gelap + teks putih yang sengaja dibiarkan di v221).
+   SENGAJA tetap BUKAN hitam (kontrasnya justru dari warna asal):
+   × putih di atas chip gelap (.vg-refslot-x, .ve2-thumb-x), huruf
+   putih avatar (.av/.agent-av/.detail-avatar) di atas latar warna
+   agen, teks putih .track .bar di atas klip berwarna, latar hijau
+   tombol selesai, dot/border/gradien aksen. */
+[data-theme="light"] [style*="color:#a1a1a1"],
+[data-theme="light"] [style*="color:#555"],
+[data-theme="light"] [style*="color:#EB87B4"],
+[data-theme="light"] [style*="color:#A6EBB1"] { color: #000000 !important; }
+[data-theme="light"] [stroke="#a1a1a1"] { stroke: #000000; }
+[data-theme="light"] .lib-filters label,
+[data-theme="light"] .lib-filters #libFilterCount,
+[data-theme="light"] .lib-meta,
+[data-theme="light"] .vs-bar #vsEmbedStatus,
+[data-theme="light"] .plus-ic,
+[data-theme="light"] .plus-sub,
+[data-theme="light"] .pick-top small,
+[data-theme="light"] .pick-desc,
+[data-theme="light"] .na-cancel,
+[data-theme="light"] .na-sug-card small,
+[data-theme="light"] .chan-x,
+[data-theme="light"] .g-x,
+[data-theme="light"] .g-row label,
+[data-theme="light"] .g-next,
+[data-theme="light"] .g-note,
+[data-theme="light"] .graph-head-btns #graphZoomLabel,
+[data-theme="light"] .kb-dlg label,
+[data-theme="light"] .ntrig-next,
+[data-theme="light"] .g-legend,
+[data-theme="light"] .ve2-transport,
+[data-theme="light"] .conn,
+[data-theme="light"] .cur-label,
+[data-theme="light"] .banner b { color: #000000; }
+[data-theme="light"] .btn-done,
+[data-theme="light"] .btn-connected,
+[data-theme="light"] .se-btn2.done,
+[data-theme="light"] .msg.user .bubble { color: #000000; }
+[data-theme="light"] .msg-menu { background: #FFFFFF; color: #000000; border-color: #DCE8F7; box-shadow: 0 4px 16px rgba(30, 42, 58, 0.18); }
+[data-theme="light"] .msg-menu button { color: #000000; }
+[data-theme="light"] .msg-menu button:hover { background: rgba(0, 0, 0, 0.06); }
