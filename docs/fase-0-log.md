@@ -2529,6 +2529,15 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v216 — Hapus menu Table dan List di Kanban (perintah Patria 3 Nov 2026 08:38)
+
+- Perintah: "Menu Table dan List di Kanban tidak diperlukan, hapus".
+- Yang dihapus (app/src/App.svelte + app/src/lib/v5logic.js + app/src/lib/i18n.ts): tombol tab Table + List di bar Kanban (tombol Kanban dipertahankan); cabang render table + list di renderKanban; variabel kanbanTab; handler klik [data-kbtab]; helper kbOpenAttrs (hanya dipakai cabang yang dihapus).
+- Yang DIPERTAHANKAN: tombol Kanban (satu-satunya view), kolom-kolom board, drag & drop, kartu + detail 2x klik, tombol "Add another list" (fitur tambah KOLOM board, bukan menu List), select proyek + filter.
+- i18n: kunci word.table/word.list (hanya dipakai 2 tombol itu) dihapus → 1270/bahasa, 0 duplikat.
+- Uji: rig-chat §v216 (3 cek: Table tidak ada, List tidak ada, Kanban tetap ada) — ALL PASSED; build + svelte-check 0 error/21 warning; loop 14 rig ALL PASSED; gerbang 9/9.
+- Pasangan SHA kode: lokal 0d5fedc ↔ remote db2fb49 (tree identik).
+
 ## v173 — Preset template pola carousel @marketingharry (vonis Patria 3 Nov 2026 08:18: pola saja, bukan salinan mentah)
 
 - Vonis: "v173 secara teknis sudah oke, untuk template marketing harry yang lebih sampai 11 slide, cukup diambil polanya saja, bukan diaplikasikan mentah-mentah". Konsekuensi: cap app TETAP 6–10 slide (tidak naik ke 12); widget batas slide 1 Nov (12 vs 10) tersalip vonis ini.
