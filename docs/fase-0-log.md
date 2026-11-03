@@ -2529,6 +2529,22 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v226 — Status koneksi terhubung jadi tombol hijau Terhubung (perintah Patria 10:48 + screenshot 10:50)
+
+- Perintah: bagian yang membutuhkan koneksi dengan aplikasi/model AI, bila sudah terhubung, statusnya tampil sebagai tombol bertuliskan Terhubung warna hijau. Screenshot Patria 10:50 mengonfirmasi keadaan sebelum: pill Terhubung di bar VoiceStudio masih abu-abu gelap (aturan .b-ok belakangan menimpa hijau .b-ok awal) — bukan tombol hijau.
+- Diubah (badge/span -> button.btn-connected saat TERHUBUNG; status belum-terhubung tetap badge seperti semula; tombol status display-only, tanpa onclick):
+  - VoiceStudio: #vsEmbedStatus span -> button (App.svelte); voicestudio.ts vsEmbedCheck: online -> className 'btn-connected' (dulu 'badge b-ok'), offline tetap 'badge b-warn'; teks tetap tr vs.embed.online 'Terhubung'.
+  - Sherpa: #sherpaStatus span -> button; sherpa.ts sherpaRenderStatus: installed -> teks 'Terhubung' (tr vs.embed.online) + className 'btn-connected' (dulu 'Terpasang' + badge); missing/error tetap 'badge b-warn'. Kunci sherpa.status.ready ('Terpasang') kini tak terpakai di render ini — DIBIARKAN (bukan dihapus tanpa grep pemakai lain).
+  - Ollama: #ollamaNote span -> button; v5logic.js ollamaCheck: sukses -> className 'btn-connected' (teks tetap 'Terhubung: {n} model.'), gagal -> 'badge b-warn'.
+  - Planner: social.js renderChannels: connected -> '<button class="btn-connected">' + tr soc.connected ('Terhubung') + label; disconnected tetap span.badge. Status kanal tampil di detail sidebar Planner saat kanal dipilih.
+  - TIDAK diubah: tombol kunci Settings (Gemini/Meta/ClassAI) sudah 'btn btn-connected' + teks 'TERHUBUNG' sejak lama (renderKeyButtons, chat.ts:113) — sudah sesuai perintah.
+- CSS: layout-scroll.css blok v226 di akhir file: '.vs-bar #vsEmbedStatus.btn-connected { color: #262626; }' — wajib karena aturan lama '.vs-bar #vsEmbedStatus { color: #a1a1a1; }' (spesifisitas lebih tinggi) mengalahkan .btn-connected untuk warna teks. Warna hijau akhir .btn-connected = #8ED694 (aturan kelompok :439, menimpa #A6EBB1 di :152) — hijau di tema gelap maupun terang. Tombol status sengaja TANPA class 'btn' supaya tidak kena btn-done permanen dari btnDoneWire.
+- Aksesibilitas: 3 tombol status kosong saat compile menaikkan warning svelte-check a11y_consider_explicit_label (+3 di atas baseline) — diperbaiki dengan aria-label berkunci i18n baru (vs.embed.status.label, sherpa.status.label, set.ollama.status.label; 9 baris). svelte-check kembali baseline 0 error 21 warning.
+- i18n: 1268 -> 1271/bahasa (3 kunci baru x 3 bahasa, 0 duplikat).
+- Rig: rig-vs cek embed v226 (tagName BUTTON + btn-connected saat Terhubung); rig-sherpa cek sesudah 'status Sherpa ada' (klik Periksa status -> BUTTON + btn-connected + teks persis 'Terhubung'); rig-audit §6 Ollama 2 cek (sukses BUTTON+btn-connected, gagal badge); rig-audit §8 Planner (klik baris kanal LinkedIn terseed -> detail sidebar memuat button.btn-connected 'Terhubung'). Loop 14 rig ALL PASSED (~/workspace/riglogs-v226/loop.log); gerbang GATE-V226 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271).
+- SHA: kode lokal 9b1f5a9 <-> remote da37b15 (tree identik, pola push_rebased.py).
+- Catatan live: BELUM dikonfirmasi live (uji disarankan: buka tab Voice — status VoiceStudio + Sherpa tampil tombol hijau 'Terhubung'; Settings — kunci terhubung sudah hijau; Planner — pilih kanal terhubung di sidebar, statusnya tombol hijau).
+
 ## v225 — Hapus paragraf Sherpa + daftar Model lokal (perintah Patria 10:39)
 
 - App.svelte tab Voice: paragraf sherpa.note ('Engine native berdampingan...') + h4 vs.models.title ('Model lokal') + ul #vsModelList DIHAPUS. Tetap: span #sherpaNote dinamis (elemen lain, status Sherpa), bar status + Muat ulang, TTS, Clone, Voice Editor.
