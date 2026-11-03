@@ -2529,6 +2529,15 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v173 — Preset template pola carousel @marketingharry (vonis Patria 3 Nov 2026 08:18: pola saja, bukan salinan mentah)
+
+- Vonis: "v173 secara teknis sudah oke, untuk template marketing harry yang lebih sampai 11 slide, cukup diambil polanya saja, bukan diaplikasikan mentah-mentah". Konsekuensi: cap app TETAP 6–10 slide (tidak naik ke 12); widget batas slide 1 Nov (12 vs 10) tersalip vonis ini.
+- Yang dibangun (app/src/lib/image-flow.ts + App.svelte + i18n.ts): toggle "Template pola Marketing Harry" (img-tpl-mh) di tab Image, tampil hanya saat Output = Carousel (img-tpl-wrap); state FlowState.mhTpl (persist LS minime.imageFlow); saat aktif, generate carousel menempelkan MH_LOCK (system lock verbatim dari dokumen pola: sans extra-bold, aksen merah terang, basis hitam/putih, badge merah, anotasi tulisan tangan abu-abu, motif TV CRT + mata close-up + buku spiral + mockup HP, portrait 4:5) + peran slide mengikuti jumlah slide pilihan user (slide 1 cover latar hitam, slide tengah content, slide terakhir closing dengan tombol SHARE); rasio dipaksa 4:5 saat preset aktif; "Tanpa teks" otomatis dimatikan saat preset diaktifkan (pola WAJIB text overlay) + klausa tanpa-teks dibuang di generate sebagai backstop. Preset TIDAK berlaku untuk Poster/Storyboard; validasi slides 6–10 TIDAK diubah.
+- i18n: 2 kunci baru (img.tpl.mh + img.tpl.mh.note) → 1272/bahasa, 0 duplikat.
+- Uji: rig-image §v173 (8 cek: toggle tampil hanya di Carousel, default mati, aktif → Tanpa teks mati, 8 prompt sesuai jumlah slide 8 bukan 11, cover/content/closing + SHARE + 4:5, tanpa klausa tanpa-teks, toggle sembunyi di Poster) — ALL PASSED; loop 14 rig ALL PASSED; gerbang 9/9.
+- Pasangan SHA kode: lokal 4dd5ff8 ↔ remote 152170a (tree identik).
+- Catatan penomoran: v173 dibangun SESUDAH v214 (vonis 08:18 datang sesudah v214 terkirim); urutan log mengikuti urutan build, bukan urutan nomor.
+
 ## v214 — Hapus dead code ve2ClipKind (perintah Patria 3 Nov 2026 08:17)
 
 - Perintah: "ve2ClipKind hapus saja jika tidak terikat fungsi khusus".
