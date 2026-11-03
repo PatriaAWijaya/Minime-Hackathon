@@ -2529,6 +2529,30 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v235 — Audit konsistensi cb + alur lain (vonis Patria 13:54 "Bangun v235, semua perbaikan audit" + perluasan 13:55 "cek juga konsistensi alur yang lain"; audit subagent read-only paralel)
+
+Konteks: Patria menguji ulang alur cafe 13:30–13:41 (brief → Prime delegasi Kreatif → cb Sosmed → IG → Image → Promosional → Infografis → Satu per satu → generate BERHASIL via gemini fallback). Vonis audit: alur utama konsisten & on-topic; yang patah hanya cabang brief interaktif (cb) di 3 tempat + 2 cacat nyata di alur lain.
+
+Perbaikan cb (creative-brief.ts, i18n.ts, rig-chat.js §33):
+- Drift kopi → efisiensi waktu: `kreatifSystem()` kini memakai scopeLine project + GROUNDING_INSTRUCTION (yang berisi contoh persis "brief coffeeshop jangan dijawab pola F&B umum"); tiap prompt generator ditambah topicLine eksplisit ("Topik/project: … Tetap pada topik… jangan mengarang topik baru").
+- Gerbang QC Prime paritas v161 untuk semua output cb (artikel, talking head, mix, threads, image single/bulk, carousel single/bulk, reels): hasil ditahan, QC 5 kriteria, maks 2 revisi, QC-mati meloloskan dengan verdict "tidak tersedia". Promo script/board = langkah antara (gerbang persetujuan user) → tidak di-gate, hanya topicLine.
+- Semua tombol hasil pindah ke bubble Prime-QC (Kreatif tanpa tombol aksi; navigasi th-char/th-voice/promo-voice-type berwording Prime, kunci baru `cb.th.char.open.prime`/`cb.th.voice.open.prime`).
+- Parser Image-PLAN: heading markdown menutup seksi berjalan (footer tidak bocor ke seksi 2); prompt image: Body wajib 1 paragraf pembuka + poin; larangan judul bebas di luar label Title:.
+- Retry in-flow soc (lipatan v233): `CbState.lastGen` + langkah `soc-retry` — generate gagal → error + pertanyaan "Coba lagi?" dengan state utuh → klik Coba lagi mengulang generator dari format tersimpan; Batal menghapus state. Kunci baru `cb.soc.retry.q/again/cancel/cancelled`.
+- i18n 1271 → 1277 kunci/bahasa.
+
+Perbaikan alur lain (temuan audit subagent, semua diimplementasikan di v235):
+- CACAT image-flow.ts: `imgSetBrief`/`imgSetBulk` tidak mereset field terstruktur → brief baru tercampur judul/body/listicle/header/footer/palette lama di sentPrompt. Diperbaiki (reset di ketiga setter, termasuk palette di `imgSetStructured`).
+- CACAT RINGAN plan30.ts `doCaptions`: sistem tanpa grounding/QC; ditambah GROUNDING_INSTRUCTION (bersama `doTable`, `draftSys`, dan `modelText` image-flow sebagai penguat murah).
+- CACAT RINGAN chat.ts jawaban langsung Prime: memasang `studioButton` tanpa QC (satu-satunya jalur tombol tanpa QC) → dihapus; bridge editor kini khusus output ter-QC.
+- CACAT RINGAN creative-brief.ts `parseBulkPlans`: pembuka pra-separator dipertahankan sebagai tab pertama → dibuang bila separator ditemukan.
+- Minor research-browser.ts `parseCmds`: laporan dipotong pada baris perintah pertama sesudah LAPORAN.
+- BERSIH (tidak diubah): fan-out Alur 1/2, delegasi tunggal, retry agen, plan-chat, parser plan30/storyboard/movie, intake `vo:`, bridge reels.
+- TIDAK masuk v235 (menunggu vonis): tampilkan sampel caption di ringkasan gerbang 3 plan30 (perubahan UI); perluasan aturan tombol ke jalur utama — DIPUTUSKAN Patria 14:16 ("perluas ke jalur utama juga") → v236.
+
+SHA: kode lokal ac11ae3 ↔ remote 54fc71f (tree identik). Gate 9/9; loop 14 rig exit=0; svelte-check 0 error/21 warning (baseline); i18n 1277/bahasa, 0 duplikat; ledger md5 tidak berubah (d542428fe9901fbd417e098e9249d4b6); cargo 0 warning.
+LIVE 3 Nov ~14:25 WIB: deploy mh-build235.sh — MH_BUILD235_OK; HEAD MacBook <LOG_SHA> (commit log); PID <PID>; md5 dist JS/CSS lokal == MacBook. App LIVE = v235. Konfirmasi live Patria untuk v235 BELUM ada (uji live yang disarankan: ulangi alur cafe yang sama — judul harus tetap "cafe", Body terisi paragraf, tombol hasil hanya di bubble Prime; lalu ulangi generate soc yang gagal → tombol Coba lagi mengulang tanpa kehilangan state).
+
 ## v234 — Tombol opsi chat yang dipilih jadi hijau di tema terang (perintah Patria 13:40; v233 DITAHAN — lihat bawah)
 
 - Perintah: "pada button yang dipilih oleh user di menu chat, otomatis berubah menjadi hijau".
