@@ -2529,6 +2529,16 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v234 — Tombol opsi chat yang dipilih jadi hijau di tema terang (perintah Patria 13:40; v233 DITAHAN — lihat bawah)
+
+- Perintah: "pada button yang dipilih oleh user di menu chat, otomatis berubah menjadi hijau".
+- Akar (dibuktikan dari sumber + screenshot 13:22): `.rec-btn.done` SUDAH hijau (#8ED694) sejak lama dan jalan di tema gelap, tapi aturan glossy light v229 (`[data-theme="light"] .rec-btn { background-image: gradien }`) berspesifisitas sama (0,2,0) dan terletak lebih belakang, sehingga lapisan gradien biru menutupi hijau di tema terang — tombol yang sudah diketuk (mis. "Awareness") tetap biru, tak bisa dibedakan dari yang belum dipilih. Mekanisme "otomatis"-nya TIDAK rusak: pickRecommendation menandai pickedRec saat ketuk + render ulang menerapkan class done.
+- Perbaikan CSS saja (layout-scroll.css blok v234; app.css verbatim TIDAK disentuh; tema gelap TIDAK disentuh): `[data-theme="light"] .rec-btn.done { background-image: none; background-color: #8ED694; color: #000000; box-shadow: none; }` (spesifisitas 0,3,0 mengalahkan aturan glossy; teks hitam konsisten v227).
+- Bukti visual: render Chromium headless VM dengan CSS dist asli (mock tema terang: Promosional biru, Awareness hijau, Leads Generator biru) — tangkapan di ~/workspace/riglogs-v234/btn-check.png.
+- Rig: rig-home §32 v234 baru (2 cek: hijau di light + tetap hijau di dark). Loop 13/14 pada jalan pertama — satu-satunya gagal adalah cek rig sendiri (regex menulis #8ED694 huruf besar, minifier menurunkannya jadi #8ed694); sesudah perbaikan cek, loop ulang rig-home ALL PASSED. Gerbang GATE-V234 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja); svelte-check 0/21.
+- SHA: kode lokal 989c1be <-> remote 5263f32 (tree identik, pola push_rebased.py).
+- CATATAN URUTAN: v233 (retry in-flow soc-retry untuk konsistensi poster-vs-reels, perintah 13:22) DITAHAN atas perintah Patria 13:29 ("coba dari awal untuk memastikan diagnosis") — deploy/restart dilarang selama uji konfirmasi. Uji konfirmasi Patria 13:30–13:41 SELESAI dan justru membuka temuan baru (drift topik cb + cacat paste Image Editor + button tanpa QC) yang diaudit 13:44–13:47 dan diusulkan sebagai paket v235; v233 dilipat ke v235. v234 dibangun di tengah masa tahan itu, deploy-nya ditahan sampai uji selesai, lalu dilepas sesudah audit disampaikan.
+
 ## v232 — Teks ketikan composer hitam di tema terang (perintah Patria 12:56 + screenshot 12:55)
 
 - Perintah: "Input text user buat berwarna hitam".
