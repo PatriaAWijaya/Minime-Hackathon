@@ -2529,6 +2529,19 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v231 — Kartu & bagian hitam di tema terang jadi gradasi biru-putih (perintah Patria 12:39 + 4 screenshot 12:37)
+
+- Perintah: "Kartu dan bagian2 lain yang masih berwarna hitam pada tema terang ubah menjadi gradien biru putih".
+- Yang diubah (CSS saja, layout-scroll.css blok v231; App.svelte + app.css verbatim TIDAK disentuh; tema gelap TIDAK disentuh):
+  - Kartu/panel/dialog (kilau v229 dilapis di atas gradasi kartu putih -> #E4EEFB; lapisan bawah opaque sehingga background gelap di bawahnya tertutup): .ms-card (kartu Media Studio), .lib-card (kartu Library), .img-card, .lib-dialog-card, .chan-card, .g-popup-card, .soc-pop, .soc-dlg, .kb-dlg, .soc-side-row (baris kanal Planner), .soc-add/.soc-del, .na-sug-card, .na-model-field, .na-model-pop.
+  - Field/kontrol (gradasi kartu saja): .se-field (termasuk textarea Rencana #ve-plan yang hitam karena class ini #171717), .se-menubtn, .se-btn2, .se-output, .lib-detail-pre, .lib-filters select (4 select filter Library), .g-input, .g-day, .g-ampm, .na-effort-btn, .n8n-nodebar button, .wa-chip, input rename project; teks yang tadinya terang (#ececec/#e5e5e5) dibalik hitam pada .se-field, .se-btn2, select filter, .g-input, .g-day, .g-ampm, .soc-dlg, .kb-dlg, .na-effort-btn, .n8n-nodebar button; hover baris model jadi datar #E4EEFB.
+  - Panel Billing: background-nya INLINE di markup (bukan class) -> selektor atribut gaya v227 + !important (satu-satunya cara mengalahkan inline style); 3 panel (Pemakaian tercatat, Kredit & pembayaran, Batas belanja) kini gradasi + kilau.
+  - Sengaja TIDAK diubah: kanvas preview video (.ve2-canvas, memang harus gelap), backdrop dialog gelap, placeholder gambar hilang, tampilan kode (.soc-wiz-uri), tombol-tombol x kecil. Border gelap dibiarkan (garis tepi, bukan bidang hitam).
+- Bukti visual: render Chromium headless VM dengan CSS dist asli (mock panel Billing inline + kartu Library + baris kanal + kartu Media Studio + textarea + select) — semua gradasi biru-putih, teks hitam terbaca; tangkapan di ~/workspace/riglogs-v231/cards-check.png.
+- Rig: rig-home §30 v231 baru (4 cek: gradasi kartu, panel Billing inline, teks dibalik hitam, kartu gelap tetap hitam di dark). Loop pertama 13/14: hanya guard v229 gagal karena mengasumsikan kilau #ffffffb3 muncul sekali — BUKAN regresi (v231 memang memakai ulang kilau yang sama); guard diperbarui (kilau tidak boleh ada di aturan dark), loop kedua 14/14 (~/workspace/riglogs-v231/loop.log); gerbang GATE-V231 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja); svelte-check 0/21.
+- SHA: kode lokal 18f3775 <-> remote 424053a (tree identik, pola push_rebased.py).
+- Catatan live: BELUM dikonfirmasi live (uji disarankan: Billing, Planner, Library, Media Studio di tema terang — tidak ada lagi bidang hitam; teks semua terbaca; tema gelap tidak berubah).
+
 ## v230 — Background umum tema terang = gradasi putih-biru + glossy (perintah Patria 12:36)
 
 - Perintah: "Background umum tema putih buat gradasi putih biru dengan effek glossy".
