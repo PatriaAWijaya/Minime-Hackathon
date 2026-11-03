@@ -532,7 +532,7 @@ h3 { font-size: 18px; }
   --t-input-bg: rgba(24, 10, 40, 0.75); --t-hover-bg: rgba(162, 28, 175, 0.12);
 }
 [data-theme="light"] {
-  --t-bg: #F4F8FF; --t-bg-soft: #FFFFFF;
+  --t-bg: linear-gradient(115deg, rgba(255, 255, 255, 0.60) 0%, rgba(255, 255, 255, 0) 42%), linear-gradient(180deg, #FFFFFF 0%, #EAF2FD 52%, #D3E5F7 100%); --t-bg-soft: #FFFFFF;
   --t-panel: rgba(255, 255, 255, 0.72); --t-panel2: #EDF3FC;
   --t-glass: rgba(255, 255, 255, 0.72);
   --t-border: #DCE8F7; --t-border-strong: #B9D2F0;
@@ -922,3 +922,13 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 [data-theme="light"] .btn-primary, [data-theme="light"] .filters button.active, [data-theme="light"] .rec-btn, [data-theme="light"] .chat-act, [data-theme="light"] .img-tab.active { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 55%), var(--t-accent-grad); }
 [data-theme="light"] .btn-primary { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 4px 14px rgba(74, 127, 193, 0.30); }
 [data-theme="light"] .filters button.active, [data-theme="light"] .rec-btn, [data-theme="light"] .chat-act, [data-theme="light"] .img-tab.active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65); }
+
+/* v230: background umum tema terang = gradasi putih-biru + glossy
+   (perintah Patria 3 Nov 2026 12:36). --t-bg light yang tadinya
+   datar #F4F8FF kini dua lapis: (1) kilau diagonal putih 0.60
+   yang memudar di 42% (efek glossy), (2) gradasi vertikal putih
+   -> biru pucat (#EAF2FD 52% -> #D3E5F7). Aman: --t-bg hanya
+   dipakai di body { background: ... } (shorthand menerima gradien);
+   tema gelap TIDAK disentuh (punya rule background-image sendiri
+   + --t-bg #0E0718). Panel-panel translusen (0.72) kini
+   meneruskan gradasi ini samar-samar = kedalaman kaca. */

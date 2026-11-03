@@ -483,7 +483,7 @@ try {
   // (jsdom tidak memuat stylesheet — pola v199: assert teks CSS dist.)
   const lightBlock = (cssText.match(/\[data-theme=light\]\{([^}]*)\}/) || [])[1] || '';
   const darkBlock = (cssText.match(/\[data-theme=dark\]\{([^}]*)\}/) || [])[1] || '';
-  check('v221: light bg kaca putih kebiruan', lightBlock.includes('--t-bg: #F4F8FF'), lightBlock.slice(0, 80));
+  check('v221: light bg kaca putih kebiruan (v230: jadi gradasi putih-biru + kilau)', lightBlock.includes('linear-gradient(180deg, #FFFFFF 0%, #EAF2FD 52%, #D3E5F7 100%)'), lightBlock.slice(0, 80));
   check('v227: light aksen bluish white + teks aksen HITAM (ganti v221)', lightBlock.includes('--t-accent: #8FB8E8') && lightBlock.includes('--t-accent-grad: linear-gradient(135deg, #C9E0F7, #8FB8E8)') && lightBlock.includes('--t-accent-text: #000000'), lightBlock.slice(0, 200));
   check('v221: ungu hilang dari blok light', !lightBlock.includes('#9333EA') && !lightBlock.includes('#D946EF') && !lightBlock.includes('#FBF5FF'), lightBlock.slice(0, 120));
   check('v221: blok gelap TIDAK berubah (violet glass)', darkBlock.includes('--t-bg: #0E0718') && darkBlock.includes('--t-accent: #8E7CC3'), darkBlock.slice(0, 80));
@@ -516,6 +516,11 @@ try {
   check('v229: kilau permukaan kaca di light', /\[data-theme=light\] \.sidebar,\[data-theme=light\] \.col,.*background-image:linear-gradient\(180deg,#ffffffb3,#fff3 40%,#fff0 65%\)/.test(cssText), '');
   check('v229: kilau di atas tombol gradien light', /\[data-theme=light\] \.btn-primary,\[data-theme=light\] \.filters button\.active,.*background-image:linear-gradient\(180deg,#ffffff8c,#fff0 55%\),var\(--t-accent-grad\)/.test(cssText), '');
   check('v229: kilau HANYA di light (gelap tidak kena)', (cssText.match(/#ffffffb3/g) || []).length === 1 && (cssText.match(/#ffffff8c/g) || []).length === 1, '');
+
+  // 29. v230: background umum light = gradasi putih-biru + glossy
+  // (bentuk minify nyata: rgba .60 -> .6, hex var dipertahankan).
+  check('v230: bg umum light gradasi putih-biru + kilau diagonal', /--t-bg: linear-gradient\(115deg, rgba\(255, 255, 255, \.6\) 0%, rgba\(255, 255, 255, 0\) 42%\), linear-gradient\(180deg, #FFFFFF 0%, #EAF2FD 52%, #D3E5F7 100%\)/.test(cssText), '');
+  check('v230: bg gelap tetap datar', /\[data-theme=dark\]\{--t-bg: #0E0718/.test(cssText), '');
 
 
 } catch (e) {
