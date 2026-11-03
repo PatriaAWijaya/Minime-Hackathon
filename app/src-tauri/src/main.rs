@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod anthropic;
 mod audio;
 mod browser;
 mod hyperframes;
@@ -62,6 +63,7 @@ fn main() {
             hyperframes::hyperframes_render,
             voicestudio::vs_launch,
             voicestudio::vs_api,
+            anthropic::anthropic_chat,
             sherpa::sherpa_status,
             sherpa::sherpa_setup,
             sherpa::sherpa_tts,

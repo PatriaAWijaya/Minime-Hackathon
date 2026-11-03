@@ -176,30 +176,38 @@ export class ModelRouter {
     return { text, provider: 'gemini', family: 'gemini', model: this.cfg.geminiModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: data.usageMetadata?.promptTokenCount ?? null, completionTokens: data.usageMetadata?.candidatesTokenCount ?? null, costUsd: 0 };
   }
 
-  /** Live Anthropic call (Messages API, v236). Throws LiveUnavailableError when not configured. */
+  /**
+   * Live Anthropic call (Messages API, v236; transport via Rust proxy since v237).
+   * Throws LiveUnavailableError when not configured.
+   * v237: fetch WebView ke api.anthropic.com DIBLOKIR CORS (preflight
+   * tanpa access-control-allow-origin; Meta mengembalikan * sehingga
+   * lolos) — kaki ini WAJIB lewat perintah Rust anthropic_chat (curl
+   * sisi server, pola vs_api v223). __TAURI_INTERNALS__ dipakai
+   * langsung (bukan impor @tauri-apps/api) agar modul ini tetap bisa
+   * diimpor runner Node yang tidak memakai Anthropic.
+   */
   async callAnthropic(prompt: string): Promise<CallResult> {
     if (!this.cfg.anthropicApiKey) {
       throw new LiveUnavailableError('anthropic', 'ANTHROPIC_API_KEY is not set');
     }
     const started = Date.now();
-    const data = (await postJson(
-      `${this.cfg.anthropicBaseUrl.replace(/\/$/, '')}/messages`,
-      { 'x-api-key': this.cfg.anthropicApiKey, 'anthropic-version': '2023-06-01' },
-      {
+    const tauriInvoke = (globalThis as unknown as { __TAURI_INTERNALS__?: { invoke?: (cmd: string, args?: unknown) => Promise<unknown> } }).__TAURI_INTERNALS__?.invoke;
+    if (!tauriInvoke) {
+      throw new LiveUnavailableError('anthropic', 'Tauri invoke tidak tersedia (Anthropic hanya lewat app desktop)');
+    }
+    const res = (await tauriInvoke('anthropic_chat', {
+      req: {
+        api_key: this.cfg.anthropicApiKey,
         model: this.cfg.anthropicModel,
+        system: this.cfg.systemInstruction ?? null,
+        prompt,
         max_tokens: 8192,
-        temperature: 0.2,
-        ...(this.cfg.systemInstruction ? { system: this.cfg.systemInstruction } : {}),
-        messages: [{ role: 'user', content: prompt }],
+        timeout_secs: 120,
       },
-    )) as {
-      content?: Array<{ type?: string; text?: string }>;
-      usage?: { input_tokens?: number; output_tokens?: number };
-    };
-    const text = (data.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('');
+    })) as { text?: string; input_tokens?: number | null; output_tokens?: number | null };
     // v236: tarif Anthropic TIDAK ditebak (aturan audit v66 $-B1:
     // model lain -> null); token tetap dicatat untuk laporan pemakaian.
-    return { text, provider: 'anthropic', family: 'anthropic', model: this.cfg.anthropicModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: data.usage?.input_tokens ?? null, completionTokens: data.usage?.output_tokens ?? null, costUsd: null };
+    return { text: res.text ?? '', provider: 'anthropic', family: 'anthropic', model: this.cfg.anthropicModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: res.input_tokens ?? null, completionTokens: res.output_tokens ?? null, costUsd: null };
   }
 
   private ollamaFamilyFor(model: string): 'deepseek' | 'qwen' {

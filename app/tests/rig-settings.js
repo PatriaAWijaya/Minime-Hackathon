@@ -49,6 +49,10 @@ function makeResp({ ok = true, status = 200, jsonData = null } = {}) {
 async function invokeStub(cmd, args) {
   log.push('invoke:' + cmd);
   const req = (args && args.req) || {};
+  // v237: stub perintah Rust anthropic_chat (uji satu kata -> OK).
+  if (cmd === 'anthropic_chat') {
+    return { text: (req.prompt || '').includes('Jawab satu kata: OK') ? 'OK' : 'NASKAH-UJI', input_tokens: 5, output_tokens: 2 };
+  }
   throw new Error('unexpected invoke ' + cmd);
 }
 

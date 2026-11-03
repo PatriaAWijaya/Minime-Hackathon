@@ -36,8 +36,20 @@ function makeResp({ ok = true, status = 200, jsonData = null } = {}) {
   };
 }
 
-async function invokeStub(cmd) {
+async function invokeStub(cmd, args) {
   log.push('invoke:' + cmd);
+  // v237: stub perintah Rust anthropic_chat — isi jawaban meniru
+  // fetchStub (split 'Bagi brief' -> tugas, uji satu kata -> OK,
+  // sisanya NASKAH-UJI). System instruction ikut diperiksa karena
+  // split memakai system, bukan prompt.
+  if (cmd === 'anthropic_chat') {
+    const req = (args && args.req) || {};
+    const full = ((req.system || '') + '\n' + (req.prompt || ''));
+    let text = 'NASKAH-UJI: Hook kopi susu, isi 5W1H, CTA order via chat.';
+    if (full.includes('Bagi brief')) text = full.includes('halo') ? '[]' : text;
+    if ((req.prompt || '').includes('Jawab satu kata: OK')) text = 'OK';
+    return { text, input_tokens: 42, output_tokens: 30 };
+  }
   throw new Error('unexpected invoke ' + cmd);
 }
 
@@ -1052,18 +1064,22 @@ try {
 
   // 34. v236: Anthropic masuk rantai — kunci Meta/Gemini dicabut,
   // pesan langsung Prime harus dijawab lewat Anthropic (footer
-  // membuktikannya), tanpa fetch ke Meta/Gemini. Kunci dipulihkan
-  // sesudahnya (ini seksi terakhir, tapi tetap rapi).
+  // membuktikannya), tanpa fetch ke Meta/Gemini. v237: transport
+  // Anthropic adalah invoke perintah Rust (fetch WebView diblokir
+  // CORS), jadi bukti jalurnya adalah log invoke, bukan fetch.
+  // Kunci dipulihkan sesudahnya (ini seksi terakhir, tapi tetap rapi).
   const savedMetaKey = store.get('minime.metaKey');
   const savedGeminiKey = store.get('minime.geminiKey');
   store.delete('minime.metaKey');
   store.delete('minime.geminiKey');
   store.set('minime.anthropicKey', 'rig-key');
   const fetchBefore34 = fetchRecs.length;
+  const logBefore34 = log.length;
   await sendMsg('halo');
   await waitFor(() => bodyText().includes('via anthropic claude-sonnet-4-5'), 'jawaban via anthropic', 120);
   const newRecs34 = fetchRecs.slice(fetchBefore34);
-  check('v236: rantai memakai Anthropic saat Meta/Gemini tanpa kunci', newRecs34.some((f) => f.url.includes('api.anthropic.com')) && !newRecs34.some((f) => f.url.includes('api.meta.ai') || f.url.includes('generativelanguage')), JSON.stringify(newRecs34.map((f) => f.url)));
+  const newInvokes34 = log.slice(logBefore34).filter((l) => l === 'invoke:anthropic_chat');
+  check('v236/v237: rantai memakai Anthropic via invoke Rust saat Meta/Gemini tanpa kunci', newInvokes34.length >= 1 && !newRecs34.some((f) => f.url.includes('api.meta.ai') || f.url.includes('generativelanguage')), 'invokes=' + newInvokes34.length + ' fetches=' + JSON.stringify(newRecs34.map((f) => f.url)));
   check('v236: footer jawaban menyebut anthropic', bodyText().includes('via anthropic claude-sonnet-4-5'));
   if (savedMetaKey) store.set('minime.metaKey', savedMetaKey);
   if (savedGeminiKey) store.set('minime.geminiKey', savedGeminiKey);
