@@ -802,6 +802,11 @@ try {
   await tick(100);
   check('v149: kartu tugas tampil di papan Kanban', (document.getElementById('kanbanBox')?.textContent || '').includes('Riset'), document.getElementById('kanbanBox')?.textContent?.slice(0, 200) || '');
 
+  // §v216: menu Table dan List di Kanban dihapus (perintah Patria 3 Nov 08:38).
+  check('v216: tombol Table di Kanban tidak ada', !document.querySelector('[data-kbtab="table"]'));
+  check('v216: tombol List di Kanban tidak ada', !document.querySelector('[data-kbtab="list"]'));
+  check('v216: tombol Kanban tetap ada', !!document.querySelector('[data-kbtab="kanban"]'));
+
   // §31 v150: 2x klik kartu -> detail (deskripsi + capaian output).
   const kcard31 = [...document.querySelectorAll('#kanbanBox .kcard')].find((el) => el.textContent.includes('Riset'));
   check('v150: kartu Riset ada di papan untuk 2x klik', !!kcard31);

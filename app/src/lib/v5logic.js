@@ -1182,31 +1182,6 @@ export function renderKanban() {
     (function () { var kf = document.getElementById("kbFilter"); if (!kf) return; var cur = kf.value; kf.innerHTML = "<option value=\"\">" + tr('home.allagents') + "</option>" + Object.keys(AGENTS).map(function (k) { return "<option>" + esc(AGENTS[k].name) + "</option>"; }).join(""); if (cur) kf.value = cur; })();
     var filter = document.getElementById("kbFilter") ? document.getElementById("kbFilter").value : "";
     function vis(card) { return !filter || card.a === filter; }
-    function kbOpenAttrs(pid, i) { return pid === currentProj ? "data-act=\"kb-open\" data-idx=\"" + i + "\"" : "data-act=\"kb-open-pid\" data-pid=\"" + esc(pid) + "\" data-idx=\"" + i + "\""; }
-    if (kanbanTab === "table") {
-      var rows = "";
-      kbGroups.forEach(function (gpid) {
-        var gc = PROJECTS[gpid].kanban || [];
-        if (kbProjView === "all") rows += "<tr><td colspan='4'><b>" + esc(PROJECTS[gpid].name) + "</b></td></tr>";
-        rows += gc.map(function (card, i) { return { card: card, i: i }; }).filter(function (x) { return vis(x.card); }).map(function (x) {
-          return "<tr " + kbOpenAttrs(gpid, x.i) + " style='cursor:pointer'><td><b>" + esc(x.card.t) + "</b></td><td>" + esc(x.card.a) + "</td><td>" + colName(x.card.c) + "</td><td>💬 " + cardComments(x.card) + "</td></tr>";
-        }).join("");
-      });
-      wrap.innerHTML = "<table><tr><th>Tugas</th><th>Agen</th><th>Status</th><th>Komentar</th></tr>" + rows + "</table>";
-      return;
-    }
-    if (kanbanTab === "list") {
-      var listHtml = "";
-      kbGroups.forEach(function (gpid) {
-        var gc = PROJECTS[gpid].kanban || [];
-        if (kbProjView === "all") listHtml += "<div class='kb-projhead'>" + esc(PROJECTS[gpid].name) + "</div>";
-        listHtml += gc.map(function (card, i) { return { card: card, i: i }; }).filter(function (x) { return vis(x.card); }).map(function (x) {
-          return "<div class='todayitem' " + kbOpenAttrs(gpid, x.i) + " style='cursor:pointer'><b>" + esc(x.card.t) + "</b><br><small style='color:#a1a1a1'>" + tr('kanban.card.agent') + esc(x.card.a) + " • " + colName(x.card.c) + " • 💬 " + cardComments(x.card) + "</small></div>";
-        }).join("");
-      });
-      wrap.innerHTML = listHtml || "<p>Tidak ada tugas untuk filter ini.</p>";
-      return;
-    }
     var totalCols = kcols().length + extraCols.length;
     wrap.innerHTML = "";
     kbGroups.forEach(function (gpid) {
@@ -2636,7 +2611,7 @@ function kcols() { return [tr('kcol.0'), tr('kcol.1'), tr('kcol.2'), tr('kcol.3'
 /* ---------- Kanban (drag & drop) ---------- */
 var dragCard = null, dragPid = null;
 
-var kanbanTab = "kanban", extraCols = [];
+var extraCols = [];
 
 /* ---------- Graph gaya n8n: trigger + agent + decision + sub-node ---------- */
 var GNODES = {
@@ -3719,15 +3694,6 @@ export function initV5() {
   renderGraph();
   renderLib();
   renderPlanner();
-  (function () {
-    document.querySelectorAll('[data-kbtab]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        kanbanTab = b.getAttribute('data-kbtab');
-        document.querySelectorAll('[data-kbtab]').forEach(function (x) { x.classList.toggle('active', x === b); });
-        renderKanban();
-      });
-    });
-  })();
   document.getElementById('chatInput').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
     });

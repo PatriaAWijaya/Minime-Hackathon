@@ -1067,8 +1067,6 @@
         </div>
         <div class="kb-tabs">
           <button data-kbtab="kanban" class="active">{t('word.kanban', lang)}</button>
-          <button data-kbtab="table">{t('word.table', lang)}</button>
-          <button data-kbtab="list">{t('word.list', lang)}</button>
           <span style="flex:1"></span>
           <label style="margin:0;font-weight:400;font-size:13px">{t('kb.proj.label', lang)}
             <select id="kbProjSel" onchange={(e) => { kbSetProj((e.target as HTMLSelectElement).value) }} style="width:auto;margin-left:6px"></select>
