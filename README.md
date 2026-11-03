@@ -46,7 +46,12 @@ sections of the Aplikasi Konten specification documents.
   or Qwen → QC Gemini. Pass threshold: score ≥ 75 and zero hard
   violations, max 2 revision rounds, then escalation to a human.
   (In the Phase 0 sample, QC is deterministic scoring with those
-  families, not yet a live LLM QC call — that is Phase 5 harness work.)
+  families. Live LLM QC arrived with the Phase 5 harness, 3 Nov 2026:
+  cross-family judged scores, average 89 across 5 scored cases;
+  see docs/fase-5-metrics.md. The desktop app extends this chain with
+  Anthropic/Claude between Gemini and Ollama via a Rust proxy, since
+  the app WebView cannot call Anthropic directly; the Node runners
+  keep the canon above, as Anthropic is unreachable from Node.)
 - **Costs:** earlier cost figures based on superseded models are
   suspended as official figures until the Phase 0 gate re-baselines them
   from actual Muse/Gemini prices and CostLedger measurements. Until then,
@@ -63,7 +68,7 @@ sections of the Aplikasi Konten specification documents.
   this repo is presented.
 - Built by Mimi, Patria A. Wijaya's AI agent, during the event.
 
-## Status (27 Oct 2026 — Phase 0 conditionally passed; Phases 1–2 gates passed; UI paused)
+## Status (3 Nov 2026 — Phases 0–5 complete; app live v242; video + submission pending)
 
 Phase 0 foundation is built and mock-tested in this repo (contracts JSON
 v1, model router, append-only CostLedger + hard limit, service-level
@@ -118,8 +123,35 @@ published, nothing scheduled). No gate was ever approved on Patria's behalf.
 Build phases are tracked in PLAN.md. Demo video (3 minutes) and
 submission follow before the deadline: **4 Nov 2026, 9:00 PM ET**.
 
+Update 3 Nov 2026: Phase 4 loop proof delivered (12 raw leads → 10
+deduped, 6 drafts unsent, 0 model calls, draft-only). The UI phase
+resumed into a full desktop app (Tauri 2 + Svelte 5), live on the
+author's MacBook at v242; v243–v245 are pushed (Planner image hosting
+moved from Imgur to ImgBB after Imgur app registration proved
+unavailable; dead-export cleanup with a byte-identical bundle) and
+await deploy behind two author actions (YoKafe posting confirmation,
+ImgBB API key). Phase 5 (3 Nov night) ran the live evaluation harness
+on an 8-case golden set: 7/8 cases succeeded per run across two runs
+(the single failure each time was a transient Gemini HTTP 503, a
+different case each run; all 8 case types succeeded at least once),
+Meta maker 5/5 at ~11.8 s average, LLM QC average 89, total measured
+cost $0.0427 against the $5 hard limit, rehearsal end-to-end live
+with draftPublished false — full metrics in docs/fase-5-metrics.md.
+The Phase 0 gate's two conditions are now closed in substance: live
+Muse is proven repeatedly (including the Fase 5 runs), and costs are
+re-baselined from CostLedger measurements (Meta muse-spark-1.3
+$1.25/$4.25 per 1M tokens; Gemini $0 on the free tier per the author's
+28 Oct decision). Gate-test is now 14/14 and the credential scan
+passes. Not yet measured: Claude via the desktop app's Tauri proxy,
+and local Ollama from the VM harness (unavailable there; proven on
+the MacBook). Remaining before the deadline: the 3-minute demo video
+(script ready) and the submission form.
+
 ## Submission
 
 - Track: Indie Developer
 - Theme: Build for Your World
+- Team: Patria (solo)
 - Repository: https://github.com/PatriaAWijaya/Minime-Hackathon (public)
+- Demo video (3 minutes): script ready in submission/; recording + link pending
+- Deadline: 4 Nov 2026, 9:00 PM ET (5 Nov 2026, 09:00 WIB)
