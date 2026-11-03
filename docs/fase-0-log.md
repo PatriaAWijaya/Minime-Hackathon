@@ -2537,6 +2537,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - Rig-vs: §v215 ditulis ulang (tanpa klik-pilih: Generate memakai model default omnivoice); cek v224 'koneksi dibuktikan daftar model' diganti cek daftar tidak ada + judul hilang; cek paragraf Sherpa hilang; header + v225. Loop 14 rig ALL PASSED (~/workspace/riglogs-v225/loop.log); gerbang GATE-V225 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1268).
 - SHA: kode lokal 9fcc33d <-> remote c16b143 (tree identik, pola push_rebased.py).
 - Catatan live: BELUM dikonfirmasi live (uji disarankan: buka tab Voice — paragraf Sherpa dan blok Model lokal sudah tidak ada; TTS Generate tetap jalan dengan model default).
+- LIVE 3 Nov 2026 ~11:00 WIB: deploy mh-build225 OK, HEAD MacBook e0114c8 (= remote log), PID 3699, md5 dist JS lokal == MacBook (1340b79ca98ab51146274c7e36fa2cb3, byte-identik), marker negatif: 'Model lokal' + 'Engine native berdampingan' + 'vsModelList' 0 kemunculan di bundle JS live. Konfirmasi ketuk live Patria BELUM ada.
 
 ## v224 — Hapus judul Panel VoiceStudio + catatan embed (perintah Patria 10:35)
 
