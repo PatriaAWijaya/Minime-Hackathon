@@ -87,6 +87,9 @@ async function fetchStub(url, opts) {
   // DOM sinkron per agen (~250-400ms: renderAgents/Detail/Graph/
   // Kanban per fase) menenggelamkan delay 400ms, tapi tidak 2000ms.
   if (body.includes('PARALEL-UJI') && !body.includes('QC hasil kerja agen') && !body.includes('Bagi brief')) await new Promise((r) => setTimeout(r, 2000));
+  // v242: split ditunda 2000ms agar posting-awal bisa dibedakan dari
+  // posting-sesudah-split (laporan live: tekan Enter, bubble tidak muncul).
+  if (body.includes('SPLIT-LAMBAT-UJI') && body.includes('Bagi brief')) await new Promise((r) => setTimeout(r, 2000));
   if (body.includes('Bagi brief')) {
     if (body.includes('PARALEL-UJI')) {
       content = '[{"agent":"riset","task":"Riset PARALEL-UJI"},{"agent":"kreatif","task":"Kreatif PARALEL-UJI"}]';
@@ -508,6 +511,21 @@ try {
   let libAfter117 = [];
   try { libAfter117 = JSON.parse(store.get('minime.library.added') || '[]'); } catch (_) { libAfter117 = []; }
   check('v117: TIDAK menambah dokumen Library', libAfter117.length === libBefore117.length, libBefore117.length + ' -> ' + libAfter117.length);
+
+  // v242 (laporan live 19:25, dikonfirmasi 19:32: tekan Enter, bubble
+  // tidak muncul): jalur project aktif — bubble user + ack Prime HARUS
+  // sudah tampil SEBELUM split selesai (split ditunda 2000ms; sendMsg
+  // hanya tick 100ms). Project pid117 masih aktif dari §13.
+  const naskahBefore242 = countOcc('NASKAH-UJI');
+  await sendMsg('Brief SPLIT-LAMBAT-UJI kopi susu gula aren');
+  const box242 = document.getElementById('chatBox')?.textContent || '';
+  const last242 = [...document.querySelectorAll('#chatBox .msg')].pop();
+  check('v242: bubble user tampil sebelum split selesai', box242.includes('SPLIT-LAMBAT-UJI'), box242.slice(-300));
+  check('v242: kolom kosong + ack Prime tampil sebelum split selesai', document.getElementById('chatInput').value === '' && (last242?.textContent || '').includes('Baik, saya mengerti'), 'input=' + JSON.stringify(document.getElementById('chatInput').value) + ' last=' + (last242?.textContent || '').slice(0, 120));
+  check('v242: belum ada hasil agen sebelum split selesai', countOcc('NASKAH-UJI') === naskahBefore242, 'naskah=' + countOcc('NASKAH-UJI') + ' sebelum=' + naskahBefore242);
+  // Alur tetap selesai normal sesudah split kembali.
+  await waitFor(() => countOcc('NASKAH-UJI') > naskahBefore242, 'fan-out v242 selesai', 120);
+  check('v242: fan-out tetap jalan sesudah posting awal', countOcc('NASKAH-UJI') > naskahBefore242, 'naskah=' + countOcc('NASKAH-UJI'));
 
   // 14. v130: standar laporan untuk SEMUA chat, lama maupun baru.
   // (a) Pesan LAMA (tersimpan gaya lama: teks ter-escape + markdown mentah)

@@ -656,15 +656,37 @@ export async function sendChatReal(): Promise<void> {
   // pesan yang menyebut satu agen tetap lewat jalur delegasi tunggal lama
   // dan split tidak dijalankan untuknya (hemat 1 model call).
   const hasExplicitDelegate = !flow1 && delegateFor(text) !== null;
+  // v242 (laporan live 19:25, dikonfirmasi Patria 19:32: tekan Enter,
+  // bubble tidak muncul): jalur project aktif TANPA delegasi eksplisit
+  // memposting bubble user + ack Prime DULUAN sebelum split — sebelumnya
+  // split (model call, rantai timeout s.d. ~3,5 menit) berjalan dulu
+  // tanpa umpan balik apa pun, sehingga window tampak beku dengan teks
+  // masih utuh di kolom. Aman di jalur ini karena currentProj tidak
+  // berubah selama split (project sudah ada). Jalur Alur 1 TIDAK diubah:
+  // pembuatan project bergantung pada hasil split — bubble yang diposting
+  // duluan akan tertinggal di Main chat bila project baru dibuat. Jalur
+  // delegasi eksplisit juga tidak berubah (tanpa split, posting langsung
+  // terjadi).
+  let postedEarly = false;
+  if (!flow1 && !hasExplicitDelegate) {
+    const rtEarly = getReplyTarget();
+    postChat('user', 'Patria', '#374151', esc(text), undefined, rtEarly ? { replyTo: rtEarly } : undefined);
+    clearReplyTarget();
+    input.value = '';
+    postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.prime.ack'));
+    postedEarly = true;
+  }
   const flow2Raw = (!flow1 && !hasExplicitDelegate) ? await splitBriefTasks(router, cfg, text) : [];
   const flow2Tasks = flow2Raw.filter((t) => currentProjectMemberKeys().includes(t.agent));
   if (flow1 && flow1Tasks.length > 0) ensureProjectForBrief(text);
   // v131: pesan user membawa kutipan reply bila mode Reply aktif.
-  const rt = getReplyTarget();
-  postChat('user', 'Patria', '#374151', esc(text), undefined, rt ? { replyTo: rt } : undefined);
-  clearReplyTarget();
-  input.value = '';
-  postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.prime.ack'));
+  if (!postedEarly) {
+    const rt = getReplyTarget();
+    postChat('user', 'Patria', '#374151', esc(text), undefined, rt ? { replyTo: rt } : undefined);
+    clearReplyTarget();
+    input.value = '';
+    postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.prime.ack'));
+  }
   // v138: split kreatif-tunggal Alur 1 masuk alur brief interaktif
   // (bukan fan-out): seremoni delegasi tetap (pengumuman + node + aktif).
   if (flow1 && flow1Tasks.length === 1 && flow1Tasks[0].agent === 'kreatif' && cbIsFlowEntry(text)) {
