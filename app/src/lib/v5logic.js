@@ -305,7 +305,7 @@ function homeChatWire() {
     else if (act === "msg-rec") { pickRecommendation(el); }
     else if (act === "cb-open-artikel") { showView("media"); mediaTab("script"); }
     else if (act === "cb-open-image") { showView("media"); mediaTab("image"); }
-    else if (act === "cb-open-voice") { var vb = document.getElementById("ms-tabbtn-voice"); showView("media"); if (vb) vb.click(); else mediaTab("voice"); }
+    else if (act === "cb-open-voice") { var vb = document.getElementById("ms-tabbtn-voice"); showView("media"); if (vb) vb.click(); else { mediaTab("voice"); if (typeof window.vsActivateOnOpen === "function") window.vsActivateOnOpen(); } }
     else if (act === "cb-open-video") { showView("media"); mediaTab("video"); }
     else if (act === "msg-v") { toggleMsgMenu(el); }
     else if (act === "msg-react") { toggleMsgPicker(el); }

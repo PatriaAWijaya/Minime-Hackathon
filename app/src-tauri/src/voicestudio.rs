@@ -100,7 +100,7 @@ const LAUNCH_TIMEOUT_NOTE: &str = "VoiceStudio dibuka tetapi backend :3900 tidak
 pub fn vs_launch() -> Result<VsLaunchResult, String> {
     let Some(app) = find_app() else {
         return Err(
-            "VoiceStudio belum terpasang di ~/Applications maupun /Applications — jalankan Setup dulu."
+            "VoiceStudio belum terpasang di ~/Applications maupun /Applications — pasang aplikasi VoiceStudio dulu, lalu buka tab Voice lagi."
                 .to_string(),
         );
     };

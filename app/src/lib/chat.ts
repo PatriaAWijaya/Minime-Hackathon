@@ -524,6 +524,11 @@ async function voiceChatRun(text: string): Promise<void> {
   postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.voice.opened'));
   showView('media');
   mediaTab('voice');
+  // v222: perintah vo: = Voice Editor di-trigger dari percakapan ->
+  // VoiceStudio otomatis aktif di background + terhubung.
+  if (typeof (window as unknown as Record<string, unknown>).vsActivateOnOpen === 'function') {
+    ((window as unknown as Record<string, () => void>).vsActivateOnOpen)();
+  }
 }
 
 export async function sendChatReal(): Promise<void> {

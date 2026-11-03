@@ -16,6 +16,10 @@
 //     seleksi bila ada).
 //  6. Transkrip: klik Transkrip memanggil whisper_transcribe, segmen
 //     tampil dengan waktu + teks, klik segmen memuat aset + seek.
+//  7. v222 (aktivasi otomatis): klik tab Voice / tombol Muat ulang
+//     saat backend mati MEMANGGIL vs_launch dulu (bukan sekadar
+//     periksa) lalu status jadi Terhubung; tick watchdog memanggil
+//     vs_launch bila tab Voice aktif, dan DIAM bila tab tak aktif.
 // Jalankan: npm run rig:vs (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -251,6 +255,35 @@ try {
   await tick(300);
   const libAfter = libBefore();
   check('v219: item audio masuk Library (audioFile + kind)', libAfter.some((it) => it.kind === 'audio' && it.audioFile === 'ved-test.wav'), JSON.stringify(libAfter.map((it) => it.kind + ':' + (it.audioFile || ''))));
+
+  // v222: aktivasi otomatis + watchdog.
+  // (Status 'Terhubung' bisa sudah menempel sejak mount — reset dulu
+  // supaya waitFor benar-benar menunggu aktivasi BARU, bukan status
+  // lama; dan tunggu kondisi gabungan status + vs_launch.)
+  const vsStatusText = () => document.getElementById('vsEmbedStatus')?.textContent || '';
+  const vsResetStatus = () => { const s = document.getElementById('vsEmbedStatus'); if (s) s.textContent = 'Belum terhubung'; };
+  backendAlive = false; log.length = 0; vsResetStatus();
+  document.getElementById('ms-tabbtn-voice').click();
+  await waitFor(() => vsStatusText().includes('Terhubung') && log.includes('invoke:vs_launch'), 'tab Voice mengaktifkan backend');
+  check('v222: klik tab Voice memanggil vs_launch saat backend mati', log.includes('invoke:vs_launch'), log.join(','));
+  check('v222: status panel jadi Terhubung sesudah aktivasi tab', vsStatusText().includes('Terhubung'), vsStatusText());
+  backendAlive = false; log.length = 0; vsResetStatus();
+  [...panel.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Muat ulang').click();
+  await waitFor(() => vsStatusText().includes('Terhubung') && log.includes('invoke:vs_launch'), 'Muat ulang mengaktifkan backend');
+  check('v222: Muat ulang memanggil vs_launch saat backend mati', log.includes('invoke:vs_launch'), log.join(','));
+  check('v222: status panel jadi Terhubung sesudah Muat ulang', vsStatusText().includes('Terhubung'), vsStatusText());
+  document.querySelector('button[data-view="media"]').click();
+  await tick(100);
+  backendAlive = false; log.length = 0;
+  await dom.window.vsVoiceWatchdogTick();
+  await tick(300);
+  check('v222: watchdog memanggil vs_launch bila tab Voice aktif + backend mati', log.includes('invoke:vs_launch'), log.join(','));
+  document.getElementById('ms-tabbtn-script').click();
+  await tick(100);
+  backendAlive = false; log.length = 0;
+  await dom.window.vsVoiceWatchdogTick();
+  await tick(300);
+  check('v222: watchdog DIAM bila tab Voice tak aktif', !log.includes('invoke:vs_launch'), log.join(','));
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));
   failures.push('rig error');

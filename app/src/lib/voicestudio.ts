@@ -228,7 +228,66 @@ export async function vsEmbedCheck(): Promise<void> {
 export async function vsEmbedReload(): Promise<void> {
   const frame = document.getElementById('vsEmbedFrame') as HTMLIFrameElement | null;
   if (frame) frame.removeAttribute('src');
+  // v222: Muat ulang BUKAN lagi sekadar periksa — dulu tombol ini hanya
+  // memanggil vsEmbedCheck, sehingga backend yang mati TIDAK PERNAH
+  // hidup kembali dari tombol ini (akar laporan "Belum terhubung"
+  // yang mentok). Kini: nyalakan dulu bila mati, baru periksa.
+  await vsActivateOnOpen();
+}
+
+// v222: VoiceStudio otomatis aktif + selalu terhubung (perintah Patria
+// 10:07, menegaskan 09:06/09:07/09:11). vsActivateOnOpen dipanggil tiap
+// Voice Editor dibuka — klik tab Voice, perintah vo: di chat,
+// navigasi cb-open-voice — dan oleh tombol Muat ulang: nyalakan via
+// vsEnsureBackend (cek -> vs_launch bila mati -> cek lagi), lalu
+// segarkan status panel. Fire-and-forget dari pemanggil (UI tidak
+// menunggu); gagal total = status panel tetap menampilkan offline
+// secara jujur, bukan klaim terhubung. Sengaja TIDAK dipanggil saat
+// mount app: user yang tak pernah membuka Voice tak perlu VoiceStudio
+// ikut menyala tiap app dibuka.
+let vsActivating = false;
+let vsWatchdog: ReturnType<typeof setInterval> | null = null;
+
+export function vsVoiceTabActive(): boolean {
+  const panel = document.getElementById('ms-tab-voice');
+  const view = document.getElementById('view-media');
+  return !!panel && panel.style.display === 'block' && !!view && view.classList.contains('active');
+}
+
+export async function vsActivateOnOpen(): Promise<void> {
+  if (vsActivating) return;
+  vsActivating = true;
+  try {
+    await vsEnsureBackend();
+  } catch {
+    /* tetap offline — vsEmbedCheck menampilkannya */
+  }
+  vsActivating = false;
   await vsEmbedCheck();
+  vsStartWatchdog();
+}
+
+// Satu tick watchdog: hanya berjalan bila tab Voice sedang aktif
+// (panel tampil + view media aktif). Bila cek gagal (putus di tengah
+// sesi), sambung ulang lewat jalur yang sama dengan aktivasi.
+export async function vsVoiceWatchdogTick(): Promise<void> {
+  if (!vsVoiceTabActive() || vsActivating) return;
+  if ((await vsCheck()) === 'online') return;
+  vsActivating = true;
+  try {
+    await vsEnsureBackend();
+  } catch {
+    /* tetap offline; tick berikutnya mencoba lagi */
+  }
+  vsActivating = false;
+  await vsEmbedCheck();
+}
+
+function vsStartWatchdog(): void {
+  if (vsWatchdog) return;
+  vsWatchdog = setInterval(() => {
+    void vsVoiceWatchdogTick();
+  }, 60000);
 }
 
 export function vsRenderVoices(): void {

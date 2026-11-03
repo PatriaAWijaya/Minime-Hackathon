@@ -3,7 +3,7 @@
   import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, toggleAddMenu, waAttach, waMic, waToggleAttach, graphNewProject, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, getTheme, setTheme, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck, libAll } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
-  import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetScript } from "./lib/voicestudio.js";
+  import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetScript, vsActivateOnOpen, vsVoiceWatchdogTick } from "./lib/voicestudio.js";
   import { sherpaSetup, sherpaTtsFromTab, sherpaRenderStatus, sherpaRefreshUI } from "./lib/sherpa.js";
   import { vedPlay, vedTrimSel, vedCutSel, vedClearSel, vedRefresh } from "./lib/voice-editor.js";
   import { initScriptEditor, setSeMenu, seRefreshUI } from "./lib/script-editor.js";
@@ -67,6 +67,11 @@
     initBrand();
     (window as unknown as Record<string, unknown>).refreshImgSpend = () => { imgSpend = readImgSpend(); };
     (window as unknown as Record<string, unknown>).refreshLiveCost = () => { liveCost = readLiveCost(); imgSpend = readImgSpend(); videoSpend = readVideoSpend(); };
+    // v222: bridge aktivasi VoiceStudio untuk chat (vo:) + v5logic
+    // (cb-open-voice) — modul-modul itu tak boleh mengimpor
+    // voicestudio langsung (siklus impor via voice-editor -> v5logic).
+    (window as unknown as Record<string, unknown>).vsActivateOnOpen = () => { void vsActivateOnOpen(); };
+    (window as unknown as Record<string, unknown>).vsVoiceWatchdogTick = () => vsVoiceWatchdogTick();
     (window as unknown as Record<string, unknown>).veSetPlan = (t: string) => { ve2Plan = t; ve2SaveState(); };
     // v218: bridge ekspor naskah movie -> rencana scene Video Editor.
     // Dipakai Script Editor (tombol Ekspor ke Video Editor) — naskah dari
@@ -1248,7 +1253,7 @@
       <div class="filters" style="flex-shrink:0;margin:0 14px 12px">
         <button id="ms-tabbtn-script" onclick={() => { mediaTab('script') }}>{t('ms.tab.script', lang)}</button>
         <button id="ms-tabbtn-image" onclick={() => { mediaTab('image') }}>{t('ms.tab.image', lang)}</button>
-        <button id="ms-tabbtn-voice" onclick={() => { mediaTab('voice'); vedRefresh(); }}>{t('ms.tab.voice', lang)}</button>
+        <button id="ms-tabbtn-voice" onclick={() => { mediaTab('voice'); vedRefresh(); vsActivateOnOpen(); }}>{t('ms.tab.voice', lang)}</button>
         <button id="ms-tabbtn-video" class="active" onclick={() => { mediaTab('video') }}>{t('ms.tab.video', lang)}</button>
       </div>
       <div class="scroll">
