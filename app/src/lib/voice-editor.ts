@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
 import { esc } from './esc.js';
 import { libAddAudio, mediaTab } from './v5logic.js';
+import { assFromCaptions } from './video.js';
 
 // Voice Editor (v65): timeline waveform + daftar aset + transkrip
 // Whisper, di tab Voice Media Studio.
@@ -819,6 +820,9 @@ function vedRenderTranscript(id?: string): void {
     '<button class="btn btn-sm" id="vedCopyBtn">' +
     esc(tr('ved.copy')) +
     '</button>' +
+    ' <button class="btn btn-sm" id="vedAssBtn">' +
+    esc(tr('ved.to_ass')) +
+    '</button>' +
     '<div style="margin-top:8px">' +
     t.segments
       .map(
@@ -839,6 +843,24 @@ function vedRenderTranscript(id?: string): void {
       ?.writeText(t.text)
       .then(() => setNote(tr('ved.copied')))
       .catch(() => setNote(tr('vs.error') + 'clipboard'));
+  });
+  // v215: transkrip -> caption ASS (sidecar, bukan burn-in — sama
+  // seperti tombol Subtitle Video Editor: assFromCaptions + invoke
+  // video_write_ass yang sudah ada; segmen Whisper sudah berbentuk
+  // {start, end, text} = T1Caption).
+  const assBtn = el('vedAssBtn');
+  assBtn?.addEventListener('click', async () => {
+    try {
+      const ass = assFromCaptions(
+        t.segments.map((s) => ({ text: s.text, start: s.start, end: s.end })),
+        1280,
+        720,
+      );
+      const r = await invoke<{ path: string }>('video_write_ass', { req: { content: ass } });
+      setNote(tr('ve2.ass_saved') + ' ' + r.path);
+    } catch (e) {
+      setNote(tr('vs.error') + (e instanceof Error ? e.message : String(e)));
+    }
   });
   box.querySelectorAll('[data-ved-seek]').forEach((row) => {
     row.addEventListener('click', () => {

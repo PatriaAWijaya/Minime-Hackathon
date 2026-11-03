@@ -1,9 +1,10 @@
 // Rig VoiceStudio (jsdom, test-only): membuktikan wiring tab Voice di
 // bundle yang sudah di-build — BUKAN mock logika bisnis:
-//  1. (v67, perintah Patria: tombol Periksa status + seksi Setup
-//     DIHAPUS dari tab) Tombol Setup (Pasang + Buka) TIDAK ada dan
-//     #vsSetupNote TIDAK ada — fungsi vsSetup* dipertahankan di
-//     voicestudio.ts untuk jalur upgrade, bukan dari UI.
+//  1. (v67: tombol Setup DIHAPUS dari tab; v215: fungsi vsSetup*
+//     + command vs_install DIHAPUS PENUH dari kode) Tombol Setup
+//     (Pasang + Buka) TIDAK ada dan #vsSetupNote TIDAK ada; stub
+//     vs_install ikut dihapus — pemanggilan vs_install kini membuat
+//     rig GAGAL (tripwire), membuktikan tidak ada lagi pemanggilnya.
 //  2. Generate TTS saat backend mati MEMANGGIL vs_launch DULU sebelum
 //     fetch /v1/audio/speech (urutan auto-launch agen).
 //  3. Bila backend sudah hidup, Generate TIDAK memanggil vs_launch lagi.
@@ -52,27 +53,24 @@ async function invokeStub(cmd) {
     backendAlive = true;
     return { backendUp: true, appPath: '/Applications/VoiceStudio.app' };
   }
-  if (cmd === 'vs_install') {
-    backendAlive = true;
-    return { installed: true, skippedDownload: true, appPath: '/Applications/VoiceStudio.app', backendUp: true, version: 'existing' };
-  }
   if (cmd === 'audio_save') return { file: 'ved-test.wav', bytes: 4 };
   if (cmd === 'audio_read') return { file: 'ved-test.wav', b64: 'UklGRg==', bytes: 4 };
   if (cmd === 'audio_delete') return { file: 'ved-test.wav', deleted: true };
   if (cmd === 'audio_path') return { path: '/Users/mac/minime-audio/ved-test.wav' };
+  if (cmd === 'video_write_ass') return { path: '/Users/mac/Movies/minime-ve2/caption-uji.ass' };
   if (cmd === 'whisper_transcribe') {
     return { segments: [{ start: 2.5, end: 4.0, text: 'Halo dunia' }], text: 'Halo dunia' };
   }
   throw new Error('unexpected invoke ' + cmd);
 }
 
-async function fetchStub(url) {
+async function fetchStub(url, opts) {
   const u = String(url);
   const p = u.replace(/^https?:\/\/127\.0\.0\.1:3900/, '');
   log.push('fetch:' + p);
   if (p === '/v1/models') {
     if (!backendAlive) throw new Error('fetch failed');
-    return makeResp({ jsonData: [] });
+    return makeResp({ jsonData: [{ id: 'tts-1' }, { id: 'tts-1-hd' }] });
   }
   if (p === '/v1/audio/voices') {
     if (!backendAlive) throw new Error('fetch failed');
@@ -80,11 +78,12 @@ async function fetchStub(url) {
   }
   if (p === '/v1/audio/speech') {
     if (!backendAlive) throw new Error('fetch failed');
+    try { const b = JSON.parse(opts?.body || '{}'); if (b.model) log.push('speech-model:' + b.model); } catch (_) {}
     return makeResp({ contentType: 'audio/wav' });
   }
   if (p === '/health') {
     if (!backendAlive) throw new Error('fetch failed');
-    return makeResp({ jsonData: { status: 'ok', device: 'mps', version: '0.5.6' } });
+    return makeResp({ jsonData: { status: 'ok', device: 'mps', version: '0.5.7' } });
   }
   if (u.startsWith('http://localhost:3901/')) {
     // Probe UI embed (no-cors di app asli): resolve = port menjawab.
@@ -177,7 +176,7 @@ try {
   await tick(300);
   check('embed: iframe terpasang saat :3901 menjawab', document.getElementById('vsEmbedFrame')?.getAttribute('src') === 'http://localhost:3901', document.getElementById('vsEmbedFrame')?.getAttribute('src') || '');
   check('embed: status Terhubung', (document.getElementById('vsEmbedStatus')?.textContent || '').includes('Terhubung'), document.getElementById('vsEmbedStatus')?.textContent || '');
-  check('embed: koneksi API terverifikasi (versi + device)', (document.getElementById('vsEmbedNote')?.textContent || '').includes('0.5.6') && (document.getElementById('vsEmbedNote')?.textContent || '').includes('mps'), document.getElementById('vsEmbedNote')?.textContent || '');
+  check('embed: koneksi API terverifikasi (versi + device)', (document.getElementById('vsEmbedNote')?.textContent || '').includes('0.5.7') && (document.getElementById('vsEmbedNote')?.textContent || '').includes('mps'), document.getElementById('vsEmbedNote')?.textContent || '');
 
   // Backend sudah hidup -> Generate tidak launch lagi.
   log.length = 0;
@@ -212,6 +211,26 @@ try {
   trBox.querySelector('[data-ved-seek]').click();
   await waitFor(() => document.getElementById('vedAudio')?.currentTime === 2.5, 'seek ke segmen');
   check('klik segmen: seek ke 2.5 dtk', document.getElementById('vedAudio').currentTime === 2.5);
+
+  // v215: (a) daftar model bisa dipilih — klik model lalu Generate
+  // memakai model itu (bukan lagi hardcode 'omnivoice'); (b) transkrip
+  // bisa disimpan sebagai caption ASS (sidecar) lewat video_write_ass.
+  const modelBtns = [...document.querySelectorAll('#vsModelList [data-vs-model]')].map((b) => b.textContent.trim());
+  check('v215: daftar model tampil sebagai tombol pilih', modelBtns.includes('tts-1') && modelBtns.includes('tts-1-hd'), modelBtns.join('|'));
+  document.querySelector('#vsModelList [data-vs-model="tts-1-hd"]').click();
+  await tick(100);
+  check('v215: model terpilih bertanda centang', (document.querySelector('#vsModelList [data-vs-model="tts-1-hd"]')?.textContent || '').startsWith('✓'), document.querySelector('#vsModelList [data-vs-model="tts-1-hd"]')?.textContent || '');
+  log.length = 0;
+  document.getElementById('vsText').value = 'Uji model pilihan.';
+  [...panel.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Generate').click();
+  await tick(500);
+  check('v215: sintesis memakai model yang dipilih', log.includes('speech-model:tts-1-hd'), log.join(','));
+  check('v215: tombol Simpan ASS ada di panel transkrip', !!document.getElementById('vedAssBtn'), '');
+  log.length = 0;
+  document.getElementById('vedAssBtn').click();
+  await tick(300);
+  check('v215: Simpan ASS memanggil video_write_ass', log.includes('invoke:video_write_ass'), log.join(','));
+  check('v215: nota ASS menampilkan path hasil', (document.getElementById('vedNote')?.textContent || '').includes('caption-uji.ass'), document.getElementById('vedNote')?.textContent || '');
 
   // v219: hasil Voice Editor dipanggil sebagai aset Video Editor +
   // disimpan ke Library (kind 'audio').

@@ -6,8 +6,9 @@ import { vedRegisterBlob } from './voice-editor.js';
 // API terverifikasi dari backend v0.5.6 di MacBook + pemakaian terbukti 22 Okt:
 //   GET  /v1/models, GET /v1/audio/voices, POST /v1/audio/speech (JSON),
 //   POST /generate (multipart). Engine jalan saat VoiceStudio.app dibuka;
-//   sejak v29 MiniMe membukanya OTOMATIS (vs_launch) bila backend mati,
-//   dan Setup satu paket (vs_install) mengunduh + memasang + membukanya.
+//   sejak v29 MiniMe membukanya OTOMATIS (vs_launch) bila backend mati.
+//   v215: fungsi setup satu paket DIHAPUS PENUH (instalasi/upgrade
+//   VoiceStudio kini urusan luar app, dipegang di sisi MacBook).
 // Perintah agen: agentVoiceTts/agentVoiceClone — pastikan backend dulu,
 // panggil API, kembalikan audio ke MiniMe (player + unduh = "import").
 
@@ -25,11 +26,33 @@ export interface VsVoice {
 
 export type VsStatus = 'unknown' | 'online' | 'offline';
 
-export const vsState: { status: VsStatus; voices: VsVoice[]; models: string[] } = {
+// v215: model TTS bisa dipilih (klik daftar) — default 'omnivoice'.
+// Pilihan bertahan antar sesi (localStorage minime.vsModel); bila model
+// terpilih tak lagi ada di daftar backend, kembali ke 'omnivoice'.
+const VS_MODEL_LS = 'minime.vsModel';
+function readVsModel(): string {
+  try {
+    return localStorage.getItem(VS_MODEL_LS) || 'omnivoice';
+  } catch {
+    return 'omnivoice';
+  }
+}
+export const vsState: { status: VsStatus; voices: VsVoice[]; models: string[]; selectedModel: string } = {
   status: 'unknown',
   voices: [],
   models: [],
+  selectedModel: readVsModel(),
 };
+
+export function vsSelectModel(m: string): void {
+  vsState.selectedModel = m || 'omnivoice';
+  try {
+    localStorage.setItem(VS_MODEL_LS, vsState.selectedModel);
+  } catch {
+    /* kuota penuh: abaikan */
+  }
+  vsRenderModels();
+}
 
 async function vsFetch(path: string, init?: RequestInit, timeoutMs = 8000): Promise<Response> {
   const ctrl = new AbortController();
@@ -81,6 +104,10 @@ export async function vsCheck(): Promise<VsStatus> {
           return String(o.id ?? o.name ?? '');
         })
         .filter(Boolean);
+      // v215: pilihan model usang (tak ada di daftar backend) -> default.
+      if (vsState.models.length > 0 && !vsState.models.includes(vsState.selectedModel)) {
+        vsSelectModel('omnivoice');
+      }
     } catch {
       vsState.models = [];
     }
@@ -232,7 +259,14 @@ export function vsRenderModels(): void {
   }
   for (const m of vsState.models) {
     const li = document.createElement('li');
-    li.textContent = m;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm';
+    btn.dataset.vsModel = m;
+    btn.textContent = (m === vsState.selectedModel ? '✓ ' : '') + m;
+    btn.setAttribute('aria-pressed', m === vsState.selectedModel ? 'true' : 'false');
+    btn.addEventListener('click', () => vsSelectModel(m));
+    li.appendChild(btn);
     ul.appendChild(li);
   }
 }
@@ -286,14 +320,6 @@ async function readErr(resp: Response): Promise<string> {
   }
 }
 
-export interface VsInstallResult {
-  installed: boolean;
-  skippedDownload: boolean;
-  appPath: string;
-  backendUp: boolean;
-  version: string;
-}
-
 // Perintah agen: pastikan backend VoiceStudio hidup (buka otomatis bila
 // mati), lalu kembalikan status. Melempar bila backend tetap mati.
 export async function vsEnsureBackend(): Promise<VsStatus> {
@@ -317,7 +343,7 @@ export async function agentVoiceTts(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'omnivoice',
+        model: vsState.selectedModel || 'omnivoice',
         input: text,
         voice,
         response_format: 'wav',
@@ -390,37 +416,6 @@ export async function vsGenerateClone(): Promise<void> {
     void vedRegisterBlob(url, filename, 'clone');
   } catch (e) {
     setNote('vsCloneNote', tr('vs.error') + (e instanceof Error ? e.message : String(e)));
-  }
-}
-
-// Setup satu paket: unduh + pasang + buka + verifikasi backend.
-// UI-nya DIHAPUS v67 atas perintah Patria (tombol Periksa status +
-// seksi Setup di tab Voice Editor) — fungsi ini DIPERTAHANKAN agar
-// jalur upgrade VoiceStudio (mis. v0.5.6 -> v0.5.7, masih tertunda)
-// tidak musnah; pasang kembali tombolnya bila jalur itu dibuka lagi.
-// vsCheck tetap dipakai onMount App.svelte (memuat model + suara).
-export async function vsSetupInstall(): Promise<void> {
-  setNote('vsSetupNote', tr('vs.setup.working'));
-  try {
-    const r = await invoke<VsInstallResult>('vs_install', {});
-    setNote(
-      'vsSetupNote',
-      tr('vs.setup.done') + ' ' + r.appPath + (r.skippedDownload ? ' (' + tr('vs.setup.skipped') + ')' : ' (v' + r.version + ')'),
-    );
-    await vsCheck();
-  } catch (e) {
-    setNote('vsSetupNote', tr('vs.error') + (e instanceof Error ? e.message : String(e)));
-  }
-}
-
-export async function vsSetupLaunch(): Promise<void> {
-  setNote('vsSetupNote', tr('vs.setup.working'));
-  try {
-    await invoke('vs_launch', {});
-    setNote('vsSetupNote', tr('vs.setup.done'));
-    await vsCheck();
-  } catch (e) {
-    setNote('vsSetupNote', tr('vs.error') + (e instanceof Error ? e.message : String(e)));
   }
 }
 

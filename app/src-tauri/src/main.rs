@@ -61,7 +61,6 @@ fn main() {
             hyperframes::hyperframes_check,
             hyperframes::hyperframes_render,
             voicestudio::vs_launch,
-            voicestudio::vs_install,
             sherpa::sherpa_status,
             sherpa::sherpa_setup,
             sherpa::sherpa_tts,
