@@ -528,6 +528,10 @@ try {
   check('v231: teks field terang dibalik hitam', /\[data-theme=light\] \.se-field,\[data-theme=light\] \.se-btn2,.*color:#000\}/.test(cssText), '');
   check('v231: kartu gelap tetap hitam di dark', /\.ms-card\{background:#1e1e1e/.test(cssText), '');
 
+  // 31. v232: teks ketikan composer hitam di light, gelap tetap terang.
+  check('v232: ketikan #chatInput hitam di light', /\[data-theme=light\] #chatInput\{color:#000\}/.test(cssText), '');
+  check('v232: ketikan #chatInput tetap terang di dark', /#chatInput\{[^}]*color:#ececec/.test(cssText), '');
+
 
 } catch (e) {
   // eslint-disable-next-line no-console

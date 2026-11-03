@@ -954,3 +954,13 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 [data-theme="light"] .se-field, [data-theme="light"] .se-btn2, [data-theme="light"] .lib-filters select, [data-theme="light"] .g-input, [data-theme="light"] .g-day, [data-theme="light"] .g-ampm, [data-theme="light"] .soc-dlg, [data-theme="light"] .kb-dlg, [data-theme="light"] .na-effort-btn, [data-theme="light"] .n8n-nodebar button { color: #000000; }
 [data-theme="light"] .na-model-row:hover { background: #E4EEFB; }
 [data-theme="light"] #view-billing .scroll > div[style*="background:#1e1e1e"] { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.70), rgba(255, 255, 255, 0.20) 40%, rgba(255, 255, 255, 0) 65%), linear-gradient(180deg, #FFFFFF, #E4EEFB) !important; }
+
+/* v232: teks ketikan composer jadi hitam di tema terang (perintah
+   Patria 3 Nov 2026 12:56 + screenshot 12:55: ketikan "Buat scrip
+   untuk promo launching cafe di surabaya selatan" nyaris tak
+   terlihat). Akar: #chatInput di app.css:140 memakai warna
+   hardcode #ececec (bukan variabel) sehingga lolos dari
+   perbaikan variabel v227. Placeholder SUDAH hitam lewat
+   var(--t-faint) -> #000000 (v227), jadi tidak diubah.
+   Tema gelap TIDAK disentuh (tetap #ececec). */
+[data-theme="light"] #chatInput { color: #000000; }
