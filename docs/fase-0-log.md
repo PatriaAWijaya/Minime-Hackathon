@@ -2539,6 +2539,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - Uji: vite build lolos; svelte-check 0 error / 21 warning (baseline); cargo fmt + check + check --tests 0 warning/error; rig-vs §v215 (stub /v1/models = tts-1/tts-1-hd, /health = 0.5.7; daftar model tampil sebagai tombol; klik tts-1-hd -> centang; Generate memakai speech-model:tts-1-hd di body; tombol Simpan ASS ada; klik -> invoke video_write_ass; nota menampilkan path) ALL PASSED; loop 14 rig ALL PASSED (~/workspace/riglogs-v215/loop.log); gerbang GATE-V215 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1276).
 - SHA: kode lokal 7ec01a6 <-> remote a02e6ef (tree identik, pola push_rebased.py).
 - Catatan live: BELUM dikonfirmasi live (uji disarankan: buka tab Voice — daftar model tampil sebagai tombol, klik satu model lalu Generate dan dengarkan hasilnya; di Voice Editor, transkrip satu aset lalu 'Simpan ASS' dan cek berkas .ass-nya; periksa backend tetap 0.5.7 sesudah restart app).
+- LIVE 3 Nov 2026 ~10:15 WIB: deploy mh-build215 OK, HEAD MacBook 9aaf952 (= remote log), PID 629 (start 10:04), md5 dist JS lokal == MacBook (84213d173352ab49c5d4dce8bb6b745e, byte-identik), marker 'Simpan ASS' di bundle JS live, 'vs_install' 0 kemunculan di bundle live, backend VoiceStudio tetap 0.5.7 (health sesudah deploy). Konfirmasi ketuk live Patria BELUM ada.
 
 ## v220 — Intake Video Editor perakitan penuh (perintah Patria 3 Nov 2026 08:25, butir v160 #3: bangun penuh untuk semua fungsi/jalur Video Editor, termasuk reels)
 
