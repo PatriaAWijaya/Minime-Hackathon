@@ -2538,6 +2538,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - Uji: vite build lolos; svelte-check 0 error / 21 warning (baseline); rig-vs ALL PASSED (termasuk cek v224 baru); loop 14 rig ALL PASSED (~/workspace/riglogs-v224/loop.log); gerbang GATE-V224 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271).
 - SHA: kode lokal 768b724 <-> remote 53d31d2 (tree identik, pola push_rebased.py).
 - Catatan live: BELUM dikonfirmasi live (uji disarankan: buka tab Voice — judul 'Panel VoiceStudio' dan paragraf catatan sudah tidak ada; yang tampil hanya bar VoiceStudio + badge status + tombol Muat ulang).
+- LIVE 3 Nov 2026 ~10:52 WIB: deploy mh-build224 OK, HEAD MacBook 3b1f903 (= remote log), PID 3328, md5 dist JS lokal == MacBook (2335d23adebad02f1dc9c3bc032ba0c2, byte-identik), marker negatif: 'vsEmbedNote' 0 kemunculan + 'Panel VoiceStudio' 0 kemunculan di bundle JS live. Konfirmasi ketuk live Patria BELUM ada.
 
 ## v223 — Proxy Rust vs_api untuk VoiceStudio (perbaikan akar CORS live, laporan Patria 10:23)
 
