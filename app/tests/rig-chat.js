@@ -85,6 +85,31 @@ async function fetchStub(url, opts) {
     // heading baru (footer tidak boleh bocor); panggilan QC dikecualikan
     // agar verdict tetap dari cabang QC.
     content = 'Title: Kopi Susu Gula Aren\nSubtitle: Manisnya Pas, Creamy-nya Nagih\nBody: Satu gelas cukup untuk memulai hari, racikan susu lembut berpadu gula aren asli.\n- Susu segar creamy\n- Gula aren asli\n- Es batu kristal\nHeader: KOPI PAGI\nFooter: Pesan sekarang via chat\nCaption: Kopi susu gula aren, manisnya pas!\n## 2. Elemen Visual dan Tata Letak\n- Elemen visual: ikon minimalis\n- Warna: cokelat hangat';
+  } else if (body.includes('FORMAT-LABEL-WAJIB')) {
+    // v238: perbaikan format — LABEL-UJI dikembalikan apa adanya
+    // (perbaikan gagal -> hasil awal dipakai, cek v203 tidak berubah);
+    // LABEL-REPAIR -> rencana berlabel lengkap.
+    if (body.includes('LABEL-UJI')) {
+      content = 'Title: Kopi Susu Gula Aren\nSubtitle: Manisnya Pas, Creamy-nya Nagih\nBody: Satu gelas cukup untuk memulai hari, racikan susu lembut berpadu gula aren asli.\n- Susu segar creamy\n- Gula aren asli\n- Es batu kristal\nHeader: KOPI PAGI\nFooter: Pesan sekarang via chat\nCaption: Kopi susu gula aren, manisnya pas!\n## 2. Elemen Visual dan Tata Letak\n- Elemen visual: ikon minimalis\n- Warna: cokelat hangat';
+    } else if (body.includes('LABEL-REPAIR')) {
+      content = 'Brief umum perbaikan: strategi kopi pagi.\nPrompt Generator: PROMPT-PERBAIKAN-UJI\nTitle: Kopi Perbaikan\nCaption: CAPTION-PERBAIKAN-UJI';
+    } else if (body.includes('NASKAH-REELS-UJI')) {
+      // v238: isi generik HARUS beda per alur — libAddScript dedupe per
+      // isi, konten sama dengan §25 akan ditolak sehingga entri
+      // 'Reels:' tidak pernah tercatat (timeout cb140r).
+      content = 'Brief umum generik reels.\nPrompt Generator: PROMPT-GENERIK-REELS-UJI\nTitle: Kopi Generik Reels\nCaption: CAPTION-GENERIK-REELS-UJI';
+    } else {
+      content = 'Brief umum generik.\nPrompt Generator: PROMPT-GENERIK-UJI\nTitle: Kopi Generik\nCaption: CAPTION-GENERIK-UJI';
+    }
+  } else if (body.includes('LABEL-V238') && body.includes('IMAGE-PLAN') && !body.includes('QC hasil kerja agen')) {
+    // v238: image single berlabel lengkap (prompt + caption).
+    content = 'Brief umum: strategi kopi pagi untuk awareness.\nPrompt Generator: PROMPT-V238-UJI\nTitle: Kopi Pagi V238\nSubtitle: Sub V238\nHeader: KOPI\nFooter: Order via chat\nCaption: CAPTION-V238-UJI';
+  } else if (body.includes('LABEL-CAR') && body.includes('CAROUSEL-PLAN') && !body.includes('QC hasil kerja agen')) {
+    // v238: carousel single — prompt per slide + caption posting.
+    content = 'Brief umum: carousel kopi pagi.\nPrompt Slide 1: PROMPT-SLIDE-1-UJI\nPrompt Slide 2: PROMPT-SLIDE-2-UJI\nPrompt Slide 3: PROMPT-SLIDE-3-UJI\nCaption: CAPTION-CAR-UJI';
+  } else if (body.includes('LABEL-REPAIR') && body.includes('IMAGE-PLAN') && !body.includes('QC hasil kerja agen')) {
+    // v238: generate pertama tanpa label -> memicu perbaikan format.
+    content = 'Strategi konten kopi pagi: konsep umum tanpa label apa pun, hanya paragraf deskriptif panjang tentang kopi dan suasana pagi.';
   } else if (body.includes('QC hasil kerja agen') && body.includes('GATE-UJI')) {
     // v161: QC pertama tugas GATE-UJI = REVISI (memicu 1 putaran revisi),
     // QC berikutnya = LOLOS. Marker membuktikan verdict interim tak bocor.
@@ -117,8 +142,12 @@ async function fetchStub(url, opts) {
   } else if (body.includes('CAROUSEL-PLAN')) {
     content = 'NASKAH-CAR-UJI: caption + carousel 6 slide kopi.';
   } else if (body.includes('REELS-PLAN')) {
+    // v238: rencana REELS-UJI dibuat triple-lengkap (prompt + caption)
+    // supaya tidak memicu perbaikan format yang akan menghapus shot.
+    // Prompt Generator di AKHIR: blok paragraf sebelum heading Shot
+    // pertama dihitung parseMovieScenes sebagai scene sendiri (n=3).
     content = body.includes('REELS-UJI')
-      ? 'Shot 1: Pembuka\nSecangkir kopi susu dituang perlahan di atas meja kayu.\nShot 2: Penutup\nBarista tersenyum menyerahkan gelas ke pelanggan.\nCaption: Kopi susu gula aren, manisnya pas!'
+      ? 'Shot 1: Pembuka\nSecangkir kopi susu dituang perlahan di atas meja kayu.\nShot 2: Penutup\nBarista tersenyum menyerahkan gelas ke pelanggan.\nCaption: Kopi susu gula aren, manisnya pas!\nPrompt Generator: PROMPT-REELS-UJI'
       : 'NASKAH-REELS-UJI: rencana reels 30-60 detik 9:16 kopi.';
   } else if (body.includes('500 karakter')) {
     content = 'Kopi susu gula aren ini creamy banget, manisnya pas dari gula aren asli, dan aromanya langsung bikin pengin nyobain satu gelas lagi. Satu gelas cukup untuk memulai hari, apalagi diminum selagi hangat ditemani roti bakar di pagi yang masih sepi. Racikan susunya lembut, gulanya tidak bikin enek, dan aftertaste kopinya bersih tanpa rasa pahit yang mengganggu. Cocok buat yang baru mulai suka kopi, juga buat penikmat lama yang cari rasa manis legit tanpa ribet. Order sekarang selagi promo berjalan, stok gula aren asli terbatas dan tiap gelas dibuat fresh begitu pesanan masuk. Jangan sampai kehabisan, karena racikan ini cuma tersedia selama persediaan gula aren masih ada.';
@@ -1084,6 +1113,81 @@ try {
   if (savedMetaKey) store.set('minime.metaKey', savedMetaKey);
   if (savedGeminiKey) store.set('minime.geminiKey', savedGeminiKey);
   store.delete('minime.anthropicKey');
+
+  // 35. v238: output kreatif triple — prompt generator spesifik masuk
+  // Image Editor sebagai brief, caption masuk body copy; carousel
+  // per slide jadi tab; format hilang diperbaiki satu kali.
+  const imgFlow238 = () => { try { return JSON.parse(store.get('minime.imageFlow') || '{}'); } catch (_) { return {}; } };
+  await sendMsg('halo Kreatif, buatkan konten instagram kopi LABEL-V238');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'v238 purpose');
+  recBtn(lastMsg(), 'Konten Sosial Media').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Platform sosmednya yang mana?'), 'v238 platform');
+  recBtn(lastMsg(), 'Instagram').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis postingannya apa?'), 'v238 format');
+  recBtn(lastMsg(), 'Image').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Tujuannya apa?'), 'v238 purpose2');
+  recBtn(lastMsg(), 'Promosional').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Pendekatannya mau yang mana?'), 'v238 approach');
+  recBtn(lastMsg(), 'Infografis').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Posting 1 per 1 atau bulk'), 'v238 count');
+  recBtn(lastMsg(), 'Satu per satu').click();
+  await waitFor(() => (imgFlow238().brief || '') === 'PROMPT-V238-UJI', 'v238 brief=prompt', 120);
+  await tick(200);
+  const f238 = imgFlow238();
+  check('v238: brief editor = Prompt Generator spesifik', f238.brief === 'PROMPT-V238-UJI', f238.brief || '');
+  check('v238: caption masuk body copy', (f238.body || '').includes('CAPTION-V238-UJI'), f238.body || '');
+  check('v238: judul dari label tetap terurai', f238.title === 'Kopi Pagi V238', f238.title || '');
+
+  // Carousel single: slide jadi tab, caption jadi body, pindah tab
+  // mengganti brief ke prompt slide itu tanpa menghapus caption.
+  await sendMsg('halo Kreatif, buatkan konten carousel instagram kopi LABEL-CAR');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'v238c purpose');
+  recBtn(lastMsg(), 'Konten Sosial Media').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Platform sosmednya yang mana?'), 'v238c platform');
+  recBtn(lastMsg(), 'Instagram').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis postingannya apa?'), 'v238c format');
+  recBtn(lastMsg(), 'Carousel').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Tujuannya apa?'), 'v238c purpose2');
+  recBtn(lastMsg(), 'Promosional').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Pendekatannya mau yang mana?'), 'v238c approach');
+  recBtn(lastMsg(), 'Listicle').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Posting 1 per 1 atau bulk'), 'v238c count');
+  recBtn(lastMsg(), 'Satu per satu').click();
+  await waitFor(() => (imgFlow238().body || '').includes('CAPTION-CAR-UJI'), 'v238c body', 120);
+  await tick(200);
+  const fCar238 = imgFlow238();
+  const tabsCar = document.querySelectorAll('#img-bulk-tabs .img-tab');
+  check('v238: carousel single membuat tab per slide', tabsCar.length === 3, 'tabs=' + tabsCar.length);
+  check('v238: brief tab pertama = prompt slide 1', (fCar238.brief || '') === 'PROMPT-SLIDE-1-UJI', fCar238.brief || '');
+  check('v238: caption carousel masuk body copy', (fCar238.body || '').includes('CAPTION-CAR-UJI'), fCar238.body || '');
+  tabsCar[1].click();
+  await tick(200);
+  const fCar238b = imgFlow238();
+  check('v238: pindah tab slide mengganti brief ke prompt slide 2', (fCar238b.brief || '') === 'PROMPT-SLIDE-2-UJI', fCar238b.brief || '');
+  check('v238: pindah tab slide tidak menghapus caption', (fCar238b.body || '').includes('CAPTION-CAR-UJI'), fCar238b.body || '');
+
+  // Perbaikan format: generate tanpa label -> satu call perbaikan,
+  // hasil akhir berlabel lengkap.
+  const fetchBeforeRep = fetchRecs.length;
+  await sendMsg('halo Kreatif, buatkan konten instagram kopi LABEL-REPAIR');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'v238r purpose');
+  recBtn(lastMsg(), 'Konten Sosial Media').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Platform sosmednya yang mana?'), 'v238r platform');
+  recBtn(lastMsg(), 'Instagram').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis postingannya apa?'), 'v238r format');
+  recBtn(lastMsg(), 'Image').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Tujuannya apa?'), 'v238r purpose2');
+  recBtn(lastMsg(), 'Promosional').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Pendekatannya mau yang mana?'), 'v238r approach');
+  recBtn(lastMsg(), 'Infografis').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Posting 1 per 1 atau bulk'), 'v238r count');
+  recBtn(lastMsg(), 'Satu per satu').click();
+  await waitFor(() => (imgFlow238().brief || '') === 'PROMPT-PERBAIKAN-UJI', 'v238r repair brief', 120);
+  await tick(200);
+  const fRep = imgFlow238();
+  check('v238: format hilang -> perbaikan menghasilkan prompt', fRep.brief === 'PROMPT-PERBAIKAN-UJI', fRep.brief || '');
+  check('v238: caption perbaikan masuk body copy', (fRep.body || '').includes('CAPTION-PERBAIKAN-UJI'), fRep.body || '');
+  check('v238: call perbaikan format terpanggil sekali', fetchRecs.slice(fetchBeforeRep).some((r) => (r.body || '').includes('FORMAT-LABEL-WAJIB')), 'calls=' + fetchRecs.slice(fetchBeforeRep).length);
 
 } catch (e) {
   // eslint-disable-next-line no-console

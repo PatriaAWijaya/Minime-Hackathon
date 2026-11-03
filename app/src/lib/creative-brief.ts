@@ -28,6 +28,9 @@ import { QC_INSTRUCTION, parseQcVerdict } from './chat.js';
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { recordLiveCost } from './cost.js';
 import { esc } from './esc.js';
+import { parsePlanLabels } from './plan-labels.js';
+import { socSetCaption } from './social.js';
+import { captionTrackTitle } from './caption-tracks.js';
 
 const LS = 'minime.creativeBrief';
 
@@ -418,7 +421,7 @@ async function cbGenerateArticle(st: CbState): Promise<void> {
     'Gaya bahasa: ' + (a['art-style'] || '-') + '\n' +
     'Jumlah kalimat: ' + (a['art-sentences'] || '-') + '\n' +
     'Segmen audiens: ' + (a['art-audience'] || '-') + '\n' +
-    'Tulis artikel lengkap, bukan kerangka.' + topicLine(st);
+    'Tulis artikel lengkap, bukan kerangka.' + topicLine(st) + '\nDi akhir, tambahkan (aturan output kreatif; jalur artikel sendiri, jangan dicampur ke caption sosmed/video):\nPrompt Generator: prompt cover image SPESIFIK artikel ini, siap generate.\nCaption promosi: caption sosmed untuk mempromosikan artikel ini (body copy + hashtag + CTA).';
   setAgentPhase('kreatif', 'busy');
   try {
     const router = routerFor(kreatifSystem());
@@ -485,71 +488,16 @@ function setImageBrief(text: string): void {
 // Body dipisah dua bentuk (keputusan Patria 23:13: listicle adalah
 // SALAH SATU bentuk body copy): baris daftar (-, *, •, 1./1)) menjadi
 // Listicle (marker dibuang), baris lain menjadi Body paragraf.
-// Caption dan elemen visual diabaikan (caption sudah punya jalurnya
-// sendiri; elemen visual tetap di brief utuh). Bila tidak ada label
-// sama sekali, semua field kosong dan brief utuh yang dipakai
-// (perilaku lama) — parse tidak menebak-nebak field.
+// v238: Caption MASUK body copy (aturan output kreatif 3 Nov 2026) —
+// dulu caption diabaikan ('skip'); kini body = paragraf Body + caption.
+// Elemen visual tetap di brief utuh. Bila tidak ada label sama sekali,
+// semua field kosong dan brief utuh yang dipakai (perilaku lama) —
+// parse tidak menebak-nebak field. Implementasi di plan-labels.ts
+// (satu sumber kebenaran dengan image-flow).
 export type ImagePlanFields = { title: string; subtitle: string; body: string; listicle: string; header: string; footer: string };
-const PLAN_LABELS: Array<{ re: RegExp; key: keyof ImagePlanFields | 'skip' }> = [
-  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(title|judul)\s*:/i, key: 'title' },
-  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(subtitle|subjudul)\s*:/i, key: 'subtitle' },
-  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(body|isi)\s*:/i, key: 'body' },
-  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(header|kepala)\s*:/i, key: 'header' },
-  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(footer|kaki)\s*:/i, key: 'footer' },
-  { re: /^(?:#{1,6}\s*)?(?:\*{0,2}\s*)?(caption|keterangan|logo|elemen visual|visual|elemen)\s*:/i, key: 'skip' },
-];
 export function parseImagePlan(text: string): ImagePlanFields {
-  const out: ImagePlanFields = { title: '', subtitle: '', body: '', listicle: '', header: '', footer: '' };
-  const sections = new Map<keyof ImagePlanFields | 'skip', string[]>();
-  let cur: keyof ImagePlanFields | 'skip' | null = null;
-  let labeled = false;
-  for (const raw of text.split('\n')) {
-    const line = raw.trim();
-    let matched = false;
-    for (const { re, key } of PLAN_LABELS) {
-      const m = line.match(re);
-      if (m) {
-        labeled = true;
-        cur = key;
-        matched = true;
-        const rest = line.slice(m[0].length).trim().replace(/^\*+|\*+$/g, '').trim();
-        if (rest) {
-          const arr = sections.get(key) || [];
-          arr.push(rest);
-          sections.set(key, arr);
-        }
-        break;
-      }
-    }
-    if (!matched && /^#{1,6}\s/.test(line)) {
-      // v235: heading markdown baru (mis. "## 2. Elemen Visual") menutup
-      // seksi berjalan — dulu heading ikut tertelan ke Footer.
-      cur = null;
-      continue;
-    }
-    if (!matched && cur) {
-      const arr = sections.get(cur) || [];
-      arr.push(line);
-      sections.set(cur, arr);
-    }
-  }
-  if (!labeled) return out;
-  const oneLine = (k: keyof ImagePlanFields): string => (sections.get(k) || []).map((s) => s.trim()).filter(Boolean).join(' ');
-  out.title = oneLine('title');
-  out.subtitle = oneLine('subtitle');
-  out.header = oneLine('header');
-  out.footer = oneLine('footer');
-  const bodyLines = (sections.get('body') || []).map((s) => s.trim()).filter(Boolean);
-  const paras: string[] = [];
-  const items: string[] = [];
-  for (const ln of bodyLines) {
-    const lm = ln.match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
-    if (lm) items.push(lm[1].trim());
-    else paras.push(ln);
-  }
-  out.body = paras.join('\n');
-  out.listicle = items.join('\n');
-  return out;
+  const f = parsePlanLabels(text);
+  return { title: f.title, subtitle: f.subtitle, body: f.body, listicle: f.listicle, header: f.header, footer: f.footer };
 }
 
 // v203: rasio dari brief/IMAGE-PLAN — rasio eksplisit di brief menang;
@@ -577,6 +525,60 @@ function setImageStructured(text: string, f: ImagePlanFields, ratio: string): vo
 
 function topicOf(st: CbState): string {
   return st.brief.length > 60 ? st.brief.slice(0, 60) : st.brief;
+}
+
+function setEditorBody(text: string): void {
+  try {
+    const w = window as unknown as Record<string, unknown>;
+    if (typeof w.imgSetBody === 'function') (w.imgSetBody as (t: string) => void)(text);
+  } catch { /* abaikan */ }
+}
+
+// v238: kriteria format triple untuk QC (ditempel ke `extra` qcGate agar
+// loop revisi QC ikut menuntut label, bukan hanya isi).
+const FORMAT_EXTRA_IMAGE = '\nFormat wajib output: Prompt Generator: (prompt image generator spesifik, siap generate) + Caption: (caption final siap posting). Bila salah satu label tidak ada, verdict REVISI.';
+const FORMAT_EXTRA_CAROUSEL = '\nFormat wajib output: Prompt Slide n: untuk tiap slide + Caption: (caption final siap posting). Bila label tidak ada, verdict REVISI.';
+const FORMAT_EXTRA_REELS = '\nFormat wajib output: Prompt Generator: (prompt cover/keyframe 9:16) + Caption: (caption final siap posting). Bila salah satu label tidak ada, verdict REVISI.';
+
+// v238: format triple wajib per output (prompt generator + caption).
+// Bila label hilang (model meleset ke dokumen strategi seperti kasus
+// 3 Nov 16:00), satu percobaan perbaikan format — tanpa mengubah isi —
+// lalu QC ulang. Bila perbaikan tetap tak berlabel, hasil awal dipakai
+// (best-effort, jangan blokir user). Bulk TIDAK diperbaiki (tab mentah
+// tetap bisa dipakai; perbaikan bulk akan merusak pemisah rencana).
+function tripleComplete(text: string, kind: 'image' | 'carousel' | 'reels'): boolean {
+  const f = parsePlanLabels(text);
+  if (kind === 'carousel') return f.slides.length > 0 && f.caption !== '';
+  return f.prompt !== '' && f.caption !== '';
+}
+
+async function repairFormatIfNeeded(
+  g: { text: string; verdict: string; footer: string | null },
+  kind: 'image' | 'carousel' | 'reels',
+  brief: string, extra: string, trace: string,
+): Promise<{ text: string; verdict: string; footer: string | null }> {
+  if (tripleComplete(g.text, kind)) return g;
+  const want = kind === 'carousel'
+    ? 'satu Prompt Slide untuk tiap slide (Prompt Slide 1:, Prompt Slide 2:, ...) dan satu Caption: di akhir'
+    : 'satu Prompt Generator: dan satu Caption:';
+  try {
+    const rep = await genText(
+      'Tulis ulang hasil berikut ke format label WAJIB (FORMAT-LABEL-WAJIB) tanpa mengubah isi, tanpa menambah atau mengurangi gagasan. Keluarkan HANYA: ' + want + '. Pertahankan semua slide/poin yang ada. Jangan menulis judul bebas di luar label.\n\nBrief: ' + brief + '\n\nHasil sebelumnya:\n' + g.text,
+      trace + '-reformat');
+    if (!tripleComplete(rep.text, kind)) return g;
+    const g2 = await qcGate(brief, extra, rep.text, trace + '-reqc');
+    return { text: g2.text, verdict: g2.verdict, footer: g2.footer };
+  } catch { return g; }
+}
+
+// v238: caption jalur video (TH/mix/reels) — JANGAN dicampur ke body copy
+// sosmed (aturan caption 3 jalur 1 Nov): caption video masuk slot komposer
+// + track caption video di Library, tempatnya sendiri.
+function routeVideoCaption(title: string, text: string): void {
+  const cap = parsePlanLabels(text).caption;
+  if (!cap) return;
+  try { socSetCaption(cap); } catch { /* abaikan */ }
+  try { libAddScript(captionTrackTitle('video', title), cap); } catch { /* abaikan */ }
 }
 
 function saveLib(title: string, content: string): void {
@@ -607,12 +609,14 @@ async function cbGenerateTH(st: CbState): Promise<void> {
       'Buat naskah audio + rencana produksi talking head.\nBrief: ' + st.brief +
       '\nKarakter: ' + (a['th-char'] || '-') + '\nSuara: ' + (a['th-voice'] || '-') +
       '\nSet/ruangan: ' + (a['th-set'] || '-') + '\nCatatan user: ' + (a['th-char-note'] || '-') + ' / ' + (a['th-voice-note'] || '-') +
-      '\nKeluarkan: (1) naskah audio lengkap, (2) rencana produksi (judul, subtitle dari naskah audio, elemen grafis), (3) caption post + hashtag dari script.' + topicLine(st),
+      '\nKeluarkan: (1) naskah audio lengkap, (2) rencana produksi (judul, subtitle dari naskah audio, elemen grafis), (3) Caption: caption final siap posting dari script (body copy + hashtag + CTA, SPESIFIK untuk video ini).' + topicLine(st),
       'trace-cb-th-' + Date.now());
     const g = await qcGate(st.brief, '\nKarakter: ' + (a['th-char'] || '-'), t.text, 'trace-cb-th-' + Date.now());
     saveLib('Talking Head: ' + topicOf(st), g.text);
     const ag = kreatif();
     postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
+    // v238: caption TH ke jalur video (bukan body copy sosmed).
+    routeVideoCaption('Talking Head: ' + topicOf(st), g.text);
     postKreatif(tr('cb.mov.done'));
     postPrime(g.verdict + openButton('cb-open-video', 'cb.open.video'));
   } catch (e) { postGenError(e); }
@@ -634,7 +638,7 @@ async function cbPromoScriptBoard(st: CbState): Promise<void> {
     const ag = kreatif();
     postChat('kreatif', ag.name, ag.color, esc(sc.text) + sc.footer);
     const b = await genText(
-      'Buat storyboard dari script berikut (daftar scene: visual, audio, teks layar, durasi).\nScript:\n' + sc.text + topicLine(st),
+      'Buat storyboard dari script berikut (daftar scene: visual, audio, teks layar, durasi). Tiap scene sertakan Prompt Generator singkat (deskripsi visual siap generate, SPESIFIK scene itu).\nScript:\n' + sc.text + topicLine(st),
       'trace-cb-promo-board-' + Date.now());
     st.board = b.text;
     postChat('kreatif', ag.name, ag.color, esc(b.text) + b.footer);
@@ -652,7 +656,7 @@ async function cbRegenBoard(st: CbState, note: string): Promise<void> {
     const base = st.mode === 'ser'
       ? ('Script panjang:\n' + (st.longScript || '') + '\nFokus part ke-' + ((st.partIndex || 0) + 1) + ' dari ' + (st.partsTotal || 1))
       : ('Script:\n' + (st.script || ''));
-    const b = await genText('Buat ulang storyboard dengan catatan revisi: ' + note + '\n' + base, 'trace-cb-board-rev-' + Date.now());
+    const b = await genText('Buat ulang storyboard dengan catatan revisi: ' + note + '\nTiap scene sertakan Prompt Generator singkat (deskripsi visual siap generate, SPESIFIK scene itu).\n' + base, 'trace-cb-board-rev-' + Date.now());
     st.board = b.text;
     const ag = kreatif();
     postChat('kreatif', ag.name, ag.color, esc(b.text) + b.footer);
@@ -675,12 +679,14 @@ async function cbGenerateMix(st: CbState): Promise<void> {
       ? ('Video berseri ' + (st.partsTotal || 1) + ' part. Script panjang:\n' + (st.longScript || ''))
       : ('Script:\n' + (st.script || '') + '\nStoryboard:\n' + (st.board || ''));
     const m = await genText(
-      'Buat rencana mixing + perakitan video utuh dari materi berikut. Sertakan: urutan video, VO, music, SFX, title, subtitle, logo, elemen visual lain, lalu caption post + hashtag dari script.\nVO: ' + vo + ' (' + voType + ')\n' + base + topicLine(st),
+      'Buat rencana mixing + perakitan video utuh dari materi berikut. Sertakan: urutan video, VO, music, SFX, title, subtitle, logo, elemen visual lain, lalu Caption: caption final siap posting dari script (body copy + hashtag + CTA, SPESIFIK untuk video ini).\nVO: ' + vo + ' (' + voType + ')\n' + base + topicLine(st),
       'trace-cb-mix-' + Date.now());
     const g = await qcGate(st.brief, '', m.text, 'trace-cb-mix-' + Date.now());
     saveLib((st.mode === 'ser' ? 'Video Berseri: ' : 'Video Promosional: ') + topicOf(st), g.text);
     const ag = kreatif();
     postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || m.footer));
+    // v238: caption video ke jalur video (bukan body copy sosmed).
+    routeVideoCaption((st.mode === 'ser' ? 'Video Berseri: ' : 'Video Promosional: ') + topicOf(st), g.text);
     postKreatif(tr('cb.mov.done'));
     postPrime(g.verdict + openButton('cb-open-video', 'cb.open.video'));
   } catch (e) { postGenError(e); }
@@ -716,7 +722,7 @@ async function cbSerNextBoard(st: CbState): Promise<void> {
   setAgentPhase('kreatif', 'busy');
   try {
     const b = await genText(
-      'Buat storyboard untuk PART ' + ((st.partIndex || 0) + 1) + ' dari ' + (st.partsTotal || 1) + ' part dari script panjang berikut.\nScript:\n' + (st.longScript || ''),
+      'Buat storyboard untuk PART ' + ((st.partIndex || 0) + 1) + ' dari ' + (st.partsTotal || 1) + ' part dari script panjang berikut. Tiap scene sertakan Prompt Generator singkat (deskripsi visual siap generate, SPESIFIK scene itu).\nScript:\n' + (st.longScript || ''),
       'trace-cb-ser-board-' + Date.now());
     st.board = b.text;
     const ag = kreatif();
@@ -843,21 +849,27 @@ async function cbGenerateImagePlan(st: CbState, bulk: boolean, count: number): P
     let verdict = '';
     if (!bulk) {
       const t = await genText(
-        'Buat caption + rancangan image untuk postingan sosmed (IMAGE-PLAN).\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
-        '\nKeluarkan: caption lengkap + rancangan isi image dengan label persis di awal baris — Title:, Subtitle:, Body:, Header:, Footer:, Caption: — disusul elemen visual lain. Body: wajib berisi satu paragraf pembuka (2-3 kalimat) diikuti poin-poin daftar. Jangan menulis judul bebas di luar label; judul utama hanya pada baris Title:.',
+        'Buat rancangan image untuk postingan sosmed (IMAGE-PLAN).\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
+        '\nKeluarkan dalam urutan ini (aturan output kreatif: SPESIFIK pada output ini, bukan brief umum saja):\n(1) Brief umum singkat (2-4 kalimat): konsep/strategi.\n(2) Prompt Generator: prompt image generator SPESIFIK untuk image ini, siap generate — subjek, aksi, latar, gaya visual, warna, komposisi, rasio.\n(3) Title:, Subtitle:, Header:, Footer: teks pada desain (bila ada).\n(4) Caption: caption final siap posting — body copy + hashtag + CTA.\n(5) Elemen visual lain.\nJudul utama hanya pada baris Title:. Tanpa Prompt Generator: dan Caption:, output dianggap gagal.',
         'trace-cb-img-' + Date.now());
-      const g = await qcGate(st.brief, '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-'), t.text, 'trace-cb-img-' + Date.now());
+      const imgExtra = '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') + FORMAT_EXTRA_IMAGE;
+      let g = await qcGate(st.brief, imgExtra, t.text, 'trace-cb-img-' + Date.now());
+      g = await repairFormatIfNeeded(g, 'image', st.brief, imgExtra, 'trace-cb-img-' + Date.now());
       verdict = g.verdict;
       postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
       // v203: urai otomatis ke field Image Editor (bukan teks mentah saja).
-      setImageStructured(g.text, parseImagePlan(g.text), ratioForImagePlan(st));
+      // v238: brief editor = Prompt Generator spesifik (bukan teks utuh);
+      // caption masuk body copy via parseImagePlan. Brief umum tetap
+      // tersimpan di chat + Library.
+      const f238 = parsePlanLabels(g.text);
+      setImageStructured(f238.prompt || g.text, parseImagePlan(g.text), ratioForImagePlan(st));
       saveLib('Image: ' + topicOf(st), g.text);
     } else {
       const t = await genText(
         'Buat ' + count + ' rencana image untuk postingan sosmed bulk (BULK-IMAGE-PLAN). Pisahkan tiap rencana dengan baris === IMAGE n === (n = nomor urut).\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
-        '\nTiap rencana berisi: caption + rancangan isi image (Title, Subtitle, Body, header, footer, logo, elemen visual lain). Tiap Body: wajib berisi satu paragraf pembuka (2-3 kalimat) diikuti poin-poin daftar. Jangan menulis judul bebas di luar label; judul utama hanya pada baris Title:.',
+        '\nTiap rencana SPESIFIK untuk postingannya sendiri (aturan output kreatif, bukan brief umum saja) dan berisi: Brief umum singkat, Prompt Generator: (prompt image generator spesifik rencana itu, siap generate), Title:, Subtitle:, Header:, Footer:, Caption: (caption final siap posting — body copy + hashtag + CTA), elemen visual lain. Judul utama hanya pada baris Title:.',
         'trace-cb-img-bulk-' + Date.now());
-      const g = await qcGate(st.brief, '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-'), t.text, 'trace-cb-img-bulk-' + Date.now());
+      const g = await qcGate(st.brief, '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') + FORMAT_EXTRA_IMAGE, t.text, 'trace-cb-img-bulk-' + Date.now());
       verdict = g.verdict;
       const plans = parseBulkPlans(g.text, 'IMAGE').slice(0, 30);
       setBulkBriefs(plans);
@@ -882,20 +894,32 @@ async function cbGenerateCarousel(st: CbState, bulk: boolean, count: number): Pr
     let verdict = '';
     if (!bulk) {
       const t = await genText(
-        'Buat caption + konten carousel untuk postingan sosmed (CAROUSEL-PLAN).\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
-        '\nKeluarkan: caption lengkap + konten carousel 6-10 slide (tiap slide: judul + isi singkat).',
+        'Buat konten carousel untuk postingan sosmed (CAROUSEL-PLAN).\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
+        '\nKeluarkan dalam urutan ini (aturan output kreatif: SPESIFIK pada output ini):\n(1) Brief umum singkat (2-4 kalimat): konsep/strategi.\n(2) Konten carousel 6-10 slide, tiap slide dengan Prompt Slide n: prompt image generator SPESIFIK slide itu, siap generate — visual + teks pada desain (judul + isi singkat).\n(3) Caption: caption final siap posting untuk carousel ini — body copy + hashtag + CTA.\nTanpa Prompt Slide dan Caption:, output dianggap gagal.',
         'trace-cb-car-' + Date.now());
-      const g = await qcGate(st.brief, '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-'), t.text, 'trace-cb-car-' + Date.now());
+      const carExtra = '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') + FORMAT_EXTRA_CAROUSEL;
+      let g = await qcGate(st.brief, carExtra, t.text, 'trace-cb-car-' + Date.now());
+      g = await repairFormatIfNeeded(g, 'carousel', st.brief, carExtra, 'trace-cb-car-' + Date.now());
       verdict = g.verdict;
       postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
-      setImageBrief(g.text);
+      // v238: tiap slide jadi tab Image Editor (prompt-nya langsung bisa
+      // digenerate), caption masuk body copy (satu caption untuk posting
+      // carousel ini). Tanpa slide terurai, jatuh ke brief mentah.
+      const fCar = parsePlanLabels(g.text);
+      if (fCar.slides.length) {
+        setBulkBriefs(fCar.slides.map((s, i) => 'Prompt Slide ' + (i + 1) + ': ' + s));
+        if (fCar.caption) setEditorBody(fCar.caption);
+      } else {
+        setImageBrief(g.text);
+        if (fCar.caption) setEditorBody(fCar.caption);
+      }
       saveLib('Carousel: ' + topicOf(st), g.text);
     } else {
       const t = await genText(
         'Buat ' + count + ' konten carousel untuk postingan sosmed bulk (BULK-CAROUSEL-PLAN). Pisahkan tiap carousel dengan baris === CAROUSEL n === (n = nomor urut).\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
-        '\nTiap carousel berisi: caption + konten 6-10 slide (tiap slide: judul + isi singkat).',
+        '\nTiap carousel SPESIFIK untuk postingannya sendiri (aturan output kreatif) dan berisi: Brief umum singkat, konten 6-10 slide (tiap slide dengan Prompt Slide n: prompt image generator spesifik slide itu + teks pada desain), dan Caption: (caption final siap posting untuk carousel itu).',
         'trace-cb-car-bulk-' + Date.now());
-      const g = await qcGate(st.brief, '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-'), t.text, 'trace-cb-car-bulk-' + Date.now());
+      const g = await qcGate(st.brief, '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') + FORMAT_EXTRA_CAROUSEL, t.text, 'trace-cb-car-bulk-' + Date.now());
       verdict = g.verdict;
       const plans = parseBulkPlans(g.text, 'CAROUSEL').slice(0, 30);
       setBulkBriefs(plans);
@@ -916,9 +940,11 @@ async function cbGenerateReels(st: CbState): Promise<void> {
   try {
     const t = await genText(
       'Buat rencana reels untuk postingan sosmed (REELS-PLAN), seperti proses pembuatan video: script + shot plan + caption + hashtag.\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + (st.platform || '-') +
-      '\nDurasi 30-60 detik, rasio 9:16.',
+      '\nDurasi 30-60 detik, rasio 9:16.\nKeluarkan juga (aturan output kreatif, SPESIFIK pada reels ini): Prompt Generator: prompt cover/keyframe 9:16 siap generate, dan Caption: caption final siap posting — body copy + hashtag + CTA. Tanpa keduanya, output dianggap gagal.',
       'trace-cb-reels-' + Date.now());
-    const g = await qcGate(st.brief, '\nPlatform: ' + (st.platform || '-'), t.text, 'trace-cb-reels-' + Date.now());
+    const reelsExtra = '\nPlatform: ' + (st.platform || '-') + FORMAT_EXTRA_REELS;
+    let g = await qcGate(st.brief, reelsExtra, t.text, 'trace-cb-reels-' + Date.now());
+    g = await repairFormatIfNeeded(g, 'reels', st.brief, reelsExtra, 'trace-cb-reels-' + Date.now());
     const ag = kreatif();
     postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
     saveLib('Reels: ' + topicOf(st), g.text);
@@ -927,6 +953,9 @@ async function cbGenerateReels(st: CbState): Promise<void> {
     // yang bisa digenerate per shot (mesin yang sama dengan movie).
     const w = window as unknown as Record<string, unknown>;
     if (typeof w.veSetReels === 'function') (w.veSetReels as (t: string, title: string) => void)(g.text, 'Reels: ' + topicOf(st));
+    // v238: caption reels ke jalur video (komposer + track caption video),
+    // bukan ke body copy sosmed.
+    routeVideoCaption('Reels: ' + topicOf(st), g.text);
     postKreatif(tr('cb.mov.done'));
     postPrime(g.verdict + openButton('cb-open-video', 'cb.open.video'));
   } catch (e) { cbSocGenFail(st, e); setAgentPhase('kreatif', null); return; }

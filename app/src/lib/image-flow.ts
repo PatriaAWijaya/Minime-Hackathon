@@ -34,6 +34,7 @@ import { captionTrackTitle, sosmedCaptionPrompt, videoCaptionPrompt } from './ca
 import { RATIO_SIZE, IMG_PRICE_USD, IMG_USD_RATE, metaGenerateImage, googleGenerateImage, GOOGLE_IMG_PRICE_USD, GOOGLE_IMG_ASPECT, mimeFromB64, addImgSpend, readImgSpend, readThumb, thumbCache } from './image-api.js';
 import { brandSuffix } from './brand.js';
 import { esc } from './esc.js';
+import { parsePlanLabels, serializePlanLabels } from './plan-labels.js';
 
 const FLOW_LS = 'minime.imageFlow';
 
@@ -107,6 +108,13 @@ function loadState(): void {
         panelsBrief: typeof o.panelsBrief === 'string' ? o.panelsBrief : null,
         mhTpl: o.mhTpl === true,
       };
+      // v238: tab triple tersimpan sebagai teks berlabel — brief aktif
+      // harus prompt-nya, bukan teks berlabel utuh (konsisten dengan
+      // tampilan sesi: brief = prompt generator).
+      if (bulk.length) {
+        const f0 = parsePlanLabels(bulk[bulkActive]);
+        if (f0.hasTriple && !f0.hasSlides) state.brief = f0.prompt || state.brief;
+      }
     }
   } catch { state = { ...DEFAULTS }; }
 }
@@ -580,24 +588,34 @@ async function approveDraft(): Promise<void> {
       } catch { parts.push(tr('img.approve.captionfail')); }
     } else {
       const kindLabel = state.output === 'carousel' ? `carousel ${state.slides} slide` : 'poster';
-      try {
-        const cap = await modelText(
+      // v238: body copy dari output kreatif dipakai LANGSUNG sebagai caption
+      // (aturan output kreatif 3 Nov: caption SPESIFIK output itu, bukan
+      // dibuat ulang generik). Hanya bila body kosong, model membuatkan.
+      const bodyCap = state.body.trim();
+      let cap: string | null = null;
+      if (bodyCap) {
+        cap = bodyCap;
+      } else try {
+        cap = await modelText(
           sosmedCaptionPrompt(kindLabel, title, state.subtitle.trim(), state.listicle.trim(), state.brief.trim()),
           'trace-img-cap-' + Date.now());
-        socSetCaption(cap);
-        libAddScript(captionTrackTitle('sosmed', title), cap);
+      } catch { parts.push(tr('img.approve.captionfail')); }
+      if (cap) {
+        const capText = cap;
+        socSetCaption(capText);
+        libAddScript(captionTrackTitle('sosmed', title), capText);
         parts.push(tr('img.approve.caption'));
         // v204 (Skenario 1 Tahap 4+5): pasangkan caption ke varian
         // poster/carousel yang tersimpan; draf Planner otomatis
         // (IG + Threads, tanpa tanggal) hanya untuk poster —
         // storyboard tidak ikut (gambarnya keyframe video, bukan
         // postingan sosmed; caption videonya tetap ke slot komposer).
-        savedNames.forEach((n) => libPairCaption(n, cap));
+        savedNames.forEach((n) => libPairCaption(n, capText));
         if (state.output === 'poster' && savedNames.length) {
-          const pids = socAutoPlannerDrafts(savedNames[0], cap);
+          const pids = socAutoPlannerDrafts(savedNames[0], capText);
           parts.push(tr(pids.length ? 'img.approve.planner' : 'img.approve.plannerfail'));
         }
-      } catch { parts.push(tr('img.approve.captionfail')); }
+      }
     }
     setNote(tr('img.approve.done') + ' ' + parts.join(' '));
     await renderGallery();
@@ -680,9 +698,16 @@ function renderBulkTabs(): void {
     b.addEventListener('click', () => {
       const idx = Number((b as HTMLElement).dataset.idx);
       if (!Number.isInteger(idx) || idx === state.bulkActive || !state.bulk) return;
-      state.bulk[state.bulkActive] = state.brief;
+      // v238: tab triple disimpan balik sebagai teks berlabel supaya
+      // suntingan prompt (brief) dan caption (body) tidak hilang; tab
+      // lain disimpan mentah seperti dulu.
+      const curText = state.bulk[state.bulkActive];
+      const curF = parsePlanLabels(curText);
+      state.bulk[state.bulkActive] = (curF.hasTriple && !curF.hasSlides)
+        ? serializePlanLabels({ prompt: state.brief, title: state.title, subtitle: state.subtitle, header: state.header, footer: state.footer, listicle: state.listicle, body: state.body })
+        : state.brief;
       state.bulkActive = idx;
-      state.brief = state.bulk[idx];
+      applyTabText(state.bulk[idx]);
       saveState(); syncForm(); renderPreview(); renderBulkTabs();
     });
   });
@@ -691,17 +716,54 @@ function renderBulkTabs(): void {
 }
 
 /** Isi tab bulk dari luar (dipakai alur brief Sosmed bulk, v140). */
+// v238: terapkan teks tab ke field editor. Aturan per jenis tab:
+// - tab triple (punya Prompt Generator:/Caption:, tanpa slide): brief =
+//   prompt (siap generate), body = caption (body copy), field lain terurai.
+// - tab carousel (slide + caption): brief = teks utuh, body = caption,
+//   field lain terurai (satu tab = satu carousel, bukan satu gambar).
+// - tab slide saja (Prompt Slide n:): brief = prompt slide, field lain
+//   tidak berubah (caption posting carousel dipegang global).
+// - tab lama tanpa label: brief = teks utuh, field direset (perilaku lama).
+function applyTabText(text: string): void {
+  const f = parsePlanLabels(text);
+  if (f.hasSlides && !f.hasTriple) {
+    state.brief = f.slides[0] || text;
+    return;
+  }
+  if (f.hasSlides) {
+    state.brief = text;
+    state.title = f.title; state.subtitle = f.subtitle; state.body = f.body;
+    state.listicle = f.listicle; state.header = f.header; state.footer = f.footer;
+    return;
+  }
+  if (f.hasTriple) {
+    state.brief = f.prompt || text;
+    state.title = f.title; state.subtitle = f.subtitle; state.body = f.body;
+    state.listicle = f.listicle; state.header = f.header; state.footer = f.footer;
+    return;
+  }
+  state.brief = text;
+}
+
 export function imgSetBulk(briefs: string[]): void {
   const list = briefs.filter((b) => typeof b === 'string' && b.trim()).slice(0, 30);
   if (!list.length) return;
   state.bulk = list;
   state.bulkActive = 0;
-  state.brief = list[0];
   // v235: brief baru = pekerjaan baru — reset field terstruktur lama
   // (dulu judul/body/listicle/header/footer/palette lama ikut masuk
   // prompt generate brief baru via sentPrompt).
   state.title = state.subtitle = state.body = state.listicle = state.header = state.footer = state.palette = '';
+  // v238: tab pertama langsung diterapkan (prompt/body dari labelnya).
+  applyTabText(list[0]);
   saveState(); syncForm(); renderPreview(); renderBulkTabs();
+}
+
+// v238: isi body copy editor dari luar (dipakai loader carousel: caption
+// posting carousel tidak ikut tab slide, jadi dipasang terpisah).
+export function imgSetBody(text: string): void {
+  state.body = text;
+  saveState(); syncForm(); renderPreview();
 }
 
 /** Set brief Image dari luar (dipakai seUse Script Editor — audit v66
@@ -754,7 +816,19 @@ export function initImageFlow(): void {
   renderPreview();
   renderBulkTabs();
   void renderGallery();
-  bind<HTMLTextAreaElement>('img-brief', 'input', (e) => { state.brief = e.value; if (state.bulk) state.bulk[state.bulkActive] = e.value; saveState(); renderPreview(); });
+  bind<HTMLTextAreaElement>('img-brief', 'input', (e) => {
+    state.brief = e.value;
+    if (state.bulk) {
+      // v238: tab triple ditulis balik sebagai teks berlabel (bukan brief
+      // mentah) supaya caption/body tab itu tidak hilang saat pindah tab
+      // atau muat ulang; tab lain ditulis mentah seperti dulu.
+      const curF = parsePlanLabels(state.bulk[state.bulkActive]);
+      state.bulk[state.bulkActive] = (curF.hasTriple && !curF.hasSlides)
+        ? serializePlanLabels({ prompt: e.value, title: state.title, subtitle: state.subtitle, header: state.header, footer: state.footer, listicle: state.listicle, body: state.body })
+        : e.value;
+    }
+    saveState(); renderPreview();
+  });
   bind<HTMLSelectElement>('img-ratio', 'change', (e) => { state.ratio = e.value; saveState(); });
   bind<HTMLSelectElement>('img-style', 'change', (e) => { state.style = e.value; saveState(); renderPreview(); });
   bind<HTMLInputElement>('img-textfree', 'change', (e) => { state.textfree = e.checked; saveState(); renderPreview(); });
@@ -827,6 +901,7 @@ export function initImageFlow(): void {
   (window as unknown as Record<string, unknown>).imgSetBrief = imgSetBrief;
   (window as unknown as Record<string, unknown>).imgSetStructured = imgSetStructured;
   (window as unknown as Record<string, unknown>).imgSetBulk = imgSetBulk;
+  (window as unknown as Record<string, unknown>).imgSetBody = imgSetBody;
   (window as unknown as Record<string, unknown>).imgLoadSaved = async (item: { content?: string; imageFile?: string; o: string }) => {
     if (item.content) { state.brief = item.content; saveState(); syncForm(); renderPreview(); }
     const box = el('img-loaded');

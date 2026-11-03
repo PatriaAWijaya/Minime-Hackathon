@@ -520,6 +520,37 @@ try {
   check('v217: grup provider tanpa note', !document.querySelector('#img-provider')?.closest('.se-group')?.querySelector('.se-note'), '');
   check('v217: elemen #img-cost hilang', !document.getElementById('img-cost'), '');
 
+  // 16. v238: tab bulk triple — prompt/body mengikuti tab aktif, dan
+  // suntingan caption tidak hilang saat pindah tab (serialize balik).
+  const imgFlow238 = () => { try { return JSON.parse(store.get('minime.imageFlow') || '{}'); } catch (_) { return {}; } };
+  dom.window.imgSetBulk([
+    'Brief umum satu.\nPrompt Generator: PROMPT-TAB-1-UJI\nTitle: Judul Satu\nCaption: CAPTION-TAB-1-UJI',
+    'Brief umum dua.\nPrompt Generator: PROMPT-TAB-2-UJI\nTitle: Judul Dua\nCaption: CAPTION-TAB-2-UJI',
+  ]);
+  await tick(100);
+  const t238a = imgFlow238();
+  check('v238: tab bulk triple pertama -> brief=prompt, body=caption', t238a.brief === 'PROMPT-TAB-1-UJI' && (t238a.body || '').includes('CAPTION-TAB-1-UJI'), (t238a.brief || '') + ' / ' + (t238a.body || ''));
+  check('v238: tab bulk triple pertama -> judul terurai', t238a.title === 'Judul Satu', t238a.title || '');
+  const tabs238 = document.querySelectorAll('#img-bulk-tabs .img-tab');
+  check('v238: bulk triple membuat 2 tab', tabs238.length === 2, 'tabs=' + tabs238.length);
+  tabs238[1].click();
+  await tick(100);
+  const t238b = imgFlow238();
+  check('v238: pindah tab triple mengganti brief+body ke tab 2', t238b.brief === 'PROMPT-TAB-2-UJI' && (t238b.body || '').includes('CAPTION-TAB-2-UJI'), (t238b.brief || '') + ' / ' + (t238b.body || ''));
+  const bodyEl = document.getElementById('img-body');
+  bodyEl.value = 'CAPTION-EDIT-UJI';
+  bodyEl.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  await tick(100);
+  // Re-query: renderBulkTabs mengganti node tombol tiap klik.
+  document.querySelectorAll('#img-bulk-tabs .img-tab')[0].click();
+  await tick(100);
+  const t238c = imgFlow238();
+  check('v238: kembali ke tab 1 -> prompt + caption tab 1', t238c.brief === 'PROMPT-TAB-1-UJI' && (t238c.body || '').includes('CAPTION-TAB-1-UJI'), (t238c.brief || '') + ' / ' + (t238c.body || ''));
+  // Re-query: renderBulkTabs mengganti node tombol tiap klik.
+  document.querySelectorAll('#img-bulk-tabs .img-tab')[1].click();
+  await tick(100);
+  const t238d = imgFlow238();
+  check('v238: suntingan caption tab 2 tidak hilang (serialize balik)', (t238d.body || '').includes('CAPTION-EDIT-UJI'), t238d.body || '');
 
 } catch (e) {
   // eslint-disable-next-line no-console
