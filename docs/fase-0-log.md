@@ -2529,6 +2529,16 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v214 — Hapus dead code ve2ClipKind (perintah Patria 3 Nov 2026 08:17)
+
+- Perintah: "ve2ClipKind hapus saja jika tidak terikat fungsi khusus".
+- Verifikasi: `ve2ClipKind` di App.svelte:491 — fungsi pemeta klip ke 'Video'|'Audio'|'Image'|'Teks'; grep seluruh src = HANYA definisi, 0 pemanggil. Kondisi terpenuhi, fungsi dihapus (8 baris). Sesudah hapus: grep 0, `npm run build` lolos, `npm run check` 0 error / 21 warning (baseline).
+- Preseden versi hapus-tunggal: v180 (hf.note), v186 (ve.canvas), v190 (ve2.drag_hint).
+- Gerbang: loop 14 rig ALL PASSED (log `~/workspace/riglogs-v214/loop.log`); skrip gerbang 9/9 (vite, svelte-check, rig terkait, gate-test, scan kredensial, ledger md5, i18n 1270/bahasa, cargo fmt+check+check --tests, cargo-lock).
+- Pasangan SHA kode: lokal 50a50f7 ↔ remote 3daff9f (tree identik).
+- PENOMORAN ULANG (dinyatakan ke Patria 08:18): v214 dipakai penghapusan ini; 4 item Voice yang sebelumnya disebut v214 GESER ke v215.
+- Antrean sesudah v214 (vonis Patria 08:18 + perintah 08:22): v173 = preset template pola carousel marketingharry (pola saja, bukan mentah; cap tetap 6-10); lalu Bridge Movie↔Script Editor (skrip disetujui dari chat maupun hasil perbaikan di Script Editor diekspor ke movie editor, generate per scene / per 10 detik sesuai kapasitas Video Generator); lalu v215 (4 item Voice).
+
 ## v213 — Picker rasio preview Video Editor + thumbnail Library 40% + Veo→Omni + detail klik-2x kartu ARSIP (perintah Patria 3 Nov 2026 04:39 + 06:16 + 06:26 + 06:42)
 - Picker rasio preview (perintah 04:39, klarifikasi 04:42: "9:16" atas ketikan "6:19"): ve2Load/ve2SaveState membawa field ratio (validasi 16:9/9:16/1:1/4:5, default 9:16); state ve2PreviewRatio + ve2RatioCss; kotak .ve2-preview-box memakai style inline aspect-ratio dinamis (meng-override CSS 9/16) dan dirender di SEMUA cabang termasuk kosong — syarat "termasuk saat kosong" terpenuhi oleh struktur; select #ve2Ratio di bar .ve2-transport, di span kanan sesudah select Zoom, pola meniru Zoom (tanpa label — tidak menaikkan warning). Cakupan SENGAJA hanya .ve2-preview-box; elemen playback #ve2Video TIDAK diubah (konten asli tidak di-letterbox paksa). Kunci i18n ve2.ratio (ID 'Rasio'/EN 'Ratio'/ZH '比例') sesudah ve2.snap.
 - Thumbnail Library mengecil 60% (perintah 06:16 "buat lebih kecil 60%", faktor dikonfirmasi Patria 06:28: jadi 40%): blok v213 di layout-scroll.css — .lib-thumb { width: 40%; margin: 0 auto 10px; }. Kartu/teks/tombol TETAP; dialog detail (.lib-detail-img) TIDAK ikut mengecil. Verifikasi CSS via assert teks CSS dist (pola v199) karena jsdom tidak memuat stylesheet eksternal.
