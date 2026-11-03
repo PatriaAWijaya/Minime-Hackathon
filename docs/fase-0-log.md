@@ -2529,6 +2529,18 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v229 — Efek glossy di tema terang (perintah Patria 12:25)
+
+- Perintah: "Tambahkan efek glossynya" — dibaca sebagai tema terang (topik berjalan sejak v221; tema gelap sudah glossy diredam sejak awal dan TIDAK disentuh).
+- Perbaikan CSS saja (layout-scroll.css, blok v229 di akhir file; App.svelte + app.css verbatim TIDAK disentuh; rumus kilau mengikuti definisi kaca di app/AGENTS.md: top sheen + edge highlight):
+  - Permukaan kaca (sidebar, kolom, kartu agen/kanban/media, node graph, notice, kartu billing, komposer): background-image linear-gradient(180deg, putih 0.70 -> 0.20 di 40% -> 0 di 65%) di atas warna panel + box-shadow inset 0 1px 0 putih 0.85.
+  - Tombol gradien (btn-primary, filters aktif, rec-btn, chat-act, img-tab aktif): kilau dilapis DI ATAS gradien (dua lapis background-image: kilau dulu, var(--t-accent-grad) sesudahnya); inset btn-primary diperkuat dari 0.18 (v221) jadi 0.75.
+  - Sengaja TIDAK kena: kanvas graph (pola dot-nya background-image sendiri), tabel, gelembung chat, tombol rail, banner.
+- Bukti visual: render Chromium headless VM dengan CSS dist asli (mock .app + sidebar + kartu agen/kanban/billing + 2 tombol) — tombol gradien berkilau jelas di atas, kartu-kartu berkilau halus; tangkapan di ~/workspace/riglogs-v229/gloss-check.png. (Mock pertama salah susun karena body app itu kolom — diperbaiki dengan wrapper .app.)
+- Rig: rig-home §28 v229 baru (3 cek teks CSS dist bentuk minify nyata: kilau permukaan, kilau tombol, kilau hanya di light). Loop 14/14 (~/workspace/riglogs-v229/loop.log); gerbang GATE-V229 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja); svelte-check 0/21.
+- SHA: kode lokal a883a46 <-> remote 75aac67 (tree identik, pola push_rebased.py).
+- Catatan live: BELUM dikonfirmasi live (uji disarankan: di tema terang, panel/kartu tampak berkilau halus dan tombol gradien berkilau jelas di atas; tema gelap tidak berubah).
+
 ## v228 — Ikon rel terlihat di tema terang (laporan Patria 11:45 + screenshot Settings)
 
 - Laporan: "Banyak menu yang masih putih, tidak terlihat" — screenshot Settings membuktikan teks halaman sudah hitam terbaca (v227 terkonfirmasi live untuk teks), tapi ikon-ikon rel navigasi kiri putih di atas latar terang sehingga tidak terlihat.
