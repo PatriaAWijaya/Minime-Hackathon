@@ -2529,6 +2529,16 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v232 — Teks ketikan composer hitam di tema terang (perintah Patria 12:56 + screenshot 12:55)
+
+- Perintah: "Input text user buat berwarna hitam".
+- Akar (dibuktikan dari screenshot + sumber): teks di screenshot itu KETIKAN, bukan placeholder (placeholder composer = "Message Prime Agent"); warna ketikan hardcode #ececec di app.css:140 (bukan variabel) sehingga lolos dari perbaikan variabel v227 — di atas latar terang nyaris tak terlihat. Placeholder sendiri SUDAH hitam lewat var(--t-faint) -> #000000 (v227), jadi tidak diubah.
+- Perbaikan CSS saja (layout-scroll.css blok v232; App.svelte + app.css verbatim TIDAK disentuh; tema gelap TIDAK disentuh, tetap #ececec): [data-theme="light"] #chatInput { color: #000000; } (spesifisitas atribut+id mengalahkan #chatInput app.css, dan file ini dimuat sesudah app.css).
+- Bukti visual: render Chromium headless VM dengan CSS dist asli (mock composer tema terang berisi ketikan yang sama) — ketikan hitam pekat dan terbaca; tangkapan di ~/workspace/riglogs-v232/input-check.png.
+- Rig: rig-home §31 v232 baru (2 cek: ketikan hitam di light + tetap terang di dark). Loop langsung 14/14 (~/workspace/riglogs-v232/loop.log); gerbang GATE-V232 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja); svelte-check 0/21.
+- SHA: kode lokal 44a754b <-> remote fff771f (tree identik, pola push_rebased.py).
+- Catatan live: BELUM dikonfirmasi live (uji disarankan: ketik di composer tema terang — teks harus hitam pekat; tema gelap tidak berubah).
+
 ## v231 — Kartu & bagian hitam di tema terang jadi gradasi biru-putih (perintah Patria 12:39 + 4 screenshot 12:37)
 
 - Perintah: "Kartu dan bagian2 lain yang masih berwarna hitam pada tema terang ubah menjadi gradien biru putih".
