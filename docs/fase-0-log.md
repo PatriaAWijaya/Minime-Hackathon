@@ -2537,7 +2537,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - Bukti visual: render Chromium headless VM dengan CSS dist asli (mock composer tema terang berisi ketikan yang sama) — ketikan hitam pekat dan terbaca; tangkapan di ~/workspace/riglogs-v232/input-check.png.
 - Rig: rig-home §31 v232 baru (2 cek: ketikan hitam di light + tetap terang di dark). Loop langsung 14/14 (~/workspace/riglogs-v232/loop.log); gerbang GATE-V232 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja); svelte-check 0/21.
 - SHA: kode lokal 44a754b <-> remote fff771f (tree identik, pola push_rebased.py).
-- Catatan live: BELUM dikonfirmasi live (uji disarankan: ketik di composer tema terang — teks harus hitam pekat; tema gelap tidak berubah).
+- LIVE 3 Nov 2026 13:01 WIB: MH_BUILD232_OK, HEAD MacBook 301ef69 (= commit log), PID segar 12051 (sebelumnya 11341), md5 CSS dist lokal == MacBook 7c2cf58a0210ddb05811b24b93deea22 (byte-identik). Tema live tetap light. Konfirmasi live Patria BELUM ada.
 
 ## v231 — Kartu & bagian hitam di tema terang jadi gradasi biru-putih (perintah Patria 12:39 + 4 screenshot 12:37)
 
