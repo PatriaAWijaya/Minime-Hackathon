@@ -2540,6 +2540,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - i18n: 10 kunci baru (ve2.movie.title/scene/gen/gen_all/clear/done/fail/empty, se.btn.export_video, se.note.movie_exported) -> 1272/bahasa, 0 duplikat.
 - Uji: build lolos; svelte-check 0 error / 21 warning (baseline); rig-ve2 §v218 (11 cek: note kosong, parse 2 scene ber-heading + judul, persist state, tombol per scene, generate Omni stub -> Selesai + path stub + 1 klip timeline + 1 aset, Bersihkan, fallback 3 paragraf -> 3 scene, tanpa kunci -> Gagal) ALL PASSED; rig-script §v218 (4 cek: tombol ekspor ada, pindah tab Video, 1 scene terbentuk, tersimpan) ALL PASSED; loop 14 rig ALL PASSED (log ~/workspace/riglogs-v218/loop.log); gerbang 9/9 (GATE-V218 pass=9 fail=0).
 - Pasangan SHA kode: lokal 0126347 ↔ remote 2743322 (tree identik).
+- LIVE 3 Nov 2026 ~09:29 WIB: MH_BUILD218_OK, HEAD MacBook 6c2c466, PID 97783, md5 dist lokal == MacBook (JS 052716de159477db94b7ba94fecfb72e, CSS 5a124359e0fc57a887e2022f5ee5eac9 — CSS sama dengan v213/v214/v216/v217/v173 karena v218 tanpa perubahan CSS), marker 'Rencana Movie' + 'Ekspor ke Video Editor' ada di bundle JS MacBook. App LIVE = v218. Konfirmasi live Patria untuk v218 BELUM ada (uji live yang disarankan: di Script Editor, hasil naskah -> tombol Ekspor ke Video Editor -> di tab Video muncul daftar scene -> Generate satu scene (Omni/Wan/HF) -> klip masuk timeline; lalu Generate semua scene).
 
 ## v217 — Cleanup UI 7 bagian (perintah Patria 3 Nov 2026 08:42–09:06)
 
