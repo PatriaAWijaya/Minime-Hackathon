@@ -2537,6 +2537,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - i18n: kunci word.table/word.list (hanya dipakai 2 tombol itu) dihapus → 1270/bahasa, 0 duplikat.
 - Uji: rig-chat §v216 (3 cek: Table tidak ada, List tidak ada, Kanban tetap ada) — ALL PASSED; build + svelte-check 0 error/21 warning; loop 14 rig ALL PASSED; gerbang 9/9.
 - Pasangan SHA kode: lokal 0d5fedc ↔ remote db2fb49 (tree identik).
+- LIVE 3 Nov 2026 ~08:59 WIB: MH_BUILD216_OK, HEAD MacBook e629936, PID 95780, md5 dist lokal == MacBook (JS b82210de014ba1c16236624494581499, CSS 5a124359e0fc57a887e2022f5ee5eac9 — CSS sama dengan v213/v214/v173 karena v216 tanpa perubahan CSS), marker 'data-kbtab' tinggal 1 di bundle JS MacBook (tombol Kanban).
 
 ## v173 — Preset template pola carousel @marketingharry (vonis Patria 3 Nov 2026 08:18: pola saja, bukan salinan mentah)
 
