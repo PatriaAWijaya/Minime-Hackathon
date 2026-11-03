@@ -1023,6 +1023,10 @@ function unstarFromPin(el) {
 export function renderChat() {
     var box = document.getElementById("chatBox");
     // v137: aksi bubble (reaksi/star/hapus) tidak boleh melempar pembaca ke akhir chat.
+    // v240: renderChat PENUH sengaja TIDAK diubah — kontrak v137 (renderChat
+    // biasa tetap gulir ke bawah, dibuktikan tes v137) dipertahankan; jalur
+    // ini hanya terpicu bila kotak tak sinkron (mis. project baru), bukan
+    // saat prosesing normal. Yang diperbaiki adalah appendChatBubble di bawah.
     var keepScroll = chatKeepScroll; chatKeepScroll = false;
     var prevTop = box.scrollTop;
     box.innerHTML = "";
@@ -1082,10 +1086,14 @@ function chatBubbleEl(m, i) {
 export function appendChatBubble(m, i) {
   var box = document.getElementById("chatBox");
   if (!box) return;
+  // v240: jangan rampas scroll pembaca yang sedang membaca pesan lama —
+  // bubble baru selama prosesing hanya menarik ke bawah bila pembaca
+  // sudah di dekat bawah (aturan yang sama dengan updateChatBubbleText).
   var keepScroll = chatKeepScroll; chatKeepScroll = false;
   var prevTop = box.scrollTop;
+  var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 100;
   box.appendChild(chatBubbleEl(m, i));
-  if (keepScroll) box.scrollTop = prevTop; else box.scrollTop = box.scrollHeight;
+  if (keepScroll || !nearBottom) box.scrollTop = prevTop; else box.scrollTop = box.scrollHeight;
 }
 
 /* v239: timpa isi satu bubble (dipakai streaming Prime-direct) tanpa

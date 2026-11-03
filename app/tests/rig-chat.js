@@ -1290,6 +1290,29 @@ try {
   check('v239: streaming SSE Meta mengalir ke bubble', bodyText().includes('STREAM-HASIL-UJI'), '');
   dom.window.fetch = fetchAsli239;
 
+  // v240: bubble baru tidak merampas scroll pembaca yang sedang membaca
+  // pesan lama (laporan live Patria 3 Nov 18:48: window chat freeze,
+  // tidak bisa discroll saat prosesing). jsdom tanpa layout (metrik 0),
+  // sehingga metrik kotak di-stub: konten 2000, viewport 500.
+  const box240 = document.getElementById('chatBox');
+  let top240 = 300;
+  let stub240ok = true;
+  try {
+    Object.defineProperty(box240, 'scrollHeight', { value: 2000, configurable: true });
+    Object.defineProperty(box240, 'clientHeight', { value: 500, configurable: true });
+    Object.defineProperty(box240, 'scrollTop', { get: () => top240, set: (v) => { top240 = v; }, configurable: true });
+  } catch (e) { stub240ok = false; }
+  check('v240: stub metrik kotak (prasyarat)', stub240ok, '');
+  if (stub240ok) {
+    // Pembaca di tengah (2000-300-500=1200 >= 100): bubble baru diam.
+    dom.window.postChat('prime', 'Prime Agent', '#EB87B4', 'SCROLL-UJI-1');
+    check('v240: bubble baru tidak menarik pembaca di tengah ke bawah', top240 === 300, 'top=' + top240);
+    // Pembaca di bawah (2000-1500-500=0 < 100): bubble baru mengikuti live.
+    top240 = 1500;
+    dom.window.postChat('prime', 'Prime Agent', '#EB87B4', 'SCROLL-UJI-2');
+    check('v240: bubble baru mengikuti pembaca di bawah ke bawah', top240 === 2000, 'top=' + top240);
+  }
+
   // v239: circuit breaker — HARUS TERAKHIR (breaker Meta yang trip di
   // sini bertahan 5 menit di proses rig ini). Call 1: Meta gagal 2x
   // (generasi + QC) -> breaker trip. Call 2: tanpa fetch api.meta.ai.
