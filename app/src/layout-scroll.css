@@ -932,3 +932,25 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
    tema gelap TIDAK disentuh (punya rule background-image sendiri
    + --t-bg #0E0718). Panel-panel translusen (0.72) kini
    meneruskan gradasi ini samar-samar = kedalaman kaca. */
+
+/* v231: kartu & bagian yang masih hitam di tema terang jadi gradasi
+   biru-putih (perintah Patria 3 Nov 2026 12:39 + 4 screenshot 12:37:
+   panel Billing, baris kanal Planner, kartu + select Library,
+   kartu + textarea Media Studio). Tema gelap TIDAK disentuh.
+   - Grup kartu/panel/dialog: kilau v229 dilapis di atas gradasi
+     kartu (putih -> #E4EEFB); lapisan bawah opaque sehingga
+     background-color gelap di bawahnya tertutup total.
+   - Grup field/kontrol: gradasi kartu saja (tanpa kilau) + teks
+     hitam untuk yang tadinya teks terang (#ececec/#e5e5e5).
+   - Panel Billing: background-nya INLINE di markup App.svelte
+     (bukan class) -> selektor atribut gaya v227 + !important
+     (satu-satunya cara mengalahkan inline style).
+   - Hover baris model: datar #E4EEFB, bukan gradasi.
+   Sengaja TIDAK diubah: kanvas preview video (.ve2-canvas),
+   backdrop dialog gelap, placeholder gambar hilang,
+   tampilan kode (.soc-wiz-uri), tombol-tombol x kecil. */
+[data-theme="light"] .ms-card, [data-theme="light"] .lib-card, [data-theme="light"] .img-card, [data-theme="light"] .lib-dialog-card, [data-theme="light"] .chan-card, [data-theme="light"] .g-popup-card, [data-theme="light"] .soc-pop, [data-theme="light"] .soc-dlg, [data-theme="light"] .kb-dlg, [data-theme="light"] .soc-side-row, [data-theme="light"] .soc-add, [data-theme="light"] .soc-del, [data-theme="light"] .na-sug-card, [data-theme="light"] .na-model-field, [data-theme="light"] .na-model-pop { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.70), rgba(255, 255, 255, 0.20) 40%, rgba(255, 255, 255, 0) 65%), linear-gradient(180deg, #FFFFFF, #E4EEFB); }
+[data-theme="light"] .se-field, [data-theme="light"] .se-menubtn, [data-theme="light"] .se-btn2, [data-theme="light"] .se-output, [data-theme="light"] .lib-detail-pre, [data-theme="light"] .lib-filters select, [data-theme="light"] .g-input, [data-theme="light"] .g-day, [data-theme="light"] .g-ampm, [data-theme="light"] .na-effort-btn, [data-theme="light"] .n8n-nodebar button, [data-theme="light"] .wa-chip, [data-theme="light"] #agentList .group input[data-act="proj-rename-input"] { background-image: linear-gradient(180deg, #FFFFFF, #E4EEFB); }
+[data-theme="light"] .se-field, [data-theme="light"] .se-btn2, [data-theme="light"] .lib-filters select, [data-theme="light"] .g-input, [data-theme="light"] .g-day, [data-theme="light"] .g-ampm, [data-theme="light"] .soc-dlg, [data-theme="light"] .kb-dlg, [data-theme="light"] .na-effort-btn, [data-theme="light"] .n8n-nodebar button { color: #000000; }
+[data-theme="light"] .na-model-row:hover { background: #E4EEFB; }
+[data-theme="light"] #view-billing .scroll > div[style*="background:#1e1e1e"] { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.70), rgba(255, 255, 255, 0.20) 40%, rgba(255, 255, 255, 0) 65%), linear-gradient(180deg, #FFFFFF, #E4EEFB) !important; }

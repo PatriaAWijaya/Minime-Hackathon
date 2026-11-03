@@ -515,12 +515,18 @@ try {
   // rgba putih -> hex-alpha, "inset 0 1px 0" -> "inset 0 1px").
   check('v229: kilau permukaan kaca di light', /\[data-theme=light\] \.sidebar,\[data-theme=light\] \.col,.*background-image:linear-gradient\(180deg,#ffffffb3,#fff3 40%,#fff0 65%\)/.test(cssText), '');
   check('v229: kilau di atas tombol gradien light', /\[data-theme=light\] \.btn-primary,\[data-theme=light\] \.filters button\.active,.*background-image:linear-gradient\(180deg,#ffffff8c,#fff0 55%\),var\(--t-accent-grad\)/.test(cssText), '');
-  check('v229: kilau HANYA di light (gelap tidak kena)', (cssText.match(/#ffffffb3/g) || []).length === 1 && (cssText.match(/#ffffff8c/g) || []).length === 1, '');
+  check('v229: kilau HANYA di light (v231 memakai ulang kilau yang sama, jadi hitungan >1 sah)', !/\[data-theme=dark\][^{]*\{[^}]*#ffffffb3/.test(cssText) && !/\[data-theme=dark\][^{]*\{[^}]*#ffffff8c/.test(cssText), '');
 
   // 29. v230: background umum light = gradasi putih-biru + glossy
   // (bentuk minify nyata: rgba .60 -> .6, hex var dipertahankan).
   check('v230: bg umum light gradasi putih-biru + kilau diagonal', /--t-bg: linear-gradient\(115deg, rgba\(255, 255, 255, \.6\) 0%, rgba\(255, 255, 255, 0\) 42%\), linear-gradient\(180deg, #FFFFFF 0%, #EAF2FD 52%, #D3E5F7 100%\)/.test(cssText), '');
   check('v230: bg gelap tetap datar', /\[data-theme=dark\]\{--t-bg: #0E0718/.test(cssText), '');
+
+  // 30. v231: kartu & bagian hitam di light jadi gradasi biru-putih.
+  check('v231: kartu light gradasi biru-putih', /\[data-theme=light\] \.ms-card,\[data-theme=light\] \.lib-card,.*linear-gradient\(180deg,#fff,#e4eefb\)/.test(cssText), '');
+  check('v231: panel Billing inline ikut gradasi', /\[data-theme=light\] #view-billing \.scroll>div\[style\*="background:#1e1e1e"\]\{background-image:.*!important\}/.test(cssText), '');
+  check('v231: teks field terang dibalik hitam', /\[data-theme=light\] \.se-field,\[data-theme=light\] \.se-btn2,.*color:#000\}/.test(cssText), '');
+  check('v231: kartu gelap tetap hitam di dark', /\.ms-card\{background:#1e1e1e/.test(cssText), '');
 
 
 } catch (e) {
