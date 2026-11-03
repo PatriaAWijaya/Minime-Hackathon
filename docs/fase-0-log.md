@@ -2529,6 +2529,18 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v228 — Ikon rel terlihat di tema terang (laporan Patria 11:45 + screenshot Settings)
+
+- Laporan: "Banyak menu yang masih putih, tidak terlihat" — screenshot Settings membuktikan teks halaman sudah hitam terbaca (v227 terkonfirmasi live untuk teks), tapi ikon-ikon rel navigasi kiri putih di atas latar terang sehingga tidak terlihat.
+- Akar (dibuktikan piksel, bukan tebakan): ikon rel ada 2 jenis dengan arah berlawanan. (1) 5 ikon file (chat, kanban, media, campaign, setting) aslinya HITAM 100% tapi dipaksa filter invert(1) INLINE supaya putih di tema gelap — di light, invert yang sama membuatnya putih di atas putih. (2) 4 PNG data-URI (search, graph, library, planner) + SVG billing memang PUTIH dari sananya (opaque 100% putih / stroke+fill white).
+- Perbaikan CSS saja (layout-scroll.css, blok v228 di akhir file; App.svelte TIDAK disentuh; tema gelap TIDAK disentuh):
+  - [data-theme="light"] .sidebar img.railicon[src$=".png"] { filter: none !important; } — !important mengalahkan inline invert(1) -> ikon file tampil hitam aslinya.
+  - [data-theme="light"] .sidebar img.railicon[src^="data:"] { filter: invert(1); } — ikon data-URI putih jadi hitam.
+  - Avatar appmark (pink) bukan railicon, tidak kena. Tooltip rel ikut hitam lewat variabel v227.
+- Rig: rig-home §27 v228 baru (2 cek teks CSS dist: aturan file-none + aturan data-invert; jsdom tidak menerapkan stylesheet). Loop 14/14 (~/workspace/riglogs-v228/loop.log); gerbang GATE-V228 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja); svelte-check 0/21.
+- SHA: kode lokal 0ceabf7 <-> remote cde6438 (tree identik, pola push_rebased.py).
+- Catatan live: BELUM dikonfirmasi live (uji disarankan: di tema terang, semua ikon rel kiri hitam dan terlihat — chat, search, kanban, graph, library, media, planner, billing, settings; tema gelap tidak berubah).
+
 ## v227 — Tema terang: ikon & teks hitam kontras + gradient bluish white tetap (perintah Patria 11:31 + 11:33)
 
 - Perintah: di tema terang, ikon dan teks memakai warna hitam yang kontras dengan keseluruhan warna latar; perhatikan pula gradient bluish white. Latar: tema live Patria sudah light sejak pagi (diubah dari system karena macOS-nya dark), tapi teksnya masih navy/abu (v221) — bukan hitam.
