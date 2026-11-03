@@ -63,6 +63,9 @@ async function fetchStub(url) {
     if (metaBad) return makeResp({ ok: false, status: 401, jsonData: { error: { message: 'unauthorized' } } });
     return makeResp({ jsonData: { choices: [{ message: { content: 'OK' } }], usage: { prompt_tokens: 5, completion_tokens: 2 } } });
   }
+  if (u.includes('api.anthropic.com')) {
+    return makeResp({ jsonData: { content: [{ type: 'text', text: 'OK' }], usage: { input_tokens: 5, output_tokens: 2 } } });
+  }
   throw new Error('unexpected fetch ' + u);
 }
 
@@ -102,16 +105,16 @@ function check(name, ok, extra = '') {
   console.log((ok ? 'PASS ' : 'FAIL ') + name + (ok || !extra ? '' : ' :: ' + String(extra).slice(0, 300)));
   if (!ok) failed++;
 }
-const btn = (kind) => document.getElementById(kind === 'gemini' ? 'keyBtnGemini' : 'keyBtnMeta');
-const note = (kind) => document.getElementById(kind === 'gemini' ? 'keyNoteGemini' : 'keyNoteMeta');
+const btn = (kind) => document.getElementById(kind === 'gemini' ? 'keyBtnGemini' : kind === 'anthropic' ? 'keyBtnAnthropic' : 'keyBtnMeta');
+const note = (kind) => document.getElementById(kind === 'gemini' ? 'keyNoteGemini' : kind === 'anthropic' ? 'keyNoteAnthropic' : 'keyNoteMeta');
 const validated = () => { try { return JSON.parse(store.get('minime.keyValidated') || '{}'); } catch { return {}; } };
 const fetchCount = (part) => log.filter((l) => l.startsWith('fetch:') && l.includes(part)).length;
 
 try {
   await waitFor(() => typeof dom.window.showView === 'function', 'mount showView', 120);
 
-  // 1. Tombol per-kunci tampil (Gemini/Meta); kartu Postiz hilang.
-  check('tombol per-kunci tampil', !!btn('gemini') && !!btn('meta') && !document.getElementById('keyBtnPostiz') && !document.getElementById('apiKeyPostiz'));
+  // 1. Tombol per-kunci tampil (Gemini/Meta/Anthropic v236); kartu Postiz hilang.
+  check('tombol per-kunci tampil', !!btn('gemini') && !!btn('meta') && !!btn('anthropic') && !!document.getElementById('apiKeyAnthropic') && !document.getElementById('keyBtnPostiz') && !document.getElementById('apiKeyPostiz'));
   check('baris status bersama hilang', !document.getElementById('keyStatus'));
   const sharedBtn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Simpan Kunci');
   check('tombol Simpan bersama hilang', !sharedBtn);
@@ -122,7 +125,7 @@ try {
   check('kunci i18n mati dihapus', !i18nSrc.includes("'key.save'") && !i18nSrc.includes("'key.saved'") && !i18nSrc.includes("'key.empty'") && !i18nSrc.includes("'key.ollama.short'") && !i18nSrc.includes("'key.postiz'") && !i18nSrc.includes("'key.ph.postiz'") && !i18nSrc.includes("'fb.card.title'") && !i18nSrc.includes("'prov.card.title'") && !i18nSrc.includes("'planner.postiz."));
 
   // 2. Awal: semua "Hubungkan API".
-  check('awal semua Hubungkan API', btn('gemini').textContent === 'Hubungkan API' && btn('meta').textContent === 'Hubungkan API');
+  check('awal semua Hubungkan API', btn('gemini').textContent === 'Hubungkan API' && btn('meta').textContent === 'Hubungkan API' && btn('anthropic').textContent === 'Hubungkan API');
 
   // 3. Gemini lolos uji -> TERHUBUNG hijau; kunci lain tidak tersentuh.
   store.set('minime.metaKey', 'meta-saved');
@@ -140,9 +143,15 @@ try {
   check('meta salah -> tetap Hubungkan + catatan + tak tervalidasi', btn('meta').textContent === 'Hubungkan API' && !validated().meta && store.get('minime.metaKey') === 'bad-meta');
   metaBad = false;
 
-  // 5. Kartu Postiz/FB/provider hilang (v63); 4 kartu kunci tersisa (v201: +ClassAI).
+  // 4b. v236: Anthropic lolos uji -> TERHUBUNG hijau + tersimpan + tervalidasi.
+  document.getElementById('apiKeyAnthropic').value = 'anthropic-ok';
+  btn('anthropic').click();
+  await waitFor(() => btn('anthropic').textContent === 'TERHUBUNG', 'anthropic TERHUBUNG', 200);
+  check('anthropic TERHUBUNG + hijau + tersimpan + tervalidasi', btn('anthropic').textContent === 'TERHUBUNG' && btn('anthropic').className.includes('btn-connected') && store.get('minime.anthropicKey') === 'anthropic-ok' && validated().anthropic === true);
+
+  // 5. Kartu Postiz/FB/provider hilang (v63); 5 kartu kunci tersisa (v201: +ClassAI; v236: +Anthropic).
   check('kartu Postiz/FB/provider hilang', !document.getElementById('fbStatusNote') && !document.getElementById('provNote') && document.querySelectorAll('.prov-card').length === 0);
-  check('4 kartu kunci tersisa (Gemini, Meta, ClassAI, Ollama)', document.querySelectorAll('.key-card').length === 4);
+  check('5 kartu kunci tersisa (Gemini, Meta, Anthropic, ClassAI, Ollama)', document.querySelectorAll('.key-card').length === 5);
 
   // 6. Klik kosong tanpa kunci tersimpan -> no-op (tanpa fetch baru).
   // (Teks tombol tidak diasersi di sini: di app nyata, state tombol
@@ -161,8 +170,9 @@ try {
   // hijau basi (tanpa mengubah kunci/flag tersimpan). v78: kartu kunci
   // ber-input menjadi 4 (Gemini, Meta, ClassAI, Ollama) — kartu Ollama yang dulu
   // MATI (hanya label) kini punya input URL + tombol Periksa.
+  // v236: +Anthropic -> 5.
   const keyRows = [...document.querySelectorAll('.key-card .key-row')].filter((row) => row.querySelector('input'));
-  check('tiap kartu kunci: input + tombol sebaris', keyRows.length === 4 && keyRows.every((row) => row.querySelector('button')));
+  check('tiap kartu kunci: input + tombol sebaris', keyRows.length === 5 && keyRows.every((row) => row.querySelector('button')));
   // 8. Ikon nav v54: wiring + isi file baru (bukti dist menyalin ikon
   // kiriman Patria, bukan ikon lama). IHDR PNG: lebar di byte 16-19,
   // tinggi di byte 20-23 (big-endian).

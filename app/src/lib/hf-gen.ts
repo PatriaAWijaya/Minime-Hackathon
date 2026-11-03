@@ -37,6 +37,7 @@ export async function hfGenerateHtml(desc: string, lang: string): Promise<{ html
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
+  cfg.anthropicApiKey = keys.anthropic;
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[lang as keyof typeof MODEL_LANG_INSTRUCTION];
   const router = new ModelRouter(cfg);
   const r = await router.callWithFallback(hfGenPrompt(desc), 'trace-hf-gen-' + Date.now());

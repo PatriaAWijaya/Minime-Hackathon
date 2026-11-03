@@ -113,6 +113,17 @@ async function fetchStub(url, opts) {
   } else if (body.includes('SARAN-UJI')) {
     content = 'Hasil uji saran.\n\u25BARECOMMEND: Opsi A | Opsi B';
   }
+  // v236: Anthropic Messages API memakai bentuk respons berbeda
+  // (content[] + usage input/output) — stub menirunya agar
+  // callAnthropic teruji pada bentuk aslinya, bukan bentuk Meta.
+  if (String(url).includes('api.anthropic.com')) {
+    return makeResp({
+      jsonData: {
+        content: [{ type: 'text', text: content }],
+        usage: { input_tokens: 42, output_tokens: 30 },
+      },
+    });
+  }
   return makeResp({
     jsonData: {
       choices: [{ message: { content } }],
@@ -1038,6 +1049,25 @@ try {
   // entri — jadi jangan tunggu Library).
   await waitFor(() => !store.get('minime.creativeBrief'), 'v235r state bersih', 120);
   check('v235: klik Coba lagi -> generate ulang sukses + state bersih', (lastMsg()?.textContent || '').includes('Buka Image Editor'), lastMsg()?.textContent.slice(0, 120) || 'tidak ada');
+
+  // 34. v236: Anthropic masuk rantai — kunci Meta/Gemini dicabut,
+  // pesan langsung Prime harus dijawab lewat Anthropic (footer
+  // membuktikannya), tanpa fetch ke Meta/Gemini. Kunci dipulihkan
+  // sesudahnya (ini seksi terakhir, tapi tetap rapi).
+  const savedMetaKey = store.get('minime.metaKey');
+  const savedGeminiKey = store.get('minime.geminiKey');
+  store.delete('minime.metaKey');
+  store.delete('minime.geminiKey');
+  store.set('minime.anthropicKey', 'rig-key');
+  const fetchBefore34 = fetchRecs.length;
+  await sendMsg('halo');
+  await waitFor(() => bodyText().includes('via anthropic claude-sonnet-4-5'), 'jawaban via anthropic', 120);
+  const newRecs34 = fetchRecs.slice(fetchBefore34);
+  check('v236: rantai memakai Anthropic saat Meta/Gemini tanpa kunci', newRecs34.some((f) => f.url.includes('api.anthropic.com')) && !newRecs34.some((f) => f.url.includes('api.meta.ai') || f.url.includes('generativelanguage')), JSON.stringify(newRecs34.map((f) => f.url)));
+  check('v236: footer jawaban menyebut anthropic', bodyText().includes('via anthropic claude-sonnet-4-5'));
+  if (savedMetaKey) store.set('minime.metaKey', savedMetaKey);
+  if (savedGeminiKey) store.set('minime.geminiKey', savedGeminiKey);
+  store.delete('minime.anthropicKey');
 
 } catch (e) {
   // eslint-disable-next-line no-console

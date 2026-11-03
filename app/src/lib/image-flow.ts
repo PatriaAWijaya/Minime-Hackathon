@@ -499,7 +499,7 @@ async function generate(): Promise<void> {
 async function modelText(prompt: string, trace: string): Promise<string> {
   const keys = readKeys();
   const cfg = defaultRouterConfig();
-  cfg.geminiApiKey = keys.gemini; cfg.metaApiKey = keys.meta;
+  cfg.geminiApiKey = keys.gemini; cfg.metaApiKey = keys.meta; cfg.anthropicApiKey = keys.anthropic;
   // v235: dulu tanpa system instruction sama sekali (tanpa bahasa,
   // tanpa grounding) untuk shot storyboard, VO, dan caption.
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + GROUNDING_INSTRUCTION[getLang()];

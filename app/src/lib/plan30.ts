@@ -163,6 +163,7 @@ async function gatedScript(row: PlanRow, niche: string): Promise<{ text: string;
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
+  cfg.anthropicApiKey = keys.anthropic;
   const router = new ModelRouter(cfg);
   // v235: grounding ditambahkan (kriteria grounding di QC tetap ada,
   // tapi draf yang lebih membumi mengurangi putaran revisi).
@@ -233,6 +234,7 @@ export async function doTable(): Promise<{ ok: boolean; error?: string }> {
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
+  cfg.anthropicApiKey = keys.anthropic;
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + GROUNDING_INSTRUCTION[getLang()];
   const router = new ModelRouter(cfg);
   let res;
@@ -397,6 +399,7 @@ export async function doCaptions(): Promise<{ ok: boolean; made: number; error?:
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
+  cfg.anthropicApiKey = keys.anthropic;
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + GROUNDING_INSTRUCTION[getLang()];
   const router = new ModelRouter(cfg);
   let made = 0;

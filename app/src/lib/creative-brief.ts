@@ -345,6 +345,7 @@ function routerFor(systemInstruction: string): ModelRouter {
   try {
     cfg.geminiApiKey = window.localStorage.getItem('minime.geminiKey') || null;
     cfg.metaApiKey = window.localStorage.getItem('minime.metaKey') || null;
+    cfg.anthropicApiKey = window.localStorage.getItem('minime.anthropicKey') || null;
   } catch { /* abaikan */ }
   cfg.systemInstruction = systemInstruction;
   return new ModelRouter(cfg);

@@ -426,6 +426,7 @@ async function seGenerate(): Promise<void> {
     const cfg = defaultRouterConfig();
     cfg.geminiApiKey = keys.gemini;
     cfg.metaApiKey = keys.meta;
+    cfg.anthropicApiKey = keys.anthropic;
     cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()];
     const router = new ModelRouter(cfg);
     const r = await router.callWithFallback(buildScriptPrompt(state), 'trace-script-' + Date.now());
@@ -468,6 +469,7 @@ async function seCaption(track: 'artikel' | 'video'): Promise<void> {
     const cfg = defaultRouterConfig();
     cfg.geminiApiKey = keys.gemini;
     cfg.metaApiKey = keys.meta;
+    cfg.anthropicApiKey = keys.anthropic;
     cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()];
     const router = new ModelRouter(cfg);
     const prompt = track === 'artikel'

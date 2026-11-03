@@ -21,22 +21,24 @@ import { researchChatIsEntry, researchChatRun } from './research-browser.js';
 
 const GEMINI_KEY_LS = 'minime.geminiKey';
 const META_KEY_LS = 'minime.metaKey';
+const ANTHROPIC_KEY_LS = 'minime.anthropicKey';
 const CLASSAI_KEY_LS = 'minime.classaiKey';
 const VALIDATED_LS = 'minime.keyValidated';
 
-export function readKeys(): { gemini: string | null; meta: string | null; classai: string | null } {
+export function readKeys(): { gemini: string | null; meta: string | null; anthropic: string | null; classai: string | null } {
   try {
     return {
       gemini: window.localStorage.getItem(GEMINI_KEY_LS) || null,
       meta: window.localStorage.getItem(META_KEY_LS) || null,
+      anthropic: window.localStorage.getItem(ANTHROPIC_KEY_LS) || null,
       classai: window.localStorage.getItem(CLASSAI_KEY_LS) || null,
     };
   } catch {
-    return { gemini: null, meta: null, classai: null };
+    return { gemini: null, meta: null, anthropic: null, classai: null };
   }
 }
 
-export type KeyKind = 'gemini' | 'meta' | 'classai';
+export type KeyKind = 'gemini' | 'meta' | 'anthropic' | 'classai';
 
 function savedKey(kind: KeyKind): string | null {
   return readKeys()[kind];
@@ -44,7 +46,7 @@ function savedKey(kind: KeyKind): string | null {
 
 function saveKey(kind: KeyKind, value: string): void {
   try {
-    const ls = kind === 'gemini' ? GEMINI_KEY_LS : kind === 'meta' ? META_KEY_LS : CLASSAI_KEY_LS;
+    const ls = kind === 'gemini' ? GEMINI_KEY_LS : kind === 'meta' ? META_KEY_LS : kind === 'anthropic' ? ANTHROPIC_KEY_LS : CLASSAI_KEY_LS;
     window.localStorage.setItem(ls, value);
   } catch {
     // storage unavailable: key simply stays unset for this session
@@ -81,7 +83,7 @@ function keyNoteId(kind: KeyKind): string {
 }
 
 function keyInputId(kind: KeyKind): string {
-  return kind === 'gemini' ? 'apiKeyGemini' : kind === 'meta' ? 'apiKeyMeta' : 'apiKeyClassai';
+  return kind === 'gemini' ? 'apiKeyGemini' : kind === 'meta' ? 'apiKeyMeta' : kind === 'anthropic' ? 'apiKeyAnthropic' : 'apiKeyClassai';
 }
 
 function setKeyNote(kind: KeyKind, text: string): void {
@@ -98,7 +100,7 @@ function setKeyNote(kind: KeyKind, text: string): void {
  * dengan tombol per-kunci ini.
  */
 export function renderKeyButtons(): void {
-  (['gemini', 'meta', 'classai'] as KeyKind[]).forEach((kind) => {
+  (['gemini', 'meta', 'anthropic', 'classai'] as KeyKind[]).forEach((kind) => {
     const btn = document.getElementById(keyBtnId(kind)) as HTMLButtonElement | null;
     if (!btn) return;
     // Bila input sedang berisi ketikan baru, kunci yang berlaku adalah
@@ -150,10 +152,11 @@ export async function connectKey(kind: KeyKind): Promise<void> {
   let ok = false;
   let note = '';
   try {
-    // Uji langsung ke provider itu saja (callMeta/callGemini tanpa
-    // callWithFallback): satu panggilan minimal, biaya nyaris nol
-    // (Meta: puluhan token; Gemini: free tier). ClassAI: baca katalog
-    // model (GET /v1/models) — memvalidasi kunci tanpa memakan kredit.
+    // Uji langsung ke provider itu saja (tanpa callWithFallback):
+    // satu panggilan minimal, biaya nyaris nol (Meta: puluhan token;
+    // Gemini: free tier; Anthropic: puluhan token Sonnet). ClassAI:
+    // baca katalog model (GET /v1/models) — memvalidasi kunci tanpa
+    // memakan kredit.
     if (kind === 'classai') {
       const r = await fetch('https://router.classai.id/v1/models', {
         headers: { Authorization: `Bearer ${key}` },
@@ -164,8 +167,10 @@ export async function connectKey(kind: KeyKind): Promise<void> {
       const cfg = defaultRouterConfig();
       cfg.geminiApiKey = kind === 'gemini' ? key : null;
       cfg.metaApiKey = kind === 'meta' ? key : null;
+      cfg.anthropicApiKey = kind === 'anthropic' ? key : null;
       const router = new ModelRouter(cfg);
       if (kind === 'gemini') recordLiveCost(await router.callGemini('Jawab satu kata: OK'));
+      else if (kind === 'anthropic') recordLiveCost(await router.callAnthropic('Jawab satu kata: OK'));
       else recordLiveCost(await router.callMeta('Jawab satu kata: OK', 'key-test'));
       ok = true;
     }
@@ -310,6 +315,7 @@ async function callAgentModel(router: ModelRouter, cfg: ReturnType<typeof defaul
   try {
     if (label.includes('muse-spark-1.3')) return await router.callMeta(prompt, trace);
     if (label.includes('gemini-3.1-flash-lite')) return await router.callGemini(prompt);
+    if (label.includes('claude')) return await router.callAnthropic(prompt);
     if (label.includes('deepseek-r1:1.5b')) {
       const r2 = new ModelRouter({ ...cfg, ollamaModel: 'deepseek-r1:1.5b', ollamaFallbackModel: 'deepseek-r1:1.5b' });
       return await r2.callOllama(prompt);
@@ -347,6 +353,7 @@ export async function retryAgentTask(idx?: number): Promise<void> {
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
+  cfg.anthropicApiKey = keys.anthropic;
   const router = new ModelRouter(cfg);
   const ag = (AGENTS as Record<string, { name: string; color: string; role: string }>)[item.agent];
   const trace = 'trace-retry-' + item.agent + '-' + Date.now();
@@ -586,6 +593,7 @@ export async function sendChatReal(): Promise<void> {
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
+  cfg.anthropicApiKey = keys.anthropic;
   const router = new ModelRouter(cfg);
   // v103 (Alur 1): tanpa project aktif, pesan diuji dulu sebagai brief —
   // Prime memecah brief lewat 1 model call. Hanya bila ada tugas relevan,

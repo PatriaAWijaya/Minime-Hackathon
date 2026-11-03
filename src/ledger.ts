@@ -19,8 +19,8 @@ export interface CostRecord {
   traceId: string;
   timestamp: string;
   agent: string;
-  provider: 'meta' | 'gemini' | 'ollama' | 'mock';
-  family: 'meta' | 'gemini' | 'deepseek' | 'qwen' | 'mock';
+  provider: 'meta' | 'gemini' | 'anthropic' | 'ollama' | 'mock';
+  family: 'meta' | 'gemini' | 'anthropic' | 'deepseek' | 'qwen' | 'mock';
   model: string;
   promptTokens: number | null;
   completionTokens: number | null;

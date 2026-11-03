@@ -67,6 +67,7 @@ export async function researchRun(
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
+  cfg.anthropicApiKey = keys.anthropic;
   cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + RS_SYSTEM;
   const router = new ModelRouter(cfg);
   const steps: RsStep[] = [];

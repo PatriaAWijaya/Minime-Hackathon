@@ -2406,7 +2406,7 @@ function naRender() {
     var letter = (naState.name.trim().charAt(0) || 'A').toUpperCase();
     var colors = NA_COLORS.map(function (c) { return '<button class="na-dot' + (naState.color === c ? ' sel' : '') + '" style="background:' + c + '" data-act="na-color" data-val="' + c + '"></button>'; }).join('');
     var shapes = NA_SHAPES.map(function (sh) { return '<button class="na-shape' + (naState.shape === sh ? ' sel' : '') + '" data-act="na-shape" data-val="' + sh + '"><span class="av av-shape-' + sh + '" style="background:' + naState.color + '">' + letter + '</span></button>'; }).join('');
-    var models = ['meta', 'gemini', 'deepseek', 'qwen'].map(function (m) { return '<div class="na-model-row" data-act="na-model" data-val="' + m + '"><span class="na-radio' + (naState.model === m ? ' on' : '') + '">' + (naState.model === m ? '✓' : '') + '</span><span>' + naModelLabel(m) + '</span></div>'; }).join('');
+    var models = ['meta', 'gemini', 'claude', 'deepseek', 'qwen'].map(function (m) { return '<div class="na-model-row" data-act="na-model" data-val="' + m + '"><span class="na-radio' + (naState.model === m ? ' on' : '') + '">' + (naState.model === m ? '✓' : '') + '</span><span>' + naModelLabel(m) + '</span></div>'; }).join('');
     var efforts = NA_EFFORTS.map(function (e) { return '<button class="na-effort-btn' + (naState.effort === e ? ' sel' : '') + '" data-act="na-effort" data-val="' + e + '">' + naEffortLabel(e) + '</button>'; }).join('');
     var sugs = NA_SUGS.map(function (sg, i) { return '<div class="na-sug-card" data-act="na-sug" data-val="' + i + '"><b>' + tr(sg.name) + '</b><br><small>' + tr(sg.name + 'd') + '</small></div>'; }).join('');
     body.innerHTML = '<div class="na-wrap">'
@@ -3543,7 +3543,7 @@ export function graphConfirmEdgeDel() {
 
 
 function detailModelOpts(ag) {
-  var labels = ["meta", "gemini", "deepseek", "qwen"].map(function (m) { return naModelLabel(m); });
+  var labels = ["meta", "gemini", "claude", "deepseek", "qwen"].map(function (m) { return naModelLabel(m); });
   var opts = optionHtml('', tr("detail.model.default"), false);
   labels.forEach(function (l) { opts += optionHtml(l, l, ag.model === l); });
   if (ag.model && labels.indexOf(ag.model) < 0) opts += optionHtml(ag.model, ag.model, true);

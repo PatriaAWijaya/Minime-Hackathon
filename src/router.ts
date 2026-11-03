@@ -15,7 +15,7 @@
  */
 import type { CostRecord } from './ledger';
 
-export type ProviderId = 'meta' | 'gemini' | 'ollama' | 'mock';
+export type ProviderId = 'meta' | 'gemini' | 'anthropic' | 'ollama' | 'mock';
 
 export interface RouterConfig {
   metaBaseUrl: string;
@@ -23,12 +23,16 @@ export interface RouterConfig {
   metaModel: string;
   geminiApiKey: string | null;
   geminiModel: string;
+  anthropicApiKey: string | null;
+  anthropicModel: string;
+  anthropicBaseUrl: string;
   ollamaBaseUrl: string;
   ollamaModel: string;
   ollamaFallbackModel: string;
   /**
    * Optional system instruction (B7: language). Applied per provider:
-   * Meta/Ollama as a system message, Gemini as systemInstruction.
+   * Meta/Ollama as a system message, Gemini as systemInstruction,
+   * Anthropic as the `system` field of the Messages API.
    * Absent = no instruction (Node fase runners keep today's behavior).
    */
   systemInstruction?: string;
@@ -50,6 +54,9 @@ export function defaultRouterConfig(): RouterConfig {
     metaModel: 'muse-spark-1.3',
     geminiApiKey: null,
     geminiModel: 'gemini-3.1-flash-lite',
+    anthropicApiKey: null,
+    anthropicModel: 'claude-sonnet-4-5',
+    anthropicBaseUrl: 'https://api.anthropic.com/v1',
     ollamaBaseUrl: 'http://127.0.0.1:11434',
     ollamaModel: 'deepseek-r1:1.5b',
     ollamaFallbackModel: 'qwen2.5:3b',
@@ -64,6 +71,9 @@ export function routerConfigFromEnv(env: NodeJS.ProcessEnv): RouterConfig {
     metaModel: env.META_MODEL || base.metaModel,
     geminiApiKey: env.GEMINI_API_KEY || null,
     geminiModel: env.GEMINI_MODEL || base.geminiModel,
+    anthropicApiKey: env.ANTHROPIC_API_KEY || null,
+    anthropicModel: env.ANTHROPIC_MODEL || base.anthropicModel,
+    anthropicBaseUrl: env.ANTHROPIC_BASE_URL || base.anthropicBaseUrl,
     ollamaBaseUrl: env.OLLAMA_BASE_URL || base.ollamaBaseUrl,
     ollamaModel: env.OLLAMA_MODEL || base.ollamaModel,
     ollamaFallbackModel: env.OLLAMA_FALLBACK_MODEL || base.ollamaFallbackModel,
@@ -80,7 +90,7 @@ export class LiveUnavailableError extends Error {
 export interface CallResult {
   text: string;
   provider: ProviderId;
-  family: 'meta' | 'gemini' | 'deepseek' | 'qwen' | 'mock';
+  family: 'meta' | 'gemini' | 'anthropic' | 'deepseek' | 'qwen' | 'mock';
   model: string;
   latencyMs: number;
   mock: boolean;
@@ -166,6 +176,32 @@ export class ModelRouter {
     return { text, provider: 'gemini', family: 'gemini', model: this.cfg.geminiModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: data.usageMetadata?.promptTokenCount ?? null, completionTokens: data.usageMetadata?.candidatesTokenCount ?? null, costUsd: 0 };
   }
 
+  /** Live Anthropic call (Messages API, v236). Throws LiveUnavailableError when not configured. */
+  async callAnthropic(prompt: string): Promise<CallResult> {
+    if (!this.cfg.anthropicApiKey) {
+      throw new LiveUnavailableError('anthropic', 'ANTHROPIC_API_KEY is not set');
+    }
+    const started = Date.now();
+    const data = (await postJson(
+      `${this.cfg.anthropicBaseUrl.replace(/\/$/, '')}/messages`,
+      { 'x-api-key': this.cfg.anthropicApiKey, 'anthropic-version': '2023-06-01' },
+      {
+        model: this.cfg.anthropicModel,
+        max_tokens: 8192,
+        temperature: 0.2,
+        ...(this.cfg.systemInstruction ? { system: this.cfg.systemInstruction } : {}),
+        messages: [{ role: 'user', content: prompt }],
+      },
+    )) as {
+      content?: Array<{ type?: string; text?: string }>;
+      usage?: { input_tokens?: number; output_tokens?: number };
+    };
+    const text = (data.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('');
+    // v236: tarif Anthropic TIDAK ditebak (aturan audit v66 $-B1:
+    // model lain -> null); token tetap dicatat untuk laporan pemakaian.
+    return { text, provider: 'anthropic', family: 'anthropic', model: this.cfg.anthropicModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: data.usage?.input_tokens ?? null, completionTokens: data.usage?.output_tokens ?? null, costUsd: null };
+  }
+
   private ollamaFamilyFor(model: string): 'deepseek' | 'qwen' {
     return model.startsWith('qwen') ? 'qwen' : 'deepseek';
   }
@@ -219,7 +255,10 @@ export class ModelRouter {
   }
 
   /**
-   * Full chain: meta -> gemini -> ollama. Returns the first success and
+   * Full chain: meta -> gemini -> anthropic -> ollama (v236: Anthropic
+   * disisipkan sesudah Gemini, sebelum Ollama — perilaku lama bertahan
+   * bila Meta/Gemini jalan, dan Anthropic menyelamatkan persis saat
+   * keduanya gagal). Returns the first success and
    * records fallbackFrom. If all fail, throws a LiveUnavailableError
    * that names EVERY provider's failure, not just the last one — so a
    * transient Gemini 503 is never masked by the final Ollama error and
@@ -230,9 +269,10 @@ export class ModelRouter {
     const chain: Array<() => Promise<CallResult>> = [
       () => this.callMeta(prompt, agent),
       () => this.callGemini(prompt),
+      () => this.callAnthropic(prompt),
       () => this.callOllama(prompt),
     ];
-    const names = ['meta', 'gemini', 'ollama'];
+    const names = ['meta', 'gemini', 'anthropic', 'ollama'];
     const failures: string[] = [];
     for (let i = 0; i < chain.length; i++) {
       try {
