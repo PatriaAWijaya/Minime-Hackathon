@@ -2529,6 +2529,21 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v237 — Proxy Rust anthropic_chat (temuan live v236 15:18: tombol Hubungkan API Anthropic gagal dengan catatan "Tidak dapat menjangkau layanan")
+
+Diagnosis: catatan itu = fetch gagal total (bukan 401 "kunci ditolak") — key Patria belum pernah sampai ke autentikasi Anthropic. Bukti curl: preflight OPTIONS ke api.anthropic.com mengembalikan allow-headers (termasuk x-api-key) tapi TANPA access-control-allow-origin; POST tanpa key menjawab 401 juga tanpa header allow-origin. Pembanding: preflight Meta mengembalikan access-control-allow-origin: *. Jadi WebView Tauri memblokir panggilan Anthropic di preflight, sementara Meta lolos. Rig tidak menangkap ini karena jsdom tidak menegakkan CORS (pelajaran v223 yang luput diterapkan ke Anthropic di v236).
+
+Isi:
+- Rust baru app/src-tauri/src/anthropic.rs: perintah `anthropic_chat` (curl sisi server, pola vs_api) — body dirangkai serde_json (model, max_tokens 8192, temperature 0.2, system bila ada, messages user), header x-api-key + anthropic-version 2023-06-01, timeout 120 detik (untuk rencana panjang), respons diurai ke {text, input_tokens, output_tokens}; error non-2xx dipotong 300 karakter ("HTTP {code}: ..." sehingga failNote memetakan 401 -> kunci ditolak, HTTP lain -> galat); TANPA unwrap() (aturan berdiri), TANPA kunci di log/error.
+- main.rs: mod anthropic + registrasi handler.
+- router.ts: callAnthropic kini memakai __TAURI_INTERNALS__.invoke langsung (bukan impor @tauri-apps/api) agar modul tetap bisa diimpor runner Node yang tidak memakai Anthropic; tanpa fallback fetch (di live, fetch pasti gagal CORS sehingga fallback hanya mengaburkan galat).
+- Rig: invokeStub rig-chat + rig-settings menjawab 'anthropic_chat' (cabang split 'Bagi brief', uji satu kata -> OK, sisanya NASKAH-UJI); rig-chat §34 kini membuktikan jalur invoke Rust (log 'invoke:anthropic_chat', tanpa fetch Meta/Gemini), bukan fetch.
+- Bukti lokal sebelum gate: cargo check + cargo fmt lolos; svelte-check 0 error/21 warning; rig-chat + rig-settings ALL PASSED.
+- Penomoran: perbaikan ini mengambil nomor v237 (memblokir tes live); perluasan tombol jalur utama geser ke v238.
+
+SHA: kode lokal 8cc674e ↔ remote 4794dab (tree identik). Gate 9/9; loop 14 rig exit=0; svelte-check 0 error/21 warning (baseline); i18n 1279/bahasa (tidak berubah); ledger md5 tidak berubah (d542428fe9901fbd417e098e9249d4b6); cargo 0 warning.
+LIVE 3 Nov ~15:35 WIB: deploy mh-build237.sh — MH_BUILD237_OK; HEAD MacBook <LOG_SHA> (commit log); PID <PID>; md5 dist JS/CSS lokal == MacBook. App LIVE = v237. Konfirmasi live Patria untuk v237 BELUM ada (uji live yang disarankan: Settings -> kartu Anthropic -> klik "Hubungkan API" lagi TANPA tempel ulang (key sudah tersimpan) -> harus TERHUBUNG hijau; bila masih gagal, catatannya kini harus menyebut alasan HTTP yang benar, bukan "tidak dapat menjangkau").
+
 ## v236 — Provider Anthropic / Claude (perintah Patria 15:05 "tambahkan anthropic pada model, aku sudah punya API key nya"; penomoran: Anthropic mengambil nomor v236, perluasan tombol jalur utama geser ke v237)
 
 Latar: uji live v235 14:35–15:01 — generate soc gagal di semua provider (Meta abort, Gemini 503 lalu abort, Ollama abort). Diagnosis 15:13: timeout jalur Ollama di app 15 detik, sementara generasi IMAGE-PLAN panjang via deepseek-r1:1.5b lokal tidak selesai dalam 300 detik (model r1 berpikir panjang); proxy bersih. Anthropic menjadi jalan keluar praktis.
