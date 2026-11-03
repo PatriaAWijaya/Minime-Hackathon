@@ -2536,6 +2536,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - i18n: 2 kunci baru (img.tpl.mh + img.tpl.mh.note) → 1272/bahasa, 0 duplikat.
 - Uji: rig-image §v173 (8 cek: toggle tampil hanya di Carousel, default mati, aktif → Tanpa teks mati, 8 prompt sesuai jumlah slide 8 bukan 11, cover/content/closing + SHARE + 4:5, tanpa klausa tanpa-teks, toggle sembunyi di Poster) — ALL PASSED; loop 14 rig ALL PASSED; gerbang 9/9.
 - Pasangan SHA kode: lokal 4dd5ff8 ↔ remote 152170a (tree identik).
+- LIVE 3 Nov 2026 ~08:35 WIB: MH_BUILD173_OK, HEAD MacBook 68e8021, PID 94475, md5 dist lokal == MacBook (JS d0d976f28e29b8ad1fc4de13532611b8, CSS 5a124359e0fc57a887e2022f5ee5eac9 — CSS sama dengan v213/v214 karena v173 tanpa perubahan CSS), marker 'img-tpl-mh' ×2 di bundle JS MacBook.
 - Catatan penomoran: v173 dibangun SESUDAH v214 (vonis 08:18 datang sesudah v214 terkirim); urutan log mengikuti urutan build, bukan urutan nomor.
 
 ## v214 — Hapus dead code ve2ClipKind (perintah Patria 3 Nov 2026 08:17)
