@@ -2540,6 +2540,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - Rig: rig-home §25 v221 diperbarui (accent-text #1E3A5F -> #000000; panah kirim #fff -> #000) + §26 v227 baru (10 cek: variabel hitam, gradient utuh, blanket inline, stroke SVG, teks abu stylesheet, tombol hijau/bubble, msg-menu light, blok gelap utuh). rig-chat §17 v135 diperbarui (aturan dasar gelap tetap ungu + putih; aturan light putih + hitam). Loop pertama 13/14: hanya rig-chat gagal karena cek v135 lama — BUKAN regresi logika (output gagal menunjukkan aturan v227 persis); sesudah perbaikan cek, loop penuh kedua 14/14 (~/workspace/riglogs-v227/loop.log); gerbang GATE-V227 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja, tanpa kunci baru); svelte-check 0/21.
 - SHA: kode lokal 8291659 <-> remote f0413f7 (tree identik, pola push_rebased.py).
 - Catatan live: BELUM dikonfirmasi live (uji disarankan: di tema terang, semua teks & ikon hitam pekat; tombol gradien tetap biru-putih pucat dengan teks hitam; menu dropdown chat putih + teks hitam; tema gelap tidak berubah).
+- LIVE 3 Nov 2026 ~11:45 WIB: deploy mh-build227 OK, HEAD MacBook b72999b (= remote log), PID 7300, md5 dist CSS lokal == MacBook (b0e5e38c09a5b981e59bdba28a8c6641, byte-identik), marker: --t-text #000000 di blok light CSS live + aturan msg-menu light di CSS live; tema tersimpan tetap light sesudah deploy. Konfirmasi ketuk live Patria BELUM ada.
 
 ## v226 — Status koneksi terhubung jadi tombol hijau Terhubung (perintah Patria 10:48 + screenshot 10:50)
 
