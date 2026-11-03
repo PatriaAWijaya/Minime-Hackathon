@@ -2543,7 +2543,7 @@ Isi:
 - Penomoran: pekerjaan ini mengambil nomor v238 (perintah terbaru Patria, didahulukan); perluasan aturan tombol ke jalur utama yang sebelumnya memegang slot v238 GESER ke v239 dan TETAP DITAHAN menunggu vonis uji live v237 dari Patria.
 
 SHA: kode lokal a294341 ↔ remote 6b6634e (tree identik).
-LIVE <LOG_SHA> <PID>: deploy mh-build238.sh — <STATUS>.
+LIVE 3 Nov ~16:35 WIB: deploy mh-build238.sh — MH_BUILD238_OK; HEAD MacBook 7c1fe53 (commit log); PID 23982; md5 dist JS/CSS lokal == MacBook. App LIVE = v238. Konfirmasi live Patria untuk v238 BELUM ada (uji live yang disarankan: ulangi alur soc-image yang sama — hasil image single harus berlabel Prompt Generator: + Caption: → prompt masuk kolom Prompt editor, caption masuk Body Copy; carousel: slide jadi tab + caption di Body Copy; approve poster/carousel harus memakai caption dari Body Copy, bukan regenerate generik).
 
 ## v237 — Proxy Rust anthropic_chat (temuan live v236 15:18: tombol Hubungkan API Anthropic gagal dengan catatan "Tidak dapat menjangkau layanan")
 
