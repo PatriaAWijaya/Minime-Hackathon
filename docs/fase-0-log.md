@@ -2529,6 +2529,23 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v241 — Hasil generate bisa diperbesar dengan ketuk 2x (permintaan Patria 3 Nov 19:20, dari screenshot Image Editor: "file yang digenerate bisa di perbesar dengan diketuk 2x")
+
+Pemeriksaan sebelum build: ketuk 2x untuk memperbesar BELUM ADA di hasil Image Editor — yang sudah punya dblclick selama ini baru kartu Library (v118), kartu Kanban, dan node Graph; kartu hasil generate hanya punya tombol Simpan / Edit di Canva / Impor.
+
+Isi:
+- app/src/lib/image-flow.ts: listener dblclick TERDELEGASI pada #img-variants (bukan handler inline — pelajaran v91/v97: handler inline di konten innerHTML MATI di WebView live Tauri padahal jsdom jalan); guard tag IMG saja sehingga tombol Simpan/Canva di dalam kartu tidak memicu zoom; dialog #imgZoomDlg menampilkan gambar besar (max 92vw/82vh) + nama file + tombol ✕; klik apa pun di dialog menutup; Esc menutup (listener keydown dipasang/dilepas per buka-tutup, listener klik dialog dipasang sekali).
+- app/src/App.svelte: div #imgZoomDlg (display:none) di dalam view Media Studio, di bawah #img-gallery.
+- app/src/layout-scroll.css: gaya overlay fixed (z-index 9999, backdrop rgba(0,0,0,.88), gambar contain + bayangan, nama 14px, tombol ✕ bulat 40px). app.css TIDAK disentuh (verbatim).
+- app/src/lib/i18n.ts: kunci baru img.zoom.hint — ID 'Ketuk 2x untuk memperbesar', EN 'Double-click to enlarge', ZH '双击放大'; dipakai sebagai title gambar varian (digabung dengan shot bila ada) supaya fitur ini bisa ditemukan tanpa ditebak.
+- Rig: rig-image §v241 (generate 2 varian → dblclick varian pertama → dialog tampil flex dengan src yang sama + title memuat 'Ketuk 2x' → klik dialog → tertutup).
+- Cakupan sengaja dibatasi ke hasil generate: galeri tersimpan belum (kliknya di sana memuat brief, jadi dblclick di sana perlu dipikirkan terpisah).
+- Bukti lokal sebelum gate: build lolos; svelte-check 0 error/21 warning (baseline); rig-image ALL PASSED (3 cek v241 baru); loop 14 rig exit=0; gate 9/9; i18n 1281→1282/bahasa; ledger md5 tidak berubah; tanpa perubahan Rust.
+- Penomoran: pekerjaan ini mengambil nomor v241; perluasan aturan tombol ke jalur utama GESER ke v242 dan TETAP DITAHAN menunggu vonis uji live v237/v238 dari Patria. Laporan freeze input tugas baru (19:25) masih dalam diagnosis terpisah dan TIDAK dicampur ke versi ini.
+
+SHA: kode lokal 207753c ↔ remote 25e0e91 (tree identik).
+LIVE <TANGGAL> WIB: deploy mh-build241.sh — MH_BUILD241_OK; HEAD MacBook <LOG_SHA> (commit log); PID <PID>; md5 dist JS/CSS lokal == MacBook. App LIVE = v241. Konfirmasi live Patria untuk v241 BELUM ada (uji live yang disarankan: di Image Editor, ketuk 2x salah satu gambar hasil generate — harus membuka gambar besar; klik di mana saja / Esc menutup).
+
 ## v240 — Scroll chat tidak lagi dirampas bubble baru selama prosesing (laporan live Patria 3 Nov 18:48: window chat freeze, tidak bisa discroll naik turun saat prosesing)
 
 Diagnosis (bukti live + baca kode): saat dicek, call Anthropic Strategi sedang berjalan 43 detik (curl anak MiniMe, max-time 120) — freeze terjadi selama prosesing, dan setelah call selesai semua proses kembali 0% CPU. Akar di sisi app: appendChatBubble — jalur SEMUA post saat prosesing normal (announce, ack, hasil, verdict, laporan) — selalu menjalankan box.scrollTop = box.scrollHeight kecuali flag chatKeepScroll; dan flag itu HANYA disetel aksi bubble (star/react/hapus, v137), tidak pernah saat prosesing. Akibatnya tiap bubble baru menarik pembaca ke bawah: upaya scroll ke atas diurungkan bubble berikutnya, dan scroll ke bawah di posisi bawah adalah no-op — yang dirasakan persis "freeze, tidak bisa discroll naik turun". Yang dibuktikan BUKAN penyebab: update progres gated (hanya teks span .stream-prog tiap 500ms, tanpa sentuh scroll); tidak ada handler wheel/preventDefault; tidak ada overlay menutup chat; #chatBox memang scroller yang benar (class .scroll → overflow-y auto, flex:1); MiniMe 0,0% CPU + 0 socket saat idle. Catatan sistem (bukan akar app): WindowServer 29–43% + Chrome renderer/GPU ~17–23% saat pengecekan — beban compositor MacBook (Chrome + Stage Manager + blur glass) dapat menambah jank di atas cacat ini.
