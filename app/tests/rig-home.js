@@ -532,6 +532,10 @@ try {
   check('v232: ketikan #chatInput hitam di light', /\[data-theme=light\] #chatInput\{color:#000\}/.test(cssText), '');
   check('v232: ketikan #chatInput tetap terang di dark', /#chatInput\{[^}]*color:#ececec/.test(cssText), '');
 
+  // 32. v234: tombol opsi chat yang dipilih user hijau di light.
+  check('v234: .rec-btn.done hijau di light (gradien dimatikan)', /\[data-theme=light\] \.rec-btn\.done\{background-image:none;background-color:#8ed694;color:#000/.test(cssText), '');
+  check('v234: .rec-btn.done tetap hijau di dark', /\.rec-btn\.done\{background:#8ed694;color:#262626\}/.test(cssText), '');
+
 
 } catch (e) {
   // eslint-disable-next-line no-console

@@ -964,3 +964,16 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
    var(--t-faint) -> #000000 (v227), jadi tidak diubah.
    Tema gelap TIDAK disentuh (tetap #ececec). */
 [data-theme="light"] #chatInput { color: #000000; }
+
+/* v234: tombol opsi chat yang dipilih user jadi hijau di tema terang
+   (perintah Patria 3 Nov 2026 13:40). Akar: .rec-btn.done sudah
+   hijau (#8ED694) sejak lama dan jalan di tema gelap, tapi aturan
+   glossy light v229 ([data-theme="light"] .rec-btn { background-image:
+   gradien }) berspesifisitas sama dan terletak lebih belakang sehingga
+   lapisan gradien biru menutupi hijau — tombol yang sudah diketuk
+   (mis. "Awareness" di screenshot 13:22) tetap biru. Perbaikan:
+   selektor light + .done (spesifisitas lebih tinggi) mematikan
+   background-image, memaksa hijau, dan teks hitam konsisten v227.
+   Mekanisme "otomatis"-nya sudah ada: pickRecommendation menandai
+   pickedRec saat ketuk + render ulang menerapkan class done. */
+[data-theme="light"] .rec-btn.done { background-image: none; background-color: #8ED694; color: #000000; box-shadow: none; }
