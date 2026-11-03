@@ -1950,3 +1950,164 @@ mod tests {
         assert_eq!(f, "redirect_uri=http%3A%2F%2F127.0.0.1%3A4317%2Fcallback");
     }
 }
+
+// Unggah gambar ke Imgur untuk URL publik (v243, perintah Patria 3 Nov 20:20:
+// "image di planner selalu punya public url").
+// Latar: IG/Threads/TikTok lewat API hanya menerima URL gambar publik —
+// file lokal selalu ditolak (blok v79). Satu-satunya jalan otomatis di
+// dalam app adalah mengunggah dulu ke host publik; host yang dipilih
+// Patria = Imgur, dengan Client-ID per-user (disimpan di Settings
+// Planner, bukan di git — konsisten dengan aturan Minime publik: tiap
+// user mengkonekkan kredensialnya sendiri). Client-ID bukan secret
+// (identifikasi aplikasi untuk rate limit), tapi tetap tidak di-log.
+// WebP selalu dikonversi dulu di frontend (PNG untuk IG/Threads, JPEG
+// untuk TikTok) karena uploader Imgur menolak .webp (terbukti 3x,
+// 3 Nov 20:16-20:18, anonim maupun login) — perintah ini menerima
+// PNG/JPEG/GIF apa adanya dan meneruskan error Imgur apa adanya.
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImgurUploadReq {
+    pub client_id: String,
+    pub b64: String,
+    pub mime: String,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImgurUploadRes {
+    pub link: String,
+}
+
+#[tauri::command]
+pub fn imgur_upload(req: ImgurUploadReq) -> Result<ImgurUploadRes, String> {
+    no_crlf(&req.client_id, "Client-ID")?;
+    let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &req.b64)
+        .map_err(|e| e.to_string())?;
+    if bytes.is_empty() || bytes.len() > 20_000_000 {
+        return Err("gambar kosong atau melebihi 20 MB".into());
+    }
+    let mime = allow_mime(req.mime.as_str());
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let tmp = std::env::temp_dir().join(format!("minime-imgur-{stamp}.bin"));
+    std::fs::write(&tmp, &bytes).map_err(|e| e.to_string())?;
+    let curl = crate::video::find_tool("curl")
+        .ok_or_else(|| "curl tidak ditemukan di PATH".to_string())?;
+    let out = std::process::Command::new(curl)
+        .args([
+            "-sS",
+            "--max-time",
+            "120",
+            "-H",
+            &format!("Authorization: Client-ID {}", req.client_id),
+            "--form",
+            &format!("image=@{};type={}", tmp.to_string_lossy(), mime),
+            "-w",
+            "\n%{http_code}",
+            "https://api.imgur.com/3/image",
+        ])
+        .output()
+        .map_err(|e| format!("gagal menjalankan curl: {e}"))?;
+    let _ = std::fs::remove_file(&tmp);
+    if !out.status.success() {
+        return Err(format!(
+            "curl Imgur gagal ({}): {}",
+            out.status,
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    let stdout = out.stdout;
+    let split = stdout
+        .iter()
+        .rposition(|b| *b == b'\n')
+        .ok_or_else(|| "respons curl tanpa baris status".to_string())?;
+    let (raw_body, tail) = stdout.split_at(split);
+    let status: u16 = String::from_utf8_lossy(&tail[1..])
+        .trim()
+        .parse()
+        .map_err(|_| "baris status curl tidak valid".to_string())?;
+    let body_text = String::from_utf8_lossy(raw_body).into_owned();
+    if !(200..300).contains(&status) {
+        let slice: String = body_text.chars().take(300).collect();
+        return Err(format!("Imgur HTTP {status}: {slice}"));
+    }
+    let v: serde_json::Value =
+        serde_json::from_str(&body_text).map_err(|e| format!("respons Imgur bukan JSON: {e}"))?;
+    let link = v["data"]["link"].as_str().unwrap_or("").to_string();
+    if link.is_empty() {
+        return Err("Imgur tidak mengembalikan link".into());
+    }
+    Ok(ImgurUploadRes { link })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImgurValidateReq {
+    pub client_id: String,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImgurValidateRes {
+    pub remaining: u64,
+    pub limit: u64,
+}
+
+// Uji Client-ID tanpa mengunggah apa pun: GET /3/credits hanya membaca
+// kuota aplikasi — gagal auth (403) berarti ID salah, 200 berarti valid.
+#[tauri::command]
+pub fn imgur_validate(req: ImgurValidateReq) -> Result<ImgurValidateRes, String> {
+    no_crlf(&req.client_id, "Client-ID")?;
+    let curl = crate::video::find_tool("curl")
+        .ok_or_else(|| "curl tidak ditemukan di PATH".to_string())?;
+    let out = std::process::Command::new(curl)
+        .args([
+            "-sS",
+            "--max-time",
+            "30",
+            "-H",
+            &format!("Authorization: Client-ID {}", req.client_id),
+            "-w",
+            "\n%{http_code}",
+            "https://api.imgur.com/3/credits",
+        ])
+        .output()
+        .map_err(|e| format!("gagal menjalankan curl: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "curl Imgur gagal ({}): {}",
+            out.status,
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    let stdout = out.stdout;
+    let split = stdout
+        .iter()
+        .rposition(|b| *b == b'\n')
+        .ok_or_else(|| "respons curl tanpa baris status".to_string())?;
+    let (raw_body, tail) = stdout.split_at(split);
+    let status: u16 = String::from_utf8_lossy(&tail[1..])
+        .trim()
+        .parse()
+        .map_err(|_| "baris status curl tidak valid".to_string())?;
+    let body_text = String::from_utf8_lossy(raw_body).into_owned();
+    if !(200..300).contains(&status) {
+        let slice: String = body_text.chars().take(300).collect();
+        return Err(format!("Imgur HTTP {status}: {slice}"));
+    }
+    let v: serde_json::Value =
+        serde_json::from_str(&body_text).map_err(|e| format!("respons Imgur bukan JSON: {e}"))?;
+    let data = &v["data"];
+    let remaining = data["UserRemaining"]
+        .as_u64()
+        .or_else(|| data["user_remaining"].as_u64())
+        .unwrap_or(0);
+    let limit = data["UserLimit"]
+        .as_u64()
+        .or_else(|| data["user_limit"].as_u64())
+        .unwrap_or(0);
+    Ok(ImgurValidateRes { remaining, limit })
+}

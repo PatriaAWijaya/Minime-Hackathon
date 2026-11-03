@@ -26,6 +26,7 @@ html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch
 
 const log = [];
 const store = new Map();
+const imgurCalls = [];
 const IMG_DAYS = [1, 2, 4, 5, 7, 9, 11, 13, 15, 17, 19, 21];
 const CAR_DAYS = [3, 6, 8, 10, 12, 14, 16, 18, 20, 22];
 const REEL_DAYS = [23, 24, 25, 26, 27, 28, 29, 30];
@@ -72,6 +73,11 @@ async function invokeStub(cmd, args) {
   if (cmd === 'social_meta_exchange') return '{"access_token":"rig-meta-tok","expires_in":3600}';
   if (cmd === 'social_meta_pages') return '{"data":[{"id":"rig-page-1","name":"Rig Page","access_token":"rig-page-tok"}]}';
   if (cmd === 'social_publish') return 'ok';
+  if (cmd === 'image_read') return { b64: 'WEBPB64UJI', file: (args && args.req && args.req.name) || '' };
+  if (cmd === 'imgur_upload') {
+    imgurCalls.push({ mime: (args && args.req && args.req.mime) || '', b64: (args && args.req && args.req.b64) || '' });
+    return { link: 'https://i.imgur.com/RIGTEST.png' };
+  }
   throw new Error('unexpected invoke ' + cmd);
 }
 
@@ -261,6 +267,33 @@ try {
   await say('batal');
   await waitBubble('Alur rencana dibatalkan', 'batal menutup alur', 200);
   check('v212: sesudah batal, state alur chat bersih', !store.has('minime.planChat'));
+
+  // v243: Planner selalu punya public URL (Imgur otomatis).
+  dom.window.HTMLCanvasElement.prototype.getContext = () => ({ drawImage() {} });
+  dom.window.HTMLCanvasElement.prototype.toDataURL = function (type) { return 'data:' + type + ';base64,UE5HREFUQQ=='; };
+  dom.window.Image = class {
+    set src(v) { this.naturalWidth = 64; this.naturalHeight = 64; setTimeout(() => { if (this.onload) this.onload(); }, 0); }
+  };
+  store.set('minime.social', JSON.stringify({ imgurClientId: 'RIG-CLIENT-ID' }));
+  const linksIG = await dom.window.socUploadLocalToImgur({ kind: 'lib', imageFile: 'poster-uji.webp', mime: '' }, ['instagram', 'threads']);
+  check('v243: IG+Threads webp Library -> satu unggahan PNG + link Imgur untuk keduanya',
+    linksIG.instagram === 'https://i.imgur.com/RIGTEST.png' && linksIG.threads === 'https://i.imgur.com/RIGTEST.png'
+    && imgurCalls.length === 1 && imgurCalls[0].mime === 'image/png',
+    JSON.stringify(linksIG) + ' calls=' + imgurCalls.length + ' mime=' + (imgurCalls[0] && imgurCalls[0].mime));
+  const linksTT = await dom.window.socUploadLocalToImgur({ kind: 'lib', imageFile: 'poster-uji.webp', mime: '' }, ['tiktok']);
+  check('v243: TikTok webp Library -> unggahan JPEG (bukan PNG)',
+    linksTT.tiktok === 'https://i.imgur.com/RIGTEST.png' && imgurCalls.length === 2 && imgurCalls[1].mime === 'image/jpeg',
+    JSON.stringify(linksTT) + ' mime=' + (imgurCalls[1] && imgurCalls[1].mime));
+  const linkQ = await dom.window.socUploadQueueFileToImgur('poster-uji.webp', '', 'instagram', 'RIG-CLIENT-ID');
+  check('v243: varian antrean (nama file saja) -> link Imgur via PNG',
+    linkQ === 'https://i.imgur.com/RIGTEST.png' && imgurCalls.length === 3 && imgurCalls[2].mime === 'image/png',
+    linkQ + ' mime=' + (imgurCalls[2] && imgurCalls[2].mime));
+  store.set('minime.social', JSON.stringify({}));
+  let missingErr = '';
+  try { await dom.window.socUploadLocalToImgur({ kind: 'lib', imageFile: 'poster-uji.webp', mime: '' }, ['instagram']); }
+  catch (e) { missingErr = String((e && e.message) || e || ''); }
+  check('v243: tanpa Client-ID -> gagal dengan pesan yang menyebut Imgur (bukan diam-diam dibatalkan)',
+    missingErr.includes('Imgur'), missingErr.slice(0, 120));
 
 } catch (e) {
   // eslint-disable-next-line no-console
