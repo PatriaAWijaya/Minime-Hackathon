@@ -2537,6 +2537,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - Gerbang: loop 14 rig ALL PASSED (log `~/workspace/riglogs-v214/loop.log`); skrip gerbang 9/9 (vite, svelte-check, rig terkait, gate-test, scan kredensial, ledger md5, i18n 1270/bahasa, cargo fmt+check+check --tests, cargo-lock).
 - Pasangan SHA kode: lokal 50a50f7 ↔ remote 3daff9f (tree identik).
 - PENOMORAN ULANG (dinyatakan ke Patria 08:18): v214 dipakai penghapusan ini; 4 item Voice yang sebelumnya disebut v214 GESER ke v215.
+- LIVE 3 Nov 2026 ~08:23 WIB: MH_BUILD214_OK, HEAD MacBook a12f161, PID 93811, md5 dist lokal == MacBook (JS 0ecee109ffe47d88a70ca5c4851b587c, CSS 5a124359e0fc57a887e2022f5ee5eac9) — bundle byte-identik dengan v213, wajar: dead code yang dihapus sudah ter-tree-shake dari bundle; grep ve2ClipKind di sumber MacBook = 0.
 - Antrean sesudah v214 (vonis Patria 08:18 + perintah 08:22): v173 = preset template pola carousel marketingharry (pola saja, bukan mentah; cap tetap 6-10); lalu Bridge Movie↔Script Editor (skrip disetujui dari chat maupun hasil perbaikan di Script Editor diekspor ke movie editor, generate per scene / per 10 detik sesuai kapasitas Video Generator); lalu v215 (4 item Voice).
 
 ## v213 — Picker rasio preview Video Editor + thumbnail Library 40% + Veo→Omni + detail klik-2x kartu ARSIP (perintah Patria 3 Nov 2026 04:39 + 06:16 + 06:26 + 06:42)
