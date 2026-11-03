@@ -2529,6 +2529,16 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v224 — Hapus judul Panel VoiceStudio + catatan embed (perintah Patria 10:35)
+
+- App.svelte tab Voice: h4 vs.embed.title ('Panel VoiceStudio') + p #vsEmbedNote DIHAPUS. Yang tampil tinggal bar status (badge Terhubung/Belum terhubung) + tombol Muat ulang + iframe (tetap tersembunyi bila :3901 tak menjawab).
+- voicestudio.ts: vsEmbedWatchCSP + flag-nya DIHAPUS (satu-satunya keluarannya adalah catatan); blok parts/conn di vsEmbedCheck DIHAPUS; fetch /health di vsEmbedCheck DIHAPUS (hasilnya hanya dipakai catatan — koneksi kini ditentukan vsCheck saja). Komentar header vsEmbedCheck diperbarui (v224).
+- i18n: 5 kunci yatim DIHAPUS (sole ref ikut terhapus, grep 0 rujukan): vs.embed.title, vs.embed.ui.online, vs.embed.ui.offline, vs.embed.conn, vs.embed.blocked (15 baris = 5 x 3 bahasa). Bertahan: vs.embed.online/offline/checking (badge) + reload.
+- Rig-vs: cek embed diubah (iframe + status TANPA catatan); cek koneksi-via-catatan diganti cek judul hilang + koneksi dibuktikan daftar model; header + v224. i18n 1276 -> 1271/bahasa.
+- Uji: vite build lolos; svelte-check 0 error / 21 warning (baseline); rig-vs ALL PASSED (termasuk cek v224 baru); loop 14 rig ALL PASSED (~/workspace/riglogs-v224/loop.log); gerbang GATE-V224 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271).
+- SHA: kode lokal 768b724 <-> remote 53d31d2 (tree identik, pola push_rebased.py).
+- Catatan live: BELUM dikonfirmasi live (uji disarankan: buka tab Voice — judul 'Panel VoiceStudio' dan paragraf catatan sudah tidak ada; yang tampil hanya bar VoiceStudio + badge status + tombol Muat ulang).
+
 ## v223 — Proxy Rust vs_api untuk VoiceStudio (perbaikan akar CORS live, laporan Patria 10:23)
 
 - Akar bug: app v222 + backend 0.5.7 hidup, tapi panel live tetap 'Belum terhubung'. Penyebabnya BUKAN versi app, BUKAN backend mati, BUKAN CSP app (CSP sudah mengizinkan :3900) — melainkan CORS VoiceStudio 0.5.7: server hanya mengembalikan header allow-origin untuk origin UI web-nya sendiri (localhost:3901); origin Tauri (https://tauri.localhost) TIDAK mendapat allow-origin sehingga fetch WebView diblokir browser meski server menjawab 200. Dibuktikan via curl ber-Origin: :3901 -> allow-origin ada; tauri.localhost -> tidak ada. curl + rig jsdom (tanpa CORS) lolos — itulah mengapa rig lolos tapi live gagal. Pelajaran: rig TIDAK menangkap blokir CORS; bukti live menang atas rig.
