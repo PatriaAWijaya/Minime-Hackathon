@@ -2539,7 +2539,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
   - Avatar appmark (pink) bukan railicon, tidak kena. Tooltip rel ikut hitam lewat variabel v227.
 - Rig: rig-home §27 v228 baru (2 cek teks CSS dist: aturan file-none + aturan data-invert; jsdom tidak menerapkan stylesheet). Loop 14/14 (~/workspace/riglogs-v228/loop.log); gerbang GATE-V228 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja); svelte-check 0/21.
 - SHA: kode lokal 0ceabf7 <-> remote cde6438 (tree identik, pola push_rebased.py).
-- Catatan live: BELUM dikonfirmasi live (uji disarankan: di tema terang, semua ikon rel kiri hitam dan terlihat — chat, search, kanban, graph, library, media, planner, billing, settings; tema gelap tidak berubah).
+- LIVE 3 Nov 2026 11:54 WIB: MH_BUILD228_OK, HEAD MacBook 4a6a3a9 (= commit log), PID segar 7924 (sebelumnya 7300), md5 CSS dist lokal == MacBook 4d8b1911ca5e541ebaaea7ffb208dff4 (CSS byte-identik, kedua aturan v228 ada di dalamnya — grep pola lama gagal karena spasi sesudah } tidak ada di output minify; md5 adalah buktinya). Tema live tetap light (LS tidak disentuh rantai). Konfirmasi live Patria BELUM ada.
 
 ## v227 — Tema terang: ikon & teks hitam kontras + gradient bluish white tetap (perintah Patria 11:31 + 11:33)
 
