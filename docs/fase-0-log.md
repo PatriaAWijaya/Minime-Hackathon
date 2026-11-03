@@ -2529,6 +2529,15 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v230 — Background umum tema terang = gradasi putih-biru + glossy (perintah Patria 12:36)
+
+- Perintah: "Background umum tema putih buat gradasi putih biru dengan effek glossy".
+- Perbaikan CSS saja (layout-scroll.css; App.svelte + app.css verbatim TIDAK disentuh; tema gelap TIDAK disentuh): --t-bg light yang tadinya datar #F4F8FF kini dua lapis — (1) kilau diagonal putih 0.60 yang memudar di 42%, (2) gradasi vertikal putih -> biru pucat (#EAF2FD 52% -> #D3E5F7). Aman: --t-bg hanya dipakai di body { background: ... } (shorthand menerima gradien); panel-panel translusen (0.72) kini meneruskan gradasi ini samar-samar = kedalaman kaca.
+- Bukti visual: render Chromium headless VM dengan CSS dist asli (mock .app + kartu-kartu) — putih di atas memudar ke biru pucat di bawah, kilau diagonal terlihat, panel translusen meneruskan biru di bawah; tangkapan di ~/workspace/riglogs-v230/bg-check.png.
+- Rig: rig-home §29 v230 baru (2 cek: gradasi di blok light + bg gelap tetap datar #0E0718). Loop pertama 13/14: hanya rig-home gagal karena cek v221 lama mengasumsikan --t-bg datar #F4F8FF — BUKAN regresi (v230 memang sengaja menggantinya); cek v221 diperbarui ke ekspektasi gradien, loop kedua 14/14 (~/workspace/riglogs-v230/loop.log); gerbang GATE-V230 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja); svelte-check 0/21.
+- SHA: kode lokal 5276f37 <-> remote f5c49be (tree identik, pola push_rebased.py).
+- Catatan live: BELUM dikonfirmasi live (uji disarankan: background umum tema terang bergradasi putih-ke-biru dengan kilau; tema gelap tidak berubah).
+
 ## v229 — Efek glossy di tema terang (perintah Patria 12:25)
 
 - Perintah: "Tambahkan efek glossynya" — dibaca sebagai tema terang (topik berjalan sejak v221; tema gelap sudah glossy diredam sejak awal dan TIDAK disentuh).
