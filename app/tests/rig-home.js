@@ -504,6 +504,12 @@ try {
   check('v227: msg-menu light putih + teks hitam', /\[data-theme=light\] \.msg-menu\{background:#fff;color:#000/.test(cssText), '');
   check('v227: blok gelap tetap TIDAK berubah', darkBlock.includes('--t-text: #E9E2F2') && darkBlock.includes('--t-accent-text: #FFFFFF'), darkBlock.slice(0, 80));
 
+  // 27. v228: ikon rel di tema terang — ikon file hitam (invert inline
+  // dihapus di light) + ikon data-URI putih (di-invert di light).
+  // (jsdom tidak menerapkan stylesheet — pola v227: assert teks CSS dist.)
+  check('v228: ikon rel file hitam di light (filter none)', /\[data-theme=light\] \.sidebar img\.railicon\[src\$="\.png"\]\{filter:none!important\}/.test(cssText), '');
+  check('v228: ikon rel data-URI putih di-invert di light', /\[data-theme=light\] \.sidebar img\.railicon\[src\^="data:"\]\{filter:invert\(1\)\}/.test(cssText), '');
+
 
 } catch (e) {
   // eslint-disable-next-line no-console

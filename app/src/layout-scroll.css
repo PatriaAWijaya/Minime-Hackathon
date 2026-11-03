@@ -884,3 +884,21 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 [data-theme="light"] .msg-menu { background: #FFFFFF; color: #000000; border-color: #DCE8F7; box-shadow: 0 4px 16px rgba(30, 42, 58, 0.18); }
 [data-theme="light"] .msg-menu button { color: #000000; }
 [data-theme="light"] .msg-menu button:hover { background: rgba(0, 0, 0, 0.06); }
+
+/* v228: ikon rel di tema terang (laporan Patria 3 Nov 2026 11:45 +
+   screenshot Settings: "banyak menu masih putih, tidak terlihat").
+   Akar (dibuktikan piksel): 5 ikon file (chat, kanban, media,
+   campaign, setting) aslinya HITAM 100% tapi dipaksa filter
+   invert(1) INLINE supaya putih di tema gelap; di light, invert
+   yang sama membuatnya putih di atas putih. 4 PNG data-URI
+   (search, graph, library, planner) + SVG billing memang PUTIH
+   dari sananya (opaque 100% putih / stroke white). Jadi di light,
+   kedua kelompok diperlakukan berlawanan:
+   - ikon file (.png): filter none (!important mengalahkan inline)
+     -> tampil hitam aslinya;
+   - ikon data-URI: filter invert(1) -> putih jadi hitam.
+   Tema gelap TIDAK disentuh (invert inline tetap berlaku di sana;
+   ikon data-URI tetap putih di sana). Avatar appmark (pink) bukan
+   railicon, tidak kena. */
+[data-theme="light"] .sidebar img.railicon[src$=".png"] { filter: none !important; }
+[data-theme="light"] .sidebar img.railicon[src^="data:"] { filter: invert(1); }
