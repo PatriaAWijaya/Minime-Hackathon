@@ -2540,7 +2540,7 @@ Isi:
 - Penomoran: pekerjaan ini mengambil nomor v242; perluasan aturan tombol ke jalur utama GESER ke v243 dan TETAP DITAHAN menunggu vonis uji live v237/v238 dari Patria. Catatan terbuka (bukan bagian perbaikan ini): aplikasi belum punya pengaman kirim ganda — menekan Enter dua kali selama menunggu split akan menjalankan dua pemecah + dua fan-out bersamaan.
 
 SHA: kode lokal c555b4e ↔ remote d3c35de (tree identik).
-LIVE <TANGGAL> WIB: deploy mh-build242.sh — MH_BUILD242_OK; HEAD MacBook <LOG_SHA> (commit log); PID <PID>; md5 dist JS/CSS lokal == MacBook. App LIVE = v242. Konfirmasi live Patria untuk v242 BELUM ada (uji live yang disarankan: di project yang sudah aktif, kirim tugas baru — bubble user + ack Prime harus langsung tampil seketika, walau jawaban agen-agen masih menunggu model; ulangi persis skenario 19:25: reply ke bubble Kreatif di tengah alur, tekan Enter).
+LIVE 3 Nov ~19:40 WIB: deploy mh-build242.sh — MH_BUILD242_OK; HEAD MacBook 854671d (commit log); PID 30589; md5 dist JS/CSS lokal == MacBook. App LIVE = v242. Konfirmasi live Patria untuk v242 BELUM ada (uji live yang disarankan: di project yang sudah aktif, kirim tugas baru — bubble user + ack Prime harus langsung tampil seketika, walau jawaban agen-agen masih menunggu model; ulangi persis skenario 19:25: reply ke bubble Kreatif di tengah alur, tekan Enter).
 
 ## v241 — Hasil generate bisa diperbesar dengan ketuk 2x (permintaan Patria 3 Nov 19:20, dari screenshot Image Editor: "file yang digenerate bisa di perbesar dengan diketuk 2x")
 
