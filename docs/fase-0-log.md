@@ -2529,6 +2529,15 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v225 — Hapus paragraf Sherpa + daftar Model lokal (perintah Patria 10:39)
+
+- App.svelte tab Voice: paragraf sherpa.note ('Engine native berdampingan...') + h4 vs.models.title ('Model lokal') + ul #vsModelList DIHAPUS. Tetap: span #sherpaNote dinamis (elemen lain, status Sherpa), bar status + Muat ulang, TTS, Clone, Voice Editor.
+- voicestudio.ts: vsRenderModels DIHAPUS total + 3 pemanggilnya (vsSelectModel, vsCheck, vsRefreshVoiceUI). vsSelectModel dipertahankan sebagai API programatik (state + LS); validasi vsCheck terhadap daftar backend tetap jalan. Konsekuensi eksplisit: pilihan model hilang dari UI, model mengunci ke default terakhir (default 'omnivoice' = alias engine aktif).
+- i18n: 3 kunci yatim DIHAPUS (sole ref ikut terhapus, grep 0 rujukan): sherpa.note, vs.models.title, vs.models.empty (9 baris = 3 x 3 bahasa). i18n 1271 -> 1268/bahasa.
+- Rig-vs: §v215 ditulis ulang (tanpa klik-pilih: Generate memakai model default omnivoice); cek v224 'koneksi dibuktikan daftar model' diganti cek daftar tidak ada + judul hilang; cek paragraf Sherpa hilang; header + v225. Loop 14 rig ALL PASSED (~/workspace/riglogs-v225/loop.log); gerbang GATE-V225 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1268).
+- SHA: kode lokal 9fcc33d <-> remote c16b143 (tree identik, pola push_rebased.py).
+- Catatan live: BELUM dikonfirmasi live (uji disarankan: buka tab Voice — paragraf Sherpa dan blok Model lokal sudah tidak ada; TTS Generate tetap jalan dengan model default).
+
 ## v224 — Hapus judul Panel VoiceStudio + catatan embed (perintah Patria 10:35)
 
 - App.svelte tab Voice: h4 vs.embed.title ('Panel VoiceStudio') + p #vsEmbedNote DIHAPUS. Yang tampil tinggal bar status (badge Terhubung/Belum terhubung) + tombol Muat ulang + iframe (tetap tersembunyi bila :3901 tak menjawab).
