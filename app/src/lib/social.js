@@ -92,7 +92,7 @@ function renderChannels(list) {
     var ch = s[p.id];
     var connected = tokenValid(ch);
     var status = connected
-      ? '<span class="badge b-ok">' + tr('soc.connected') + (ch.label ? ' · ' + esc(ch.label) : '') + '</span>'
+      ? '<button type="button" class="btn-connected">' + tr('soc.connected') + (ch.label ? ' · ' + esc(ch.label) : '') + '</button>'
       : '<span class="badge">' + tr('soc.not_connected') + '</span>';
     var body = '';
     if (p.id === 'facebook') {

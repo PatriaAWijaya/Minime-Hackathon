@@ -273,10 +273,12 @@ try {
   W.ollamaCheck();
   await tick(100);
   check('Ollama ok -> nota 2 model', (document.getElementById('ollamaNote')?.textContent || '').includes('2 model'), document.getElementById('ollamaNote')?.textContent);
+  check('v226: nota Ollama = tombol hijau saat terhubung', document.getElementById('ollamaNote')?.tagName === 'BUTTON' && document.getElementById('ollamaNote')?.classList.contains('btn-connected'), document.getElementById('ollamaNote')?.tagName + ' ' + (document.getElementById('ollamaNote')?.className || ''));
   dom.window.fetch = async () => { throw new Error('down'); };
   W.ollamaCheck();
   await tick(100);
   check('Ollama gagal -> nota tidak terjangkau', (document.getElementById('ollamaNote')?.textContent || '').includes('tidak terjangkau'), document.getElementById('ollamaNote')?.textContent);
+  check('v226: nota Ollama gagal = badge (bukan hijau)', document.getElementById('ollamaNote')?.classList.contains('badge') && !document.getElementById('ollamaNote')?.classList.contains('btn-connected'), document.getElementById('ollamaNote')?.className || '');
 
   // 7. Campaign operabel v79: tambah lead, ubah stage, salin draf, follow-up.
   dom.window.showView('campaign');
@@ -332,6 +334,11 @@ try {
   dom.window.showView('planner');
   dom.window.renderPlanner();
   await tick(100);
+  var sideRow = document.querySelector('[data-soc-side="linkedin"]');
+  check('v226: baris kanal LinkedIn ada di sidebar', !!sideRow, '');
+  if (sideRow) { sideRow.click(); await tick(100); }
+  var chBtn = document.querySelector('.soc-side-detail button.btn-connected');
+  check('v226: status kanal = tombol hijau Terhubung', !!chBtn && (chBtn.textContent || '').includes('Terhubung'), chBtn ? chBtn.textContent : '');
   var sentChip = document.querySelector('[data-soc-view="q-sent-1"]');
   check('chip terkirim punya data-soc-view', !!sentChip, '');
   sentChip.click();

@@ -28,6 +28,8 @@
 // 10. v225 (hapus): paragraf sherpa.note + daftar Model lokal TIDAK
 //     ADA lagi; pilihan model mengunci ke default (omnivoice) — cek
 //     §v215 diubah dari klik-pilih menjadi model default.
+// 11. v226 (tombol hijau): status koneksi yang terhubung tampil sebagai
+//     <button> btn-connected bertuliskan Terhubung (bukan badge).
 // Jalankan: npm run rig:vs (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -195,6 +197,7 @@ try {
   await tick(300);
   check('embed: iframe terpasang saat :3901 menjawab', document.getElementById('vsEmbedFrame')?.getAttribute('src') === 'http://localhost:3901', document.getElementById('vsEmbedFrame')?.getAttribute('src') || '');
   check('embed: status Terhubung', (document.getElementById('vsEmbedStatus')?.textContent || '').includes('Terhubung'), document.getElementById('vsEmbedStatus')?.textContent || '');
+  check('v226: status VoiceStudio = tombol hijau saat Terhubung', document.getElementById('vsEmbedStatus')?.tagName === 'BUTTON' && document.getElementById('vsEmbedStatus')?.classList.contains('btn-connected'), document.getElementById('vsEmbedStatus')?.tagName + ' ' + (document.getElementById('vsEmbedStatus')?.className || ''));
   check('v224: judul Panel VoiceStudio hilang', ![...panel.querySelectorAll('h4')].some((h) => h.textContent.trim() === 'Panel VoiceStudio'), [...panel.querySelectorAll('h4')].map((h) => h.textContent.trim()).join('|'));
   check('v225: daftar Model lokal tidak ada', !document.getElementById('vsModelList') && ![...panel.querySelectorAll('h4')].some((h) => h.textContent.trim() === 'Model lokal'), [...panel.querySelectorAll('h4')].map((h) => h.textContent.trim()).join('|'));
 

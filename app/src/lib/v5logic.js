@@ -3573,8 +3573,8 @@ export function ollamaCheck() {
   fetch(url + "/api/tags").then(function (r) { return r.json(); }).then(function (j) {
     var n = (j && j.models) ? j.models.length : 0;
     try { localStorage.setItem("minime.ollamaUrl", url); } catch (_) {}
-    if (note) { note.textContent = tr("set.ollama.ok", { n: n }); }
-  }).catch(function () { if (note) note.textContent = tr("set.ollama.fail"); });
+    if (note) { note.textContent = tr("set.ollama.ok", { n: n }); note.className = "btn-connected"; }
+  }).catch(function () { if (note) { note.textContent = tr("set.ollama.fail"); note.className = "badge b-warn"; } });
 }
 
 /* ---------- Library ---------- */

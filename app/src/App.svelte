@@ -1322,7 +1322,7 @@
         <div id="ms-tab-voice" style="display:none">
           <h3>{t('ms.tab.voice', lang)}</h3>
           <div class="vs-embed">
-            <div class="vs-bar"><b>VoiceStudio</b> <span id="vsEmbedStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { vsEmbedReload() }}>{t('vs.embed.reload', lang)}</button></div>
+            <div class="vs-bar"><b>VoiceStudio</b> <button type="button" id="vsEmbedStatus" class="badge" aria-label={t('vs.embed.status.label', lang)}></button> <button class="btn btn-sm" onclick={() => { vsEmbedReload() }}>{t('vs.embed.reload', lang)}</button></div>
             <iframe id="vsEmbedFrame" title="VoiceStudio" onload={() => { vsEmbedCheck() }} style="display:none"></iframe>
           </div>
           <h4>{t('vs.clone.title', lang)}</h4>
@@ -1337,7 +1337,7 @@
           <audio id="vsAudio" controls style="display:none;width:100%;margin-top:8px"></audio>
           <a id="vsDownload" style="display:none">{t('vs.download', lang)}</a>
           <h4>{t('sherpa.title', lang)}</h4>
-          <p><span id="sherpaStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { sherpaRenderStatus() }}>{t('vs.status.check', lang)}</button> <button class="btn btn-primary" onclick={() => { sherpaSetup() }}>{t('sherpa.setup', lang)}</button> <button class="btn btn-primary" onclick={() => { sherpaTtsFromTab() }}>{t('sherpa.tts', lang)}</button> <span id="sherpaNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span></p>
+          <p><button type="button" id="sherpaStatus" class="badge" aria-label={t('sherpa.status.label', lang)}></button> <button class="btn btn-sm" onclick={() => { sherpaRenderStatus() }}>{t('vs.status.check', lang)}</button> <button class="btn btn-primary" onclick={() => { sherpaSetup() }}>{t('sherpa.setup', lang)}</button> <button class="btn btn-primary" onclick={() => { sherpaTtsFromTab() }}>{t('sherpa.tts', lang)}</button> <span id="sherpaNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span></p>
 
           <h4>{t('vs.ref.title', lang)}</h4>
           <label>{t('vs.ref.label', lang)}</label>
@@ -1690,7 +1690,7 @@
         <div class="key-card"><b>{t('key.gemini', lang)}</b><div class="key-row"><input type="password" id="apiKeyGemini" placeholder={t('key.ph.empty', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnGemini" onclick={() => { connectKey('gemini') }}>{t('key.connect', lang)}</button></div><span id="keyNoteGemini"></span></div>
         <div class="key-card"><b>{t('key.meta', lang)}</b><div class="key-row"><input type="password" id="apiKeyMeta" placeholder={t('key.ph.meta', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnMeta" onclick={() => { connectKey('meta') }}>{t('key.connect', lang)}</button></div><span id="keyNoteMeta"></span></div>
         <div class="key-card"><b>{t('key.classai', lang)}</b><div class="key-row"><input type="password" id="apiKeyClassai" placeholder={t('key.ph.empty', lang)} style="width:320px" oninput={() => { renderKeyButtons() }}> <button class="btn btn-primary" id="keyBtnClassai" onclick={() => { connectKey('classai') }}>{t('key.connect', lang)}</button></div><span id="keyNoteClassai"></span></div>
-        <div class="key-card"><b>{t('set.ollama.url', lang)}</b><div class="key-row"><input id="ollamaUrl" placeholder="http://127.0.0.1:11434" style="width:320px"> <button class="btn btn-primary" onclick={() => { ollamaCheck() }}>{t('set.ollama.check', lang)}</button></div><span id="ollamaNote"></span></div>
+        <div class="key-card"><b>{t('set.ollama.url', lang)}</b><div class="key-row"><input id="ollamaUrl" placeholder="http://127.0.0.1:11434" style="width:320px"> <button class="btn btn-primary" onclick={() => { ollamaCheck() }}>{t('set.ollama.check', lang)}</button></div><button type="button" id="ollamaNote" class="badge" aria-label={t('set.ollama.status.label', lang)}></button></div>
       </div>
     </div>
   </div>

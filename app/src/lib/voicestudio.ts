@@ -256,7 +256,8 @@ export async function vsEmbedCheck(): Promise<void> {
   const apiOnline = vsState.status === 'online';
   if (status) {
     status.textContent = apiOnline ? tr('vs.embed.online') : tr('vs.embed.offline');
-    status.className = 'badge ' + (apiOnline ? 'b-ok' : 'b-warn');
+    // v226: terhubung = tombol hijau (btn-connected), bukan badge.
+    status.className = apiOnline ? 'btn-connected' : 'badge b-warn';
   }
 }
 

@@ -37,10 +37,15 @@ export async function sherpaRenderStatus(): Promise<void> {
   if (!el) return;
   try {
     const r = await invoke<SherpaStatus>('sherpa_status', {});
-    el.textContent = r.installed
-      ? tr('sherpa.status.ready') + (r.modelPath ? ' ' + r.modelPath : '')
-      : tr('sherpa.status.missing');
-    el.className = 'badge ' + (r.installed ? 'b-ok' : 'b-warn');
+    // v226: terpasang = tombol hijau bertuliskan Terhubung (aturan
+    // status koneksi); jalur model tetap tampil di nota sesudah Setup.
+    if (r.installed) {
+      el.textContent = tr('vs.embed.online');
+      el.className = 'btn-connected';
+    } else {
+      el.textContent = tr('sherpa.status.missing');
+      el.className = 'badge b-warn';
+    }
   } catch (e) {
     el.textContent = tr('vs.error') + (e instanceof Error ? e.message : String(e));
     el.className = 'badge b-warn';

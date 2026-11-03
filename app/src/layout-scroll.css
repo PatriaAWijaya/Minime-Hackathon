@@ -811,3 +811,12 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 [data-theme="light"] .btn-primary { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 14px rgba(74, 127, 193, 0.30); }
 [data-theme="light"] .soc-composer .btn-primary, [data-theme="light"] #socCreatePost { background: var(--t-accent-strong); border-color: var(--t-accent-strong); color: var(--t-accent-text); }
 [data-theme="light"] .pill-send svg { stroke: #FFFFFF; }
+
+/* v226: status koneksi yang terhubung = tombol hijau (perintah Patria).
+   Override ini perlu spesifisitas lebih tinggi karena .vs-bar
+   #vsEmbedStatus mengunci warna teks abu-abu (aturan itu tetap berlaku
+   untuk status belum-terhubung / memeriksa). .btn-connected sendiri
+   sudah hijau (#A6EBB1 + teks #262626) sejak lama; tombol status
+   sengaja TANPA class btn supaya btnDoneWire tidak menandainya
+   btn-done permanen (yang akan salah saat status berubah). */
+.vs-bar #vsEmbedStatus.btn-connected { color: #262626; }

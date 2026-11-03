@@ -105,6 +105,9 @@ try {
   const sbtns = [...panel.querySelectorAll('button')].map((b) => b.textContent.trim());
   check('tombol Sherpa ada', sbtns.includes('Setup Sherpa') && sbtns.includes('Generate via Sherpa'), sbtns.join('|'));
   check('status Sherpa ada', !!document.getElementById('sherpaStatus'));
+  [...panel.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Periksa status').click();
+  await tick(200);
+  check('v226: status Sherpa = tombol hijau Terhubung saat terpasang', document.getElementById('sherpaStatus')?.tagName === 'BUTTON' && document.getElementById('sherpaStatus')?.classList.contains('btn-connected') && (document.getElementById('sherpaStatus')?.textContent || '') === 'Terhubung', document.getElementById('sherpaStatus')?.tagName + ' ' + (document.getElementById('sherpaStatus')?.className || '') + ' ' + (document.getElementById('sherpaStatus')?.textContent || ''));
   check('catatan Sherpa ada', !!document.getElementById('sherpaNote'));
 
   log.length = 0;
