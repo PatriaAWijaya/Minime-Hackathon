@@ -961,6 +961,15 @@ try {
   check('v203: brief utuh tetap tersimpan', (f203.brief || '').includes('Title: Kopi Susu Gula Aren'), (f203.brief || '').slice(0, 80));
   check('v203: kolom Body tampil di editor', (document.getElementById('img-body')?.value || '').includes('Satu gelas cukup'), document.getElementById('img-body')?.value || '');
 
+  // v219: perintah 'vo: <naskah>' mengirim naskah VO ke Voice Editor.
+  // Pemicu bertitik-dua (preseden 'riset:' v212) sehingga tidak masuk
+  // delegasi/cb meski teks memuat kata 'voice over'.
+  await sendMsg('vo: Halo, ini naskah voice over uji untuk iklan kopi.');
+  await waitFor(() => (document.getElementById('vsText')?.value || '').includes('Halo, ini naskah voice over uji'), 'v219 vsText terisi');
+  check('v219: vo: mengisi kolom TTS Voice Editor', (document.getElementById('vsText')?.value || '').includes('Halo, ini naskah voice over uji'), document.getElementById('vsText')?.value || '');
+  check('v219: vo: membuka tab Voice', document.getElementById('ms-tab-voice')?.style.display === 'block', document.getElementById('ms-tab-voice')?.style.display || '');
+  check('v219: vo: bubble konfirmasi Prime ada', (lastMsg()?.textContent || '').includes('Voice Editor'), lastMsg()?.textContent || '');
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-chat exception :: ' + (e && e.stack ? e.stack : e));

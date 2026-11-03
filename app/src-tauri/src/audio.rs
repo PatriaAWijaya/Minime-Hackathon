@@ -80,6 +80,32 @@ pub fn audio_read(req: AudioReadReq) -> Result<AudioReadRes, String> {
     })
 }
 
+// v219: kembalikan path absolut file audio (dipakai Voice Editor saat
+// mengirim aset ke Video Editor — ve2 membaca/menulis lewat path).
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioPathReq {
+    pub name: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioPathRes {
+    pub path: String,
+}
+
+#[tauri::command]
+pub fn audio_path(req: AudioPathReq) -> Result<AudioPathRes, String> {
+    let name = crate::image::safe_name(&req.name).ok_or("nama file tidak valid")?;
+    let path = audio_dir()?.join(&name);
+    if !path.exists() {
+        return Err("file audio tidak ditemukan".to_string());
+    }
+    Ok(AudioPathRes {
+        path: path.to_string_lossy().to_string(),
+    })
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioDeleteReq {

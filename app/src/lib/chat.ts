@@ -509,6 +509,23 @@ function composeFlowReport(name: string, brief: string, results: { name: string;
   return lines.join('\n');
 }
 
+/* v219: intake VO lewat chat — pemicu eksplisit bertitik-dua (preseden
+   'riset:' v212) supaya tidak membajak brief delegasi/cb yang memuat
+   kata 'voice'. Perintah ini sendiri adalah konfirmasi: teks yang
+   sudah ada di kolom TTS Voice Editor diganti naskah baru. */
+function voiceChatIsEntry(text: string): boolean {
+  return /^\s*vo\s*:\s*\S+/i.test(text);
+}
+async function voiceChatRun(text: string): Promise<void> {
+  const script = text.trim().replace(/^\s*vo\s*:\s*/i, '').trim();
+  if (typeof (window as unknown as Record<string, unknown>).vsSetScript === 'function') {
+    ((window as unknown as Record<string, (t: string) => void>).vsSetScript)(script);
+  }
+  postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.voice.opened'));
+  showView('media');
+  mediaTab('voice');
+}
+
 export async function sendChatReal(): Promise<void> {
   const input = document.getElementById('chatInput') as HTMLInputElement | null;
   if (!input) return;
@@ -549,6 +566,15 @@ export async function sendChatReal(): Promise<void> {
     clearReplyTarget();
     input.value = '';
     await researchChatRun(text);
+    return;
+  }
+  // v219: "vo: <naskah>" langsung kirim naskah VO ke Voice Editor.
+  if (voiceChatIsEntry(text)) {
+    const rt0 = getReplyTarget();
+    postChat('user', 'Patria', '#374151', esc(text), undefined, rt0 ? { replyTo: rt0 } : undefined);
+    clearReplyTarget();
+    input.value = '';
+    await voiceChatRun(text);
     return;
   }
   const keys = readKeys();

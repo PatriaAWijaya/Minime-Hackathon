@@ -3,7 +3,7 @@
   import { initV5, setSendChatImpl, doSearch, filterAgents, mediaTab, campaignTab, renderAgents, renderCampaign, cpAddLead, renderDetail, renderKanban, renderLib, renderPlanner, libSetFilter, libToggleView, kbSetProj, runGraphSim, sendChat, showView, toggleAddMenu, waAttach, waMic, waToggleAttach, graphNewProject, graphPrimeFirst, graphZoomIn, graphZoomOut, graphStopSim, getTheme, setTheme, graphClosePanel, renderGraphProjSel, kbTeamOpen, ollamaCheck, libAll } from "./lib/v5logic.js";
   import { getLang, setLang, t } from "./lib/i18n.js";
   import { sendChatReal, connectKey, renderKeyButtons } from "./lib/chat.js";
-  import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI } from "./lib/voicestudio.js";
+  import { vsCheck, vsEmbedCheck, vsEmbedReload, vsGenerateTts, vsGenerateClone, vsRenderStatus, vsRefreshVoiceUI, vsSetScript } from "./lib/voicestudio.js";
   import { sherpaSetup, sherpaTtsFromTab, sherpaRenderStatus, sherpaRefreshUI } from "./lib/sherpa.js";
   import { vedPlay, vedTrimSel, vedCutSel, vedClearSel, vedRefresh } from "./lib/voice-editor.js";
   import { initScriptEditor, setSeMenu, seRefreshUI } from "./lib/script-editor.js";
@@ -77,6 +77,11 @@
       ve2Plan = t;
       ve2SaveState();
     };
+    // v219: bridge intake Voice Editor — (1) naskah VO dari chat
+    // (perintah 'vo:') masuk kolom TTS; (2) aset Voice Editor masuk
+    // daftar aset Video Editor (dedup per src di ve2EnsureAsset).
+    (window as unknown as Record<string, unknown>).vsSetScript = (t: string) => { vsSetScript(t); };
+    (window as unknown as Record<string, unknown>).veAddAudioAsset = (path: string, name: string, dur: number) => { ve2EnsureAsset(path, name, 'Audio', dur); ve2SaveState(); };
     renderKeyButtons();
   });
 

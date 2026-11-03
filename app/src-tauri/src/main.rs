@@ -73,6 +73,7 @@ fn main() {
             audio::audio_save,
             audio::audio_read,
             audio::audio_delete,
+            audio::audio_path,
             whisper::whisper_transcribe,
             browser::open_browser,
             browser::open_external_url,

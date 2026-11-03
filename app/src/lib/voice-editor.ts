@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
 import { esc } from './esc.js';
+import { libAddAudio, mediaTab } from './v5logic.js';
 
 // Voice Editor (v65): timeline waveform + daftar aset + transkrip
 // Whisper, di tab Voice Media Studio.
@@ -648,6 +649,16 @@ function vedRenderAssets(): void {
         esc(a.id) +
         '">' +
         esc(tr('ved.delete')) +
+        '</button>' +
+        '<button class="btn btn-sm" data-ved-ve2="' +
+        esc(a.id) +
+        '">' +
+        esc(tr('ved.to_video')) +
+        '</button>' +
+        '<button class="btn btn-sm" data-ved-lib="' +
+        esc(a.id) +
+        '">' +
+        esc(tr('ved.to_lib')) +
         '</button></div>',
     )
     .join('');
@@ -660,6 +671,44 @@ function vedRenderAssets(): void {
   box.querySelectorAll('[data-ved-del]').forEach((b) =>
     b.addEventListener('click', () => void vedDeleteAsset((b as HTMLElement).dataset.vedDel ?? '')),
   );
+  box.querySelectorAll('[data-ved-ve2]').forEach((b) =>
+    b.addEventListener('click', () => void vedToVideo((b as HTMLElement).dataset.vedVe2 ?? '')),
+  );
+  box.querySelectorAll('[data-ved-lib]').forEach((b) =>
+    b.addEventListener('click', () => void vedToLib((b as HTMLElement).dataset.vedLib ?? '')),
+  );
+}
+
+// v219: hasil Voice Editor dipanggil sebagai aset Video Editor —
+// path absolut dari Rust (audio_path) lalu bridge veAddAudioAsset
+// (App.svelte) yang memasukkan ke daftar aset ve2 (dedup per src).
+// Tombol ini HANYA menambah aset; masuk timeline tetap lewat klik
+// thumbnail aset di Video Editor (alur yang sudah ada).
+async function vedToVideo(id: string): Promise<void> {
+  const asset = loadAssets().find((a) => a.id === id);
+  if (!asset) return;
+  try {
+    const r = (await invoke('audio_path', { req: { name: asset.file } })) as { path: string };
+    const w = window as unknown as Record<string, unknown>;
+    if (typeof w.veAddAudioAsset === 'function') {
+      (w.veAddAudioAsset as (path: string, name: string, dur: number) => void)(r.path, asset.name, asset.duration);
+    }
+    mediaTab('video');
+  } catch (e) {
+    setNote(tr('vs.error') + (e instanceof Error ? e.message : String(e)));
+  }
+}
+
+// v219: hasil akhir Voice Editor yang disetujui disimpan ke Library
+// (kind 'audio'; isi = transkrip bila ada, bila tidak catatan berkas).
+async function vedToLib(id: string): Promise<void> {
+  const asset = loadAssets().find((a) => a.id === id);
+  if (!asset) return;
+  const content = asset.transcript?.text?.trim()
+    ? asset.transcript.text
+    : 'Audio: ' + asset.file + ' (' + fmtDuration(asset.duration) + ')';
+  const r = libAddAudio(asset.name, asset.file, content);
+  setNote(tr(r.saveFailed ? 'lib.err.save' : (r.added ? 'ved.lib_saved' : 'se.note.already')));
 }
 
 async function vedDeleteAsset(id: string): Promise<void> {

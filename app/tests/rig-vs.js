@@ -59,6 +59,7 @@ async function invokeStub(cmd) {
   if (cmd === 'audio_save') return { file: 'ved-test.wav', bytes: 4 };
   if (cmd === 'audio_read') return { file: 'ved-test.wav', b64: 'UklGRg==', bytes: 4 };
   if (cmd === 'audio_delete') return { file: 'ved-test.wav', deleted: true };
+  if (cmd === 'audio_path') return { path: '/Users/mac/minime-audio/ved-test.wav' };
   if (cmd === 'whisper_transcribe') {
     return { segments: [{ start: 2.5, end: 4.0, text: 'Halo dunia' }], text: 'Halo dunia' };
   }
@@ -211,6 +212,26 @@ try {
   trBox.querySelector('[data-ved-seek]').click();
   await waitFor(() => document.getElementById('vedAudio')?.currentTime === 2.5, 'seek ke segmen');
   check('klik segmen: seek ke 2.5 dtk', document.getElementById('vedAudio').currentTime === 2.5);
+
+  // v219: hasil Voice Editor dipanggil sebagai aset Video Editor +
+  // disimpan ke Library (kind 'audio').
+  const ve2Before = () => { try { return JSON.parse(dom.window.localStorage.getItem('minime.ve2') || '{}'); } catch (_) { return {}; } };
+  const libBefore = () => { try { return JSON.parse(dom.window.localStorage.getItem('minime.library.added') || '[]'); } catch (_) { return []; } };
+  const assetBox2 = document.getElementById('vedAssets');
+  const assetBtns2 = [...assetBox2.querySelectorAll('button')].map((b) => b.textContent.trim());
+  check('v219: tombol Ke Video + Ke Library ada di baris aset', assetBtns2.includes('Ke Video') && assetBtns2.includes('Ke Library'), assetBtns2.join('|'));
+  log.length = 0;
+  assetBox2.querySelector('[data-ved-ve2]').click();
+  await tick(300);
+  check('v219: Ke Video memanggil audio_path', log.includes('invoke:audio_path'), log.join(','));
+  const ve2After = ve2Before();
+  const ve2Assets = ve2After.assets || [];
+  check('v219: aset Audio masuk state ve2 (path absolut)', ve2Assets.some((a) => a.src === '/Users/mac/minime-audio/ved-test.wav' && a.kind === 'Audio'), JSON.stringify(ve2Assets));
+  check('v219: Ke Video pindah ke tab Video', document.getElementById('ms-tab-video')?.style.display === 'block', document.getElementById('ms-tab-video')?.style.display || '');
+  assetBox2.querySelector('[data-ved-lib]').click();
+  await tick(300);
+  const libAfter = libBefore();
+  check('v219: item audio masuk Library (audioFile + kind)', libAfter.some((it) => it.kind === 'audio' && it.audioFile === 'ved-test.wav'), JSON.stringify(libAfter.map((it) => it.kind + ':' + (it.audioFile || ''))));
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));
   failures.push('rig error');
