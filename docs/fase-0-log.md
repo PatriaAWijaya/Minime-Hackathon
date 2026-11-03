@@ -2537,6 +2537,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - Rig-vs: stub vs_api (models/voices/health/speech/generate, digerbangi backendAlive) + pencatatan model speech dipindah dari fetch ke vs_api; cabang fetch :3900 diubah menjadi tripwire (fetch langsung kini membuat rig GAGAL); asersi speech lama dialihkan ke vs_api; §v223 baru (TTS + Clone lewat proxy, tanpa fetch langsung). Loop 14 rig ALL PASSED (~/workspace/riglogs-v223/loop.log); gerbang GATE-V223 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1276, tanpa kunci baru).
 - SHA: kode lokal 994389f <-> remote 5ae5eee (tree identik, pola push_rebased.py).
 - Catatan live: BELUM dikonfirmasi live (uji disarankan: buka tab Voice — status harus jadi Terhubung; lalu Generate satu TTS dan dengarkan; lalu Generate Clone dengan satu file referensi. Bukti rig TIDAK cukup untuk kasus ini karena rig tidak menegakkan CORS — ketuk live Patria adalah bukti penentunya).
+- LIVE 3 Nov 2026 ~10:50 WIB: deploy mh-build223 OK, HEAD MacBook a2a7d4b (= remote log), PID 2707, md5 dist JS lokal == MacBook (8cfce789799ba9e3fd810dafb0cb011b, byte-identik), marker 'vs_api' di bundle JS live + 2 kemunculan di biner app, backend tetap 0.5.7 sehat. Konfirmasi ketuk live Patria BELUM ada (dan untuk kasus ini ketuk live adalah bukti penentu, karena rig tidak menegakkan CORS).
 
 ## v222 — VoiceStudio otomatis aktif + selalu terhubung (perintah Patria 3 Nov 2026 10:07, menegaskan 09:06/09:07/09:11)
 
