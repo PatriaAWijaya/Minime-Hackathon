@@ -2536,7 +2536,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - Bukti visual: render Chromium headless VM dengan CSS dist asli (mock .app + kartu-kartu) — putih di atas memudar ke biru pucat di bawah, kilau diagonal terlihat, panel translusen meneruskan biru di bawah; tangkapan di ~/workspace/riglogs-v230/bg-check.png.
 - Rig: rig-home §29 v230 baru (2 cek: gradasi di blok light + bg gelap tetap datar #0E0718). Loop pertama 13/14: hanya rig-home gagal karena cek v221 lama mengasumsikan --t-bg datar #F4F8FF — BUKAN regresi (v230 memang sengaja menggantinya); cek v221 diperbarui ke ekspektasi gradien, loop kedua 14/14 (~/workspace/riglogs-v230/loop.log); gerbang GATE-V230 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja); svelte-check 0/21.
 - SHA: kode lokal 5276f37 <-> remote f5c49be (tree identik, pola push_rebased.py).
-- Catatan live: BELUM dikonfirmasi live (uji disarankan: background umum tema terang bergradasi putih-ke-biru dengan kilau; tema gelap tidak berubah).
+- LIVE 3 Nov 2026 12:46 WIB: MH_BUILD230_OK, HEAD MacBook ba2f1af (= commit log), PID segar 10798 (sebelumnya 9935), md5 CSS dist lokal == MacBook 04dde78860f304b08dc0fb1010817a67 (byte-identik). Tema live tetap light. Konfirmasi live Patria BELUM ada.
 
 ## v229 — Efek glossy di tema terang (perintah Patria 12:25)
 
