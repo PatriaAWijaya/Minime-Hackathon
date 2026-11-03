@@ -2542,7 +2542,7 @@ Isi:
 - Penomoran: perbaikan ini mengambil nomor v237 (memblokir tes live); perluasan tombol jalur utama geser ke v238.
 
 SHA: kode lokal 8cc674e ↔ remote 4794dab (tree identik). Gate 9/9; loop 14 rig exit=0; svelte-check 0 error/21 warning (baseline); i18n 1279/bahasa (tidak berubah); ledger md5 tidak berubah (d542428fe9901fbd417e098e9249d4b6); cargo 0 warning.
-LIVE 3 Nov ~15:35 WIB: deploy mh-build237.sh — MH_BUILD237_OK; HEAD MacBook <LOG_SHA> (commit log); PID <PID>; md5 dist JS/CSS lokal == MacBook. App LIVE = v237. Konfirmasi live Patria untuk v237 BELUM ada (uji live yang disarankan: Settings -> kartu Anthropic -> klik "Hubungkan API" lagi TANPA tempel ulang (key sudah tersimpan) -> harus TERHUBUNG hijau; bila masih gagal, catatannya kini harus menyebut alasan HTTP yang benar, bukan "tidak dapat menjangkau").
+LIVE 3 Nov ~15:35 WIB: deploy mh-build237.sh — MH_BUILD237_OK; HEAD MacBook 926f6aa (commit log); PID 20742; md5 dist JS/CSS lokal == MacBook. App LIVE = v237. Konfirmasi live Patria untuk v237 BELUM ada (uji live yang disarankan: Settings -> kartu Anthropic -> klik "Hubungkan API" lagi TANPA tempel ulang (key sudah tersimpan) -> harus TERHUBUNG hijau; bila masih gagal, catatannya kini harus menyebut alasan HTTP yang benar, bukan "tidak dapat menjangkau").
 
 ## v236 — Provider Anthropic / Claude (perintah Patria 15:05 "tambahkan anthropic pada model, aku sudah punya API key nya"; penomoran: Anthropic mengambil nomor v236, perluasan tombol jalur utama geser ke v237)
 
