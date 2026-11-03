@@ -2540,7 +2540,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - Bukti visual: render Chromium headless VM dengan CSS dist asli (mock panel Billing inline + kartu Library + baris kanal + kartu Media Studio + textarea + select) — semua gradasi biru-putih, teks hitam terbaca; tangkapan di ~/workspace/riglogs-v231/cards-check.png.
 - Rig: rig-home §30 v231 baru (4 cek: gradasi kartu, panel Billing inline, teks dibalik hitam, kartu gelap tetap hitam di dark). Loop pertama 13/14: hanya guard v229 gagal karena mengasumsikan kilau #ffffffb3 muncul sekali — BUKAN regresi (v231 memang memakai ulang kilau yang sama); guard diperbarui (kilau tidak boleh ada di aturan dark), loop kedua 14/14 (~/workspace/riglogs-v231/loop.log); gerbang GATE-V231 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja); svelte-check 0/21.
 - SHA: kode lokal 18f3775 <-> remote 424053a (tree identik, pola push_rebased.py).
-- Catatan live: BELUM dikonfirmasi live (uji disarankan: Billing, Planner, Library, Media Studio di tema terang — tidak ada lagi bidang hitam; teks semua terbaca; tema gelap tidak berubah).
+- LIVE 3 Nov 2026 12:54 WIB: MH_BUILD231_OK, HEAD MacBook aa56abd (= commit log), PID segar 11341 (sebelumnya 10798), md5 CSS dist lokal == MacBook 64a49f4ba866c3fe43aecd4715a4e372 (byte-identik). Tema live tetap light. Konfirmasi live Patria BELUM ada.
 
 ## v230 — Background umum tema terang = gradasi putih-biru + glossy (perintah Patria 12:36)
 
