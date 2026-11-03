@@ -19,8 +19,12 @@
 // audiens), dan dicocokkan longgar pada langkah pilihan (tujuan).
 // State bertahan di localStorage sehingga reload di tengah alur tidak
 // menghilangkan progres (pertanyaan tetap terbaca di riwayat chat).
-import { AGENTS, libAddScript, postChat, setAgentPhase } from './v5logic.js';
-import { getLang, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_INSTRUCTION, tr } from './i18n.js';
+import { AGENTS, currentProjectName, hasProject, libAddScript, postChat, setAgentPhase } from './v5logic.js';
+import { getLang, GROUNDING_INSTRUCTION, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_INSTRUCTION, tr } from './i18n.js';
+// v235: QC_INSTRUCTION + parseQcVerdict dipakai HANYA di dalam fungsi
+// (runtime), bukan saat evaluasi modul — sehingga siklus impor
+// chat.js <-> creative-brief.js aman (tidak ada akses top-level).
+import { QC_INSTRUCTION, parseQcVerdict } from './chat.js';
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { recordLiveCost } from './cost.js';
 import { esc } from './esc.js';
@@ -32,7 +36,7 @@ type CbStep = 'purpose' | 'art-story' | 'art-pov' | 'art-style' | 'art-sentences
   | 'th-char' | 'th-char-return' | 'th-voice' | 'th-voice-return' | 'th-set'
   | 'promo-goal' | 'promo-board-ok' | 'promo-board-rev' | 'promo-vo' | 'promo-voice-type' | 'promo-voice-return'
   | 'ser-parts' | 'ser-board' | 'ser-board-rev'
-  | 'soc-platform' | 'soc-format' | 'soc-purpose' | 'soc-approach-img' | 'soc-approach-car' | 'soc-count' | 'soc-bulk-n';
+  | 'soc-platform' | 'soc-format' | 'soc-purpose' | 'soc-approach-img' | 'soc-approach-car' | 'soc-count' | 'soc-bulk-n' | 'soc-retry';
 
 type CbMode = 'th' | 'promo' | 'ser';
 
@@ -48,6 +52,9 @@ interface CbState {
   partsTotal?: number;
   partIndex?: number;
   longScript?: string;
+  // v235 (lipatan v233): format generate soc terakhir, agar kegagalan
+  // bisa ditawari Coba lagi di dalam alur tanpa kehilangan jawaban.
+  lastGen?: { format: string; bulk: boolean; count: number };
 }
 
 function loadState(): CbState | null {
@@ -60,9 +67,9 @@ function loadState(): CbState | null {
       'mov-type', 'th-char', 'th-char-return', 'th-voice', 'th-voice-return', 'th-set',
       'promo-goal', 'promo-board-ok', 'promo-board-rev', 'promo-vo', 'promo-voice-type', 'promo-voice-return',
       'ser-parts', 'ser-board', 'ser-board-rev',
-      'soc-platform', 'soc-format', 'soc-purpose', 'soc-approach-img', 'soc-approach-car', 'soc-count', 'soc-bulk-n'];
+      'soc-platform', 'soc-format', 'soc-purpose', 'soc-approach-img', 'soc-approach-car', 'soc-count', 'soc-bulk-n', 'soc-retry'];
     if (!steps.includes(o.step as CbStep)) return null;
-    return { brief: o.brief, step: o.step as CbStep, answers: o.answers || {}, attempts: o.attempts || 0, platform: o.platform, mode: o.mode, script: o.script, board: o.board, partsTotal: o.partsTotal, partIndex: o.partIndex, longScript: o.longScript };
+    return { brief: o.brief, step: o.step as CbStep, answers: o.answers || {}, attempts: o.attempts || 0, platform: o.platform, mode: o.mode, script: o.script, board: o.board, partsTotal: o.partsTotal, partIndex: o.partIndex, longScript: o.longScript, lastGen: o.lastGen };
   } catch {
     return null;
   }
@@ -117,6 +124,64 @@ function postKreatif(text: string): void {
 function postKreatifAsk(text: string): void {
   const ag = kreatif();
   postChat('kreatif', ag.name, ag.color, text, undefined, { cbAsk: true });
+}
+
+// v235: pesan Prime sebagai kurasi (curation=true, sama seperti verdict
+// QC jalur utama) — SATU-SATUNYA pengirim tombol hasil di cb. Bubble
+// Kreatif tidak lagi membawa tombol aksi apa pun.
+function postPrime(text: string): void {
+  postChat('prime', 'Prime Agent', '#EB87B4', text, true);
+}
+
+// v235: konteks project aktif untuk grounding cb — menyamai scopeLine()
+// chat.ts. Sebelum v235 cb buta topik (hanya brief tugas + jawaban,
+// tanpa scope/grounding): akar drift kopi -> efisiensi waktu.
+function cbScopeLine(): string {
+  return hasProject() ? ' ' + tr('chat.scope', { name: currentProjectName() }) : '';
+}
+
+// v235: baris topik eksplisit di prompt generator cb.
+function topicLine(st: CbState): string {
+  return hasProject() ? '\nTopik/project: ' + currentProjectName() + '. Tetap pada topik, segmen, dan lokasi ini; jangan mengarang topik baru.' : '';
+}
+
+// v235: gerbang QC Prime paritas v161 untuk output cb — hasil ditahan,
+// QC 5 kriteria, maks 2 revisi; gagal QC (semua provider down)
+// meloloskan hasil dengan verdict 'tidak tersedia' (gate tidak boleh
+// memblokir output karena QC-nya sendiri mati). Footer terakhir
+// (revisi, bila ada) dikembalikan agar provenance bubble tetap akurat.
+async function qcGate(brief: string, extra: string, text: string, trace: string): Promise<{ text: string; verdict: string; footer: string | null }> {
+  let cur = text;
+  let verdict = '';
+  let footer: string | null = null;
+  for (let round = 0; round <= 2; round++) {
+    try {
+      const qr = routerFor(QC_INSTRUCTION);
+      const q = await qr.callWithFallback('Tugas: ' + brief + extra + '\n\nHasil agen:\n- Kreatif: ' + cur, trace + '-qc-' + round);
+      recordLiveCost(q);
+      verdict = q.text;
+    } catch {
+      verdict = tr('flow.qc.unavailable');
+      break;
+    }
+    if (parseQcVerdict(verdict) === 'LOLOS' || round === 2) break;
+    const rev = await genText('Revisi hasil berikut berdasarkan verdict QC Prime di bawah. Pertahankan bagian yang sudah benar, perbaiki hanya yang dikritik.\n\nVerdict QC:\n' + verdict + '\n\nHasil sebelumnya:\n' + cur, trace + '-rev-' + (round + 1));
+    cur = rev.text;
+    footer = rev.footer;
+  }
+  return { text: cur, verdict, footer };
+}
+
+// v235 (lipatan v233): kegagalan generate soc TIDAK lagi mematikan alur
+// (dulu catch -> clearState: format + jawaban hilang, pesan berikutnya
+// jatuh ke jawaban bebas Prime). State dipertahankan dan user ditanya
+// Coba lagi/Batal di dalam alur (langkah 'soc-retry').
+function cbSocGenFail(st: CbState, e: unknown): void {
+  postGenError(e);
+  st.step = 'soc-retry';
+  st.attempts = 0;
+  saveState(st);
+  askStep(st);
 }
 
 function askStep(st: CbState, prefix = ''): void {
@@ -217,6 +282,14 @@ function askStep(st: CbState, prefix = ''): void {
       q = tr('cb.q.soc.bulkn');
       opts = [];
       break;
+    case 'soc-retry': {
+      // v235: tanya Coba lagi/Batal sesudah generate soc gagal.
+      const f = st.lastGen?.format;
+      const fmt = f === 'carousel' ? tr('cb.opt.fmt.carousel') : f === 'reels' ? tr('cb.opt.fmt.reels') : tr('cb.opt.fmt.image');
+      q = tr('cb.soc.retry.q', { format: fmt });
+      opts = [tr('cb.soc.retry.again'), tr('cb.soc.retry.cancel')];
+      break;
+    }
     default:
       // Langkah tunggu (th-char-return, th-voice-return, promo-voice-return)
       // tidak pernah menanyakan apa pun — mereka maju saat user kembali
@@ -279,7 +352,9 @@ function routerFor(systemInstruction: string): ModelRouter {
 
 function kreatifSystem(): string {
   const ag = kreatif();
-  return MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + REPORT_FORMAT_INSTRUCTION[getLang()];
+  // v235: scope project + grounding — menyamai instruksi agen jalur
+  // utama (dulu cb hanya bahasa + role + format laporan).
+  return MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + cbScopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
 }
 
 function footerFor(r: { provider: string; model: string; latencyMs: number; fallbackFrom?: string | null; promptTokens?: number | null; completionTokens?: number | null }): string {
@@ -342,16 +417,18 @@ async function cbGenerateArticle(st: CbState): Promise<void> {
     'Gaya bahasa: ' + (a['art-style'] || '-') + '\n' +
     'Jumlah kalimat: ' + (a['art-sentences'] || '-') + '\n' +
     'Segmen audiens: ' + (a['art-audience'] || '-') + '\n' +
-    'Tulis artikel lengkap, bukan kerangka.';
+    'Tulis artikel lengkap, bukan kerangka.' + topicLine(st);
   setAgentPhase('kreatif', 'busy');
   try {
     const router = routerFor(kreatifSystem());
     const r = await router.callWithFallback(prompt, 'trace-cb-article-' + Date.now());
     recordLiveCost(r);
+    const g = await qcGate(st.brief, '\nSegmen audiens: ' + (a['art-audience'] || '-'), r.text, 'trace-cb-article-' + Date.now());
     const topic = st.brief.length > 60 ? st.brief.slice(0, 60) : st.brief;
-    setArtikel(topic, a['art-audience'] || '', r.text);
-    postChat('kreatif', ag.name, ag.color, esc(r.text) + footerFor(r));
-    postKreatif(tr('cb.art.done') + '<br><button class="btn btn-sm chat-act" data-act="cb-open-artikel">' + esc(tr('cb.art.open')) + '</button>');
+    setArtikel(topic, a['art-audience'] || '', g.text);
+    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || footerFor(r)));
+    postKreatif(tr('cb.art.done'));
+    postPrime(g.verdict + '<br><button class="btn btn-sm chat-act" data-act="cb-open-artikel">' + esc(tr('cb.art.open')) + '</button>');
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     postChat('kreatif', ag.name, ag.color, tr('cb.err.gen') + esc(msg));
@@ -443,6 +520,12 @@ export function parseImagePlan(text: string): ImagePlanFields {
         break;
       }
     }
+    if (!matched && /^#{1,6}\s/.test(line)) {
+      // v235: heading markdown baru (mis. "## 2. Elemen Visual") menutup
+      // seksi berjalan — dulu heading ikut tertelan ke Footer.
+      cur = null;
+      continue;
+    }
     if (!matched && cur) {
       const arr = sections.get(cur) || [];
       arr.push(line);
@@ -523,12 +606,14 @@ async function cbGenerateTH(st: CbState): Promise<void> {
       'Buat naskah audio + rencana produksi talking head.\nBrief: ' + st.brief +
       '\nKarakter: ' + (a['th-char'] || '-') + '\nSuara: ' + (a['th-voice'] || '-') +
       '\nSet/ruangan: ' + (a['th-set'] || '-') + '\nCatatan user: ' + (a['th-char-note'] || '-') + ' / ' + (a['th-voice-note'] || '-') +
-      '\nKeluarkan: (1) naskah audio lengkap, (2) rencana produksi (judul, subtitle dari naskah audio, elemen grafis), (3) caption post + hashtag dari script.',
+      '\nKeluarkan: (1) naskah audio lengkap, (2) rencana produksi (judul, subtitle dari naskah audio, elemen grafis), (3) caption post + hashtag dari script.' + topicLine(st),
       'trace-cb-th-' + Date.now());
-    saveLib('Talking Head: ' + topicOf(st), t.text);
+    const g = await qcGate(st.brief, '\nKarakter: ' + (a['th-char'] || '-'), t.text, 'trace-cb-th-' + Date.now());
+    saveLib('Talking Head: ' + topicOf(st), g.text);
     const ag = kreatif();
-    postChat('kreatif', ag.name, ag.color, esc(t.text) + t.footer);
-    postKreatif(tr('cb.mov.done') + openButton('cb-open-video', 'cb.open.video'));
+    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
+    postKreatif(tr('cb.mov.done'));
+    postPrime(g.verdict + openButton('cb-open-video', 'cb.open.video'));
   } catch (e) { postGenError(e); }
   setAgentPhase('kreatif', null);
   clearState();
@@ -541,14 +626,14 @@ async function cbPromoScriptBoard(st: CbState): Promise<void> {
   setAgentPhase('kreatif', 'busy');
   try {
     const sc = await genText(
-      'Tulis script video promosional.\nBrief: ' + st.brief + '\nTujuan: ' + goal +
+      'Tulis script video promosional.\nBrief: ' + st.brief + topicLine(st) + '\nTujuan: ' + goal +
       '\nPilih model storytelling yang paling sesuai untuk tujuan ini dan tulis script lengkap.',
       'trace-cb-promo-script-' + Date.now());
     st.script = sc.text;
     const ag = kreatif();
     postChat('kreatif', ag.name, ag.color, esc(sc.text) + sc.footer);
     const b = await genText(
-      'Buat storyboard dari script berikut (daftar scene: visual, audio, teks layar, durasi).\nScript:\n' + sc.text,
+      'Buat storyboard dari script berikut (daftar scene: visual, audio, teks layar, durasi).\nScript:\n' + sc.text + topicLine(st),
       'trace-cb-promo-board-' + Date.now());
     st.board = b.text;
     postChat('kreatif', ag.name, ag.color, esc(b.text) + b.footer);
@@ -589,12 +674,14 @@ async function cbGenerateMix(st: CbState): Promise<void> {
       ? ('Video berseri ' + (st.partsTotal || 1) + ' part. Script panjang:\n' + (st.longScript || ''))
       : ('Script:\n' + (st.script || '') + '\nStoryboard:\n' + (st.board || ''));
     const m = await genText(
-      'Buat rencana mixing + perakitan video utuh dari materi berikut. Sertakan: urutan video, VO, music, SFX, title, subtitle, logo, elemen visual lain, lalu caption post + hashtag dari script.\nVO: ' + vo + ' (' + voType + ')\n' + base,
+      'Buat rencana mixing + perakitan video utuh dari materi berikut. Sertakan: urutan video, VO, music, SFX, title, subtitle, logo, elemen visual lain, lalu caption post + hashtag dari script.\nVO: ' + vo + ' (' + voType + ')\n' + base + topicLine(st),
       'trace-cb-mix-' + Date.now());
-    saveLib((st.mode === 'ser' ? 'Video Berseri: ' : 'Video Promosional: ') + topicOf(st), m.text);
+    const g = await qcGate(st.brief, '', m.text, 'trace-cb-mix-' + Date.now());
+    saveLib((st.mode === 'ser' ? 'Video Berseri: ' : 'Video Promosional: ') + topicOf(st), g.text);
     const ag = kreatif();
-    postChat('kreatif', ag.name, ag.color, esc(m.text) + m.footer);
-    postKreatif(tr('cb.mov.done') + openButton('cb-open-video', 'cb.open.video'));
+    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || m.footer));
+    postKreatif(tr('cb.mov.done'));
+    postPrime(g.verdict + openButton('cb-open-video', 'cb.open.video'));
   } catch (e) { postGenError(e); }
   setAgentPhase('kreatif', null);
   clearState();
@@ -709,7 +796,12 @@ function setBulkBriefs(briefs: string[]): void {
 }
 
 function parseBulkPlans(text: string, kind: 'IMAGE' | 'CAROUSEL'): string[] {
-  const parts = text.split(new RegExp('^=== ' + kind + ' \\d+ ===$', 'm')).map((x) => x.trim()).filter(Boolean);
+  const re = new RegExp('^=== ' + kind + ' \\d+ ===$', 'm');
+  const m = re.exec(text);
+  if (!m) return [text];
+  // v235: buang pembuka sebelum separator pertama (dulu pembuka itu
+  // dipertahankan sebagai "plan" tab pertama).
+  const parts = text.slice(m.index).split(re).map((x) => x.trim()).filter(Boolean);
   return parts.length ? parts : [text];
 }
 
@@ -719,18 +811,20 @@ async function cbGenerateThreads(st: CbState): Promise<void> {
   setAgentPhase('kreatif', 'busy');
   try {
     const t = await genText(
-      'Buat script Threads dari brief berikut. Script harus muat dalam 500 karakter; bila tidak muat, tulis versi lengkapnya saja (pemotongan dilakukan sesudahnya).\nBrief: ' + st.brief,
+      'Buat script Threads dari brief berikut. Script harus muat dalam 500 karakter; bila tidak muat, tulis versi lengkapnya saja (pemotongan dilakukan sesudahnya).\nBrief: ' + st.brief + topicLine(st),
       'trace-cb-threads-' + Date.now());
+    const g = await qcGate(st.brief, '', t.text, 'trace-cb-threads-' + Date.now());
     const ag = kreatif();
-    if (t.text.length <= 500) {
-      postChat('kreatif', ag.name, ag.color, esc(t.text) + t.footer);
-      saveLib('Threads: ' + topicOf(st), t.text);
+    if (g.text.length <= 500) {
+      postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
+      saveLib('Threads: ' + topicOf(st), g.text);
     } else {
-      const parts = splitThreads(t.text);
-      parts.forEach((p, i) => postChat('kreatif', ag.name, ag.color, esc('(' + (i + 1) + '/' + parts.length + ') ' + p) + (i === parts.length - 1 ? t.footer : '')));
+      const parts = splitThreads(g.text);
+      parts.forEach((p, i) => postChat('kreatif', ag.name, ag.color, esc('(' + (i + 1) + '/' + parts.length + ') ' + p) + (i === parts.length - 1 ? (g.footer || t.footer) : '')));
       saveLib('Threads: ' + topicOf(st), parts.join('\n\n---\n\n'));
     }
     postKreatif(tr('cb.soc.threads.done'));
+    postPrime(g.verdict);
   } catch (e) { postGenError(e); }
   setAgentPhase('kreatif', null);
   clearState();
@@ -745,27 +839,33 @@ async function cbGenerateImagePlan(st: CbState, bulk: boolean, count: number): P
   setAgentPhase('kreatif', 'busy');
   try {
     const ag = kreatif();
+    let verdict = '';
     if (!bulk) {
       const t = await genText(
-        'Buat caption + rancangan image untuk postingan sosmed (IMAGE-PLAN).\nBrief: ' + st.brief + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
-        '\nKeluarkan: caption lengkap + rancangan isi image dengan label persis di awal baris — Title:, Subtitle:, Body:, Header:, Footer:, Caption: — disusul elemen visual lain.',
+        'Buat caption + rancangan image untuk postingan sosmed (IMAGE-PLAN).\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
+        '\nKeluarkan: caption lengkap + rancangan isi image dengan label persis di awal baris — Title:, Subtitle:, Body:, Header:, Footer:, Caption: — disusul elemen visual lain. Body: wajib berisi satu paragraf pembuka (2-3 kalimat) diikuti poin-poin daftar. Jangan menulis judul bebas di luar label; judul utama hanya pada baris Title:.',
         'trace-cb-img-' + Date.now());
-      postChat('kreatif', ag.name, ag.color, esc(t.text) + t.footer);
+      const g = await qcGate(st.brief, '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-'), t.text, 'trace-cb-img-' + Date.now());
+      verdict = g.verdict;
+      postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
       // v203: urai otomatis ke field Image Editor (bukan teks mentah saja).
-      setImageStructured(t.text, parseImagePlan(t.text), ratioForImagePlan(st));
-      saveLib('Image: ' + topicOf(st), t.text);
+      setImageStructured(g.text, parseImagePlan(g.text), ratioForImagePlan(st));
+      saveLib('Image: ' + topicOf(st), g.text);
     } else {
       const t = await genText(
-        'Buat ' + count + ' rencana image untuk postingan sosmed bulk (BULK-IMAGE-PLAN). Pisahkan tiap rencana dengan baris === IMAGE n === (n = nomor urut).\nBrief: ' + st.brief + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
-        '\nTiap rencana berisi: caption + rancangan isi image (Title, Subtitle, Body, header, footer, logo, elemen visual lain).',
+        'Buat ' + count + ' rencana image untuk postingan sosmed bulk (BULK-IMAGE-PLAN). Pisahkan tiap rencana dengan baris === IMAGE n === (n = nomor urut).\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
+        '\nTiap rencana berisi: caption + rancangan isi image (Title, Subtitle, Body, header, footer, logo, elemen visual lain). Tiap Body: wajib berisi satu paragraf pembuka (2-3 kalimat) diikuti poin-poin daftar. Jangan menulis judul bebas di luar label; judul utama hanya pada baris Title:.',
         'trace-cb-img-bulk-' + Date.now());
-      const plans = parseBulkPlans(t.text, 'IMAGE').slice(0, 30);
+      const g = await qcGate(st.brief, '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-'), t.text, 'trace-cb-img-bulk-' + Date.now());
+      verdict = g.verdict;
+      const plans = parseBulkPlans(g.text, 'IMAGE').slice(0, 30);
       setBulkBriefs(plans);
-      postChat('kreatif', ag.name, ag.color, esc(plans.join('\n\n---\n\n')) + t.footer);
+      postChat('kreatif', ag.name, ag.color, esc(plans.join('\n\n---\n\n')) + (g.footer || t.footer));
       saveLib('Bulk Image: ' + topicOf(st), plans.join('\n\n---\n\n'));
     }
-    postKreatif(tr('cb.soc.done') + openButton('cb-open-image', 'cb.open.image'));
-  } catch (e) { postGenError(e); }
+    postKreatif(tr('cb.soc.done'));
+    postPrime(verdict + openButton('cb-open-image', 'cb.open.image'));
+  } catch (e) { cbSocGenFail(st, e); setAgentPhase('kreatif', null); return; }
   setAgentPhase('kreatif', null);
   clearState();
 }
@@ -778,26 +878,32 @@ async function cbGenerateCarousel(st: CbState, bulk: boolean, count: number): Pr
   setAgentPhase('kreatif', 'busy');
   try {
     const ag = kreatif();
+    let verdict = '';
     if (!bulk) {
       const t = await genText(
-        'Buat caption + konten carousel untuk postingan sosmed (CAROUSEL-PLAN).\nBrief: ' + st.brief + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
+        'Buat caption + konten carousel untuk postingan sosmed (CAROUSEL-PLAN).\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
         '\nKeluarkan: caption lengkap + konten carousel 6-10 slide (tiap slide: judul + isi singkat).',
         'trace-cb-car-' + Date.now());
-      postChat('kreatif', ag.name, ag.color, esc(t.text) + t.footer);
-      setImageBrief(t.text);
-      saveLib('Carousel: ' + topicOf(st), t.text);
+      const g = await qcGate(st.brief, '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-'), t.text, 'trace-cb-car-' + Date.now());
+      verdict = g.verdict;
+      postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
+      setImageBrief(g.text);
+      saveLib('Carousel: ' + topicOf(st), g.text);
     } else {
       const t = await genText(
-        'Buat ' + count + ' konten carousel untuk postingan sosmed bulk (BULK-CAROUSEL-PLAN). Pisahkan tiap carousel dengan baris === CAROUSEL n === (n = nomor urut).\nBrief: ' + st.brief + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
+        'Buat ' + count + ' konten carousel untuk postingan sosmed bulk (BULK-CAROUSEL-PLAN). Pisahkan tiap carousel dengan baris === CAROUSEL n === (n = nomor urut).\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-') +
         '\nTiap carousel berisi: caption + konten 6-10 slide (tiap slide: judul + isi singkat).',
         'trace-cb-car-bulk-' + Date.now());
-      const plans = parseBulkPlans(t.text, 'CAROUSEL').slice(0, 30);
+      const g = await qcGate(st.brief, '\nPlatform: ' + platform + '\nTujuan: ' + (a['soc-purpose'] || '-') + '\nPendekatan: ' + (a['soc-approach'] || '-'), t.text, 'trace-cb-car-bulk-' + Date.now());
+      verdict = g.verdict;
+      const plans = parseBulkPlans(g.text, 'CAROUSEL').slice(0, 30);
       setBulkBriefs(plans);
-      postChat('kreatif', ag.name, ag.color, esc(plans.join('\n\n---\n\n')) + t.footer);
+      postChat('kreatif', ag.name, ag.color, esc(plans.join('\n\n---\n\n')) + (g.footer || t.footer));
       saveLib('Bulk Carousel: ' + topicOf(st), plans.join('\n\n---\n\n'));
     }
-    postKreatif(tr('cb.soc.done') + openButton('cb-open-image', 'cb.open.image'));
-  } catch (e) { postGenError(e); }
+    postKreatif(tr('cb.soc.done'));
+    postPrime(verdict + openButton('cb-open-image', 'cb.open.image'));
+  } catch (e) { cbSocGenFail(st, e); setAgentPhase('kreatif', null); return; }
   setAgentPhase('kreatif', null);
   clearState();
 }
@@ -808,19 +914,21 @@ async function cbGenerateReels(st: CbState): Promise<void> {
   setAgentPhase('kreatif', 'busy');
   try {
     const t = await genText(
-      'Buat rencana reels untuk postingan sosmed (REELS-PLAN), seperti proses pembuatan video: script + shot plan + caption + hashtag.\nBrief: ' + st.brief + '\nPlatform: ' + (st.platform || '-') +
+      'Buat rencana reels untuk postingan sosmed (REELS-PLAN), seperti proses pembuatan video: script + shot plan + caption + hashtag.\nBrief: ' + st.brief + topicLine(st) + '\nPlatform: ' + (st.platform || '-') +
       '\nDurasi 30-60 detik, rasio 9:16.',
       'trace-cb-reels-' + Date.now());
+    const g = await qcGate(st.brief, '\nPlatform: ' + (st.platform || '-'), t.text, 'trace-cb-reels-' + Date.now());
     const ag = kreatif();
-    postChat('kreatif', ag.name, ag.color, esc(t.text) + t.footer);
-    saveLib('Reels: ' + topicOf(st), t.text);
+    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
+    saveLib('Reels: ' + topicOf(st), g.text);
     // v220: rencana reels masuk Video Editor (dulu hanya teks di chat):
     // teks mentah ke textarea rencana + shot terurai ke grup rencana
     // yang bisa digenerate per shot (mesin yang sama dengan movie).
     const w = window as unknown as Record<string, unknown>;
-    if (typeof w.veSetReels === 'function') (w.veSetReels as (t: string, title: string) => void)(t.text, 'Reels: ' + topicOf(st));
-    postKreatif(tr('cb.mov.done') + openButton('cb-open-video', 'cb.open.video'));
-  } catch (e) { postGenError(e); }
+    if (typeof w.veSetReels === 'function') (w.veSetReels as (t: string, title: string) => void)(g.text, 'Reels: ' + topicOf(st));
+    postKreatif(tr('cb.mov.done'));
+    postPrime(g.verdict + openButton('cb-open-video', 'cb.open.video'));
+  } catch (e) { cbSocGenFail(st, e); setAgentPhase('kreatif', null); return; }
   setAgentPhase('kreatif', null);
   clearState();
 }
@@ -922,7 +1030,8 @@ export async function cbAnswer(text: string): Promise<void> {
   switch (st.step) {
     case 'th-char': {
       st.answers['th-char'] = reply;
-      postKreatif(tr('cb.th.char.open') + openButton('cb-open-image', 'cb.open.image'));
+      // v235: navigasi antar-editor pun dari Prime (bukan Kreatif).
+      postPrime(tr('cb.th.char.open.prime') + openButton('cb-open-image', 'cb.open.image'));
       setImageBrief('Character sheet talking head untuk: ' + st.brief + '. Sumber karakter: ' + reply + '.');
       st.step = 'th-char-return';
       saveState(st);
@@ -937,7 +1046,7 @@ export async function cbAnswer(text: string): Promise<void> {
     }
     case 'th-voice': {
       st.answers['th-voice'] = reply;
-      postKreatif(tr('cb.th.voice.open') + openButton('cb-open-voice', 'cb.open.voice'));
+      postPrime(tr('cb.th.voice.open.prime') + openButton('cb-open-voice', 'cb.open.voice'));
       st.step = 'th-voice-return';
       saveState(st);
       return;
@@ -999,7 +1108,7 @@ export async function cbAnswer(text: string): Promise<void> {
     }
     case 'promo-voice-type': {
       st.answers['promo-voice-type'] = reply;
-      postKreatif(tr('cb.th.voice.open') + openButton('cb-open-voice', 'cb.open.voice'));
+      postPrime(tr('cb.th.voice.open.prime') + openButton('cb-open-voice', 'cb.open.voice'));
       st.step = 'promo-voice-return';
       saveState(st);
       return;
@@ -1072,6 +1181,8 @@ export async function cbAnswer(text: string): Promise<void> {
       }
       st.answers['soc-format'] = f;
       if (f === 'reels') {
+        st.lastGen = { format: 'reels', bulk: false, count: 1 };
+        saveState(st);
         await cbGenerateReels(st);
         return;
       }
@@ -1112,6 +1223,8 @@ export async function cbAnswer(text: string): Promise<void> {
         return;
       }
       if (c === 'single') {
+        st.lastGen = { format: st.answers['soc-format'] || 'image', bulk: false, count: 1 };
+        saveState(st);
         if (st.answers['soc-format'] === 'carousel') await cbGenerateCarousel(st, false, 1);
         else await cbGenerateImagePlan(st, false, 1);
         return;
@@ -1130,8 +1243,37 @@ export async function cbAnswer(text: string): Promise<void> {
       }
       const count = n > 30 ? 30 : n;
       if (n > 30) postKreatif(tr('cb.soc.bulkcap'));
+      st.lastGen = { format: st.answers['soc-format'] || 'image', bulk: true, count };
+      saveState(st);
       if (st.answers['soc-format'] === 'carousel') await cbGenerateCarousel(st, true, count);
       else await cbGenerateImagePlan(st, true, count);
+      return;
+    }
+    case 'soc-retry': {
+      // v235: Coba lagi menjalankan ulang generator dari lastGen (format
+      // + jawaban tetap tersimpan); Batal menghapus state. Ketik bebas
+      // 'lanjutkan'/'ulangi' juga diterima sebagai Coba lagi.
+      const norm = normReply(reply);
+      const isCancel = norm === normReply(tr('cb.soc.retry.cancel')) || /batal/i.test(reply);
+      if (isCancel) {
+        clearState();
+        postKreatif(tr('cb.soc.retry.cancelled'));
+        return;
+      }
+      const isAgain = norm === normReply(tr('cb.soc.retry.again')) || /coba lagi|lanjutkan|ulangi/i.test(reply);
+      if (!isAgain) {
+        unmatchedOption(st);
+        return;
+      }
+      const g = st.lastGen;
+      if (!g) {
+        clearState();
+        postKreatif(tr('cb.q.giveup'));
+        return;
+      }
+      if (g.format === 'reels') await cbGenerateReels(st);
+      else if (g.format === 'carousel') await cbGenerateCarousel(st, g.bulk, g.count);
+      else await cbGenerateImagePlan(st, g.bulk, g.count);
       return;
     }
     default:

@@ -40,7 +40,12 @@ function parseCmds(text: string): { searches: string[]; opens: string[]; report:
     if (t.startsWith('CARI:')) searches.push(t.slice(5).trim());
     else if (t.startsWith('BUKA:')) opens.push(t.slice(5).trim());
     else if (t.startsWith('LAPORAN:')) {
-      report = text.slice(text.indexOf('LAPORAN:') + 8).trim();
+      // v235: potong laporan pada baris perintah pertama sesudah
+      // LAPORAN (dulu CARI/BUKA sesudah LAPORAN ikut masuk laporan).
+      const rest = text.slice(text.indexOf('LAPORAN:') + 8);
+      const restLines = rest.split('\n');
+      const cut = restLines.findIndex((l) => /^(CARI|BUKA|LAPORAN):/.test(l.trim()));
+      report = (cut >= 0 ? restLines.slice(0, cut).join('\n') : rest).trim();
       break;
     }
   }

@@ -6,7 +6,7 @@
 // Naskah/visual/caption/batch menyusul di versi berikutnya dan HANYA
 // jalan sesudah gerbang 1 lolos (tombol tahap berikut nonaktif).
 
-import { tr, getLang, MODEL_LANG_INSTRUCTION } from './i18n.js';
+import { tr, getLang, GROUNDING_INSTRUCTION, MODEL_LANG_INSTRUCTION } from './i18n.js';
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
 import { readKeys, QC_INSTRUCTION, parseQcVerdict } from './chat.js';
 import { recordLiveCost } from './cost.js';
@@ -164,7 +164,9 @@ async function gatedScript(row: PlanRow, niche: string): Promise<{ text: string;
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
   const router = new ModelRouter(cfg);
-  const draftSys = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah agen Kreatif. Tulis HANYA naskah sesuai format yang diminta, tanpa pembuka, tanpa penutup, tanpa rekomendasi.';
+  // v235: grounding ditambahkan (kriteria grounding di QC tetap ada,
+  // tapi draf yang lebih membumi mengurangi putaran revisi).
+  const draftSys = MODEL_LANG_INSTRUCTION[getLang()] + GROUNDING_INSTRUCTION[getLang()] + ' Kamu adalah agen Kreatif. Tulis HANYA naskah sesuai format yang diminta, tanpa pembuka, tanpa penutup, tanpa rekomendasi.';
   const prompt = scriptPrompt(row, niche);
   cfg.systemInstruction = draftSys;
   let r = await router.callWithFallback(prompt, 'trace-p30-script-' + row.day);
@@ -231,7 +233,7 @@ export async function doTable(): Promise<{ ok: boolean; error?: string }> {
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
-  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()];
+  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + GROUNDING_INSTRUCTION[getLang()];
   const router = new ModelRouter(cfg);
   let res;
   try {
@@ -395,7 +397,7 @@ export async function doCaptions(): Promise<{ ok: boolean; made: number; error?:
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini;
   cfg.metaApiKey = keys.meta;
-  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()];
+  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + GROUNDING_INSTRUCTION[getLang()];
   const router = new ModelRouter(cfg);
   let made = 0;
   for (const row of p.rows) {

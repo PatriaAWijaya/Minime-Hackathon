@@ -23,7 +23,7 @@
 // Library + galeri + biaya + antrean native.
 
 import { invoke } from '@tauri-apps/api/core';
-import { tr } from './i18n.js';
+import { getLang, GROUNDING_INSTRUCTION, MODEL_LANG_INSTRUCTION, tr } from './i18n.js';
 import { recordLiveCost } from './cost.js';
 import { readKeys } from './chat.js';
 import { libAddImage, libAddScript, libPairCaption } from './v5logic.js';
@@ -500,6 +500,9 @@ async function modelText(prompt: string, trace: string): Promise<string> {
   const keys = readKeys();
   const cfg = defaultRouterConfig();
   cfg.geminiApiKey = keys.gemini; cfg.metaApiKey = keys.meta;
+  // v235: dulu tanpa system instruction sama sekali (tanpa bahasa,
+  // tanpa grounding) untuk shot storyboard, VO, dan caption.
+  cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + GROUNDING_INSTRUCTION[getLang()];
   const router = new ModelRouter(cfg);
   const r = await router.callWithFallback(prompt, trace);
   recordLiveCost(r);
@@ -694,6 +697,10 @@ export function imgSetBulk(briefs: string[]): void {
   state.bulk = list;
   state.bulkActive = 0;
   state.brief = list[0];
+  // v235: brief baru = pekerjaan baru — reset field terstruktur lama
+  // (dulu judul/body/listicle/header/footer/palette lama ikut masuk
+  // prompt generate brief baru via sentPrompt).
+  state.title = state.subtitle = state.body = state.listicle = state.header = state.footer = state.palette = '';
   saveState(); syncForm(); renderPreview(); renderBulkTabs();
 }
 
@@ -706,6 +713,9 @@ export function imgSetBrief(text: string): void {
   state.bulkActive = 0;
   state.panels = null;
   state.panelsBrief = null;
+  // v235: brief baru = pekerjaan baru — reset field terstruktur lama
+  // (lihat imgSetBulk: field lama ikut masuk prompt generate baru).
+  state.title = state.subtitle = state.body = state.listicle = state.header = state.footer = state.palette = '';
   saveState();
   syncForm();
   renderPreview();
@@ -723,6 +733,9 @@ export function imgSetStructured(f: { brief: string; title: string; subtitle: st
   state.listicle = f.listicle;
   state.header = f.header;
   state.footer = f.footer;
+  // v235: palette lama ikut dibersihkan (plan terstruktur tidak membawa
+  // palette; palette lama akan bocor ke prompt generate via sentPrompt).
+  state.palette = '';
   if (RATIO_SIZE[f.ratio]) state.ratio = f.ratio;
   state.output = f.output;
   state.bulk = null;

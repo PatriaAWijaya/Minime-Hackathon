@@ -756,8 +756,12 @@ export async function sendChatReal(): Promise<void> {
         ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
         (r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + r.fallbackFrom + ')' : '') +
         (r.promptTokens != null || r.completionTokens != null ? ' · ' + (r.promptTokens ?? '—') + '+' + (r.completionTokens ?? '—') + ' token' : '');
-      const studio = mediaNeeded(text) ? studioButton(r.text, 'prime') : '';
-      postChat('prime', 'Prime Agent', '#EB87B4', esc(r.text) + footer + studio);
+      // v235: tombol studio HANYA untuk output ter-QC (jalur agen).
+      // Jawaban langsung Prime tidak di-QC (v162), jadi tanpa tombol —
+      // bridge editor tetap khusus output ter-QC; user tetap bisa salin
+      // tempel manual. (Dulu cabang ini memasang studioButton sehingga
+      // satu-satunya jalur tombol tanpa QC justru ada di sini.)
+      postChat('prime', 'Prime Agent', '#EB87B4', esc(r.text) + footer);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.error') + esc(msg) + tr('chat.error.hint') + retryButton('prime', text, 'prime'));

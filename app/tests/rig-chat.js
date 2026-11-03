@@ -42,6 +42,7 @@ async function invokeStub(cmd) {
 }
 
 let gagalUji = 0;
+let gagalSoc = 0;
 let gateUji = 0;
 const fetchRecs = [];
 async function fetchStub(url, opts) {
@@ -59,11 +60,19 @@ async function fetchStub(url, opts) {
   // diset di rig sehingga Gemini melempar tanpa fetch). Panggilan ke-4
   // (tombol Coba lagi) sukses — membuktikan retry.
   if (body.includes('GAGAL-UJI')) { gagalUji++; if (gagalUji <= 3) return makeResp({ ok: false, status: 500, jsonData: { error: 'GAGAL-UJI' } }); }
+  // v235: 4 panggilan generate IMAGE-PLAN pertama untuk GAGAL-SOC gagal
+  // (seluruh percobaan provider satu generate: meta, gemini rig-key,
+  // ollama primer + fallback) — panggilan QC/revisi tidak ikut gagal,
+  // sehingga retry menguji jalur generate saja.
+  if (body.includes('GAGAL-SOC') && body.includes('IMAGE-PLAN') && !body.includes('QC hasil kerja agen') && !body.includes('Verdict QC')) { gagalSoc++; if (gagalSoc <= 4) return makeResp({ ok: false, status: 500, jsonData: { error: 'GAGAL-SOC' } }); }
   if (body.includes('Bagi brief')) {
     content = (body.includes('Halo utama') || body.includes('jadwal posting') || body.includes('halo') || body.includes('brief produk digital')) ? '[]' : (body.includes('Alur 2') ? '[{"agent":"riset","task":"Riset pasar Alur 2"},{"agent":"strategi","task":"Strategi Alur 2"},{"agent":"kreatif","task":"Buat naskah Alur 2"}]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat naskah video kopi susu"}]');
-  } else if (body.includes('LABEL-UJI')) {
+  } else if (body.includes('LABEL-UJI') && !body.includes('QC hasil kerja agen')) {
     // v203: rencana IMAGE-PLAN berlabel untuk uji urai terstruktur.
-    content = 'Title: Kopi Susu Gula Aren\nSubtitle: Manisnya Pas, Creamy-nya Nagih\nBody: Satu gelas cukup untuk memulai hari, racikan susu lembut berpadu gula aren asli.\n- Susu segar creamy\n- Gula aren asli\n- Es batu kristal\nHeader: KOPI PAGI\nFooter: Pesan sekarang via chat\nCaption: Kopi susu gula aren, manisnya pas!';
+    // v235: seksi '## 2.' sesudah Footer menguji parser berhenti di
+    // heading baru (footer tidak boleh bocor); panggilan QC dikecualikan
+    // agar verdict tetap dari cabang QC.
+    content = 'Title: Kopi Susu Gula Aren\nSubtitle: Manisnya Pas, Creamy-nya Nagih\nBody: Satu gelas cukup untuk memulai hari, racikan susu lembut berpadu gula aren asli.\n- Susu segar creamy\n- Gula aren asli\n- Es batu kristal\nHeader: KOPI PAGI\nFooter: Pesan sekarang via chat\nCaption: Kopi susu gula aren, manisnya pas!\n## 2. Elemen Visual dan Tata Letak\n- Elemen visual: ikon minimalis\n- Warna: cokelat hangat';
   } else if (body.includes('QC hasil kerja agen') && body.includes('GATE-UJI')) {
     // v161: QC pertama tugas GATE-UJI = REVISI (memicu 1 putaran revisi),
     // QC berikutnya = LOLOS. Marker membuktikan verdict interim tak bocor.
@@ -78,7 +87,9 @@ async function fetchStub(url, opts) {
   } else if (body.includes('PART 2')) {
     content = 'NASKAH-SERI-P2-UJI';
   } else if (body.includes('mixing')) {
-    content = 'NASKAH-MIX-UJI';
+    // v235: mix berseri harus berbeda isi dari mix promosional, kalau
+    // tidak libAddScript (dedupe per isi) menolak entri kedua.
+    content = body.includes('Video berseri') ? 'NASKAH-MIX-SERI-UJI' : 'NASKAH-MIX-UJI';
   } else if (body.includes('berseri')) {
     content = 'NASKAH-SERI-UJI';
   } else if (body.includes('promosional')) {
@@ -628,8 +639,10 @@ try {
   recBtn(lastMsg(), 'Sedang').click();
   await waitFor(() => (lastMsg()?.textContent || '').includes('Segmen audiens'), 'cb audience question');
   recBtn(lastMsg(), 'Umum').click();
-  await waitFor(() => (lastMsg()?.textContent || '').includes('sudah tampil di Script Editor'), 'cb article done');
-  check('v138: artikel selesai + tombol Buka di Script Editor', !!document.querySelector('#chatBox [data-act="cb-open-artikel"]'), lastMsg()?.textContent.slice(0, 120) || 'tidak ada');
+  // v235: bubble terakhir kini verdict Prime (teks selesai ada di bubble
+  // Kreatif sebelumnya) — tunggu lewat bodyText, bukan lastMsg.
+  await waitFor(() => bodyText().includes('Artikel selesai dan sudah tampil di Script Editor'), 'cb article done');
+  check('v138: artikel selesai + tombol Buka di Script Editor dari Prime', !!document.querySelector('#chatBox .msg.curation [data-act="cb-open-artikel"]'), lastMsg()?.textContent.slice(0, 120) || 'tidak ada');
   const se138 = JSON.parse(store.get('minime.scriptEditor') || '{}');
   check('v138: artikel tampil di Script Editor bagian Artikel', se138.menu === 'artikel' && (se138.output || '').includes('NASKAH-UJI'), 'menu=' + se138.menu + ' output=' + String(se138.output || '').slice(0, 60));
   // §21 v139: Movie — talking head end-to-end (karakter, suara, set).
@@ -665,7 +678,9 @@ try {
   recBtn(lastMsg(), 'Setuju, simpan').click();
   await waitFor(() => (lastMsg()?.textContent || '').includes('Perlu voice over?'), 'cb139p vo');
   recBtn(lastMsg(), 'Tidak perlu').click();
-  await waitFor(() => (lastMsg()?.textContent || '').includes('tersimpan di Library'), 'cb139p mix done');
+  // v235: bubble terakhir kini verdict Prime — tunggu entri Library
+  // mix yang baru (tombol Prime dari §21 sudah ada dan mengecoh).
+  await waitFor(() => JSON.parse(store.get('minime.library.added') || '[]').some((x) => (x.o || '').includes('Video Promosional:')), 'cb139p mix done');
   const lib139p = JSON.parse(store.get('minime.library.added') || '[]');
   check('v139: storyboard + rencana promosional tersimpan di Library', lib139p.some((x) => (x.o || '').startsWith('Storyboard:')) && lib139p.some((x) => (x.o || '').includes('Video Promosional:')), JSON.stringify(lib139p.map((x) => x.o)));
   // §23 v139: Movie — berseri 2 part (part per part, approve, ekor VO+mix).
@@ -682,7 +697,8 @@ try {
   recBtn(lastMsg(), 'Setuju, simpan').click();
   await waitFor(() => (lastMsg()?.textContent || '').includes('Perlu voice over?'), 'cb139s vo');
   recBtn(lastMsg(), 'Tidak perlu').click();
-  await waitFor(() => (lastMsg()?.textContent || '').includes('tersimpan di Library'), 'cb139s mix done');
+  // v235: tunggu entri Library mix yang baru (alasan sama seperti §22).
+  await waitFor(() => JSON.parse(store.get('minime.library.added') || '[]').some((x) => (x.o || '').includes('Video Berseri:')), 'cb139s mix done');
   const lib139s = JSON.parse(store.get('minime.library.added') || '[]');
   check('v139: storyboard part 1 + part 2 berseri tersimpan di Library', lib139s.some((x) => (x.o || '').includes('Storyboard Part 1:')) && lib139s.some((x) => (x.o || '').includes('Storyboard Part 2:')), JSON.stringify(lib139s.map((x) => x.o)));
   // §24 v140: Sosmed — Threads (script >500 karakter dibagi per bagian).
@@ -993,6 +1009,35 @@ try {
   check('v220: judul grup Rencana Reels + topik', (document.getElementById('ve2-movie')?.textContent || '').includes('Rencana Reels'), document.getElementById('ve2-movie')?.textContent?.slice(0, 80) || '');
   check('v220: teks mentah reels di textarea rencana', (document.getElementById('ve-plan')?.value || '').includes('Secangkir kopi susu'), (document.getElementById('ve-plan')?.value || '').slice(0, 60));
   check('v220: tombol Buka Video Editor tetap ada', !!document.querySelector('#chatBox [data-act="cb-open-video"]'));
+
+  // §33 v235: (a) footer parser berhenti di heading seksi baru;
+  // (b) tombol hasil hanya dari Prime-QC; (c) retry in-flow soc.
+  const f235 = imgFlow203();
+  check('v235: footer tidak bocor ke seksi 2', f235.footer === 'Pesan sekarang via chat', f235.footer || '');
+  const done235 = [...document.querySelectorAll('#chatBox .msg')].find((m) => (m.textContent || '').includes('Konten selesai dan tersimpan di Library'));
+  check('v235: bubble selesai Kreatif tanpa tombol aksi', !!done235 && !done235.querySelector('.chat-act'), done235?.textContent.slice(0, 80) || 'tidak ada');
+  check('v235: tombol Buka Image Editor dari bubble kurasi Prime', !!document.querySelector('#chatBox .msg.curation [data-act="cb-open-image"]'));
+  await sendMsg('halo Kreatif, buatkan konten instagram kopi GAGAL-SOC');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'v235r purpose');
+  recBtn(lastMsg(), 'Konten Sosial Media').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Platform sosmednya yang mana?'), 'v235r platform');
+  recBtn(lastMsg(), 'Instagram').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis postingannya apa?'), 'v235r format');
+  recBtn(lastMsg(), 'Image').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Tujuannya apa?'), 'v235r purpose2');
+  recBtn(lastMsg(), 'Promosional').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Pendekatannya mau yang mana?'), 'v235r approach');
+  recBtn(lastMsg(), 'Infografis').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Posting 1 per 1 atau bulk'), 'v235r count');
+  recBtn(lastMsg(), 'Satu per satu').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Generate Image gagal'), 'v235r retry question', 120);
+  check('v235: gagal generate soc -> tanya Coba lagi (state tidak hilang)', (lastMsg()?.textContent || '').includes('Coba lagi'));
+  recBtn(lastMsg(), 'Coba lagi').click();
+  // Sinyal selesai yang benar = state bersih (entri Library 'Image:'
+  // sudah ada dari §25 dan dedupe isi membuat saveLib retry tak nambah
+  // entri — jadi jangan tunggu Library).
+  await waitFor(() => !store.get('minime.creativeBrief'), 'v235r state bersih', 120);
+  check('v235: klik Coba lagi -> generate ulang sukses + state bersih', (lastMsg()?.textContent || '').includes('Buka Image Editor'), lastMsg()?.textContent.slice(0, 120) || 'tidak ada');
 
 } catch (e) {
   // eslint-disable-next-line no-console
