@@ -25,7 +25,7 @@ import { getLang, GROUNDING_INSTRUCTION, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_I
 // (runtime), bukan saat evaluasi modul — sehingga siklus impor
 // chat.js <-> creative-brief.js aman (tidak ada akses top-level).
 import { QC_INSTRUCTION, parseQcVerdict } from './chat.js';
-import { ModelRouter, defaultRouterConfig } from '../../../src/router';
+import { ModelRouter, callPinnedModel, defaultRouterConfig, providerForLabel } from '../../../src/router';
 import { recordLiveCost } from './cost.js';
 import { esc } from './esc.js';
 import { parsePlanLabels } from './plan-labels.js';
@@ -110,9 +110,14 @@ export function cbIsCreative(text: string): boolean {
   return words.some((w) => low.includes(' ' + w + ' '));
 }
 
-function kreatif(): { name: string; color: string; role: string } {
-  const ag = (AGENTS as Record<string, { name: string; color: string; role: string }>)['kreatif'];
+function kreatif(): { name: string; color: string; role: string; model?: string } {
+  const ag = (AGENTS as Record<string, { name: string; color: string; role: string; model?: string }>)['kreatif'];
   return ag || { name: 'Kreatif', color: '#F97316', role: 'Naskah & Brief' };
+}
+
+/* v239: sufiks footer waktu tembok (lihat chat.ts totalSuffix). */
+function totalSuffixCb(totalMs: number): string {
+  return ' · ' + tr('word.total') + ' ' + totalMs + 'ms';
 }
 
 function postKreatif(text: string): void {
@@ -153,7 +158,8 @@ function topicLine(st: CbState): string {
 // meloloskan hasil dengan verdict 'tidak tersedia' (gate tidak boleh
 // memblokir output karena QC-nya sendiri mati). Footer terakhir
 // (revisi, bila ada) dikembalikan agar provenance bubble tetap akurat.
-async function qcGate(brief: string, extra: string, text: string, trace: string): Promise<{ text: string; verdict: string; footer: string | null }> {
+async function qcGate(brief: string, extra: string, text: string, trace: string): Promise<{ text: string; verdict: string; footer: string | null; wallMs: number }> {
+  const started = Date.now();
   let cur = text;
   let verdict = '';
   let footer: string | null = null;
@@ -172,7 +178,7 @@ async function qcGate(brief: string, extra: string, text: string, trace: string)
     cur = rev.text;
     footer = rev.footer;
   }
-  return { text: cur, verdict, footer };
+  return { text: cur, verdict, footer, wallMs: Date.now() - started };
 }
 
 // v235 (lipatan v233): kegagalan generate soc TIDAK lagi mematikan alur
@@ -376,10 +382,8 @@ async function cbDirectGenerate(st: CbState, purposeLabel: string): Promise<void
   postKreatif(tr('cb.branch.direct', { purpose: purposeLabel }));
   setAgentPhase('kreatif', 'busy');
   try {
-    const router = routerFor(kreatifSystem());
-    const r = await router.callWithFallback(st.brief, 'trace-cb-direct-' + Date.now());
-    recordLiveCost(r);
-    postChat('kreatif', ag.name, ag.color, esc(r.text) + footerFor(r));
+    const r = await callKreatif(st.brief, 'trace-cb-direct-' + Date.now());
+    postChat('kreatif', ag.name, ag.color, esc(r.text) + r.footer);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     postChat('kreatif', ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint'));
@@ -424,13 +428,11 @@ async function cbGenerateArticle(st: CbState): Promise<void> {
     'Tulis artikel lengkap, bukan kerangka.' + topicLine(st) + '\nDi akhir, tambahkan (aturan output kreatif; jalur artikel sendiri, jangan dicampur ke caption sosmed/video):\nPrompt Generator: prompt cover image SPESIFIK artikel ini, siap generate.\nCaption promosi: caption sosmed untuk mempromosikan artikel ini (body copy + hashtag + CTA).';
   setAgentPhase('kreatif', 'busy');
   try {
-    const router = routerFor(kreatifSystem());
-    const r = await router.callWithFallback(prompt, 'trace-cb-article-' + Date.now());
-    recordLiveCost(r);
+    const r = await callKreatif(prompt, 'trace-cb-article-' + Date.now());
     const g = await qcGate(st.brief, '\nSegmen audiens: ' + (a['art-audience'] || '-'), r.text, 'trace-cb-article-' + Date.now());
     const topic = st.brief.length > 60 ? st.brief.slice(0, 60) : st.brief;
     setArtikel(topic, a['art-audience'] || '', g.text);
-    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || footerFor(r)));
+    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || r.footer) + totalSuffixCb(r.ms + g.wallMs));
     postKreatif(tr('cb.art.done'));
     postPrime(g.verdict + '<br><button class="btn btn-sm chat-act" data-act="cb-open-artikel">' + esc(tr('cb.art.open')) + '</button>');
   } catch (e) {
@@ -553,10 +555,10 @@ function tripleComplete(text: string, kind: 'image' | 'carousel' | 'reels'): boo
 }
 
 async function repairFormatIfNeeded(
-  g: { text: string; verdict: string; footer: string | null },
+  g: { text: string; verdict: string; footer: string | null; wallMs: number },
   kind: 'image' | 'carousel' | 'reels',
   brief: string, extra: string, trace: string,
-): Promise<{ text: string; verdict: string; footer: string | null }> {
+): Promise<{ text: string; verdict: string; footer: string | null; wallMs: number }> {
   if (tripleComplete(g.text, kind)) return g;
   const want = kind === 'carousel'
     ? 'satu Prompt Slide untuk tiap slide (Prompt Slide 1:, Prompt Slide 2:, ...) dan satu Caption: di akhir'
@@ -567,7 +569,7 @@ async function repairFormatIfNeeded(
       trace + '-reformat');
     if (!tripleComplete(rep.text, kind)) return g;
     const g2 = await qcGate(brief, extra, rep.text, trace + '-reqc');
-    return { text: g2.text, verdict: g2.verdict, footer: g2.footer };
+    return { text: g2.text, verdict: g2.verdict, footer: g2.footer, wallMs: (g.wallMs || 0) + rep.ms + g2.wallMs };
   } catch { return g; }
 }
 
@@ -585,11 +587,31 @@ function saveLib(title: string, content: string): void {
   try { libAddScript(title, content); } catch { /* abaikan */ }
 }
 
-async function genText(prompt: string, trace: string): Promise<{ text: string; footer: string }> {
+/* v239: generasi cb menghormati model pin Kreatif (dulu SELALU rantai
+   global — Sonnet yang dipilih user tidak pernah dicoba pertama di
+   jalur cb). Pin gagal -> rantai dengan provider pin dilewati. */
+async function callKreatif(prompt: string, trace: string): Promise<{ text: string; footer: string; ms: number }> {
   const router = routerFor(kreatifSystem());
+  const label = kreatif().model || '';
+  try {
+    const pinned = await callPinnedModel(router, label, prompt, trace);
+    if (pinned) {
+      recordLiveCost(pinned);
+      return { text: pinned.text, footer: footerFor(pinned), ms: pinned.latencyMs };
+    }
+  } catch (_) {
+    const skip = providerForLabel(label);
+    const r = await router.callWithFallback(prompt, trace, false, undefined, skip ? new Set([skip]) : undefined);
+    recordLiveCost(r);
+    return { text: r.text, footer: footerFor(r), ms: r.latencyMs };
+  }
   const r = await router.callWithFallback(prompt, trace);
   recordLiveCost(r);
-  return { text: r.text, footer: footerFor(r) };
+  return { text: r.text, footer: footerFor(r), ms: r.latencyMs };
+}
+
+async function genText(prompt: string, trace: string): Promise<{ text: string; footer: string; ms: number }> {
+  return callKreatif(prompt, trace);
 }
 
 function postGenError(e: unknown): void {
@@ -614,7 +636,7 @@ async function cbGenerateTH(st: CbState): Promise<void> {
     const g = await qcGate(st.brief, '\nKarakter: ' + (a['th-char'] || '-'), t.text, 'trace-cb-th-' + Date.now());
     saveLib('Talking Head: ' + topicOf(st), g.text);
     const ag = kreatif();
-    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
+    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer) + totalSuffixCb(t.ms + g.wallMs));
     // v238: caption TH ke jalur video (bukan body copy sosmed).
     routeVideoCaption('Talking Head: ' + topicOf(st), g.text);
     postKreatif(tr('cb.mov.done'));
@@ -684,7 +706,7 @@ async function cbGenerateMix(st: CbState): Promise<void> {
     const g = await qcGate(st.brief, '', m.text, 'trace-cb-mix-' + Date.now());
     saveLib((st.mode === 'ser' ? 'Video Berseri: ' : 'Video Promosional: ') + topicOf(st), g.text);
     const ag = kreatif();
-    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || m.footer));
+    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || m.footer) + totalSuffixCb(m.ms + g.wallMs));
     // v238: caption video ke jalur video (bukan body copy sosmed).
     routeVideoCaption((st.mode === 'ser' ? 'Video Berseri: ' : 'Video Promosional: ') + topicOf(st), g.text);
     postKreatif(tr('cb.mov.done'));
@@ -823,11 +845,11 @@ async function cbGenerateThreads(st: CbState): Promise<void> {
     const g = await qcGate(st.brief, '', t.text, 'trace-cb-threads-' + Date.now());
     const ag = kreatif();
     if (g.text.length <= 500) {
-      postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
+      postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer) + totalSuffixCb(t.ms + g.wallMs));
       saveLib('Threads: ' + topicOf(st), g.text);
     } else {
       const parts = splitThreads(g.text);
-      parts.forEach((p, i) => postChat('kreatif', ag.name, ag.color, esc('(' + (i + 1) + '/' + parts.length + ') ' + p) + (i === parts.length - 1 ? (g.footer || t.footer) : '')));
+      parts.forEach((p, i) => postChat('kreatif', ag.name, ag.color, esc('(' + (i + 1) + '/' + parts.length + ') ' + p) + (i === parts.length - 1 ? (g.footer || t.footer) + totalSuffixCb(t.ms + g.wallMs) : '')));
       saveLib('Threads: ' + topicOf(st), parts.join('\n\n---\n\n'));
     }
     postKreatif(tr('cb.soc.threads.done'));
@@ -856,7 +878,7 @@ async function cbGenerateImagePlan(st: CbState, bulk: boolean, count: number): P
       let g = await qcGate(st.brief, imgExtra, t.text, 'trace-cb-img-' + Date.now());
       g = await repairFormatIfNeeded(g, 'image', st.brief, imgExtra, 'trace-cb-img-' + Date.now());
       verdict = g.verdict;
-      postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
+      postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer) + totalSuffixCb(t.ms + g.wallMs));
       // v203: urai otomatis ke field Image Editor (bukan teks mentah saja).
       // v238: brief editor = Prompt Generator spesifik (bukan teks utuh);
       // caption masuk body copy via parseImagePlan. Brief umum tetap
@@ -873,7 +895,7 @@ async function cbGenerateImagePlan(st: CbState, bulk: boolean, count: number): P
       verdict = g.verdict;
       const plans = parseBulkPlans(g.text, 'IMAGE').slice(0, 30);
       setBulkBriefs(plans);
-      postChat('kreatif', ag.name, ag.color, esc(plans.join('\n\n---\n\n')) + (g.footer || t.footer));
+      postChat('kreatif', ag.name, ag.color, esc(plans.join('\n\n---\n\n')) + (g.footer || t.footer) + totalSuffixCb(t.ms + g.wallMs));
       saveLib('Bulk Image: ' + topicOf(st), plans.join('\n\n---\n\n'));
     }
     postKreatif(tr('cb.soc.done'));
@@ -901,7 +923,7 @@ async function cbGenerateCarousel(st: CbState, bulk: boolean, count: number): Pr
       let g = await qcGate(st.brief, carExtra, t.text, 'trace-cb-car-' + Date.now());
       g = await repairFormatIfNeeded(g, 'carousel', st.brief, carExtra, 'trace-cb-car-' + Date.now());
       verdict = g.verdict;
-      postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
+      postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer) + totalSuffixCb(t.ms + g.wallMs));
       // v238: tiap slide jadi tab Image Editor (prompt-nya langsung bisa
       // digenerate), caption masuk body copy (satu caption untuk posting
       // carousel ini). Tanpa slide terurai, jatuh ke brief mentah.
@@ -923,7 +945,7 @@ async function cbGenerateCarousel(st: CbState, bulk: boolean, count: number): Pr
       verdict = g.verdict;
       const plans = parseBulkPlans(g.text, 'CAROUSEL').slice(0, 30);
       setBulkBriefs(plans);
-      postChat('kreatif', ag.name, ag.color, esc(plans.join('\n\n---\n\n')) + (g.footer || t.footer));
+      postChat('kreatif', ag.name, ag.color, esc(plans.join('\n\n---\n\n')) + (g.footer || t.footer) + totalSuffixCb(t.ms + g.wallMs));
       saveLib('Bulk Carousel: ' + topicOf(st), plans.join('\n\n---\n\n'));
     }
     postKreatif(tr('cb.soc.done'));
@@ -946,7 +968,7 @@ async function cbGenerateReels(st: CbState): Promise<void> {
     let g = await qcGate(st.brief, reelsExtra, t.text, 'trace-cb-reels-' + Date.now());
     g = await repairFormatIfNeeded(g, 'reels', st.brief, reelsExtra, 'trace-cb-reels-' + Date.now());
     const ag = kreatif();
-    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer));
+    postChat('kreatif', ag.name, ag.color, esc(g.text) + (g.footer || t.footer) + totalSuffixCb(t.ms + g.wallMs));
     saveLib('Reels: ' + topicOf(st), g.text);
     // v220: rencana reels masuk Video Editor (dulu hanya teks di chat):
     // teks mentah ke textarea rencana + shot terurai ke grup rencana

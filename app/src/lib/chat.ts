@@ -10,12 +10,19 @@
 // and never sent anywhere except the provider's own API endpoint.
 // No key -> that provider is skipped by the chain (LiveUnavailableError
 // -> fallthrough), exactly like the Node fase runners.
-import { ModelRouter, defaultRouterConfig } from '../../../src/router';
-import { AGENTS, activateAgent, clearReplyTarget, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, getReplyTarget, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, kbTaskMove, kbTaskStart, kbUpdateTaskOut, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView } from './v5logic.js';
+import { ModelRouter, callPinnedModel, defaultRouterConfig, providerForLabel } from '../../../src/router';
+import type { OnToken } from '../../../src/router';
+import { AGENTS, activateAgent, clearReplyTarget, currentProjectMemberKeys, currentProjectName, ensureProjectForBrief, getReplyTarget, graphNoteDelegation, graphNoteDelegationForMember, hasProject, isAgentDeactivated, kbTaskMove, kbTaskStart, kbUpdateTaskOut, libAddReport, markChatApproveDone, mediaTab, postChat, setAgentPhase, showView, updateChatBubbleText } from './v5logic.js';
 import { getLang, GROUNDING_INSTRUCTION, MODEL_LANG_INSTRUCTION, REPORT_FORMAT_INSTRUCTION, tr } from './i18n.js';
 import { esc } from './esc.js';
 import { recordLiveCost } from './cost.js';
 import { cbAnswer, cbIsActive, cbIsFlowEntry, cbStart } from './creative-brief.js';
+import { registerAnthropicStream } from './anthropic-stream.js';
+
+// v239: daftarkan jembatan streaming Anthropic sekali saat modul chat
+// dimuat (chat + cb sama-sama lewat modul ini, jadi semua pemanggil
+// onToken mendapat handler; tanpa ini, Anthropic tetap jalan utuh).
+registerAnthropicStream();
 import { planChatAnswer, planChatIsActive, planChatIsEntry, planChatStart } from './plan-chat.js';
 import { researchChatIsEntry, researchChatRun } from './research-browser.js';
 
@@ -310,24 +317,18 @@ export function approveStudio(idx?: number): void {
    dicoba dulu; bila gagal, jatuh ke rantai global seperti sebelumnya.
    Footer "via provider model" di bubble hasil membuktikan pilihan dipakai.
    Reasoning/Effort belum live (tidak ada provider yang menerima field itu). */
-async function callAgentModel(router: ModelRouter, cfg: ReturnType<typeof defaultRouterConfig>, agentKey: string, prompt: string, trace: string) {
+async function callAgentModel(router: ModelRouter, agentKey: string, prompt: string, trace: string, onToken?: OnToken) {
   const label = ((AGENTS as Record<string, { model?: string }>)[agentKey]?.model || '') as string;
   try {
-    if (label.includes('muse-spark-1.3')) return await router.callMeta(prompt, trace);
-    if (label.includes('gemini-3.1-flash-lite')) return await router.callGemini(prompt);
-    if (label.includes('claude')) return await router.callAnthropic(prompt);
-    if (label.includes('deepseek-r1:1.5b')) {
-      const r2 = new ModelRouter({ ...cfg, ollamaModel: 'deepseek-r1:1.5b', ollamaFallbackModel: 'deepseek-r1:1.5b' });
-      return await r2.callOllama(prompt);
-    }
-    if (label.includes('qwen2.5:3b')) {
-      const r2 = new ModelRouter({ ...cfg, ollamaModel: 'qwen2.5:3b', ollamaFallbackModel: 'qwen2.5:3b' });
-      return await r2.callOllama(prompt);
-    }
+    const pinned = await callPinnedModel(router, label, prompt, trace, onToken);
+    if (pinned) return pinned;
   } catch (_) {
-    // Preferensi gagal -> rantai global di bawah (bukan diam).
+    // Preferensi gagal -> rantai global di bawah (bukan diam), dengan
+    // provider pin dilewati (baru saja gagal untuk tindakan yang sama).
+    const skip = providerForLabel(label);
+    return router.callWithFallback(prompt, trace, false, onToken, skip ? new Set([skip]) : undefined);
   }
-  return router.callWithFallback(prompt, trace);
+  return router.callWithFallback(prompt, trace, false, onToken);
 }
 
 /* v152: tombol "Coba lagi" pada bubble error — mengulang tugas yang sama
@@ -361,10 +362,11 @@ export async function retryAgentTask(idx?: number): Promise<void> {
     if (item.kind === 'agent' && ag) {
       setAgentPhase(item.agent, 'busy');
       // v161: gate (sama seperti delegasi).
-      const g = await gatedAgentAnswer(router, cfg, item.agent, item.task, trace);
+      const g = await gatedAgentAnswer(cfg, item.agent, item.task, trace);
       const footer = ' — ' + tr('chat.footer.via') + ' ' + g.r.provider + ' ' + g.r.model + ' · ' + g.r.latencyMs + 'ms'
         + (g.r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + g.r.fallbackFrom + ')' : '')
-        + (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '');
+        + (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '')
+        + totalSuffix(g.wallMs);
       const studio = item.agent === 'kreatif' && mediaNeeded(item.task) ? studioButton(g.text, item.agent) : '';
       postChat(item.agent, ag.name, ag.color, esc(g.text) + footer + studio);
       kbUpdateTaskOut(ag.name, taskShort(item.task), g.text);
@@ -422,27 +424,72 @@ export function parseQcVerdict(qcText: string): 'LOLOS' | 'REVISI' {
   return m ? (m[1].toUpperCase() as 'LOLOS' | 'REVISI') : 'LOLOS';
 }
 
+/* v239: sufiks footer waktu tembok — footer lama hanya menampilkan
+   latensi panggilan TERAKHIR, padahal satu jawaban bisa terdiri dari
+   2-6 panggilan; angka total inilah yang dirasakan user. */
+function totalSuffix(wallMs: number): string {
+  return ' · ' + tr('word.total') + ' ' + wallMs + 'ms';
+}
+
+/* v239: indikator progres streaming untuk bubble ack agen — span kecil
+   di dalam bubble ack, diperbarui maksimal 2x/detik (bukan per token)
+   supaya DOM tidak ditulis ribuan kali. Isi bubble ack tidak diubah;
+   span dihapus saat generasi selesai (finally di pemanggil). */
+function makeProgressUpdater(ackEl: Element | null): { update: (chars: number) => void; done: () => void } {
+  let span: HTMLElement | null = null;
+  let lastAt = 0;
+  return {
+    update(chars: number) {
+      if (!ackEl) return;
+      const now = Date.now();
+      if (span && now - lastAt < 500) return;
+      lastAt = now;
+      const bubble = ackEl.querySelector('.bubble');
+      if (!bubble) return;
+      if (!span) {
+        span = document.createElement('span');
+        span.className = 'stream-prog';
+        span.style.cssText = 'display:block;opacity:.6;font-size:.85em;margin-top:4px';
+        bubble.appendChild(span);
+      }
+      span.textContent = '⏳ ' + tr('chat.stream.writing') + ' ±' + Math.max(1, Math.round(chars / 4)) + ' token';
+    },
+    done() {
+      if (span) span.remove();
+      span = null;
+    },
+  };
+}
+
 async function gatedAgentAnswer(
-  router: ModelRouter,
   cfg: ReturnType<typeof defaultRouterConfig>,
   agentKey: string,
   taskText: string,
   tracePrefix: string,
-): Promise<{ r: Awaited<ReturnType<typeof callAgentModel>>; text: string; verdictText: string; rounds: number }> {
+  onProgress?: (chars: number) => void,
+): Promise<{ r: Awaited<ReturnType<typeof callAgentModel>>; text: string; verdictText: string; rounds: number; wallMs: number }> {
+  const started = Date.now();
+  // v239: isolasi cfg+router per jawaban — fan-out paralel tidak boleh
+  // saling menimpa systemInstruction lewat router/cfg bersama.
+  const cfg2 = { ...cfg };
+  const router2 = new ModelRouter(cfg2);
   const ag = (AGENTS as Record<string, { name: string; color: string; role: string }>)[agentKey];
   const agentInstruction = () =>
-    (cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()]);
+    (cfg2.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + ' Kamu adalah ' + ag.name + ' (' + ag.role + ').' + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()]);
   agentInstruction();
-  let r = await callAgentModel(router, cfg, agentKey, taskText, tracePrefix + '-0');
+  const genToken: OnToken | undefined = onProgress
+    ? (delta, total, reset) => { void delta; onProgress(reset ? 0 : total.length); }
+    : undefined;
+  let r = await callAgentModel(router2, agentKey, taskText, tracePrefix + '-0', genToken);
   recordLiveCost(r);
   let text = r.text;
   let verdictText = '';
   let rounds = 0;
   for (let round = 0; round <= 2; round++) {
     try {
-      cfg.systemInstruction = QC_INSTRUCTION;
+      cfg2.systemInstruction = QC_INSTRUCTION;
       const qcInput = 'Tugas: ' + taskText + '\n\nHasil agen:\n- ' + ag.name + ': ' + text;
-      const q = await router.callWithFallback(qcInput, tracePrefix + '-qc-' + round);
+      const q = await router2.callWithFallback(qcInput, tracePrefix + '-qc-' + round);
       recordLiveCost(q);
       verdictText = q.text;
     } catch {
@@ -454,11 +501,11 @@ async function gatedAgentAnswer(
     agentInstruction();
     const revPrompt =
       'Revisi hasil berikut berdasarkan verdict QC Prime di bawah. Pertahankan bagian yang sudah benar, perbaiki hanya yang dikritik.\n\nVerdict QC:\n' + verdictText + '\n\nHasil sebelumnya:\n' + text;
-    r = await callAgentModel(router, cfg, agentKey, revPrompt, tracePrefix + '-rev-' + rounds);
+    r = await callAgentModel(router2, agentKey, revPrompt, tracePrefix + '-rev-' + rounds, genToken);
     recordLiveCost(r);
     text = r.text;
   }
-  return { r, text, verdictText, rounds };
+  return { r, text, verdictText, rounds, wallMs: Date.now() - started };
 }
 
 // v162 (brief Image otomatis, perintah Patria 1 Nov 14:57): output yang
@@ -635,8 +682,13 @@ export async function sendChatReal(): Promise<void> {
     postChat('prime', 'Prime Agent', '#EB87B4', tr('flow.project.created', { name: currentProjectName() }));
     const tasks = flow1Tasks;
     if (tasks.length > 0) {
-      const results: { name: string; task: string; text: string }[] = [];
-      for (const t of tasks) {
+      // v239: fan-out PARALEL — pengumuman semua agen dulu (sinkron,
+      // urutan tetap), lalu semua jawaban agen jalan bersamaan.
+      // Promise.all menjaga urutan results = urutan tugas (laporan
+      // tetap berurutan) walau bubble hasil muncul sesuai siapa yang
+      // selesai duluan. gatedAgentAnswer mengisolasi cfg+router
+      // sendiri, jadi tidak ada systemInstruction yang tertukar.
+      const items = tasks.map((t) => {
         const ag = (AGENTS as Record<string, { name: string; color: string; role: string }>)[t.agent];
         postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.delegate.announce', { agent: esc(ag.name), task: esc(taskShort(t.task)) }));
         graphNoteDelegation(t.agent, t.task);
@@ -644,18 +696,24 @@ export async function sendChatReal(): Promise<void> {
         postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
         setAgentPhase(t.agent, 'starting');
         const kbCard = kbTaskStart(ag.name, taskShort(t.task), t.task);
-        const trace = 'trace-flow1-' + t.agent + '-' + Date.now();
+        const ackEl = document.querySelector('#chatBox > div:last-child');
+        return { t, ag, kbCard, trace: 'trace-flow1-' + t.agent + '-' + Date.now(), ackEl };
+      });
+      const results = await Promise.all(items.map(async (it) => {
+        const { t, ag, kbCard, trace, ackEl } = it;
+        const prog = makeProgressUpdater(ackEl);
         let resultText: string;
         try {
           setAgentPhase(t.agent, 'busy');
           kbTaskMove(kbCard, 1);
           // v161: gate per-agen (verdict interim internal; verdict set
           // tetap di QC alur di bawah).
-          const g = await gatedAgentAnswer(router, cfg, t.agent, t.task, trace);
+          const g = await gatedAgentAnswer(cfg, t.agent, t.task, trace, (chars) => prog.update(chars));
           const footer =
             ' — ' + tr('chat.footer.via') + ' ' + g.r.provider + ' ' + g.r.model + ' · ' + g.r.latencyMs + 'ms' +
             (g.r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + g.r.fallbackFrom + ')' : '') +
-            (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '');
+            (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '') +
+            totalSuffix(g.wallMs);
           const studio = t.agent === 'kreatif' && mediaNeeded(t.task) ? studioButton(g.text, t.agent) : '';
           resultText = g.text;
           postChat(t.agent, ag.name, ag.color, esc(g.text) + footer + studio);
@@ -663,11 +721,13 @@ export async function sendChatReal(): Promise<void> {
           const msg = e instanceof Error ? e.message : String(e);
           resultText = tr('chat.error') + msg;
           postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint') + retryButton(t.agent, t.task, 'agent'));
+        } finally {
+          prog.done();
         }
         setAgentPhase(t.agent, null);
         kbTaskMove(kbCard, 4, resultText);
-        results.push({ name: ag.name, task: t.task, text: resultText });
-      }
+        return { name: ag.name, task: t.task, text: resultText };
+      }));
       let qcText: string;
       try {
         cfg.systemInstruction = QC_INSTRUCTION;
@@ -702,8 +762,8 @@ export async function sendChatReal(): Promise<void> {
     return;
   }
   if (flow2Tasks.length > 0) {
-    const results: { name: string; task: string; text: string }[] = [];
-    for (const t of flow2Tasks) {
+    // v239: fan-out PARALEL (pola sama dengan Alur 1).
+    const items2 = flow2Tasks.map((t) => {
       const ag = (AGENTS as Record<string, { name: string; color: string; role: string }>)[t.agent];
       postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.delegate.announce', { agent: esc(ag.name), task: esc(taskShort(t.task)) }));
       graphNoteDelegationForMember(t.agent, t.task);
@@ -711,18 +771,25 @@ export async function sendChatReal(): Promise<void> {
       postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
       setAgentPhase(t.agent, 'starting');
       const kbCard = kbTaskStart(ag.name, taskShort(t.task), t.task);
-      const trace = 'trace-flow2-' + t.agent + '-' + Date.now();
+      const ackEl = document.querySelector('#chatBox > div:last-child');
+      return { t, ag, kbCard, trace: 'trace-flow2-' + t.agent + '-' + Date.now(), ackEl };
+    });
+
+    const results = await Promise.all(items2.map(async (it) => {
+      const { t, ag, kbCard, trace, ackEl } = it;
+      const prog = makeProgressUpdater(ackEl);
       let resultText: string;
       try {
         setAgentPhase(t.agent, 'busy');
         kbTaskMove(kbCard, 1);
         // v161: gate per-agen (verdict interim internal; verdict set
         // tetap di QC alur di bawah).
-        const g = await gatedAgentAnswer(router, cfg, t.agent, t.task, trace);
+        const g = await gatedAgentAnswer(cfg, t.agent, t.task, trace, (chars) => prog.update(chars));
         const footer =
           ' — ' + tr('chat.footer.via') + ' ' + g.r.provider + ' ' + g.r.model + ' · ' + g.r.latencyMs + 'ms' +
           (g.r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + g.r.fallbackFrom + ')' : '') +
-          (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '');
+          (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '') +
+          totalSuffix(g.wallMs);
         const studio = t.agent === 'kreatif' && mediaNeeded(t.task) ? studioButton(g.text, t.agent) : '';
         resultText = g.text;
         postChat(t.agent, ag.name, ag.color, esc(g.text) + footer + studio);
@@ -730,11 +797,13 @@ export async function sendChatReal(): Promise<void> {
         const msg = e instanceof Error ? e.message : String(e);
         resultText = tr('chat.error') + msg;
         postChat(t.agent, ag.name, ag.color, tr('chat.error') + esc(msg) + tr('chat.error.hint') + retryButton(t.agent, t.task, 'agent'));
+      } finally {
+        prog.done();
       }
       setAgentPhase(t.agent, null);
       kbTaskMove(kbCard, 4, resultText);
-      results.push({ name: ag.name, task: t.task, text: resultText });
-    }
+      return { name: ag.name, task: t.task, text: resultText };
+    }));
     let qcText: string;
     try {
       cfg.systemInstruction = QC_INSTRUCTION;
@@ -757,8 +826,23 @@ export async function sendChatReal(): Promise<void> {
   if (!delegate) {
     cfg.systemInstruction = MODEL_LANG_INSTRUCTION[getLang()] + scopeLine() + GROUNDING_INSTRUCTION[getLang()] + REPORT_FORMAT_INSTRUCTION[getLang()];
     const trace = 'trace-chat-' + Date.now();
+    // v239: jawaban Prime-direct mengalir langsung ke bubble (tanpa QC,
+    // jadi tidak ada yang ditahan): bubble dibuat pada token pertama,
+    // ditimpa tiap ~300ms selagi token mengalir, footer ditempel di
+    // akhir. Bila provider pertama sempat mengirim token lalu gagal,
+    // reset mengosongkan bubble sebelum token provider berikutnya.
+    let streamIdx: number | null = null;
+    let lastWrite = 0;
+    const onToken: OnToken = (delta, total, reset) => {
+      void delta;
+      if (streamIdx === null) streamIdx = postChat('prime', 'Prime Agent', '#EB87B4', '');
+      const now = Date.now();
+      if (now - lastWrite < 300 && !reset) return;
+      lastWrite = now;
+      updateChatBubbleText(streamIdx, reset ? '' : esc(total));
+    };
     try {
-      const r = await router.callWithFallback(text, trace);
+      const r = await router.callWithFallback(text, trace, false, onToken);
       recordLiveCost(r);
       const footer =
         ' — ' + tr('chat.footer.via') + ' ' + r.provider + ' ' + r.model + ' · ' + r.latencyMs + 'ms' +
@@ -769,10 +853,13 @@ export async function sendChatReal(): Promise<void> {
       // bridge editor tetap khusus output ter-QC; user tetap bisa salin
       // tempel manual. (Dulu cabang ini memasang studioButton sehingga
       // satu-satunya jalur tombol tanpa QC justru ada di sini.)
-      postChat('prime', 'Prime Agent', '#EB87B4', esc(r.text) + footer);
+      if (streamIdx === null) postChat('prime', 'Prime Agent', '#EB87B4', esc(r.text) + footer);
+      else updateChatBubbleText(streamIdx, esc(r.text) + footer);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.error') + esc(msg) + tr('chat.error.hint') + retryButton('prime', text, 'prime'));
+      const errHtml = tr('chat.error') + esc(msg) + tr('chat.error.hint') + retryButton('prime', text, 'prime');
+      if (streamIdx === null) postChat('prime', 'Prime Agent', '#EB87B4', errHtml);
+      else updateChatBubbleText(streamIdx, errHtml);
     }
     return;
   }
@@ -799,11 +886,20 @@ export async function sendChatReal(): Promise<void> {
     kbTaskMove(kbCard, 1);
     // v161: gate — jawaban ditahan sampai LOLOS (maks 2 revisi),
     // baru jawaban final + verdict final diposting.
-    const g = await gatedAgentAnswer(router, cfg, delegate, text, trace);
+    // v239: progres streaming pada bubble ack delegasi.
+    const ackElDel = document.querySelector('#chatBox > div:last-child');
+    const progDel = makeProgressUpdater(ackElDel);
+    let g: Awaited<ReturnType<typeof gatedAgentAnswer>>;
+    try {
+      g = await gatedAgentAnswer(cfg, delegate, text, trace, (chars) => progDel.update(chars));
+    } finally {
+      progDel.done();
+    }
     const footer =
       ' — ' + tr('chat.footer.via') + ' ' + g.r.provider + ' ' + g.r.model + ' · ' + g.r.latencyMs + 'ms' +
       (g.r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + g.r.fallbackFrom + ')' : '') +
-      (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '');
+      (g.r.promptTokens != null || g.r.completionTokens != null ? ' · ' + (g.r.promptTokens ?? '—') + '+' + (g.r.completionTokens ?? '—') + ' token' : '') +
+      totalSuffix(g.wallMs);
     // Tombol studio HANYA untuk Kreatif (aturan skill) + tugas media.
     const studio = delegate === 'kreatif' && mediaNeeded(text) ? studioButton(g.text, delegate) : '';
     kbOut = g.text;

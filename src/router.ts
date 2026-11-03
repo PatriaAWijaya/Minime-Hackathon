@@ -100,62 +100,224 @@ export interface CallResult {
   costUsd: number | null;
 }
 
-async function postJson(url: string, headers: Record<string, string>, body: unknown, timeoutMs = 30000): Promise<unknown> {
+/**
+ * v239 — streaming + circuit breaker.
+ * OnToken menerima (delta, total, reset): reset=true berarti provider
+ * sebelumnya sempat mengirim token lalu gagal, sehingga pemanggil HARUS
+ * membuang buffer parsial sebelum menampilkan token provider berikutnya.
+ * Tanpa streaming (onToken kosong), perilaku sama seperti postJson dulu,
+ * hanya timeout-nya berubah: idle 30 detik (bukan total 30 detik) +
+ * total 180 detik, supaya generasi panjang yang sah tidak diaborsi di
+ * tengah jalan seperti dulu (kasus Meta/Gemini 30 detik).
+ */
+export type OnToken = (delta: string, total: string, reset: boolean) => void;
+
+type StreamExtract = (obj: unknown) => { text: string; prompt: number | null; completion: number | null } | null;
+
+async function postJsonStream(
+  url: string,
+  headers: Record<string, string>,
+  body: unknown,
+  extract: StreamExtract,
+  onToken?: OnToken,
+  timeoutIdleMs = 30000,
+  timeoutTotalMs = 180000,
+): Promise<{ text: string; promptTokens: number | null; completionTokens: number | null }> {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  let idle: ReturnType<typeof setTimeout> | undefined;
+  const armIdle = () => {
+    if (idle) clearTimeout(idle);
+    idle = setTimeout(() => ctrl.abort(), timeoutIdleMs);
+  };
+  const totalTimer = setTimeout(() => ctrl.abort(), timeoutTotalMs);
   try {
+    armIdle();
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(body),
       signal: ctrl.signal,
     });
-    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${JSON.stringify(data).slice(0, 300)}`);
+      const errText = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${errText.slice(0, 300)}`);
     }
-    return data;
+    const reader = res.body?.getReader?.();
+    if (!reader) {
+      // Stub rig / lingkungan tanpa stream: baca JSON utuh seperti dulu.
+      const data = (await res.json().catch(() => ({}))) as unknown;
+      const ex = extract(data);
+      const text = ex?.text ?? '';
+      if (onToken && text) onToken(text, text, false);
+      return { text, promptTokens: ex?.prompt ?? null, completionTokens: ex?.completion ?? null };
+    }
+    const decoder = new TextDecoder();
+    let buf = '';
+    let raw = '';
+    let acc = '';
+    let promptTokens: number | null = null;
+    let completionTokens: number | null = null;
+    const feedLine = (line: string) => {
+      const t = line.trim();
+      if (!t) return;
+      let payload: unknown = null;
+      if (t.startsWith('data:')) {
+        const d = t.slice(5).trim();
+        if (!d || d === '[DONE]') return;
+        try { payload = JSON.parse(d); } catch { return; }
+      } else if (t.startsWith('{')) {
+        try { payload = JSON.parse(t); } catch { return; }
+      } else return;
+      const ex = extract(payload);
+      if (!ex) return;
+      if (ex.prompt != null) promptTokens = ex.prompt;
+      if (ex.completion != null) completionTokens = ex.completion;
+      if (ex.text) {
+        acc += ex.text;
+        if (onToken) onToken(ex.text, acc, false);
+      }
+    };
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      armIdle();
+      const chunk = decoder.decode(value, { stream: true });
+      raw += chunk;
+      buf += chunk;
+      let idx: number;
+      while ((idx = buf.indexOf('\n')) >= 0) {
+        feedLine(buf.slice(0, idx));
+        buf = buf.slice(idx + 1);
+      }
+    }
+    if (buf.trim()) feedLine(buf);
+    if (!acc) {
+      // Provider mengabaikan flag stream dan mengembalikan JSON utuh.
+      try {
+        const ex = extract(JSON.parse(raw));
+        if (ex?.text) {
+          acc = ex.text;
+          if (ex.prompt != null) promptTokens = ex.prompt;
+          if (ex.completion != null) completionTokens = ex.completion;
+          if (onToken) onToken(acc, acc, false);
+        }
+      } catch { /* biarkan kosong */ }
+    }
+    return { text: acc, promptTokens, completionTokens };
   } finally {
-    clearTimeout(t);
+    if (idle) clearTimeout(idle);
+    clearTimeout(totalTimer);
   }
 }
 
-function chatCompletionsText(data: unknown): { text: string; usage: { prompt: number | null; completion: number | null } } {
-  const d = data as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
-  const text = d.choices?.[0]?.message?.content ?? '';
-  return { text, usage: { prompt: d.usage?.prompt_tokens ?? null, completion: d.usage?.completion_tokens ?? null } };
+function metaExtract(d: unknown): { text: string; prompt: number | null; completion: number | null } | null {
+  const o = d as { choices?: Array<{ delta?: { content?: string }; message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } } | null;
+  if (!o || typeof o !== 'object') return null;
+  const c = o.choices?.[0];
+  return { text: c?.delta?.content ?? c?.message?.content ?? '', prompt: o.usage?.prompt_tokens ?? null, completion: o.usage?.completion_tokens ?? null };
+}
+
+function geminiExtract(d: unknown): { text: string; prompt: number | null; completion: number | null } | null {
+  const o = d as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number } } | null;
+  if (!o || typeof o !== 'object') return null;
+  const text = o.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
+  return { text, prompt: o.usageMetadata?.promptTokenCount ?? null, completion: o.usageMetadata?.candidatesTokenCount ?? null };
+}
+
+function ollamaExtract(d: unknown): { text: string; prompt: number | null; completion: number | null } | null {
+  const o = d as { message?: { content?: string }; prompt_eval_count?: number; eval_count?: number } | null;
+  if (!o || typeof o !== 'object') return null;
+  return { text: o.message?.content ?? '', prompt: o.prompt_eval_count ?? null, completion: o.eval_count ?? null };
+}
+
+/* v239 — circuit breaker per provider (state level modul, bukan instans,
+   karena tiap sendChat membuat ModelRouter baru). Gagal jaringan/HTTP/
+   timeout 2x berturut-turut -> provider dilewati 5 menit tanpa fetch.
+   Gagal pra-penerbangan (kunci kosong, Tauri tak tersedia) TIDAK dihitung:
+   itu bukan bukti provider bermasalah, dan kunci bisa saja baru diisi
+   user lewat Settings di tengah sesi. */
+const breakerState = new Map<ProviderId, { failures: number; lastFail: number }>();
+const BREAKER_AFTER = 2;
+const BREAKER_MS = 5 * 60 * 1000;
+function breakerTripped(p: ProviderId): boolean {
+  const s = breakerState.get(p);
+  return !!s && s.failures >= BREAKER_AFTER && Date.now() - s.lastFail < BREAKER_MS;
+}
+function breakerNote(p: ProviderId, ok: boolean): void {
+  if (ok) { breakerState.delete(p); return; }
+  const s = breakerState.get(p) || { failures: 0, lastFail: 0 };
+  s.failures += 1;
+  s.lastFail = Date.now();
+  breakerState.set(p, s);
+}
+export function resetRouterBreakers(): void { breakerState.clear(); }
+
+/* v239 — handler streaming Anthropic didaftarkan dari sisi app (bukan
+   diimpor di sini): router.ts harus tetap bisa diimpor runner Node,
+   dan @tauri-apps/api tidak bisa di-resolve Vite dari luar app/.
+   Tanpa handler terdaftar, callAnthropic dengan onToken jatuh ke
+   anthropic_chat utuh (bukan error). */
+export type AnthropicStreamReq = {
+  api_key: string;
+  model: string;
+  system: string | null;
+  prompt: string;
+  max_tokens: number;
+  timeout_secs: number;
+};
+export type AnthropicStreamRes = { text: string; input_tokens?: number | null; output_tokens?: number | null };
+type AnthropicStreamHandler = (req: AnthropicStreamReq, onDelta: (delta: string) => void) => Promise<AnthropicStreamRes>;
+let anthropicStreamHandler: AnthropicStreamHandler | null = null;
+export function setAnthropicStreamHandler(fn: AnthropicStreamHandler | null): void {
+  anthropicStreamHandler = fn;
+}
+
+function preFlight(provider: ProviderId, detail: string): LiveUnavailableError {
+  const e = new LiveUnavailableError(provider, detail);
+  (e as unknown as { preFlight?: boolean }).preFlight = true;
+  return e;
+}
+
+/** v239 — peta label model picker -> provider (sama dengan callAgentModel v152, dipusatkan agar cb memakainya juga). */
+export function providerForLabel(label: string): ProviderId | null {
+  if (label.includes('muse-spark-1.3')) return 'meta';
+  if (label.includes('gemini-3.1-flash-lite')) return 'gemini';
+  if (label.includes('claude')) return 'anthropic';
+  if (label.includes('deepseek-r1:1.5b') || label.includes('qwen2.5:3b')) return 'ollama';
+  return null;
 }
 
 export class ModelRouter {
   constructor(private cfg: RouterConfig) {}
 
   /** Live Meta call. Throws LiveUnavailableError when not configured. */
-  async callMeta(prompt: string, traceId: string): Promise<CallResult> {
+  async callMeta(prompt: string, traceId: string, onToken?: OnToken): Promise<CallResult> {
     if (!this.cfg.metaApiKey) {
-      throw new LiveUnavailableError('meta', 'META_API_KEY is not set (claim/card pending)');
+      throw preFlight('meta', 'META_API_KEY is not set (claim/card pending)');
     }
     const started = Date.now();
-    const data = await postJson(
+    const { text, promptTokens, completionTokens } = await postJsonStream(
       `${this.cfg.metaBaseUrl.replace(/\/$/, '')}/chat/completions`,
       { Authorization: `Bearer ${this.cfg.metaApiKey}` },
-      { model: this.cfg.metaModel, messages: [...(this.cfg.systemInstruction ? [{ role: 'system', content: this.cfg.systemInstruction }] : []), { role: 'user', content: prompt }], temperature: 0.2 },
+      { model: this.cfg.metaModel, messages: [...(this.cfg.systemInstruction ? [{ role: 'system', content: this.cfg.systemInstruction }] : []), { role: 'user', content: prompt }], temperature: 0.2, stream: true },
+      metaExtract,
+      onToken,
     );
-    const { text, usage } = chatCompletionsText(data);
     void traceId;
     // Audit v66 $-B1: biaya live HARUS dihitung di sini, bukan dibuang
     // ke null — dulu Billing menampilkan $0 untuk semua live call.
     // Tarif muse-spark-1.3: $1,25 input / $4,25 output per 1 jt token.
     // Model lain -> null (jangan menebak tarifnya).
     const isSpark13 = this.cfg.metaModel === 'muse-spark-1.3';
-    const costUsd = isSpark13 && usage.prompt != null && usage.completion != null
-      ? usage.prompt * 1.25e-6 + usage.completion * 4.25e-6
+    const costUsd = isSpark13 && promptTokens != null && completionTokens != null
+      ? promptTokens * 1.25e-6 + completionTokens * 4.25e-6
       : null;
-    return { text, provider: 'meta', family: 'meta', model: this.cfg.metaModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: usage.prompt, completionTokens: usage.completion, costUsd };
+    return { text, provider: 'meta', family: 'meta', model: this.cfg.metaModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens, completionTokens, costUsd };
   }
 
-  async callGemini(prompt: string): Promise<CallResult> {
+  async callGemini(prompt: string, onToken?: OnToken): Promise<CallResult> {
     if (!this.cfg.geminiApiKey) {
-      throw new LiveUnavailableError('gemini', 'GEMINI_API_KEY is not set');
+      throw preFlight('gemini', 'GEMINI_API_KEY is not set');
     }
     const started = Date.now();
     // Key via ?key= query param (not a header): this is how Google's
@@ -163,17 +325,19 @@ export class ModelRouter {
     // the Secure Vault surrogate mechanism supports (the surrogate is
     // swapped for the real key on approved egress). Header placement
     // was tried and is NOT compatible with that mechanism.
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.cfg.geminiModel)}:generateContent?key=${encodeURIComponent(this.cfg.geminiApiKey)}`;
-    const data = (await postJson(url, {}, { contents: [{ parts: [{ text: prompt }] }], ...(this.cfg.systemInstruction ? { systemInstruction: { parts: [{ text: this.cfg.systemInstruction }] } } : {}) })) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
-    };
-    const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.cfg.geminiModel)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(this.cfg.geminiApiKey)}`;
+    const { text, promptTokens, completionTokens } = await postJsonStream(
+      url,
+      {},
+      { contents: [{ parts: [{ text: prompt }] }], ...(this.cfg.systemInstruction ? { systemInstruction: { parts: [{ text: this.cfg.systemInstruction }] } } : {}) },
+      geminiExtract,
+      onToken,
+    );
     // Audit v66 $-B1: Gemini = $0 atas dasar free tier (keputusan
     // Patria 28 Okt 2026 'Catat $0 free tier, tutup bagian 2') —
     // BUKAN karena tarifnya nol. Bila pemakaian berbayar dimulai,
     // baris ini harus dihitung dari tarif model yang dipakai.
-    return { text, provider: 'gemini', family: 'gemini', model: this.cfg.geminiModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: data.usageMetadata?.promptTokenCount ?? null, completionTokens: data.usageMetadata?.candidatesTokenCount ?? null, costUsd: 0 };
+    return { text, provider: 'gemini', family: 'gemini', model: this.cfg.geminiModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens, completionTokens, costUsd: 0 };
   }
 
   /**
@@ -185,15 +349,40 @@ export class ModelRouter {
    * sisi server, pola vs_api v223). __TAURI_INTERNALS__ dipakai
    * langsung (bukan impor @tauri-apps/api) agar modul ini tetap bisa
    * diimpor runner Node yang tidak memakai Anthropic.
+   * v239: bila onToken diisi, dicoba dulu jalur streaming
+   * anthropic_chat_stream (Tauri Channel) — gagal apa pun (rig/jsdom,
+   * WebView lama) jatuh ke anthropic_chat utuh di bawah, bukan error.
    */
-  async callAnthropic(prompt: string): Promise<CallResult> {
+  async callAnthropic(prompt: string, onToken?: OnToken): Promise<CallResult> {
     if (!this.cfg.anthropicApiKey) {
-      throw new LiveUnavailableError('anthropic', 'ANTHROPIC_API_KEY is not set');
+      throw preFlight('anthropic', 'ANTHROPIC_API_KEY is not set');
     }
     const started = Date.now();
     const tauriInvoke = (globalThis as unknown as { __TAURI_INTERNALS__?: { invoke?: (cmd: string, args?: unknown) => Promise<unknown> } }).__TAURI_INTERNALS__?.invoke;
     if (!tauriInvoke) {
-      throw new LiveUnavailableError('anthropic', 'Tauri invoke tidak tersedia (Anthropic hanya lewat app desktop)');
+      throw preFlight('anthropic', 'Tauri invoke tidak tersedia (Anthropic hanya lewat app desktop)');
+    }
+    if (onToken && anthropicStreamHandler) {
+      try {
+        let acc = '';
+        const sres = await anthropicStreamHandler(
+          {
+            api_key: this.cfg.anthropicApiKey,
+            model: this.cfg.anthropicModel,
+            system: this.cfg.systemInstruction ?? null,
+            prompt,
+            max_tokens: 8192,
+            timeout_secs: 180,
+          },
+          (delta: string) => {
+            acc += delta;
+            onToken(delta, acc, false);
+          },
+        );
+        return { text: sres.text ?? acc, provider: 'anthropic', family: 'anthropic', model: this.cfg.anthropicModel, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: sres.input_tokens ?? null, completionTokens: sres.output_tokens ?? null, costUsd: null };
+      } catch (_) {
+        // Streaming tak tersedia -> jalur utuh di bawah (bukan error).
+      }
     }
     const res = (await tauriInvoke('anthropic_chat', {
       req: {
@@ -214,21 +403,32 @@ export class ModelRouter {
     return model.startsWith('qwen') ? 'qwen' : 'deepseek';
   }
 
-  private async callOllamaModel(prompt: string, model: string): Promise<CallResult> {
+  private async callOllamaModel(prompt: string, model: string, onToken?: OnToken): Promise<CallResult> {
     const started = Date.now();
-    let data: unknown;
+    let text = '';
+    let promptTokens: number | null = null;
+    let completionTokens: number | null = null;
     try {
-      data = await postJson(
+      const r = await postJsonStream(
         `${this.cfg.ollamaBaseUrl.replace(/\/$/, '')}/api/chat`,
         {},
-        { model, messages: [...(this.cfg.systemInstruction ? [{ role: 'system', content: this.cfg.systemInstruction }] : []), { role: 'user', content: prompt }], stream: false },
-        15000,
+        { model, messages: [...(this.cfg.systemInstruction ? [{ role: 'system', content: this.cfg.systemInstruction }] : []), { role: 'user', content: prompt }], stream: true },
+        ollamaExtract,
+        onToken,
       );
+      text = r.text;
+      promptTokens = r.promptTokens;
+      completionTokens = r.completionTokens;
     } catch (e) {
       throw new LiveUnavailableError('ollama', e instanceof Error ? e.message : String(e));
     }
-    const d = data as { message?: { content?: string }; prompt_eval_count?: number; eval_count?: number };
-    return { text: d.message?.content ?? '', provider: 'ollama', family: this.ollamaFamilyFor(model), model, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens: d.prompt_eval_count ?? null, completionTokens: d.eval_count ?? null, costUsd: 0 };
+    return { text, provider: 'ollama', family: this.ollamaFamilyFor(model), model, latencyMs: Date.now() - started, mock: false, fallbackFrom: null, promptTokens, completionTokens, costUsd: 0 };
+  }
+
+  /** v239: Ollama dengan model eksplisit (dipakai pin model picker). */
+  async callOllamaAs(model: string, prompt: string, onToken?: OnToken): Promise<CallResult> {
+    const r = new ModelRouter({ ...this.cfg, ollamaModel: model, ollamaFallbackModel: model });
+    return r.callOllama(prompt, onToken);
   }
 
   /**
@@ -236,15 +436,26 @@ export class ModelRouter {
    * (qwen2.5:3b by default) only if the primary fails. Both are local
    * and free. Throws LiveUnavailableError only if both fail.
    */
-  async callOllama(prompt: string): Promise<CallResult> {
+  async callOllama(prompt: string, onToken?: OnToken): Promise<CallResult> {
+    let primaryHad = false;
+    const primaryWrapped: OnToken | undefined = onToken
+      ? (delta, total, _r) => { primaryHad = true; onToken(delta, total, false); }
+      : undefined;
     try {
-      return await this.callOllamaModel(prompt, this.cfg.ollamaModel);
+      return await this.callOllamaModel(prompt, this.cfg.ollamaModel, primaryWrapped);
     } catch (primaryError) {
       if (this.cfg.ollamaFallbackModel === this.cfg.ollamaModel) {
         throw primaryError;
       }
+      let fallbackResetSent = false;
+      const fallbackWrapped: OnToken | undefined = onToken
+        ? (delta, total, _r) => {
+          if (primaryHad && !fallbackResetSent) { fallbackResetSent = true; onToken('', '', true); }
+          onToken(delta, total, false);
+        }
+        : undefined;
       try {
-        const r = await this.callOllamaModel(prompt, this.cfg.ollamaFallbackModel);
+        const r = await this.callOllamaModel(prompt, this.cfg.ollamaFallbackModel, fallbackWrapped);
         r.fallbackFrom = this.cfg.ollamaModel;
         return r;
       } catch (fallbackError) {
@@ -272,23 +483,48 @@ export class ModelRouter {
    * transient Gemini 503 is never masked by the final Ollama error and
    * callers can retry on 503 instead of misdiagnosing the chain.
    * `allowMock` is a test-only escape hatch and is recorded on the result.
+   * v239: onToken dialirkan (dengan reset bila provider sebelumnya sempat
+   * mengirim token lalu gagal); provider yang trip breaker dilewati tanpa
+   * fetch; skip = provider yang baru saja gagal sebagai model pin (tidak
+   * dicoba dua kali untuk satu tindakan user yang sama).
    */
-  async callWithFallback(prompt: string, agent: string, allowMock = false): Promise<CallResult> {
-    const chain: Array<() => Promise<CallResult>> = [
-      () => this.callMeta(prompt, agent),
-      () => this.callGemini(prompt),
-      () => this.callAnthropic(prompt),
-      () => this.callOllama(prompt),
+  async callWithFallback(prompt: string, agent: string, allowMock = false, onToken?: OnToken, skip?: Set<ProviderId>): Promise<CallResult> {
+    const chain: Array<{ name: ProviderId; fn: (t?: OnToken) => Promise<CallResult> }> = [
+      { name: 'meta', fn: (t) => this.callMeta(prompt, agent, t) },
+      { name: 'gemini', fn: (t) => this.callGemini(prompt, t) },
+      { name: 'anthropic', fn: (t) => this.callAnthropic(prompt, t) },
+      { name: 'ollama', fn: (t) => this.callOllama(prompt, t) },
     ];
-    const names = ['meta', 'gemini', 'anthropic', 'ollama'];
+    const names: ProviderId[] = ['meta', 'gemini', 'anthropic', 'ollama'];
     const failures: string[] = [];
+    let hadPartial = false;
     for (let i = 0; i < chain.length; i++) {
+      const step = chain[i];
+      if (skip?.has(step.name)) {
+        failures.push(`${step.name}: skipped (just failed as pinned model)`);
+        continue;
+      }
+      if (breakerTripped(step.name)) {
+        failures.push(`${step.name}: breaker (failed recently, skipped)`);
+        continue;
+      }
       try {
-        const r = await chain[i]();
+        let providerHad = false;
+        const wrapped: OnToken | undefined = onToken
+          ? (delta, total, _r) => {
+            if (!providerHad && hadPartial) onToken('', '', true);
+            providerHad = true;
+            hadPartial = true;
+            onToken(delta, total, false);
+          }
+          : undefined;
+        const r = await step.fn(wrapped);
+        breakerNote(step.name, true);
         if (i > 0) r.fallbackFrom = names[i - 1];
         return r;
       } catch (e) {
-        failures.push(`${names[i]}: ${e instanceof Error ? e.message : String(e)}`);
+        if ((e as unknown as { preFlight?: boolean }).preFlight !== true) breakerNote(step.name, false);
+        failures.push(`${step.name}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
     if (allowMock) {
@@ -322,4 +558,19 @@ export class ModelRouter {
     if (makerFamily === 'gemini') return 'meta';
     return 'gemini';
   }
+}
+
+/**
+ * v239 — panggilan model pin (label picker) yang dipakai bersama chat.ts
+ * dan creative-brief.ts. Mengembalikan null bila label tidak cocok
+ * (pemanggil memakai rantai global); melempar bila model pin gagal
+ * (pemanggil memakai rantai dengan skip provider tersebut).
+ */
+export async function callPinnedModel(router: ModelRouter, label: string, prompt: string, trace: string, onToken?: OnToken): Promise<CallResult | null> {
+  if (label.includes('muse-spark-1.3')) return router.callMeta(prompt, trace, onToken);
+  if (label.includes('gemini-3.1-flash-lite')) return router.callGemini(prompt, onToken);
+  if (label.includes('claude')) return router.callAnthropic(prompt, onToken);
+  if (label.includes('deepseek-r1:1.5b')) return router.callOllamaAs('deepseek-r1:1.5b', prompt, onToken);
+  if (label.includes('qwen2.5:3b')) return router.callOllamaAs('qwen2.5:3b', prompt, onToken);
+  return null;
 }

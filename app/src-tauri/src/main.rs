@@ -64,6 +64,7 @@ fn main() {
             voicestudio::vs_launch,
             voicestudio::vs_api,
             anthropic::anthropic_chat,
+            anthropic::anthropic_chat_stream,
             sherpa::sherpa_status,
             sherpa::sherpa_setup,
             sherpa::sherpa_tts,

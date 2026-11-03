@@ -1043,28 +1043,69 @@ export function renderChat() {
       } else { _pin.style.display = 'none'; _pin.innerHTML = ''; }
     }
     _msgs.forEach(function (m, i) {
-      var div = document.createElement("div");
-      div.setAttribute("data-idx", String(i));
-      div.className = "msg " + (m.who === "user" ? "user" : (m.curation ? "curation" : (m.who === "prime" ? "prime" : "")));
-      var who = esc(String(m.name || ""));
-      // N1 v87: hanya pesan user di-escape (input luar tak boleh jadi HTML);
-      // pesan agen adalah HTML app sendiri (mis. tombol Buka di Media Studio).
-      // v130: pesan agen/Prime lewat render markdown dulu (pesan lama ikut
-      // rapi karena render terjadi tiap tampil); pesan user tetap literal.
-      // v132: rekomendasi agen diekstrak dulu (marker dihapus dari tampilan).
-      var rec = m.who === "user" ? { options: [], cleaned: m.text } : extractRecommendations(m.text);
-      var body = m.who === "user" ? linkifyChatHtml(esc(m.text)) : linkifyChatHtml(renderChatMarkdown(rec.cleaned));
-      // v131: tombol V (menu) + tombol react + chip reaksi + kutipan reply.
-      var vbtn = '<button class="msg-vbtn" data-act="msg-v" data-idx="' + i + '">▾</button>';
-      var rbtn = '<button class="msg-reactbtn" data-act="msg-react" data-idx="' + i + '">☺</button>';
-      var inner = '<div class="who">' + who + '</div>' + msgReplyQuoteHtml(m) + body + msgRecsHtml(m, rec.options) + msgReactsHtml(m);
-      div.innerHTML = m.curation
-        ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + vbtn + inner + rbtn + '</div></div>'
-        : '<div class="body"><div class="bubble">' + vbtn + inner + rbtn + '</div></div>';
-      box.appendChild(div);
+      box.appendChild(chatBubbleEl(m, i));
     });
     if (keepScroll) box.scrollTop = prevTop; else box.scrollTop = box.scrollHeight;
   }
+
+/* v239: satu bubble chat sebagai elemen DOM (diekstrak dari renderChat
+   agar append-only dan update-per-bubble memakai konstruksi yang sama
+   persis — bukan duplikat markup yang bisa melenceng). */
+function chatBubbleEl(m, i) {
+  var div = document.createElement("div");
+  div.setAttribute("data-idx", String(i));
+  div.className = "msg " + (m.who === "user" ? "user" : (m.curation ? "curation" : (m.who === "prime" ? "prime" : "")));
+  var who = esc(String(m.name || ""));
+  // N1 v87: hanya pesan user di-escape (input luar tak boleh jadi HTML);
+  // pesan agen adalah HTML app sendiri (mis. tombol Buka di Media Studio).
+  // v130: pesan agen/Prime lewat render markdown dulu (pesan lama ikut
+  // rapi karena render terjadi tiap tampil); pesan user tetap literal.
+  // v132: rekomendasi agen diekstrak dulu (marker dihapus dari tampilan).
+  var rec = m.who === "user" ? { options: [], cleaned: m.text } : extractRecommendations(m.text);
+  var body = m.who === "user" ? linkifyChatHtml(esc(m.text)) : linkifyChatHtml(renderChatMarkdown(rec.cleaned));
+  // v131: tombol V (menu) + tombol react + chip reaksi + kutipan reply.
+  var vbtn = '<button class="msg-vbtn" data-act="msg-v" data-idx="' + i + '">▾</button>';
+  var rbtn = '<button class="msg-reactbtn" data-act="msg-react" data-idx="' + i + '">☺</button>';
+  var inner = '<div class="who">' + who + '</div>' + msgReplyQuoteHtml(m) + body + msgRecsHtml(m, rec.options) + msgReactsHtml(m);
+  div.innerHTML = m.curation
+    ? '<div class="msg-col"><div class="cur-label">KURASI PRIME</div><div class="bubble">' + vbtn + inner + rbtn + '</div></div>'
+    : '<div class="body"><div class="bubble">' + vbtn + inner + rbtn + '</div></div>';
+  return div;
+}
+
+/* v239: tambah satu bubble di akhir tanpa membangun ulang seluruh chat.
+   Dulu tiap postChat memanggil renderChat() penuh (kosongkan #chatBox +
+   rebuild semua bubble + parsing markdown per baris) — di chat panjang
+   biayanya O(n) per bubble, O(n²) per sesi. Dipakai postChat bila kotak
+   sedang sinkron dengan chat aktif; bila tidak, pemanggil jatuh ke
+   renderChat() penuh (aman: mis. project baru dibuat tanpa render). */
+export function appendChatBubble(m, i) {
+  var box = document.getElementById("chatBox");
+  if (!box) return;
+  var keepScroll = chatKeepScroll; chatKeepScroll = false;
+  var prevTop = box.scrollTop;
+  box.appendChild(chatBubbleEl(m, i));
+  if (keepScroll) box.scrollTop = prevTop; else box.scrollTop = box.scrollHeight;
+}
+
+/* v239: timpa isi satu bubble (dipakai streaming Prime-direct) tanpa
+   rebuild seluruh chat. State ikut diperbarui sehingga renderChat()
+   penuh berikutnya menampilkan teks yang sama. Scroll otomatis hanya
+   bila pembaca sudah di bawah — streaming tidak boleh menarik pembaca
+   yang sedang membaca pesan lama. */
+export function updateChatBubbleText(idx, text) {
+  var msgs = PROJECTS[currentProj] ? PROJECTS[currentProj].chat : mainChatGet();
+  var m = msgs[idx];
+  if (!m) return;
+  m.text = text;
+  var box = document.getElementById("chatBox");
+  if (!box) return;
+  var el = box.querySelector('[data-idx="' + idx + '"]');
+  if (!el) { renderChat(); return; }
+  var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 100;
+  el.replaceWith(chatBubbleEl(m, idx));
+  if (nearBottom) box.scrollTop = box.scrollHeight;
+}
 
 /* Orkestrasi chat: agen penerima tugas otomatis AKTIF di list —
    terpilih + panel Detail-nya tampil bila ia ada di proyek aktif,
@@ -1095,7 +1136,13 @@ export function postChat(who, name, color, text, curation, extra) {
       var _mm = { who: who, name: name, color: color, text: text, curation: !!curation };
       if (extra) Object.assign(_mm, extra);
       _mc.push(_mm);
-      mainChatSave(); renderChat(); return;
+      mainChatSave();
+      // v239: append-only bila kotak sinkron (jumlah anak = pesan lama);
+      // bila tidak sinkron (mis. project baru), render penuh seperti dulu.
+      var _box = document.getElementById("chatBox");
+      if (_box && _box.childElementCount === _mc.length - 1) appendChatBubble(_mm, _mc.length - 1);
+      else renderChat();
+      return _mc.length - 1;
     }
     var _pm = { who: who, name: name, color: color, text: text, curation: !!curation };
     if (extra) Object.assign(_pm, extra);
@@ -1103,11 +1150,18 @@ export function postChat(who, name, color, text, curation, extra) {
     // v159 (perintah Patria 14:32): cap 500 pesan/project DIHAPUS — skema
     // percakapan satu project bisa sangat banyak dan pendalaman tidak
     // boleh berhenti karena terbatasnya logic (menggantikan cap v89).
-    renderChat();
+    var _box2 = document.getElementById("chatBox");
+    if (_box2 && _box2.childElementCount === PROJECTS[currentProj].chat.length - 1) appendChatBubble(_pm, PROJECTS[currentProj].chat.length - 1);
+    else renderChat();
     // v159: simpan tiap bubble project di sini juga (cabang Main chat
     // sudah memanggil mainChatSave). Tanpa ini, bubble hanya hidup di
     // memori sampai ada aksi lain yang kebetulan memanggil saveHomeState.
+    // v239: simpan tetap langsung (tanpa debounce) — debounce 500ms
+    // berisiko kehilangan bubble terakhir bila app dimatikan paksa
+    // (deploy pkill tidak memberi kesempatan flush), sementara biaya
+    // stringify jauh lebih kecil daripada rebuild DOM yang dihapus.
     saveHomeState();
+    return PROJECTS[currentProj].chat.length - 1;
   }
 
 
@@ -3724,5 +3778,5 @@ export function initV5() {
   var ou = document.getElementById("ollamaUrl");
   if (ou) { try { ou.value = localStorage.getItem("minime.ollamaUrl") || "http://127.0.0.1:11434"; } catch (_) { ou.value = "http://127.0.0.1:11434"; } }
 
-  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphNoteDelegationForMember, currentProjectMemberKeys, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphNewProject, markChatApproveDone, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAddAudio, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, setAgentPhase, renderCampaign, renderChat, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, socCheckReminders, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbTaskStart, kbTaskMove, kbTaskDetail, kbTaskDetailClose, kbUpdateTaskOut, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
+  Object.assign(window, {AGENTS, GEDGES, GNODES, LIB, PROJECTS, activateAgent, addKanbanList, addNodeAfter, agentKeyByName, campaignTab, cardComments, colColor, colName, curvePath, detailNote, doSearch, filterAgents, homeNotifyToggle, loadHomeState, naCancel, naCreate, naEffort, naHelpInput, naModelFilter, naModelToggle, naNameInput, naPickColor, naPickModel, naPickShape, naSuggest, ncClose, ncCreate, ncFilter, ncToggle, ncUpdateCreate, plusNewAgent, plusNewChannel, saveHomeState, graphSelect, graphClosePanel, renderGraphPopup, graphRename, graphRedesc, graphSetBranch, graphSetTrig, graphSetTrigNum, graphSetTrigBool, graphSetAmpm, graphToggleDay, graphRunNow, graphDuplicate, graphToggleLock, graphDeleteNode, graphAddNode, graphPrimeFirst, graphSetAgent, graphSetBrief, graphNoteDelegation, graphNoteDelegationForMember, currentProjectMemberKeys, graphEnsureAgentNode, graphBuildProject, detailGoGraph, agentDropToProject, agentDrop, initGraphScheduler, graphZoomSet, graphZoomIn, graphZoomOut, graphFullscreen, graphPanTo, graphNewProject, markChatApproveDone, getTheme, setTheme, applyTheme, saveGraphState, loadGraphState, graphNextRun, graphPrevRun, graphTrigSummary, graphNextText, isAgentDeactivated, libAddImage, libAddScript, libAddAudio, libAll, libConfirmClose, libConfirmDelete, libDelete, libDetail, libDetailClose, libMedia, libRevise, libSetFilter, libRestoreArchived, makeResizer, mediaTab, nodeRects, postChat, renameAgent, renderAddMenu, renderAgents, setAgentPhase, renderCampaign, renderChat, appendChatBubble, updateChatBubbleText, renderDetail, renderGraph, renderKanban, renderLib, renderPlanner, retitleAgent, socNextRepeat, socCheckReminders, runGraphSim, selectAgent, sendChat, setInstructions, showView, switchProject, toggleAddMenu, toggleGroup, toggleSkillList, waAttach, waMic, waToggleAttach, waRemoveAtt, waApplyAttachments, waClearAttachments, waCamShot, waRecToggle, detailModelToggle, detailModelSet, detailEffortToggle, detailEffortSet, detailSkillToggle, detailMemToggle, detailMemAdd, detailMemDel, detailFilesToggle, detailFilesPick, detailFilesAddFiles, detailFilesDel, detailAvatarPick, searchJump, kbOpen, kbOpenPid, kbClose, kbRenderDlg, kbSetProj, kbSave, kbAskDel, kbDel, kbApprove, kbTaskStart, kbTaskMove, kbTaskDetail, kbTaskDetailClose, kbUpdateTaskOut, kbAddComment, kbTeamOpen, kbTeamSave, graphStopSim, graphSelectEdge, graphAskEdgeDel, graphCancelEdgeDel, graphConfirmEdgeDel, ollamaCheck, cpAddLead, cpDelAdded, cpLeadDetail, cpLeadClose, cpLeadSaveStage, cpCopyDraft, cpFuAdd, cpFuToggle, cpFuDel});
 }

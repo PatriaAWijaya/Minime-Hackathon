@@ -48,6 +48,7 @@ async function invokeStub(cmd, args) {
     let text = 'NASKAH-UJI: Hook kopi susu, isi 5W1H, CTA order via chat.';
     if (full.includes('Bagi brief')) text = full.includes('halo') ? '[]' : text;
     if ((req.prompt || '').includes('Jawab satu kata: OK')) text = 'OK';
+    if ((req.prompt || '').includes('PIN-UJI')) text = 'PIN-ANTHROPIC-UJI';
     return { text, input_tokens: 42, output_tokens: 30 };
   }
   throw new Error('unexpected invoke ' + cmd);
@@ -77,8 +78,21 @@ async function fetchStub(url, opts) {
   // ollama primer + fallback) — panggilan QC/revisi tidak ikut gagal,
   // sehingga retry menguji jalur generate saja.
   if (body.includes('GAGAL-SOC') && body.includes('IMAGE-PLAN') && !body.includes('QC hasil kerja agen') && !body.includes('Verdict QC')) { gagalSoc++; if (gagalSoc <= 4) return makeResp({ ok: false, status: 500, jsonData: { error: 'GAGAL-SOC' } }); }
+  // v239: BREAKER-UJI — hanya Meta yang 500 (Gemini/Ollama lolos), agar
+  // breaker bisa dibuktikan: 2 gagal Meta berturut-turut -> call ke-3
+  // melewati Meta tanpa fetch.
+  if (body.includes('BREAKER-UJI') && String(url).includes('api.meta.ai')) return makeResp({ ok: false, status: 500, jsonData: { error: 'BREAKER-UJI' } });
+  // v239: PARALEL-UJI — generasi (bukan split/QC) ditunda 2000ms agar
+  // paralel vs sekuensial bisa dibedakan dari waktu tembok: overhead
+  // DOM sinkron per agen (~250-400ms: renderAgents/Detail/Graph/
+  // Kanban per fase) menenggelamkan delay 400ms, tapi tidak 2000ms.
+  if (body.includes('PARALEL-UJI') && !body.includes('QC hasil kerja agen') && !body.includes('Bagi brief')) await new Promise((r) => setTimeout(r, 2000));
   if (body.includes('Bagi brief')) {
-    content = (body.includes('Halo utama') || body.includes('jadwal posting') || body.includes('halo') || body.includes('brief produk digital')) ? '[]' : (body.includes('Alur 2') ? '[{"agent":"riset","task":"Riset pasar Alur 2"},{"agent":"strategi","task":"Strategi Alur 2"},{"agent":"kreatif","task":"Buat naskah Alur 2"}]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat naskah video kopi susu"}]');
+    if (body.includes('PARALEL-UJI')) {
+      content = '[{"agent":"riset","task":"Riset PARALEL-UJI"},{"agent":"kreatif","task":"Kreatif PARALEL-UJI"}]';
+    } else {
+      content = (body.includes('Halo utama') || body.includes('jadwal posting') || body.includes('halo') || body.includes('brief produk digital')) ? '[]' : (body.includes('Alur 2') ? '[{"agent":"riset","task":"Riset pasar Alur 2"},{"agent":"strategi","task":"Strategi Alur 2"},{"agent":"kreatif","task":"Buat naskah Alur 2"}]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat naskah video kopi susu"}]');
+    }
   } else if (body.includes('LABEL-UJI') && !body.includes('QC hasil kerja agen')) {
     // v203: rencana IMAGE-PLAN berlabel untuk uji urai terstruktur.
     // v235: seksi '## 2.' sesudah Footer menguji parser berhenti di
@@ -110,6 +124,9 @@ async function fetchStub(url, opts) {
   } else if (body.includes('LABEL-REPAIR') && body.includes('IMAGE-PLAN') && !body.includes('QC hasil kerja agen')) {
     // v238: generate pertama tanpa label -> memicu perbaikan format.
     content = 'Strategi konten kopi pagi: konsep umum tanpa label apa pun, hanya paragraf deskriptif panjang tentang kopi dan suasana pagi.';
+  } else if (body.includes('PARALEL-UJI') && !body.includes('QC hasil kerja agen')) {
+    // v239: hasil generasi paralel (sudah ditunda 400ms di atas).
+    content = 'PARALEL-HASIL-UJI';
   } else if (body.includes('QC hasil kerja agen') && body.includes('GATE-UJI')) {
     // v161: QC pertama tugas GATE-UJI = REVISI (memicu 1 putaran revisi),
     // QC berikutnya = LOLOS. Marker membuktikan verdict interim tak bocor.
@@ -162,6 +179,28 @@ async function fetchStub(url, opts) {
       jsonData: {
         content: [{ type: 'text', text: content }],
         usage: { input_tokens: 42, output_tokens: 30 },
+      },
+    });
+  }
+  // v239: Gemini dan Ollama juga memakai bentuk respons sendiri
+  // (candidates[] / message.content). Sebelumnya stub mengembalikan
+  // format OpenAI untuk keduanya sehingga geminiExtract/ollamaExtract
+  // mem-parse teks kosong — tes breaker (Meta dilewati breaker) adalah
+  // yang pertama membutuhkan isi lewat Gemini, dan membongkarnya.
+  if (String(url).includes('generativelanguage')) {
+    return makeResp({
+      jsonData: {
+        candidates: [{ content: { parts: [{ text: content }] } }],
+        usageMetadata: { promptTokenCount: 42, candidatesTokenCount: 30 },
+      },
+    });
+  }
+  if (String(url).includes('11434')) {
+    return makeResp({
+      jsonData: {
+        message: { content },
+        prompt_eval_count: 42,
+        eval_count: 30,
       },
     });
   }
@@ -1188,6 +1227,83 @@ try {
   check('v238: format hilang -> perbaikan menghasilkan prompt', fRep.brief === 'PROMPT-PERBAIKAN-UJI', fRep.brief || '');
   check('v238: caption perbaikan masuk body copy', (fRep.body || '').includes('CAPTION-PERBAIKAN-UJI'), fRep.body || '');
   check('v238: call perbaikan format terpanggil sekali', fetchRecs.slice(fetchBeforeRep).some((r) => (r.body || '').includes('FORMAT-LABEL-WAJIB')), 'calls=' + fetchRecs.slice(fetchBeforeRep).length);
+
+  // v239: fan-out paralel — 2 agen yang masing-masing ditunda 400ms
+  // harus selesai < 700ms (sekuensial lama = 800ms+), laporan tetap
+  // urut tugas (riset sebelum kreatif) walau bubble muncul acak.
+  const pid239 = 'paralel-uji';
+  dom.window.PROJECTS[pid239] = { name: 'Paralel uji', agents: [{ key: 'riset', status: 'Idle', task: '—' }, { key: 'kreatif', status: 'Idle', task: '—' }], chat: [], kanban: [] };
+  dom.window.switchProject(pid239);
+  await tick(100);
+  const tPar = Date.now();
+  await sendMsg('Tolong PARALEL-UJI kopi susu pagi ini');
+  await waitFor(() => countOcc('PARALEL-HASIL-UJI') >= 2, 'paralel hasil', 120);
+  const wallPar = Date.now() - tPar;
+  check('v239: fan-out paralel (2 agen x 2000ms selesai < 4000ms)', wallPar < 4000, 'wall=' + wallPar);
+  await waitFor(() => countOcc('PARALEL-HASIL-UJI') >= 4, 'paralel laporan', 120);
+  const repPar = lastMsg();
+  check('v239: laporan fan-out tetap urut tugas (riset sebelum kreatif)', (repPar?.textContent || '').indexOf('Riset') >= 0 && (repPar?.textContent || '').indexOf('Riset') < (repPar?.textContent || '').indexOf('Kreatif'), (repPar?.textContent || '').slice(0, 200));
+
+  // v239: model pin — Riset di-pin ke Claude: generasi lewat invoke
+  // anthropic_chat, TANPA fetch Meta untuk generasi (QC tetap rantai).
+  const savedRisetModel = dom.window.AGENTS['riset'].model;
+  dom.window.AGENTS['riset'].model = 'Anthropic · claude-sonnet-4-5';
+  dom.window.localStorage.setItem('minime.anthropicKey', 'rig-key');
+  const logPin0 = log.length;
+  const recPin0 = fetchRecs.length;
+  await sendMsg('riset PIN-UJI pasar kopi pagi');
+  await waitFor(() => bodyText().includes('PIN-ANTHROPIC-UJI'), 'pin anthropic', 120);
+  await tick(300);
+  const logPin = log.slice(logPin0);
+  const recPin = fetchRecs.slice(recPin0);
+  check('v239: model pin Claude dipakai (invoke anthropic_chat)', logPin.some((l) => l === 'invoke:anthropic_chat'), logPin.join(' | ').slice(0, 300));
+  check('v239: pin Claude melewati Meta untuk generasi', !recPin.some((f) => f.url.includes('api.meta.ai') && f.body.includes('PIN-UJI') && !f.body.includes('QC hasil kerja agen')), JSON.stringify(recPin.map((f) => f.url)));
+  const pinBubble = [...document.querySelectorAll('#chatBox .msg')].find((m) => (m.textContent || '').includes('PIN-ANTHROPIC-UJI'));
+  check('v239: footer agen memuat total waktu tembok', /total \d+ms/i.test(pinBubble?.textContent || ''), (pinBubble?.textContent || '').slice(-200));
+  dom.window.AGENTS['riset'].model = savedRisetModel;
+  dom.window.localStorage.removeItem('minime.anthropicKey');
+
+  // v239: postChat append-only — node pertama tidak dibangun ulang,
+  // jumlah anak +2; kotak yang dirusak jatuh ke render penuh.
+  const box239 = document.getElementById('chatBox');
+  const first239 = box239.firstChild;
+  const n239 = box239.childElementCount;
+  dom.window.postChat('prime', 'Prime Agent', '#EB87B4', 'APPEND-UJI-1');
+  dom.window.postChat('prime', 'Prime Agent', '#EB87B4', 'APPEND-UJI-2');
+  check('v239: postChat append-only (node pertama utuh)', box239.firstChild === first239, '');
+  check('v239: postChat append-only (jumlah anak +2)', box239.childElementCount === n239 + 2, 'anak=' + box239.childElementCount + ' n0=' + n239);
+  box239.removeChild(box239.firstChild);
+  dom.window.postChat('prime', 'Prime Agent', '#EB87B4', 'APPEND-UJI-3');
+  check('v239: kotak tak sinkron -> render penuh memulihkan jumlah', box239.childElementCount === dom.window.PROJECTS[pid239].chat.length, 'anak=' + box239.childElementCount + ' chat=' + dom.window.PROJECTS[pid239].chat.length);
+
+  // v239: streaming SSE Meta mengalir ke bubble Prime-direct.
+  const fetchAsli239 = dom.window.fetch;
+  dom.window.fetch = async (url, opts) => {
+    if (String(url).includes('api.meta.ai')) {
+      return new Response('data: {"choices":[{"delta":{"content":"STREAM-"}}]}\n\ndata: {"choices":[{"delta":{"content":"HASIL-UJI"}}]}\n\ndata: [DONE]\n\n', { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+    }
+    return fetchAsli239(url, opts);
+  };
+  await sendMsg('Halo utama STREAM-UJI');
+  await waitFor(() => bodyText().includes('STREAM-HASIL-UJI'), 'stream hasil', 120);
+  await tick(300);
+  check('v239: streaming SSE Meta mengalir ke bubble', bodyText().includes('STREAM-HASIL-UJI'), '');
+  dom.window.fetch = fetchAsli239;
+
+  // v239: circuit breaker — HARUS TERAKHIR (breaker Meta yang trip di
+  // sini bertahan 5 menit di proses rig ini). Call 1: Meta gagal 2x
+  // (generasi + QC) -> breaker trip. Call 2: tanpa fetch api.meta.ai.
+  const curBr0 = document.querySelectorAll('#chatBox .msg.curation').length;
+  await sendMsg('riset BREAKER-UJI pasar kopi');
+  await waitFor(() => document.querySelectorAll('#chatBox .msg.curation').length > curBr0, 'breaker call1 verdict', 120);
+  await tick(300);
+  const naskahBr0 = countOcc('NASKAH-UJI');
+  const recBr0 = fetchRecs.length;
+  await sendMsg('riset BREAKER-UJI lagi');
+  await waitFor(() => countOcc('NASKAH-UJI') > naskahBr0, 'breaker call2', 120);
+  await tick(300);
+  const recBr = fetchRecs.slice(recBr0);
+  check('v239: breaker melewati Meta setelah 2 gagal (call ke-2 tanpa fetch api.meta.ai)', !recBr.some((f) => f.url.includes('api.meta.ai')), JSON.stringify(recBr.map((f) => f.url)));
 
 } catch (e) {
   // eslint-disable-next-line no-console
