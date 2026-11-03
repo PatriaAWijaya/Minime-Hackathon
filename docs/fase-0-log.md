@@ -2529,6 +2529,14 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v245 — Cleanup audit: hapus dead export socConnectedChannels (perintah Patria 3 Nov 22:28)
+
+- Latar: audit v6 (3 Nov 22:23–22:26) menemukan dead export `socConnectedChannels` (social.js:283) — didefinisikan, tidak pernah dipanggil di file mana pun (grep seluruh app/src + tests hanya menemukan baris definisi). 3 Nov 22:28 Patria perintahkan hapus "jika tidak berguna dan tidak berpengaruh pada bundle apapun".
+- Penghapusan: 6 baris fungsi dihapus (app/src/lib/social.js); tidak ada referensi tersisa (grep pasca-hapus kosong). Sesuai aturan house "no dead code shipped".
+- Bukti nol efek bundle: rebuild pasca-hapus menghasilkan hash dist IDENTIK dengan pra-hapus (index-B87wpdVi.js + index-9oz3-U-r.css) — Rollup sudah membuang export tak terpakai itu; penghapusan tidak mengubah satu byte pun di bundle. svelte-check tetap 0 error / 21 warning; i18n tetap 1293.
+- Loop 14 rig v245 (22:28–22:31): 14/14 exit=0, tanpa FAIL. Gate v245: 9/9.
+- Push: kode lokal d073b03 ↔ remote 87573a8 (tree identik, parent terverifikasi ebdab2d = log v244). DEPLOY DITAHAN (sama seperti v244: menunggu konfirmasi posting YoKafe + API key ImgBB diisi Patria sesudah deploy). v245 tidak mengubah perilaku app — deploy berikutnya membawa v244+v245 sekaligus.
+
 ## v244 — Host unggah Planner Imgur → ImgBB (vonis Patria 3 Nov 21:00: "Pakai ImgBB")
 - Latar: v243 (Imgur otomatis) selesai dibangun + gate 9/9 + ter-push, tapi TIDAK PERNAH deploy (ditahan: dialog posting YoKafe belum aman). 3 Nov 20:42–20:53 terbukti pendaftaran aplikasi Imgur tidak tersedia: settings/apps kosong tanpa formulir, imgur.com/register dan api.imgur.com/oauth2/addclient me-redirect ke beranda — Client-ID Imgur tidak bisa diperoleh, jadi fitur otomatis v243 tidak bisa aktif. 3 Nov 20:55 Patria perintahkan cek host lain; riset menghasilkan ImgBB sebagai rekomendasi utama (API key, permanen default, direct link i.ibb.co, 32 MB) + Catbox sebagai alternatif tanpa kunci; 3 Nov 21:00 Patria vonis "Pakai ImgBB".
 - Verifikasi jalur kunci (live, hanya baca, 3 Nov 21:01): imgbb.com menampilkan tombol Create account; api.imgbb.com menampilkan tombol Get API key; tanpa redirect. Berbeda dari Imgur — jalur aktivasi TERBUKA.
