@@ -1316,6 +1316,7 @@
           <div id="img-variants" class="mediagrid"></div>
           <h4>{t('img.gallery', lang)}</h4>
           <div id="img-gallery" class="mediagrid"></div>
+          <div id="imgZoomDlg" style="display:none"></div>
           </div>
           </div>
         </div>

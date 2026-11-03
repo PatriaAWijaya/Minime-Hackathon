@@ -172,6 +172,18 @@ try {
   document.getElementById('img-generate').click();
   await waitFor(() => document.querySelectorAll('#img-variants img').length === 2, '2 varian tampil', 120);
   check('2 varian tampil', document.querySelectorAll('#img-variants img').length === 2);
+  // v241: ketuk 2x varian -> dialog perbesar tampil dengan gambar yang sama;
+  // klik di dialog menutupnya (delegasi dblclick, bukan inline handler).
+  const img241 = document.querySelector('#img-variants img');
+  const src241 = img241 ? img241.getAttribute('src') || '' : '';
+  img241.dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true }));
+  await tick(100);
+  const dlg241 = document.getElementById('imgZoomDlg');
+  check('v241: dblclick varian membuka perbesar', !!dlg241 && dlg241.style.display === 'flex' && (dlg241.querySelector('img')?.getAttribute('src') || '') === src241, dlg241 ? dlg241.style.display + ' ' + (dlg241.querySelector('img')?.getAttribute('src') || '').slice(0, 60) : 'tidak ada dialog');
+  check('v241: title varian memuat petunjuk ketuk 2x', (img241.getAttribute('title') || '').includes('Ketuk 2x'), img241.getAttribute('title') || '');
+  dlg241.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+  await tick(100);
+  check('v241: klik dialog menutup perbesar', dlg241.style.display === 'none', dlg241.style.display);
   check('v217: nota selesai tanpa Rp (biaya pindah ke Billing)', (document.getElementById('img-status')?.textContent || '').length > 0 && !(document.getElementById('img-status')?.textContent || '').includes('Rp'), document.getElementById('img-status')?.textContent || '');
   const spend = JSON.parse(store.get('minime.imageSpend') || '{}');
   check('spend tercatat 2 gambar', spend.images === 2 && spend.usd === 0.02, JSON.stringify(spend));

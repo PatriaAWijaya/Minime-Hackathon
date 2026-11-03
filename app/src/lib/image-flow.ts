@@ -139,16 +139,58 @@ let variants: Variant[] = [];
 let genBrief = '';
 
 function variantCard(v: Variant, i: number): string {
-  return `<div class="img-card"><img src="${v.url}" alt=""${v.shot ? ` title="${esc(v.shot)}"` : ''}><div class="se-note">${esc(v.name)}${v.label ? ' · ' + esc(v.label) : ''}</div>`
+  // v241: title selalu memuat petunjuk ketuk 2x (discoverability zoom).
+  const hint = tr('img.zoom.hint');
+  return `<div class="img-card"><img src="${v.url}" alt="" title="${esc(v.shot ? v.shot + ' — ' + hint : hint)}"><div class="se-note">${esc(v.name)}${v.label ? ' · ' + esc(v.label) : ''}</div>`
     + `<div class="img-canva-row"><button class="se-btn2" data-img-save="${i}">${esc(tr('img.save'))}</button> `
     + `<button class="se-btn2" data-img-canva="${i}">${esc(tr('img.canva.edit'))}</button> `
     + `<input type="file" accept="image/*" data-img-canvafile="${i}"> `
     + `<button class="se-btn2" data-img-canvaup="${i}">${esc(tr('img.canva.import'))}</button></div></div>`;
 }
 
+// v241: dialog perbesar hasil generate — ketuk 2x (dblclick) pada gambar
+// varian membuka gambar besar; klik apa pun di dialog / Esc menutup.
+// Delegasi (bukan inline handler): pelajaran v91/v97 — handler inline di
+// konten innerHTML MATI di WebView live Tauri padahal jsdom jalan.
+// Guard IMG saja: tombol Simpan/Canva di dalam kartu tidak memicu zoom.
+let zoomWired = false;
+let zoomKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+function openImgZoom(url: string, name: string): void {
+  const d = el('imgZoomDlg');
+  if (!d) return;
+  if (!zoomWired) {
+    zoomWired = true;
+    d.addEventListener('click', () => closeImgZoom());
+  }
+  d.innerHTML = `<img src="${esc(url)}" alt=""><div class="img-zoom-name">${esc(name)}</div><button class="img-zoom-x" aria-label="✕">✕</button>`;
+  d.style.display = 'flex';
+  if (zoomKeyHandler) document.removeEventListener('keydown', zoomKeyHandler);
+  zoomKeyHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') closeImgZoom(); };
+  document.addEventListener('keydown', zoomKeyHandler);
+}
+function closeImgZoom(): void {
+  const d = el('imgZoomDlg');
+  if (d) { d.style.display = 'none'; d.innerHTML = ''; }
+  if (zoomKeyHandler) { document.removeEventListener('keydown', zoomKeyHandler); zoomKeyHandler = null; }
+}
+let zoomVariantsWired = false;
+function wireZoomVariants(): void {
+  const g = el('img-variants');
+  if (!g || zoomVariantsWired) return;
+  zoomVariantsWired = true;
+  g.addEventListener('dblclick', (e) => {
+    const t = e.target as HTMLElement | null;
+    if (!t || t.tagName !== 'IMG') return;
+    const card = t.closest('.img-card');
+    const name = card?.querySelector('.se-note')?.textContent || '';
+    openImgZoom((t as HTMLImageElement).src, name);
+  });
+}
+
 function renderVariants(): void {
   const g = el('img-variants');
   if (!g) return;
+  wireZoomVariants();
   g.innerHTML = variants.map(variantCard).join('');
   g.querySelectorAll('[data-img-save]').forEach((b) => {
     b.addEventListener('click', () => void saveVariant(Number((b as HTMLElement).dataset.imgSave)));
