@@ -2540,7 +2540,7 @@ Isi:
 - Penomoran: pekerjaan ini mengambil nomor v240 (laporan terbaru Patria, didahulukan); perluasan aturan tombol ke jalur utama yang sebelumnya memegang slot v240 GESER ke v241 dan TETAP DITAHAN menunggu vonis uji live v237/v238 dari Patria.
 
 SHA: kode lokal 1c88a1c ↔ remote 0c11dcc (tree identik).
-LIVE <TANGGAL> WIB: deploy mh-build240.sh — MH_BUILD240_OK; HEAD MacBook <LOG_SHA> (commit log); PID <PID>; md5 dist JS/CSS lokal == MacBook. App LIVE = v240. Konfirmasi live Patria untuk v240 BELUM ada (uji live yang disarankan: kirim brief fan-out, lalu saat agen-agen masih bekerja, scroll ke atas membaca hasil yang sudah ada — posisi harus bertahan, tidak ditarik ke bawah oleh bubble baru; bila sudah di bawah, bubble baru tetap mengikuti live).
+LIVE 3 Nov ~19:01 WIB: deploy mh-build240.sh — MH_BUILD240_OK; HEAD MacBook 82108c0 (commit log); PID 28440; md5 dist JS/CSS lokal == MacBook. App LIVE = v240. Konfirmasi live Patria untuk v240 BELUM ada (uji live yang disarankan: kirim brief fan-out, lalu saat agen-agen masih bekerja, scroll ke atas membaca hasil yang sudah ada — posisi harus bertahan, tidak ditarik ke bawah oleh bubble baru; bila sudah di bawah, bubble baru tetap mengikuti live).
 
 ## v239 — Percepatan pemrosesan jawaban: streaming + fan-out paralel + hormat model pin + circuit breaker + render append-only + footer waktu tembok (perintah Patria 3 Nov 17:53 "Bangun semua rekomendasi 1-6 sekaligus", atas diagnosis audit 16:50 "cek semua lapisan, kenapa prosesing jawaban terasa lebih lambat dengan model sekelas Sonnet sekalipun")
 
