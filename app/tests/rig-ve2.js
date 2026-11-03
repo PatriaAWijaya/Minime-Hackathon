@@ -136,7 +136,7 @@ try {
   // 1. Seed + toolbar + output.
   check('toolbar ve2 ada (4 tombol)', ['ve2BtnCut', 've2BtnText', 've2BtnSub', 've2BtnTrans'].every((id) => !!document.getElementById(id)));
   check('v146: fixture 8 klip terrender', clips().length === 8, clips().length);
-  check('output default minime-ve2.mp4', document.getElementById('ve2Out')?.value === '/Users/mac/Movies/minime-ve2.mp4', document.getElementById('ve2Out')?.value);
+  check('output default minime-ve2.mp4', document.getElementById('ve2OutI')?.value === '/Users/mac/Movies/minime-ve2.mp4', document.getElementById('ve2OutI')?.value);
 
   // 2. Klik klip -> inspector.
   document.querySelector('[data-ve2-clip="fix1"]').click();
@@ -184,13 +184,13 @@ try {
   check('transisi: effect fix2 = fade tersimpan', ve2State(store).clips?.find((c) => c.id === 'fix2')?.effect === 'fade');
 
   // 8. Simpan proyek.
-  document.getElementById('ve2BtnSave').click();
+  document.getElementById('ve2BtnSaveI').click();
   await tick(100);
   check('simpan proyek: status tersimpan', status().includes('tersimpan'), status());
 
   // 9. Ekspor tanpa src ditolak jujur.
   invokeLog.length = 0;
-  document.getElementById('ve2BtnExport').click();
+  document.getElementById('ve2BtnExportI').click();
   await tick(200);
   check('ekspor tanpa src ditolak', status().includes('Tidak ada klip video ber-src'), status());
   check('ekspor tanpa src tidak memanggil render', !invokeLog.includes('invoke:video_render'), invokeLog.join(','));
@@ -211,7 +211,7 @@ try {
 
   // 11. Ekspor ber-src + fade: 2x render + frame + status.
   invokeLog.length = 0;
-  document.getElementById('ve2BtnExport').click();
+  document.getElementById('ve2BtnExportI').click();
   await tick(500);
   check('ekspor memanggil video_render 2x (base + fade)', invokeLog.filter((x) => x === 'invoke:video_render').length === 2, invokeLog.join(','));
   check('ekspor memanggil video_qc + video_capture', invokeLog.includes('invoke:video_qc') && invokeLog.includes('invoke:video_capture'), invokeLog.join(','));
@@ -251,7 +251,7 @@ try {
   check('v182: klik + aset gambar -> klip B-Roll 5 dtk', !!imgClip && imgClip.track === 'B-Roll' && imgClip.dur === 5, JSON.stringify(imgClip));
   check('v182: klip 11 -> 12', clips().length === 12, clips().length);
   renderArgsLog.length = 0;
-  document.getElementById('ve2BtnExport').click();
+  document.getElementById('ve2BtnExportI').click();
   await tick(500);
   const baseArgs = renderArgsLog[0] || [];
   const loopIdx = baseArgs.indexOf('-loop');
@@ -494,7 +494,7 @@ try {
   const insp25 = doc6.querySelector('.ve2-inspector');
   check('v193: Inspector kosong menampilkan tombol proyek', !!insp25.querySelector('#ve2BtnSaveI') && !!insp25.querySelector('#ve2BtnExportI') && !!insp25.querySelector('#ve2BtnPreviewI') && !!insp25.querySelector('#ve2OutI'), 'saveI:' + !!insp25.querySelector('#ve2BtnSaveI'));
   check('v193: placeholder pilih-klip hilang dari Inspector', !insp25.querySelector('.se-note'), 'se-note:' + !!insp25.querySelector('.se-note'));
-  check('v193: tombol proyek atas tetap ada tepat satu', doc6.querySelectorAll('#ve2BtnSave').length === 1 && doc6.querySelectorAll('#ve2BtnExport').length === 1 && doc6.querySelectorAll('#ve2BtnPreview').length === 1, 'top:' + doc6.querySelectorAll('#ve2BtnSave').length);
+  check('v217: toolbar atas hilang, tombol Inspector tepat satu', doc6.querySelectorAll('#ve2BtnSave').length === 0 && doc6.querySelectorAll('#ve2BtnExport').length === 0 && doc6.querySelectorAll('#ve2BtnPreview').length === 0 && doc6.querySelectorAll('#ve2BtnSaveI').length === 1 && doc6.querySelectorAll('#ve2BtnExportI').length === 1 && doc6.querySelectorAll('#ve2BtnPreviewI').length === 1, 'top:' + doc6.querySelectorAll('#ve2BtnSave').length + ' I:' + doc6.querySelectorAll('#ve2BtnSaveI').length);
   check('v193: File output Inspector terikat nilai default', doc6.getElementById('ve2OutI').value === '/Users/mac/Movies/minime-ve2.mp4', doc6.getElementById('ve2OutI').value);
   doc6.getElementById('ve2BtnSaveI').click();
   await tick(100);
@@ -655,6 +655,37 @@ try {
   check('v213: ganti picker -> kotak jadi 16:9', boxStyleV2.includes('16/9'), boxStyleV2);
   const savedV = JSON.parse(storeV.get('minime.ve2') || '{}');
   check('v213: rasio tersimpan di state ve2', savedV.ratio === '16:9', JSON.stringify(savedV.ratio));
+
+  // §v217: toolbar atas hilang + acts selalu tampil + urutan aset + spend notes hilang.
+  const storeW = new Map();
+  storeW.set('minime.cleaned-v84', '1');
+  storeW.set('minime.cleaned-graph-v88', '1');
+  storeW.set('minime.videoSpend', JSON.stringify({ videos: 2, usd: 2.02, idr: 36659 }));
+  storeW.set('minime.ve2', JSON.stringify({ clips: [
+    { id: 'w1', name: 'Klip uji', track: 'Video', start: 0, dur: 8, src: '', effect: 'none' },
+  ], assets: [
+    { id: 'wa1', name: 'Aset uji', icon: '🎬', kind: 'Video', src: '', duration: 0 },
+  ], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1 }));
+  const domW = makeDom(storeW);
+  const docW = domW.window.document;
+  await waitFor(() => docW.querySelector('[data-view="media"]'), 'mountW rail media', 100);
+  docW.querySelector('[data-view="media"]').click();
+  await tick(100);
+  docW.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  check('v217: toolbar atas hilang total', !docW.getElementById('ve2BtnSave') && !docW.getElementById('ve2BtnExport') && !docW.getElementById('ve2BtnPreview') && !docW.getElementById('ve2Out'), '');
+  check('v217: tombol Inspector tepat satu (tanpa klip terpilih)', docW.querySelectorAll('#ve2BtnSaveI').length === 1 && docW.querySelectorAll('#ve2BtnExportI').length === 1 && docW.querySelectorAll('#ve2BtnPreviewI').length === 1, 'I:' + docW.querySelectorAll('#ve2BtnSaveI').length);
+  check('v217: se-note spend Video hilang walau spend > 0', ![...docW.querySelectorAll('p.se-note')].some((el) => /\d+ klip · \$/.test(el.textContent || '')), [...docW.querySelectorAll('p.se-note')].map((el) => (el.textContent || '').slice(0, 30)).join('|'));
+  const addRowW = docW.getElementById('ve2NewSrc')?.closest('div');
+  const gridW = docW.querySelector('.ve2-asset-grid');
+  check('v217: baris tambah aset sebelum grid thumbnail', !!addRowW && !!gridW && (addRowW.compareDocumentPosition(gridW) & 4) !== 0, addRowW ? 'row-ok' : 'no-row');
+  docW.querySelector('[data-ve2-clip="w1"]').click();
+  await tick(100);
+  check('v217: acts Inspector tetap tampil saat klip terpilih', !!docW.getElementById('ve2BtnSaveI') && !!docW.getElementById('ve2BtnExportI') && !!docW.getElementById('ve2BtnPreviewI') && !!docW.getElementById('ve2OutI'), 'I:' + !!docW.getElementById('ve2BtnSaveI'));
+  check('v217: note Video yang dihapus hilang (cine + omni dur/audio/price)', ![...docW.querySelectorAll('p.se-note')].some((el) => ['Ketuk beat', 'Durasi ditentukan model', 'Audio dibuat otomatis', 'Perkiraan: maks'].some((t) => (el.textContent || '').includes(t))), '');
+  check('v217: label model 1.1-flash hilang', !(docW.body.textContent || '').includes('Gemini Omni 1.1-flash'), '');
+  check('v217: tombol Snap berlabel Snap + ikon svg monochrome', (docW.getElementById('ve2BtnSnap')?.textContent || '').includes('Snap') && !!docW.getElementById('ve2BtnSnap')?.querySelector('svg'), docW.getElementById('ve2BtnSnap')?.textContent || '');
+
 
 } catch (e) {
   // eslint-disable-next-line no-console

@@ -172,7 +172,7 @@ try {
   document.getElementById('img-generate').click();
   await waitFor(() => document.querySelectorAll('#img-variants img').length === 2, '2 varian tampil', 120);
   check('2 varian tampil', document.querySelectorAll('#img-variants img').length === 2);
-  check('biaya generate tampil (Rp)', (document.getElementById('img-status')?.textContent || '').includes('Rp'));
+  check('v217: nota selesai tanpa Rp (biaya pindah ke Billing)', (document.getElementById('img-status')?.textContent || '').length > 0 && !(document.getElementById('img-status')?.textContent || '').includes('Rp'), document.getElementById('img-status')?.textContent || '');
   const spend = JSON.parse(store.get('minime.imageSpend') || '{}');
   check('spend tercatat 2 gambar', spend.images === 2 && spend.usd === 0.02, JSON.stringify(spend));
 
@@ -513,6 +513,13 @@ try {
   await tick(100);
   await setSel('img-output', 'poster');
   check('v173: toggle template sembunyi di Poster', disp('img-tpl-wrap') === 'none', disp('img-tpl-wrap'));
+
+  // §v217: note provider + baris biaya total hilang dari tab Image.
+  document.getElementById('ms-tabbtn-image')?.click();
+  await tick(100);
+  check('v217: grup provider tanpa note', !document.querySelector('#img-provider')?.closest('.se-group')?.querySelector('.se-note'), '');
+  check('v217: elemen #img-cost hilang', !document.getElementById('img-cost'), '');
+
 
 } catch (e) {
   // eslint-disable-next-line no-console

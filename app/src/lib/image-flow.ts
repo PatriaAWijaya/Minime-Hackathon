@@ -24,7 +24,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { tr } from './i18n.js';
-import { fmtIdrNum, recordLiveCost } from './cost.js';
+import { recordLiveCost } from './cost.js';
 import { readKeys } from './chat.js';
 import { libAddImage, libAddScript, libPairCaption } from './v5logic.js';
 import { ModelRouter, defaultRouterConfig } from '../../../src/router';
@@ -125,15 +125,6 @@ function renderPreview(): void {
   if (p) p.textContent = state.brief.trim() ? tr('img.preview') + ': ' + sentPrompt() : '';
 }
 
-function renderCost(): void {
-  const c = el('img-cost');
-  const s = readImgSpend();
-  if (c) {
-    c.textContent = s.images > 0
-      ? tr('img.cost.total', { n: s.images, usd: s.usd.toFixed(2), idr: fmtIdrNum(s.idr) })
-      : '';
-  }
-}
 
 type Variant = { b64: string; url: string; name: string; label: string; prompt: string; shot: string };
 let variants: Variant[] = [];
@@ -497,9 +488,7 @@ async function generate(): Promise<void> {
     const usd = variants.length * pricePer;
     addImgSpend(variants.length, pricePer);
     renderVariants();
-    renderCost();
-    setNote(tr('img.status.done', { n: variants.length })
-      + ' ' + tr('img.cost', { n: variants.length, usd: usd.toFixed(2), idr: fmtIdrNum(Math.round(usd * IMG_USD_RATE)) }));
+    setNote(tr('img.status.done', { n: variants.length }));
   } catch (e) {
     setNote(tr('img.err.api') + ' ' + (e instanceof Error ? e.message : String(e)));
   } finally {
@@ -751,7 +740,6 @@ export function initImageFlow(): void {
   syncForm();
   renderPreview();
   renderBulkTabs();
-  renderCost();
   void renderGallery();
   bind<HTMLTextAreaElement>('img-brief', 'input', (e) => { state.brief = e.value; if (state.bulk) state.bulk[state.bulkActive] = e.value; saveState(); renderPreview(); });
   bind<HTMLSelectElement>('img-ratio', 'change', (e) => { state.ratio = e.value; saveState(); });
@@ -843,7 +831,6 @@ export function initImageFlow(): void {
 export function imgRefreshUI(): void {
   syncForm();
   renderPreview();
-  renderCost();
   setNote('');
   void renderGallery();
 }

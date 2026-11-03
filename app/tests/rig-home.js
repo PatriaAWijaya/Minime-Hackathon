@@ -455,6 +455,29 @@ try {
   check('v200: kartu kedua gemini-3.1-flash-lite', billCards.length === 2 && (billCards[1].querySelector('b') ? billCards[1].querySelector('b').textContent : '') === 'gemini-3.1-flash-lite', billCards.length > 1 ? billCards[1].textContent.slice(0, 40) : 'no-card');
   check('v200: grid kartu ada di panel Pemakaian', !!document.querySelector('#view-billing .bill-grid'), '');
 
+  // 24. v217: heading Batch hilang + Billing rumah tunggal biaya (kartu per sumber + Pemakaian masukkan Wan).
+  const storeW = new Map();
+  storeW.set('minime.cleaned-v84', '1');
+  storeW.set('minime.cleaned-graph-v88', '1');
+  storeW.set('minime.classaiSpend', JSON.stringify({ videos: 1, usd: 4.62, idr: 83800 }));
+  const domW = makeDom(storeW);
+  const docW = domW.window.document;
+  for (let i = 0; i < 60 && !docW.querySelector('button[data-view="billing"]'); i++) await tick(50);
+  docW.querySelector('button[data-view="planner"]').click();
+  await tick(100);
+  check('v217: header Planner tampil di puncak Planner', [...docW.querySelectorAll('#view-planner h3')].some((h) => (h.textContent || '').trim() === 'Planner'), [...docW.querySelectorAll('#view-planner h3')].map((h) => (h.textContent || '').trim()).join('|'));
+  check('v217: Billing punya 3 kartu seksi (Pemakaian + Kredit + Batas)', ['Pemakaian tercatat', 'Kredit & pembayaran', 'Batas belanja'].every((t) => [...docW.querySelectorAll('#view-billing h3')].some((h) => (h.textContent || '').trim() === t)), [...docW.querySelectorAll('#view-billing h3')].map((h) => (h.textContent || '').trim()).join('|'));
+  docW.querySelector('button[data-view="billing"]').click();
+  await tick(100);
+  const cardsW = [...docW.querySelectorAll('#view-billing .bill-card')];
+  check('v217: kartu Billing = 2 ledger + 1 Wan', cardsW.length === 3, String(cardsW.length));
+  check('v217: kartu Wan 3.0 ada', cardsW.some((c) => (c.querySelector('b')?.textContent || '') === 'Wan 3.0'), cardsW.map((c) => c.querySelector('b')?.textContent || '').join(','));
+  const usedDiv = [...docW.querySelectorAll('#view-billing div')].find((d) => (d.textContent || '').trim().startsWith('Pemakaian:'));
+  const usedMatch = (usedDiv?.textContent || '').match(/\$([\d.]+)/);
+  const usedVal = usedMatch ? parseFloat(usedMatch[1]) : NaN;
+  check('v217: Pemakaian memasukkan Wan (0.00295 + 4.62)', Math.abs(usedVal - 4.62295) < 0.001, usedDiv?.textContent?.slice(0, 60) || '');
+
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-home exception :: ' + (e && e.stack ? e.stack : e));

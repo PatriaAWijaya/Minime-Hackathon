@@ -1180,7 +1180,7 @@
           </select></label></div>
           <div class="se-group"><label>{t('img.provider', lang)}<select id="img-provider" class="se-field">
             <option value="meta">{t('img.provider.meta', lang)}</option><option value="google">{t('img.provider.google', lang)}</option>
-          </select></label><p class="se-note">{t('img.provider.note', lang)}</p></div>
+          </select></label></div>
           <div class="se-group"><label>{t('img.output', lang)}<select id="img-output" class="se-field">
             <option value="poster">{t('img.output.poster', lang)}</option><option value="storyboard">{t('img.output.storyboard', lang)}</option><option value="carousel">{t('img.output.carousel', lang)}</option>
           </select></label></div>
@@ -1203,7 +1203,6 @@
           <div id="img-preview" class="se-note"></div>
           <div class="se-group"><button id="img-generate" class="se-btn">{t('img.generate', lang)}</button> <button id="img-approve" class="se-btn2">{t('img.approve', lang)}</button> <button id="img-load-script" class="se-btn2">{t('img.loadscript', lang)}</button> <button id="img-clear" class="se-btn2">{t('img.clear', lang)}</button></div>
           <div id="img-status" class="se-note"></div>
-          <div id="img-cost" class="se-note"></div>
           <div id="img-loaded" class="img-card" style="display:none"></div>
           <div id="img-variants" class="mediagrid"></div>
           <h4>{t('img.gallery', lang)}</h4>
@@ -1263,9 +1262,8 @@
           <div class="ms-card">
 <div class="se-group"><h4>{t('vg.title', lang)}</h4></div>
 <div class="vg-card">
-<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><label>{t('vg2.model', lang)} <select id="vg-model" bind:value={vgModel}><option value="omni">{t('vg2.model.omni', lang)}</option><option value="wan">{t('vg2.model.wan', lang)}</option><option value="hyperframes">{t('vg2.model.hf', lang)}</option></select></label>{#if vgModel === 'omni'}<span class="se-note" style="font-weight:700">{t('vg2.omni', lang)}</span>{/if}</div>
+<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><label>{t('vg2.model', lang)} <select id="vg-model" bind:value={vgModel}><option value="omni">{t('vg2.model.omni', lang)}</option><option value="wan">{t('vg2.model.wan', lang)}</option><option value="hyperframes">{t('vg2.model.hf', lang)}</option></select></label></div>
 <div class="se-group"><h4>{t('vg2.cine.title', lang)}</h4>
-<p class="se-note">{t('vg2.cine.note', lang)}</p>
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn btn-sm" data-vg-cine="1" onclick={() => vgCineLoadTitle()}>{t('vg2.cine.titlecard', lang)}</button>{#each CINE_BEATS as b}<button class="btn btn-sm" data-vg-cine={b.n} onclick={() => vgCineLoadBeat(b)}>{t('vg.tpl.beat', lang)} {b.n}</button>{/each}</div></div>
 {#if vgModel === 'omni'}
 <div class="vg-tabs"><button class="vg-tab {vgTab === 'prompt' ? 'vg-tab-sel' : ''}" data-vg-tab="prompt" onclick={() => { vgTab = 'prompt'; }}>{t('vg2.tab.prompt', lang)}</button><button class="vg-tab {vgTab === 'refs' ? 'vg-tab-sel' : ''}" data-vg-tab="refs" onclick={() => { vgTab = 'refs'; }}>{t('vg2.tab.refs', lang)}</button><button class="vg-tab {vgTab === 'frames' ? 'vg-tab-sel' : ''}" data-vg-tab="frames" onclick={() => { vgTab = 'frames'; }}>{t('vg2.tab.frames', lang)}</button></div>
@@ -1295,12 +1293,8 @@
 <label>{t('vg.aspect', lang)} <select id="vg-aspect" bind:value={vgAspect}><option value="9:16">9:16</option><option value="16:9">16:9</option></select></label>
 <label>{t('vg.res', lang)} <select id="vg-res" bind:value={vgRes}><option value="360p">360p</option><option value="720p">720p</option><option value="1080p">1080p</option><option value="4k">4K</option></select></label>
 </div>
-<p class="se-note">{t('omni.dur', lang)}</p>
-<p class="se-note">{t('omni.audio', lang)}</p>
-<p class="se-note">{t('omni.price', lang, { usd: omniPriceUsd(vgRes, 10).toFixed(2), idr: Math.round(omniPriceUsd(vgRes, 10) * 18148).toLocaleString('id-ID'), res: vgRes })}</p>
 <button id="vg-generate" class="btn btn-primary" disabled={vgBusy} onclick={() => vgGenerate()}>{vgBusy ? t('vg.generating', lang) : t('vg.generate', lang)}</button> <button id="vg-add-timeline" class="btn btn-sm" disabled={!vgLastPath} onclick={() => vgAddToTimeline()}>{t('vg.add_timeline', lang)}</button>
 <p id="vg-status" class="se-note" style="white-space:pre-line">{vgStatus}</p>
-{#if videoSpend.videos > 0}<p class="se-note">{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</p>{/if}
 {:else if vgModel === 'wan'}
 <label>{t('vg.prompt', lang)}<textarea id="vg-wan-prompt" rows="3" class="se-field" bind:value={vgPrompt}></textarea></label>
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button id="vg-wan-prompt-clear" class="btn btn-sm" onclick={() => { vgPrompt = ''; vgStatus = ''; }}>{t('img.clear', lang)}</button></div>
@@ -1313,7 +1307,6 @@
 <p class="se-note">{t('vg.wan.price', lang, { usd: wanPriceUsd(vgWanRes, vgWanSec).toFixed(2), idr: Math.round(wanPriceUsd(vgWanRes, vgWanSec) * 18148).toLocaleString('id-ID'), res: vgWanRes, s: vgWanSec })}</p>
 <button id="vg-wan-generate" class="btn btn-primary" disabled={vgBusy} onclick={() => vgWanGenerate()}>{vgBusy ? t('vg.generating', lang) : t('vg.generate', lang)}</button> <button id="vg-wan-add-timeline" class="btn btn-sm" disabled={!vgWanLastPath} onclick={() => vgWanAddToTimeline()}>{t('vg.add_timeline', lang)}</button>
 <p id="vg-wan-status" class="se-note" style="white-space:pre-line">{vgStatus}</p>
-{#if classaiSpend.videos > 0}<p class="se-note">{t('vg.wan.spend', lang, { n: classaiSpend.videos })} · ${classaiSpend.usd.toFixed(2)} ≈ Rp{classaiSpend.idr.toLocaleString('id-ID')}</p>{/if}
 {:else}
 <div class="se-group"><h4>{t('hf.title', lang)}</h4>
 <div class="se-group"><label>{t('hf.desc', lang)}<textarea id="hf-desc" rows="3" class="se-field" bind:value={hfDesc}></textarea></label></div>
@@ -1333,12 +1326,6 @@
 <div class="se-group"><label>{t('img.plan', lang)}<textarea id="ve-plan" rows="2" class="se-field" value={ve2Plan} oninput={(e) => { ve2Plan = (e.target as HTMLTextAreaElement).value; ve2SaveState(); }}></textarea></label></div>
 </div>
           <p id="ve2Status" class="se-note" style="white-space:pre-line">{ve2Status ? ve2Status : t('ve2.ready', lang)}</p>
-          <div class="ve2-toolbar">
-          <button id="ve2BtnSave" class="btn btn-sm" onclick={() => { ve2SaveProject() }}>{t('settings.saveproj', lang)}</button>
-          <button id="ve2BtnExport" class="btn btn-sm" onclick={() => { ve2Export() }} disabled={ve2Busy}>{ve2Busy ? t('ve2.rendering', lang) : t('ve.export', lang)}</button>
-          <button id="ve2BtnPreview" class="btn btn-sm" onclick={() => { ve2Preview() }}>{t('ve.render', lang)}</button>
-          <label style="margin-left:8px">{t('t1.output', lang)} <input id="ve2Out" type="text" bind:value={ve2Out} style="width:280px"></label>
-          </div>
           {#if ve2Frame}<div><img id="ve2Frame" src={ve2Frame} alt="" style="max-width:100%"></div>{/if}
           </div>
           <div class="se-group"><h4>{t('ve2.editor', lang)}</h4></div>
@@ -1346,6 +1333,7 @@
           <div class="ve2-top">
           <div class="ve2-assets">
           <h4 style="margin:0 0 8px">{t('word.aset', lang)}</h4>
+          <div style="display:flex;gap:6px;margin-top:8px"><input id="ve2NewSrc" type="text" bind:value={ve2NewSrc} placeholder="/Users/mac/Movies/klip.mp4" style="flex:1"><select id="ve2NewKind" bind:value={ve2NewKind}><option value="Image">Image</option><option value="Video">Video</option><option value="Audio">Audio</option></select><button id="ve2AssetAdd" class="btn btn-sm" onclick={() => { ve2AddAsset() }}>{t('t1.add', lang)}</button></div>
           <div class="ve2-asset-grid">
           {#each ve2Assets as a (a.id)}
           <div class="ve2-thumb-wrap">
@@ -1360,7 +1348,6 @@
           </div>
           {/each}
           </div>
-          <div style="display:flex;gap:6px;margin-top:8px"><input id="ve2NewSrc" type="text" bind:value={ve2NewSrc} placeholder="/Users/mac/Movies/klip.mp4" style="flex:1"><select id="ve2NewKind" bind:value={ve2NewKind}><option value="Image">Image</option><option value="Video">Video</option><option value="Audio">Audio</option></select><button id="ve2AssetAdd" class="btn btn-sm" onclick={() => { ve2AddAsset() }}>{t('t1.add', lang)}</button></div>
           </div>
           <div class="ve2-preview">
           <video id="ve2Video" bind:this={ve2VideoEl} style="width:100%;background:#000;display:{ve2VideoOn ? 'block' : 'none'};max-height:min(480px, 55vh);object-fit:contain" controls onpause={() => { ve2VideoPaused(); }}></video>
@@ -1394,17 +1381,14 @@
           <label>{t('ve.dur.label', lang)}</label><input id="ve2Dur" type="number" step="0.1" value={ve2SelClip()?.dur ?? 0} onchange={(e) => { ve2SetField('dur', e.currentTarget.value) }}>
           <label>{t('ve.track', lang)}</label><select id="ve2Track" value={ve2SelClip()?.track ?? 'Video'} onchange={(e) => { ve2SetField('track', e.currentTarget.value) }}><option value="Video">{t('word.video', lang)}</option><option value="B-Roll">B-Roll</option><option value="Audio">{t('word.audio', lang)}</option><option value="Teks">{t('word.teks', lang)}</option></select>
           <label>{t('ve.effect', lang)}</label><select id="ve2Fx" value={ve2SelClip()?.effect ?? 'none'} onchange={(e) => { ve2SetField('effect', e.currentTarget.value) }}><option value="none">{t('ve.fx.none', lang)}</option><option value="fade">{t('ve.fx.fade', lang)}</option><option value="zoom">{t('ve.fx.zoom', lang)}</option></select>
-          {:else}
-          <!-- v193 (perintah Patria 18:21): placeholder 'pilih klip' dihapus,
-               diganti tombol proyek (id baru agar tidak bentrok tombol atas;
-               handler sama; File output terikat ve2Out yang sama). -->
+          {/if}
+          <!-- v217: toolbar atas dihapus; blok tombol proyek kini selalu tampil (id I dipertahankan). -->
           <div class="ve2-inspector-acts">
           <button id="ve2BtnSaveI" class="btn btn-sm" onclick={() => { ve2SaveProject() }}>{t('settings.saveproj', lang)}</button>
           <button id="ve2BtnExportI" class="btn btn-sm" onclick={() => { ve2Export() }} disabled={ve2Busy}>{ve2Busy ? t('ve2.rendering', lang) : t('ve.export', lang)}</button>
           <button id="ve2BtnPreviewI" class="btn btn-sm" onclick={() => { ve2Preview() }}>{t('ve.render', lang)}</button>
           <label>{t('t1.output', lang)}<input id="ve2OutI" type="text" bind:value={ve2Out}></label>
           </div>
-          {/if}
           </div>
           </div>
           </div>
@@ -1445,7 +1429,7 @@
           <button id="ve2BtnTrans" class="btn btn-sm" disabled={!ve2SelClip()} onclick={() => { ve2Transition() }}>{t('ve.transition', lang)}</button>
           <button id="ve2BtnPlay" class="btn btn-sm" disabled={ve2Playing} onclick={() => { if (!ve2Playing) ve2PlayToggle(); }}>{t('ve.play', lang)}</button>
           <button id="ve2BtnStop" class="btn btn-sm" disabled={!ve2Playing} onclick={() => { if (ve2Playing) ve2PlayToggle(); }}>{t('ve2.stop', lang)}</button>
-          <button id="ve2BtnSnap" type="button" class="btn btn-sm" aria-pressed={ve2Snap} style:background={ve2Snap ? '#8ED694' : undefined} style:color={ve2Snap ? '#262626' : undefined} onclick={() => { ve2Snap = !ve2Snap; ve2SaveState(); }}>{t('ve2.snap', lang)}</button>
+          <button id="ve2BtnSnap" type="button" class="btn btn-sm" aria-pressed={ve2Snap} style:background={ve2Snap ? '#8ED694' : undefined} style:color={ve2Snap ? '#262626' : undefined} onclick={() => { ve2Snap = !ve2Snap; ve2SaveState(); }}><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px"><path d="M6 2h4v7a2 2 0 0 0 4 0V2h4v7a6 6 0 0 1-12 0V2z"/></svg> {t('ve2.snap', lang)}</button>
           </div>
         </div>
       </div>
@@ -1473,7 +1457,7 @@
     {/if}
     <div class="view" id="view-planner">
       <div class="scroll">
-        <h3 style="margin:0 14px 12px">{t('ms.tab.batch', lang)}</h3>
+        <h3 style="margin:0 14px 12px">{t('planner.header', lang)}</h3>
         <div id="socNotice" style="display:none;margin:0 14px 12px;padding:10px 12px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px"></div>
         <div id="socPasteWrap" style="display:none;margin:0 14px 12px;padding:10px 12px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:10px"></div>
         <div id="nativePlanner"></div>
@@ -1567,8 +1551,8 @@
         <div style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:16px;margin-bottom:12px">
           <h3 style="margin:0 0 12px">{t('billing.limit', lang)}</h3>
           <div>{t('billing.limit.hard', lang)}: {fmtUsd(BILLING_HARD_LIMIT, lang)} (≈ Rp{fmtIdrNum(90740)})</div>
-          <div>{t('billing.used', lang)}: ${(COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd + videoSpend.usd).toFixed(4)} (≈ Rp{fmtIdrNum(Math.round((COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd + videoSpend.usd) * 18137))})</div>
-          {#if COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd + videoSpend.usd > BILLING_HARD_LIMIT.usdMax}
+          <div>{t('billing.used', lang)}: ${(COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd + videoSpend.usd + classaiSpend.usd).toFixed(4)} (≈ Rp{fmtIdrNum(Math.round((COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd + videoSpend.usd + classaiSpend.usd) * 18137))})</div>
+          {#if COST_TOTAL.usdMax + liveCost.usd + imgSpend.usd + videoSpend.usd + classaiSpend.usd > BILLING_HARD_LIMIT.usdMax}
           <div style="color:#EB87B4;margin-top:8px">{t('billing.over', lang)}</div>
           {/if}
         </div>
