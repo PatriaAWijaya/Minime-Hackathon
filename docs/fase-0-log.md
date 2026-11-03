@@ -2544,7 +2544,7 @@ Isi:
 - Penomoran: pekerjaan ini mengambil nomor v241; perluasan aturan tombol ke jalur utama GESER ke v242 dan TETAP DITAHAN menunggu vonis uji live v237/v238 dari Patria. Laporan freeze input tugas baru (19:25) masih dalam diagnosis terpisah dan TIDAK dicampur ke versi ini.
 
 SHA: kode lokal 207753c ↔ remote 25e0e91 (tree identik).
-LIVE <TANGGAL> WIB: deploy mh-build241.sh — MH_BUILD241_OK; HEAD MacBook <LOG_SHA> (commit log); PID <PID>; md5 dist JS/CSS lokal == MacBook. App LIVE = v241. Konfirmasi live Patria untuk v241 BELUM ada (uji live yang disarankan: di Image Editor, ketuk 2x salah satu gambar hasil generate — harus membuka gambar besar; klik di mana saja / Esc menutup).
+LIVE 3 Nov ~19:31 WIB: deploy mh-build241.sh — MH_BUILD241_OK; HEAD MacBook d7a9ad9 (commit log); PID 30039; md5 dist JS/CSS lokal == MacBook. App LIVE = v241. Konfirmasi live Patria untuk v241 BELUM ada (uji live yang disarankan: di Image Editor, ketuk 2x salah satu gambar hasil generate — harus membuka gambar besar; klik di mana saja / Esc menutup).
 
 ## v240 — Scroll chat tidak lagi dirampas bubble baru selama prosesing (laporan live Patria 3 Nov 18:48: window chat freeze, tidak bisa discroll naik turun saat prosesing)
 
