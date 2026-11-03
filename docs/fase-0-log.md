@@ -2547,7 +2547,7 @@ Isi:
 - Penomoran: pekerjaan ini mengambil nomor v239 (perintah terbaru Patria, didahulukan); perluasan aturan tombol ke jalur utama yang sebelumnya memegang slot v239 GESER ke v240 dan TETAP DITAHAN menunggu vonis uji live v237/v238 dari Patria.
 
 SHA: kode lokal 36983d7 ↔ remote 64d3eb4 (tree identik).
-LIVE <TANGGAL> WIB: deploy mh-build239.sh — MH_BUILD239_OK; HEAD MacBook <LOG_SHA> (commit log); PID <PID>; md5 dist JS/CSS lokal == MacBook. App LIVE = v239. Konfirmasi live Patria untuk v239 BELUM ada (uji live yang disarankan: kirim brief fan-out multi-agen — jawaban agen-agen harus muncul beriringan, bukan satu-per-satu; footer jawaban memuat 'Total …ms' waktu tembok; saat provider pertama gagal 2×, panggilan berikutnya langsung melewatinya).
+LIVE 3 Nov ~18:29 WIB: deploy mh-build239.sh — MH_BUILD239_OK; HEAD MacBook 58a60fd (commit log); PID 26642; md5 dist JS/CSS lokal == MacBook. App LIVE = v239. Konfirmasi live Patria untuk v239 BELUM ada (uji live yang disarankan: kirim brief fan-out multi-agen — jawaban agen-agen harus muncul beriringan, bukan satu-per-satu; footer jawaban memuat 'Total …ms' waktu tembok; saat provider pertama gagal 2×, panggilan berikutnya langsung melewatinya).
 
 ## v238 — Output kreatif triple: prompt generator spesifik ke Image Editor, caption ke body copy (perintah Patria 3 Nov 16:07 + perluasan 16:09 "semua output kreatif" + penegasan "harus spesifik pada output, bukan cuma brief umum" + 16:26 "cek logic sekali lagi")
 
