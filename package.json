@@ -27,7 +27,8 @@
     "fase1": "node dist/fase1-run.js",
     "scan": "node scripts/scan.js",
     "start": "node dist/main.js",
-    "fase4": "node dist/fase4-run.js"
+    "fase4": "node dist/fase4-run.js",
+    "fase5": "node dist/fase5-run.js"
   },
   "version": "0.1.0"
 }

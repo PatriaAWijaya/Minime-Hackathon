@@ -1,0 +1,390 @@
+{
+  "traceId": "fase5-1793721280185",
+  "startedAt": "2026-11-03T15:54:40.185Z",
+  "finishedAt": "2026-11-03T16:04:59.795Z",
+  "hardLimitUsd": 5,
+  "allowMock": false,
+  "ledgerFile": "data/fase5-final/cost-ledger.jsonl",
+  "limitProof": {
+    "appendRefused": true,
+    "guardRefused": true
+  },
+  "retries": [
+    {
+      "caseId": "g5-carousel",
+      "phase": "maker",
+      "attempt": 1,
+      "error": "live provider gemini unavailable: generate.py failed: Command failed: python3 /home/hatch/workspace/custom-connectors/custom.legacy-gemini/bin/generate.py --model gemini-3.1-flash-lite --json\nerror: HTTP 503: {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high d"
+    },
+    {
+      "caseId": "g5-caption",
+      "phase": "qc",
+      "attempt": 1,
+      "error": "live provider gemini unavailable: generate.py failed: Command failed: python3 /home/hatch/workspace/custom-connectors/custom.legacy-gemini/bin/generate.py --model gemini-3.1-flash-lite --json\nerror: HTTP 503: {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high d"
+    },
+    {
+      "caseId": "g5-storyboard",
+      "phase": "maker",
+      "attempt": 1,
+      "error": "live provider gemini unavailable: generate.py failed: Command failed: python3 /home/hatch/workspace/custom-connectors/custom.legacy-gemini/bin/generate.py --model gemini-3.1-flash-lite --json\nerror: HTTP 503: {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high d"
+    },
+    {
+      "caseId": "g5-planner",
+      "phase": "qc",
+      "attempt": 1,
+      "error": "live provider gemini unavailable: generate.py failed: Command failed: python3 /home/hatch/workspace/custom-connectors/custom.legacy-gemini/bin/generate.py --model gemini-3.1-flash-lite --json\nerror: HTTP 503: {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high d"
+    },
+    {
+      "caseId": "g5-chain",
+      "phase": "qc",
+      "attempt": 1,
+      "error": "live provider gemini unavailable: generate.py failed: Command failed: python3 /home/hatch/workspace/custom-connectors/custom.legacy-gemini/bin/generate.py --model gemini-3.1-flash-lite --json\nerror: HTTP 503: {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high d"
+    },
+    {
+      "caseId": "g5-ollama",
+      "phase": "maker",
+      "attempt": 1,
+      "error": "live provider ollama unavailable: primary deepseek-r1:1.5b failed (live provider ollama unavailable: fetch failed); fallback qwen2.5:3b failed (live provider ollama unavailable: fetch failed)"
+    }
+  ],
+  "cases": [
+    {
+      "id": "g5-stp",
+      "task": "stp-draft",
+      "makerExpected": "meta",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "meta",
+      "family": "meta",
+      "model": "muse-spark-1.3",
+      "fallbackFrom": null,
+      "latencyMs": 15861,
+      "promptTokens": 50,
+      "completionTokens": 1606,
+      "costUsd": 0.006888,
+      "outputLength": 1749,
+      "outputPreview": "**Segmenting:** Pasar TEST-Kopi di Surabaya disegmentasi secara geografis pada klaster kampus utama seperti sekitar UNAIR, ITS, UNESA, UPN Veteran, dan UINSA; secara demografis pada mahasiswa usia 18-24 tahun dengan uang saku Rp1-3 juta per bulan; secara psikografis pada gaya hidup nongkrong, nugas ",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": 95,
+        "reason": "Draf STP sangat komprehensif, memiliki fokus yang tajam pada karakteristik pasar mahasiswa Surabaya, serta menyediakan nilai jual yang konkret dan siap diimplementasikan.",
+        "provider": "gemini",
+        "latencyMs": 2086,
+        "promptTokens": 466,
+        "completionTokens": 43,
+        "costUsd": 0,
+        "error": null
+      },
+      "success": true
+    },
+    {
+      "id": "g5-image",
+      "task": "image-prompt",
+      "makerExpected": "meta",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "meta",
+      "family": "meta",
+      "model": "muse-spark-1.3",
+      "fallbackFrom": null,
+      "latencyMs": 9134,
+      "promptTokens": 76,
+      "completionTokens": 1145,
+      "costUsd": 0.0049612499999999995,
+      "outputLength": 185,
+      "outputPreview": "VISUAL PROMPT: Iced brown sugar milk coffee in clear glass with condensation, wooden table background, no text no letters no words in image\nTEXT OVERLAY: Rasa Kopi Susu Gula Aren Mantap",
+      "checksMinLength": true,
+      "qcDeterministic": {
+        "score": 100,
+        "hardViolations": [],
+        "passes": true
+      },
+      "qcLlm": {
+        "score": 95,
+        "reason": "Prompt visual sangat spesifik dan teknis, serta instruksi teks overlay sudah sesuai dengan brief untuk kebutuhan konten promosi.",
+        "provider": "gemini",
+        "latencyMs": 1215,
+        "promptTokens": 108,
+        "completionTokens": 35,
+        "costUsd": 0,
+        "error": null
+      },
+      "success": true
+    },
+    {
+      "id": "g5-carousel",
+      "task": "carousel-plan",
+      "makerExpected": "gemini",
+      "makerOk": false,
+      "makerError": "live provider gemini unavailable: generate.py failed: Command failed: python3 /home/hatch/workspace/custom-connectors/custom.legacy-gemini/bin/generate.py --model gemini-3.1-flash-lite --json\nerror: HTTP 503: {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please ",
+      "provider": null,
+      "family": null,
+      "model": null,
+      "fallbackFrom": null,
+      "latencyMs": null,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "outputLength": 0,
+      "outputPreview": "",
+      "checksMinLength": false,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": null,
+        "reason": null,
+        "provider": null,
+        "latencyMs": null,
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": null,
+        "error": null
+      },
+      "success": false
+    },
+    {
+      "id": "g5-caption",
+      "task": "caption-sosmed",
+      "makerExpected": "meta",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "meta",
+      "family": "meta",
+      "model": "muse-spark-1.3",
+      "fallbackFrom": null,
+      "latencyMs": 17209,
+      "promptTokens": 38,
+      "completionTokens": 1502,
+      "costUsd": 0.006431,
+      "outputLength": 403,
+      "outputPreview": "Senin lagi, semangat lagi (katanya) 😅☕\n\nUntung ada TEST-Kopi — pahitnya pas, manisnya nggak lebay, aromanya bikin auto melek. Mau yang panas buat temen lembur atau yang es buat temen nongkrong, semua aman di kantong.\n\nRasanya kayak pelukan hangat di tengah deadline yang dingin ❤️\n\nCoba spill di kom",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": null,
+        "reason": null,
+        "provider": null,
+        "latencyMs": null,
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": null,
+        "error": "live provider gemini unavailable: generate.py failed: Command failed: python3 /home/hatch/workspace/custom-connectors/custom.legacy-gemini/bin/generate.py --model gemini-3.1-flash-lite --json\nerror: HTTP 503: {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please "
+      },
+      "success": true
+    },
+    {
+      "id": "g5-storyboard",
+      "task": "storyboard",
+      "makerExpected": "gemini",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "gemini",
+      "family": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "fallbackFrom": null,
+      "latencyMs": 2762,
+      "promptTokens": 39,
+      "completionTokens": 377,
+      "costUsd": 0,
+      "outputLength": 1249,
+      "outputPreview": "Berikut adalah *shot plan* 3 shot untuk Reels 15 detik dengan tema \"TEST-Kopi\":\n\n**Konsep:** *Sensory Experience* (Menonjolkan kualitas dan kesegaran kopi).\n\n---\n\n### **Shot 1: The Pour (5 Detik)**\n*   **Visual:** *Close-up* ekstrem saat kopi panas dituang ke dalam cangkir, memperlihatkan uap yang m",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": 95,
+        "reason": "Output sangat relevan dengan brief TEST-Kopi, lengkap mencakup visual durasi dan narasi tiap shot, serta siap dipakai sebagai draf produksi.",
+        "provider": "meta",
+        "latencyMs": 11414,
+        "promptTokens": 418,
+        "completionTokens": 1221,
+        "costUsd": 0.005711750000000001,
+        "error": null
+      },
+      "success": true
+    },
+    {
+      "id": "g5-planner",
+      "task": "planner-draft",
+      "makerExpected": "meta",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "meta",
+      "family": "meta",
+      "model": "muse-spark-1.3",
+      "fallbackFrom": null,
+      "latencyMs": 7254,
+      "promptTokens": 41,
+      "completionTokens": 673,
+      "costUsd": 0.0029115,
+      "outputLength": 209,
+      "outputPreview": "Berikut draf planner untuk TEST-Kopi:\n\n**Judul Postingan:** Awali Pagimu dengan TEST-Kopi\n\n**Caption:** Nikmati aroma khas TEST-Kopi yang pekat untuk menambah semangat pagimu.\n\n**Jadwal:** Senin, jam 08.00 WIB",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": 60,
+        "reason": "Draf sudah relevan dan siap pakai, namun terlalu singkat karena hanya mencakup satu konten tanpa variasi format atau strategi pendukung yang mendalam.",
+        "provider": "gemini",
+        "latencyMs": 1473,
+        "promptTokens": 127,
+        "completionTokens": 41,
+        "costUsd": 0,
+        "error": null
+      },
+      "success": true
+    },
+    {
+      "id": "g5-chain",
+      "task": "chain-call",
+      "makerExpected": "chain",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "meta",
+      "family": "meta",
+      "model": "muse-spark-1.3",
+      "fallbackFrom": null,
+      "latencyMs": 9532,
+      "promptTokens": 21,
+      "completionTokens": 980,
+      "costUsd": 0.0041912500000000005,
+      "outputLength": 138,
+      "outputPreview": "MiniMe adalah istilah untuk versi kecil dari seseorang, yang paling terkenal sebagai karakter klon mini Dr. Evil dalam film Austin Powers.",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": 100,
+        "reason": "Output memberikan definisi yang akurat, relevan dengan referensi budaya populer, dan sudah siap digunakan sebagai draf penjelasan istilah.",
+        "provider": "gemini",
+        "latencyMs": 1672,
+        "promptTokens": 90,
+        "completionTokens": 37,
+        "costUsd": 0,
+        "error": null
+      },
+      "success": true
+    },
+    {
+      "id": "g5-ollama",
+      "task": "ollama-probe",
+      "makerExpected": "ollama",
+      "makerOk": false,
+      "makerError": "live provider ollama unavailable: primary deepseek-r1:1.5b failed (live provider ollama unavailable: fetch failed); fallback qwen2.5:3b failed (live provider ollama unavailable: fetch failed)",
+      "provider": null,
+      "family": null,
+      "model": null,
+      "fallbackFrom": null,
+      "latencyMs": null,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "outputLength": 0,
+      "outputPreview": "",
+      "checksMinLength": false,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": null,
+        "reason": null,
+        "provider": null,
+        "latencyMs": null,
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": null,
+        "error": null
+      },
+      "success": true
+    }
+  ],
+  "rehearsal": {
+    "ok": true,
+    "traceId": "trace-1793721870709",
+    "stages": [
+      "queued",
+      "brief",
+      "done"
+    ],
+    "qc": {
+      "score": 100,
+      "hardViolations": [],
+      "passes": true
+    },
+    "draftPublished": false,
+    "mock": false,
+    "ledgerRecords": [
+      {
+        "traceId": "trace-1793721870709",
+        "timestamp": "2026-11-03T16:04:44.904Z",
+        "agent": "Research",
+        "provider": "meta",
+        "family": "meta",
+        "model": "muse-spark-1.3",
+        "promptTokens": 22,
+        "completionTokens": 1312,
+        "costUsd": 0.0056035,
+        "costIdr": null,
+        "mock": false,
+        "fallbackFrom": null
+      },
+      {
+        "traceId": "trace-1793721870709",
+        "timestamp": "2026-11-03T16:04:59.731Z",
+        "agent": "Strategy",
+        "provider": "meta",
+        "family": "meta",
+        "model": "muse-spark-1.3",
+        "promptTokens": 21,
+        "completionTokens": 1408,
+        "costUsd": 0.00601025,
+        "costIdr": null,
+        "mock": false,
+        "fallbackFrom": null
+      }
+    ]
+  },
+  "metrics": {
+    "casesTotal": 8,
+    "casesSuccess": 7,
+    "byProvider": {
+      "meta": {
+        "calls": 5,
+        "ok": 5,
+        "fallbacks": 0,
+        "avgLatencyMs": 11798,
+        "totalCostUsd": 0.025383
+      },
+      "none": {
+        "calls": 2,
+        "ok": 0,
+        "fallbacks": 0,
+        "avgLatencyMs": null,
+        "totalCostUsd": 0
+      },
+      "gemini": {
+        "calls": 1,
+        "ok": 1,
+        "fallbacks": 0,
+        "avgLatencyMs": 2762,
+        "totalCostUsd": 0
+      }
+    },
+    "llmQc": {
+      "scored": 5,
+      "avg": 89,
+      "min": 60,
+      "max": 100
+    },
+    "ledger": {
+      "records": 13,
+      "totalUsd": 0.0427085,
+      "totalIdr": null,
+      "usdIdrRate": null,
+      "hardLimitIdr": null,
+      "mockRecords": 0
+    },
+    "reconciliation": {
+      "ledgerTotalUsd": 0.0427085,
+      "recordedSumUsd": 0.0427085,
+      "match": true,
+      "mockRecords": 0,
+      "mockContamination": false
+    }
+  }
+}

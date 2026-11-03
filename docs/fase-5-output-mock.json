@@ -1,0 +1,349 @@
+{
+  "traceId": "fase5-1793721033718",
+  "startedAt": "2026-11-03T15:50:33.718Z",
+  "finishedAt": "2026-11-03T15:51:33.944Z",
+  "hardLimitUsd": 5,
+  "allowMock": true,
+  "ledgerFile": "data/fase5-mock3/cost-ledger.jsonl",
+  "limitProof": {
+    "appendRefused": true,
+    "guardRefused": true
+  },
+  "retries": [
+    {
+      "caseId": "g5-ollama",
+      "phase": "maker",
+      "attempt": 1,
+      "error": "live provider ollama unavailable: primary deepseek-r1:1.5b failed (live provider ollama unavailable: fetch failed); fallback qwen2.5:3b failed (live provider ollama unavailable: fetch failed)"
+    }
+  ],
+  "cases": [
+    {
+      "id": "g5-stp",
+      "task": "stp-draft",
+      "makerExpected": "meta",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "mock",
+      "family": "mock",
+      "model": "mock",
+      "fallbackFrom": null,
+      "latencyMs": 0,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "outputLength": 170,
+      "outputPreview": "[MOCK fase5-g5-stp] structured output for prompt: Buat draf STP (Segmenting, Targeting, Positioning) — satu paragraf per elemen — untuk merek fiksi TEST-Kopi, kopi susu g",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": null,
+        "reason": null,
+        "provider": null,
+        "latencyMs": null,
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": null,
+        "error": "mock mode: LLM QC dilewati"
+      },
+      "success": true
+    },
+    {
+      "id": "g5-image",
+      "task": "image-prompt",
+      "makerExpected": "meta",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "mock",
+      "family": "mock",
+      "model": "mock",
+      "fallbackFrom": null,
+      "latencyMs": 0,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "outputLength": 172,
+      "outputPreview": "[MOCK fase5-g5-image] structured output for prompt: Untuk poster produk TEST-Kopi (kopi susu gula aren), tulis PERSIS dua baris ini dan tidak yang lain: baris pertama 'VISU",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": null,
+        "reason": null,
+        "provider": null,
+        "latencyMs": null,
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": null,
+        "error": "mock mode: LLM QC dilewati"
+      },
+      "success": true
+    },
+    {
+      "id": "g5-carousel",
+      "task": "carousel-plan",
+      "makerExpected": "gemini",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "mock",
+      "family": "mock",
+      "model": "mock",
+      "fallbackFrom": null,
+      "latencyMs": 0,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "outputLength": 175,
+      "outputPreview": "[MOCK fase5-g5-carousel] structured output for prompt: Buat rencana carousel 3 slide untuk TEST-Kopi (kopi susu gula aren, mahasiswa Surabaya). Tiap slide: judul + satu kalima",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": null,
+        "reason": null,
+        "provider": null,
+        "latencyMs": null,
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": null,
+        "error": "mock mode: LLM QC dilewati"
+      },
+      "success": true
+    },
+    {
+      "id": "g5-caption",
+      "task": "caption-sosmed",
+      "makerExpected": "meta",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "mock",
+      "family": "mock",
+      "model": "mock",
+      "fallbackFrom": null,
+      "latencyMs": 0,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "outputLength": 174,
+      "outputPreview": "[MOCK fase5-g5-caption] structured output for prompt: Tulis caption Instagram jalur sosmed (santai, satu ajakan bertindak) untuk TEST-Kopi, maksimal 150 kata, dalam Bahasa In",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": null,
+        "reason": null,
+        "provider": null,
+        "latencyMs": null,
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": null,
+        "error": "mock mode: LLM QC dilewati"
+      },
+      "success": true
+    },
+    {
+      "id": "g5-storyboard",
+      "task": "storyboard",
+      "makerExpected": "gemini",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "mock",
+      "family": "mock",
+      "model": "mock",
+      "fallbackFrom": null,
+      "latencyMs": 0,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "outputLength": 177,
+      "outputPreview": "[MOCK fase5-g5-storyboard] structured output for prompt: Buat shot plan 3 shot untuk reels 15 detik TEST-Kopi. Tiap shot: visual + durasi + narasi satu kalimat. Jawab dalam Baha",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": null,
+        "reason": null,
+        "provider": null,
+        "latencyMs": null,
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": null,
+        "error": "mock mode: LLM QC dilewati"
+      },
+      "success": true
+    },
+    {
+      "id": "g5-planner",
+      "task": "planner-draft",
+      "makerExpected": "meta",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "mock",
+      "family": "mock",
+      "model": "mock",
+      "fallbackFrom": null,
+      "latencyMs": 0,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "outputLength": 174,
+      "outputPreview": "[MOCK fase5-g5-planner] structured output for prompt: Buat draf planner untuk TEST-Kopi: judul postingan, caption satu kalimat, dan satu catatan jadwal (hari + jam). Jawab da",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": null,
+        "reason": null,
+        "provider": null,
+        "latencyMs": null,
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": null,
+        "error": "mock mode: LLM QC dilewati"
+      },
+      "success": true
+    },
+    {
+      "id": "g5-chain",
+      "task": "chain-call",
+      "makerExpected": "chain",
+      "makerOk": true,
+      "makerError": null,
+      "provider": "mock",
+      "family": "mock",
+      "model": "mock",
+      "fallbackFrom": null,
+      "latencyMs": 0,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "outputLength": 110,
+      "outputPreview": "[MOCK fase5-g5-chain] structured output for prompt: Jawab dalam satu kalimat Bahasa Indonesia: apa itu MiniMe?",
+      "checksMinLength": true,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": null,
+        "reason": null,
+        "provider": null,
+        "latencyMs": null,
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": null,
+        "error": "mock mode: LLM QC dilewati"
+      },
+      "success": true
+    },
+    {
+      "id": "g5-ollama",
+      "task": "ollama-probe",
+      "makerExpected": "ollama",
+      "makerOk": false,
+      "makerError": "live provider ollama unavailable: primary deepseek-r1:1.5b failed (live provider ollama unavailable: fetch failed); fallback qwen2.5:3b failed (live provider ollama unavailable: fetch failed)",
+      "provider": null,
+      "family": null,
+      "model": null,
+      "fallbackFrom": null,
+      "latencyMs": null,
+      "promptTokens": null,
+      "completionTokens": null,
+      "costUsd": null,
+      "outputLength": 0,
+      "outputPreview": "",
+      "checksMinLength": false,
+      "qcDeterministic": null,
+      "qcLlm": {
+        "score": null,
+        "reason": null,
+        "provider": null,
+        "latencyMs": null,
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": null,
+        "error": null
+      },
+      "success": true
+    }
+  ],
+  "rehearsal": {
+    "ok": true,
+    "traceId": "trace-1793721093750",
+    "stages": [
+      "queued",
+      "brief",
+      "done"
+    ],
+    "qc": {
+      "score": 100,
+      "hardViolations": [],
+      "passes": true
+    },
+    "draftPublished": false,
+    "mock": true,
+    "ledgerRecords": [
+      {
+        "traceId": "trace-1793721093750",
+        "timestamp": "2026-11-03T15:51:33.895Z",
+        "agent": "Research",
+        "provider": "mock",
+        "family": "mock",
+        "model": "mock",
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": 0,
+        "costIdr": 0,
+        "mock": true,
+        "fallbackFrom": "ollama"
+      },
+      {
+        "traceId": "trace-1793721093750",
+        "timestamp": "2026-11-03T15:51:33.898Z",
+        "agent": "Strategy",
+        "provider": "mock",
+        "family": "mock",
+        "model": "mock",
+        "promptTokens": null,
+        "completionTokens": null,
+        "costUsd": 0,
+        "costIdr": 0,
+        "mock": true,
+        "fallbackFrom": "ollama"
+      }
+    ]
+  },
+  "metrics": {
+    "casesTotal": 8,
+    "casesSuccess": 8,
+    "byProvider": {
+      "mock": {
+        "calls": 7,
+        "ok": 7,
+        "fallbacks": 0,
+        "avgLatencyMs": 0,
+        "totalCostUsd": 0
+      },
+      "none": {
+        "calls": 1,
+        "ok": 0,
+        "fallbacks": 0,
+        "avgLatencyMs": null,
+        "totalCostUsd": 0
+      }
+    },
+    "llmQc": {
+      "scored": 0,
+      "avg": null,
+      "min": null,
+      "max": null
+    },
+    "ledger": {
+      "records": 9,
+      "totalUsd": 0,
+      "totalIdr": null,
+      "usdIdrRate": null,
+      "hardLimitIdr": null,
+      "mockRecords": 9
+    },
+    "reconciliation": {
+      "ledgerTotalUsd": 0,
+      "recordedSumUsd": 0,
+      "match": true,
+      "mockRecords": 9,
+      "mockContamination": false
+    }
+  }
+}
