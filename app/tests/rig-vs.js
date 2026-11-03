@@ -23,6 +23,9 @@
 //  8. v223 (proxy Rust): semua API :3900 lewat invoke vs_api (bukan
 //     fetch WebView yang diblokir CORS VoiceStudio); fetch langsung
 //     :3900 membuat rig GAGAL (tripwire); TTS + Clone lewat proxy.
+//  9. v224 (hapus): judul 'Panel VoiceStudio' + catatan #vsEmbedNote
+//     TIDAK ADA lagi; koneksi dibuktikan badge status + daftar model,
+//     bukan catatan.
 // Jalankan: npm run rig:vs (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -185,12 +188,13 @@ try {
 
   // Panel embed VoiceStudio: probe :3901 + cek koneksi API.
   backendAlive = true;
-  check('panel embed ada (iframe + status + catatan)', !!document.getElementById('vsEmbedFrame') && !!document.getElementById('vsEmbedStatus') && !!document.getElementById('vsEmbedNote'));
+  check('panel embed ada (iframe + status, TANPA catatan)', !!document.getElementById('vsEmbedFrame') && !!document.getElementById('vsEmbedStatus') && !document.getElementById('vsEmbedNote'));
   [...document.querySelectorAll('.vs-embed button')].find((b) => b.textContent.trim() === 'Muat ulang').click();
   await tick(300);
   check('embed: iframe terpasang saat :3901 menjawab', document.getElementById('vsEmbedFrame')?.getAttribute('src') === 'http://localhost:3901', document.getElementById('vsEmbedFrame')?.getAttribute('src') || '');
   check('embed: status Terhubung', (document.getElementById('vsEmbedStatus')?.textContent || '').includes('Terhubung'), document.getElementById('vsEmbedStatus')?.textContent || '');
-  check('embed: koneksi API terverifikasi (versi + device)', (document.getElementById('vsEmbedNote')?.textContent || '').includes('0.5.7') && (document.getElementById('vsEmbedNote')?.textContent || '').includes('mps'), document.getElementById('vsEmbedNote')?.textContent || '');
+  check('v224: judul Panel VoiceStudio hilang', ![...panel.querySelectorAll('h4')].some((h) => h.textContent.trim() === 'Panel VoiceStudio'), [...panel.querySelectorAll('h4')].map((h) => h.textContent.trim()).join('|'));
+  check('v224: koneksi dibuktikan daftar model (bukan catatan)', document.querySelectorAll('#vsModelList button').length > 0, String(document.querySelectorAll('#vsModelList button').length));
 
   // Backend sudah hidup -> Generate tidak launch lagi.
   log.length = 0;

@@ -211,30 +211,17 @@ export function vsRenderStatus(): void {
 // Planner, disesuaikan dengan kenyataan VoiceStudio):
 // - Backend :3900 HANYA API; UI web :3901 hanya ada bila server Vite-nya
 //   berjalan. Karena itu iframe HANYA dipasang bila probe :3901 menjawab;
-//   bila tidak, iframe disembunyikan dan panel menampilkan pemeriksaan
-//   koneksi API + panduan buka aplikasi (tanpa panel kosong yang diam).
-// - Cek koneksi berjalan SETELAH embed termuat (onload iframe) dan saat
-//   Muat ulang / mount: /health (versi + device) + vsCheck (model + suara).
+//   bila tidak, iframe disembunyikan.
+// - v224: judul panel + catatan penjelasan DIHAPUS atas perintah
+//   Patria (10:35) — yang tampil hanya bar status + tombol Muat ulang.
+//   Cek koneksi berjalan SETELAH embed termuat (onload iframe) dan saat
+//   Muat ulang / mount, lewat vsCheck (model + suara); /health tidak
+//   lagi dipanggil karena hasilnya hanya dipakai catatan yang dihapus.
 export const VS_UI = 'http://localhost:3901';
 
-let vsEmbedCSPWatched = false;
-function vsEmbedWatchCSP(): void {
-  if (vsEmbedCSPWatched) return;
-  vsEmbedCSPWatched = true;
-  document.addEventListener('securitypolicyviolation', (ev) => {
-    const d = (ev as SecurityPolicyViolationEvent).violatedDirective || '';
-    if (d.includes('frame-src')) {
-      const note = document.getElementById('vsEmbedNote');
-      if (note) note.textContent = tr('vs.embed.blocked');
-    }
-  });
-}
-
 export async function vsEmbedCheck(): Promise<void> {
-  vsEmbedWatchCSP();
   const frame = document.getElementById('vsEmbedFrame') as HTMLIFrameElement | null;
   const status = document.getElementById('vsEmbedStatus');
-  const note = document.getElementById('vsEmbedNote');
   if (status) {
     status.textContent = tr('vs.embed.checking');
     status.className = 'badge';
@@ -263,38 +250,13 @@ export async function vsEmbedCheck(): Promise<void> {
       frame.style.display = 'none';
     }
   }
-  // 2. Koneksi API: /health (versi + device) + vsCheck (model + suara).
-  let version = '?';
-  let device = '?';
-  try {
-    const r = await vsFetch('/health', {}, 4000);
-    if (r.ok) {
-      const j = (await r.json()) as Record<string, unknown>;
-      version = String(j.version ?? '?');
-      device = String(j.device ?? '?');
-    }
-  } catch {
-    /* health gagal -> status dari vsCheck yang menentukan */
-  }
+  // 2. Koneksi API lewat vsCheck (model + suara); status badge yang
+  // menentukan (v224: tanpa catatan).
   await vsCheck();
   const apiOnline = vsState.status === 'online';
   if (status) {
     status.textContent = apiOnline ? tr('vs.embed.online') : tr('vs.embed.offline');
     status.className = 'badge ' + (apiOnline ? 'b-ok' : 'b-warn');
-  }
-  if (note) {
-    const parts = [uiAlive ? tr('vs.embed.ui.online') : tr('vs.embed.ui.offline')];
-    if (apiOnline) {
-      parts.push(
-        tr('vs.embed.conn', {
-          version,
-          device,
-          models: String(vsState.models.length),
-          voices: String(vsState.voices.length),
-        }),
-      );
-    }
-    note.textContent = parts.join(' ');
   }
 }
 

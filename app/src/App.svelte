@@ -1321,11 +1321,9 @@
         </div>
         <div id="ms-tab-voice" style="display:none">
           <h3>{t('ms.tab.voice', lang)}</h3>
-          <h4>{t('vs.embed.title', lang)}</h4>
           <div class="vs-embed">
             <div class="vs-bar"><b>VoiceStudio</b> <span id="vsEmbedStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { vsEmbedReload() }}>{t('vs.embed.reload', lang)}</button></div>
             <iframe id="vsEmbedFrame" title="VoiceStudio" onload={() => { vsEmbedCheck() }} style="display:none"></iframe>
-            <p class="se-note" id="vsEmbedNote"></p>
           </div>
           <h4>{t('vs.clone.title', lang)}</h4>
           <label>{t('vs.voice.label', lang)}</label>
