@@ -2529,6 +2529,13 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## README refresh 3 Nov 23:14 (perintah Patria "jalankan"; ditegaskan "LAKUKAN!")
+
+- Latar: verifikasi logged-out 23:12 menemukan seksi Status README masih bertanggal 27 Okt ("Phase 0 conditionally passed; Phases 1–2 gates passed; UI paused") — kedaluwarsa dibanding keadaan sekarang.
+- Perubahan (riwayat 27 Okt dipertahankan verbatim, bukan ditulis ulang): heading Status → 3 Nov 2026 (Fase 0–5 selesai, app live v242, video+submit pending); paragraf update 3 Nov (Fase 4, app Tauri+Svelte live v242, v243–v245 ter-push menunggu deploy, hasil Fase 5, penutupan substansi dua kondisi gate Fase 0, gate-test 14/14, yang belum terukur, sisa video+form); parenthetical QC → live LLM QC Fase 5 (rata-rata 89) + catatan rantai app (Anthropic via proxy Rust); seksi Submission → tim Patria solo + status video + tenggat 5 Nov 09:00 WIB.
+- Verifikasi: struktur heading utuh (H1 + 5 H2), diff hanya README.md (+34/-2), credential scan lolos.
+- Push: README lokal 24f2674 ↔ remote 7518317 (tree identik).
+
 ## Fase 5 — Eval harness + dress rehearsal (perintah Patria 3 Nov 22:35: "jalankan fase 5, lakukan semua testnya mandiri, aku afk"; diselesaikan tanpa minta acc lagi atas perintah 22:48)
 
 - Sebelumnya tidak ada harness/golden set ("golden" di kode ternyata Golden Circle, bukan golden set). Dibangun dari nol mengikuti pola runner Fase 1–4: `src/fase5.ts` + `src/fase5-run.ts` + `docs/fase-5-golden-set.json` (8 kasus: STP, image prompt, carousel, caption, storyboard, planner, chain, probe Ollama) + script `npm run fase5`. M1: guard pra-panggil (tolak sebelum belanja) melengkapi append-refusal ledger yang sudah ada — keduanya dibuktikan dengan limit $0,000001 (nol biaya API). M14: semua usage per panggilan (maker + QC + rehearsal) tercatat di output JSON + ledger, lalu direkonsiliasi (ledger total == jumlah record) — memperbaiki cacat Fase 1–3 yang tidak bisa direproduksi. LLM QC: penilaian live cross-family, dicatat terpisah dari QC deterministik, tidak pernah dicampur.
