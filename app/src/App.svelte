@@ -73,7 +73,18 @@
     // chat masuk lewat jalur yang sama (Approve Studio -> Script Editor).
     (window as unknown as Record<string, unknown>).veSetMovie = (t: string) => {
       const p = parseMovieScenes(t);
-      ve2Movie = { title: p.title, scenes: p.scenes.map((sc) => ({ n: sc.n, heading: sc.heading, text: sc.text, status: 'idle' as const, path: '', dur: 0, err: '' })) };
+      ve2Movie = { title: p.title, kind: 'movie', scenes: p.scenes.map((sc) => ({ n: sc.n, heading: sc.heading, text: sc.text, status: 'idle' as const, path: '', dur: 0, err: '' })) };
+      ve2Plan = t;
+      ve2SaveState();
+    };
+    // v220: intake reels — REELS-PLAN diurai parser yang SAMA dengan
+    // movie (heading Shot/Scene/Adegan/Beat + nomor, atau blok
+    // paragraf), lalu memakai mesin generate per scene yang sama.
+    // Bedanya hanya kind 'reels' (judul grup + persistensi); tombol
+    // Generate/Generate semua/Bersihkan tidak diduplikasi.
+    (window as unknown as Record<string, unknown>).veSetReels = (t: string, title: string) => {
+      const p = parseMovieScenes(t);
+      ve2Movie = { title: title || p.title, kind: 'reels', scenes: p.scenes.map((sc) => ({ n: sc.n, heading: sc.heading, text: sc.text, status: 'idle' as const, path: '', dur: 0, err: '' })) };
       ve2Plan = t;
       ve2SaveState();
     };
@@ -101,7 +112,7 @@
   // v218: rencana movie — daftar scene hasil ekspor naskah (Script Editor
   // maupun chat lewat Script Editor), masing-masing bisa digenerate per scene.
   interface Ve2MovieScene { n: number; heading: string; text: string; status: 'idle' | 'busy' | 'done' | 'fail'; path: string; dur: number; err: string; }
-  interface Ve2Movie { title: string; scenes: Ve2MovieScene[]; }
+  interface Ve2Movie { title: string; scenes: Ve2MovieScene[]; kind: 'movie' | 'reels'; }
   function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number; plan: string; snap: boolean; ratio: string; movie: Ve2Movie | null } | null {
     try {
       const raw = localStorage.getItem('minime.ve2');
@@ -113,7 +124,7 @@
       const assetKinds = [...tracks, 'Image'];
       const assets: Ve2Asset[] = v.assets.filter((a: any) => a && typeof a.id === 'string' && typeof a.name === 'string').map((a: any) => ({ id: a.id, name: a.name, icon: typeof a.icon === 'string' ? a.icon : '🎬', kind: (assetKinds.includes(a.kind) ? a.kind : 'Video') as Ve2Asset['kind'], src: typeof a.src === 'string' ? a.src : '', duration: Number.isFinite(a.duration) ? Number(a.duration) : 0 }));
       const movieRaw = v.movie && typeof v.movie === 'object' && Array.isArray((v.movie as { scenes?: unknown }).scenes) ? (v.movie as { title?: unknown; scenes: unknown[] }) : null;
-      const movie: Ve2Movie | null = movieRaw ? { title: typeof movieRaw.title === 'string' ? movieRaw.title : '', scenes: movieRaw.scenes.filter((sc): sc is Record<string, unknown> => !!sc && typeof sc === 'object').map((sc, i) => ({ n: Number.isFinite(Number(sc.n)) ? Number(sc.n) : i + 1, heading: typeof sc.heading === 'string' ? sc.heading : '', text: typeof sc.text === 'string' ? sc.text : '', status: (['idle', 'busy', 'done', 'fail'].includes(String(sc.status)) ? String(sc.status) : 'idle') as Ve2MovieScene['status'], path: typeof sc.path === 'string' ? sc.path : '', dur: Number.isFinite(Number(sc.dur)) ? Number(sc.dur) : 0, err: typeof sc.err === 'string' ? sc.err : '' })).filter((sc) => sc.text) } : null;
+      const movie: Ve2Movie | null = movieRaw ? { title: typeof movieRaw.title === 'string' ? movieRaw.title : '', kind: ((movieRaw as { kind?: unknown }).kind === 'reels' ? 'reels' : 'movie') as Ve2Movie['kind'], scenes: movieRaw.scenes.filter((sc): sc is Record<string, unknown> => !!sc && typeof sc === 'object').map((sc, i) => ({ n: Number.isFinite(Number(sc.n)) ? Number(sc.n) : i + 1, heading: typeof sc.heading === 'string' ? sc.heading : '', text: typeof sc.text === 'string' ? sc.text : '', status: (['idle', 'busy', 'done', 'fail'].includes(String(sc.status)) ? String(sc.status) : 'idle') as Ve2MovieScene['status'], path: typeof sc.path === 'string' ? sc.path : '', dur: Number.isFinite(Number(sc.dur)) ? Number(sc.dur) : 0, err: typeof sc.err === 'string' ? sc.err : '' })).filter((sc) => sc.text) } : null;
       // Scene yang sedang busy saat app ditutup tidak mungkin masih jalan:
       // kembalikan ke idle supaya tombol Generate-nya bisa ditekan lagi.
       if (movie) movie.scenes.forEach((sc) => { if (sc.status === 'busy') sc.status = 'idle'; });
@@ -1419,7 +1430,7 @@
 <div class="se-group"><label>{t('img.plan', lang)}<textarea id="ve-plan" rows="2" class="se-field" value={ve2Plan} oninput={(e) => { ve2Plan = (e.target as HTMLTextAreaElement).value; ve2SaveState(); }}></textarea></label></div>
 {#if ve2Movie}
 <div class="se-group" id="ve2-movie">
-<h4>{t('ve2.movie.title', lang)}{ve2Movie.title ? ` — ${ve2Movie.title}` : ''}</h4>
+<h4>{t(ve2Movie.kind === 'reels' ? 've2.reels.title' : 've2.movie.title', lang)}{ve2Movie.title ? ` — ${ve2Movie.title}` : ''}</h4>
 {#each ve2Movie.scenes as sc (sc.n)}
 <div class="se-group" data-ve2-scene={sc.n}>
 <div><b>{sc.heading ? sc.heading : t('ve2.movie.scene', lang, { n: sc.n })}</b> — {sc.text.slice(0, 120)}{sc.text.length > 120 ? '…' : ''}</div>

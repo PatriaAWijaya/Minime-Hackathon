@@ -94,7 +94,9 @@ async function fetchStub(url, opts) {
   } else if (body.includes('CAROUSEL-PLAN')) {
     content = 'NASKAH-CAR-UJI: caption + carousel 6 slide kopi.';
   } else if (body.includes('REELS-PLAN')) {
-    content = 'NASKAH-REELS-UJI: rencana reels 30-60 detik 9:16 kopi.';
+    content = body.includes('REELS-UJI')
+      ? 'Shot 1: Pembuka\nSecangkir kopi susu dituang perlahan di atas meja kayu.\nShot 2: Penutup\nBarista tersenyum menyerahkan gelas ke pelanggan.\nCaption: Kopi susu gula aren, manisnya pas!'
+      : 'NASKAH-REELS-UJI: rencana reels 30-60 detik 9:16 kopi.';
   } else if (body.includes('500 karakter')) {
     content = 'Kopi susu gula aren ini creamy banget, manisnya pas dari gula aren asli, dan aromanya langsung bikin pengin nyobain satu gelas lagi. Satu gelas cukup untuk memulai hari, apalagi diminum selagi hangat ditemani roti bakar di pagi yang masih sepi. Racikan susunya lembut, gulanya tidak bikin enek, dan aftertaste kopinya bersih tanpa rasa pahit yang mengganggu. Cocok buat yang baru mulai suka kopi, juga buat penikmat lama yang cari rasa manis legit tanpa ribet. Order sekarang selagi promo berjalan, stok gula aren asli terbatas dan tiap gelas dibuat fresh begitu pesanan masuk. Jangan sampai kehabisan, karena racikan ini cuma tersedia selama persediaan gula aren masih ada.';
   } else if (body.includes('SARAN-UJI')) {
@@ -969,6 +971,24 @@ try {
   check('v219: vo: mengisi kolom TTS Voice Editor', (document.getElementById('vsText')?.value || '').includes('Halo, ini naskah voice over uji'), document.getElementById('vsText')?.value || '');
   check('v219: vo: membuka tab Voice', document.getElementById('ms-tab-voice')?.style.display === 'block', document.getElementById('ms-tab-voice')?.style.display || '');
   check('v219: vo: bubble konfirmasi Prime ada', (lastMsg()?.textContent || '').includes('Voice Editor'), lastMsg()?.textContent || '');
+
+  // v220: alur reels kini mengisi Video Editor — rencana terurai jadi
+  // shot di grup Rencana Reels + teks mentah di textarea rencana.
+  // Marker REELS-UJI membuat stub mengembalikan REELS-PLAN ber-heading
+  // Shot (pola LABEL-UJI v203). Alur: purpose -> platform -> format.
+  await sendMsg('halo Kreatif, buatkan konten instagram kopi REELS-UJI');
+  await waitFor(() => (lastMsg()?.textContent || '').includes('dipergunakan untuk apa?'), 'v220 purpose');
+  recBtn(lastMsg(), 'Konten Sosial Media').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Platform sosmednya yang mana?'), 'v220 platform');
+  recBtn(lastMsg(), 'Instagram').click();
+  await waitFor(() => (lastMsg()?.textContent || '').includes('Jenis postingannya apa?'), 'v220 format');
+  recBtn(lastMsg(), 'Reels').click();
+  await waitFor(() => document.getElementById('ve2-movie'), 'v220 grup rencana reels', 120);
+  await tick(200);
+  check('v220: reels masuk grup Rencana Reels (2 shot)', document.querySelectorAll('#ve2-movie [data-ve2-scene]').length === 2, 'n=' + document.querySelectorAll('#ve2-movie [data-ve2-scene]').length);
+  check('v220: judul grup Rencana Reels + topik', (document.getElementById('ve2-movie')?.textContent || '').includes('Rencana Reels'), document.getElementById('ve2-movie')?.textContent?.slice(0, 80) || '');
+  check('v220: teks mentah reels di textarea rencana', (document.getElementById('ve-plan')?.value || '').includes('Secangkir kopi susu'), (document.getElementById('ve-plan')?.value || '').slice(0, 60));
+  check('v220: tombol Buka Video Editor tetap ada', !!document.querySelector('#chatBox [data-act="cb-open-video"]'));
 
 } catch (e) {
   // eslint-disable-next-line no-console

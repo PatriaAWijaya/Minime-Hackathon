@@ -814,6 +814,11 @@ async function cbGenerateReels(st: CbState): Promise<void> {
     const ag = kreatif();
     postChat('kreatif', ag.name, ag.color, esc(t.text) + t.footer);
     saveLib('Reels: ' + topicOf(st), t.text);
+    // v220: rencana reels masuk Video Editor (dulu hanya teks di chat):
+    // teks mentah ke textarea rencana + shot terurai ke grup rencana
+    // yang bisa digenerate per shot (mesin yang sama dengan movie).
+    const w = window as unknown as Record<string, unknown>;
+    if (typeof w.veSetReels === 'function') (w.veSetReels as (t: string, title: string) => void)(t.text, 'Reels: ' + topicOf(st));
     postKreatif(tr('cb.mov.done') + openButton('cb-open-video', 'cb.open.video'));
   } catch (e) { postGenError(e); }
   setAgentPhase('kreatif', null);

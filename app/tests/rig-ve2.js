@@ -770,6 +770,37 @@ try {
   await waitFor(() => (docN.querySelector('[data-ve2-scene="1"]')?.textContent || '').includes('Gagal'), 'scene gagal tanpa kunci', 120);
   check('v218: tanpa kunci Gemini, scene jadi Gagal (jujur)', (docN.querySelector('[data-ve2-scene="1"]')?.textContent || '').includes('Gagal'), docN.querySelector('[data-ve2-scene="1"]')?.textContent?.slice(0, 120) || '');
 
+  // §v220: intake reels — veSetReels mengurai REELS-PLAN dengan parser
+  // yang sama, judul grup 'Rencana Reels', generate per shot memakai
+  // mesin movie yang sama (Omni stub), lalu Bersihkan.
+  const storeR = new Map();
+  storeR.set('minime.cleaned-v84', '1');
+  storeR.set('minime.cleaned-graph-v88', '1');
+  storeR.set('minime.geminiKey', 'uji');
+  storeR.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1 }));
+  const domR = makeDomM(storeR);
+  const docR = domR.window.document;
+  await waitFor(() => docR.querySelector('[data-view="media"]'), 'mountR rail media', 100);
+  docR.querySelector('[data-view="media"]').click();
+  await tick(100);
+  docR.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  const reelsR = 'Shot 1: Pembuka\nSecangkir kopi susu dituang perlahan di atas meja kayu.\nShot 2: Penutup\nBarista tersenyum menyerahkan gelas ke pelanggan.\nCaption: Kopi susu gula aren, manisnya pas!';
+  domR.window.veSetReels(reelsR, 'Reels: Kopi Uji');
+  await tick(100);
+  check('v220: veSetReels parse 2 shot ber-heading', docR.querySelectorAll('[data-ve2-scene]').length === 2, 'n=' + docR.querySelectorAll('[data-ve2-scene]').length);
+  check('v220: judul grup Rencana Reels (bukan Movie)', (docR.getElementById('ve2-movie')?.textContent || '').includes('Rencana Reels') && (docR.getElementById('ve2-movie')?.textContent || '').includes('Reels: Kopi Uji'), docR.getElementById('ve2-movie')?.textContent?.slice(0, 80) || '');
+  check('v220: teks mentah reels masuk textarea rencana', (docR.getElementById('ve-plan')?.value || '').includes('Secangkir kopi susu'), (docR.getElementById('ve-plan')?.value || '').slice(0, 60));
+  const savedR = JSON.parse(storeR.get('minime.ve2') || '{}');
+  check('v220: kind reels tersimpan di state ve2', savedR.movie && savedR.movie.kind === 'reels' && savedR.movie.scenes.length === 2, JSON.stringify(savedR.movie || {}).slice(0, 120));
+  docR.querySelector('[data-ve2-scene-gen="1"]').click();
+  await waitFor(() => (docR.querySelector('[data-ve2-scene="1"]')?.textContent || '').includes('Selesai'), 'shot reels 1 selesai', 120);
+  const savedR2 = JSON.parse(storeR.get('minime.ve2') || '{}');
+  check('v220: klip shot reels masuk timeline', (savedR2.clips || []).length === 1 && (savedR2.clips[0].src || '').includes('omni-uji.mp4'), JSON.stringify(savedR2.clips || []).slice(0, 120));
+  docR.getElementById('ve2MovieClear').click();
+  await tick(100);
+  check('v220: Bersihkan hapus rencana reels', !docR.getElementById('ve2-movie') && !!docR.getElementById('ve2-movie-empty'), '');
+
 
 } catch (e) {
   // eslint-disable-next-line no-console
