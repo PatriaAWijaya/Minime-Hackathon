@@ -83,7 +83,7 @@
   // klip gambar berurutan bersama track Video.
   interface Ve2Clip { id: string; name: string; track: 'Video' | 'B-Roll' | 'Audio' | 'Teks'; start: number; dur: number; src: string; effect: 'none' | 'fade' | 'zoom'; }
   interface Ve2Asset { id: string; name: string; icon: string; kind: 'Video' | 'B-Roll' | 'Audio' | 'Teks' | 'Image'; src: string; duration: number; }
-  function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number; plan: string; snap: boolean } | null {
+  function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number; plan: string; snap: boolean; ratio: string } | null {
     try {
       const raw = localStorage.getItem('minime.ve2');
       if (!raw) return null;
@@ -93,7 +93,7 @@
       const clips: Ve2Clip[] = v.clips.filter((c: any) => c && typeof c.id === 'string' && typeof c.name === 'string' && Number.isFinite(c.start) && Number.isFinite(c.dur)).map((c: any) => ({ id: c.id, name: c.name, track: (tracks.includes(c.track) ? c.track : 'Video') as Ve2Clip['track'], start: Number(c.start), dur: Number(c.dur), src: typeof c.src === 'string' ? c.src : '', effect: (['fade', 'zoom'].includes(c.effect) ? c.effect : 'none') as Ve2Clip['effect'] }));
       const assetKinds = [...tracks, 'Image'];
       const assets: Ve2Asset[] = v.assets.filter((a: any) => a && typeof a.id === 'string' && typeof a.name === 'string').map((a: any) => ({ id: a.id, name: a.name, icon: typeof a.icon === 'string' ? a.icon : '🎬', kind: (assetKinds.includes(a.kind) ? a.kind : 'Video') as Ve2Asset['kind'], src: typeof a.src === 'string' ? a.src : '', duration: Number.isFinite(a.duration) ? Number(a.duration) : 0 }));
-      return { clips, assets, out: typeof v.out === 'string' ? v.out : '', zoom: [0.5, 1, 2].includes(Number(v.zoom)) ? Number(v.zoom) : 1, plan: typeof v.plan === 'string' ? v.plan : '', snap: typeof v.snap === 'boolean' ? v.snap : true };
+      return { clips, assets, out: typeof v.out === 'string' ? v.out : '', zoom: [0.5, 1, 2].includes(Number(v.zoom)) ? Number(v.zoom) : 1, plan: typeof v.plan === 'string' ? v.plan : '', snap: typeof v.snap === 'boolean' ? v.snap : true, ratio: ['16:9', '9:16', '1:1', '4:5'].includes(v.ratio) ? v.ratio : '9:16' };
     } catch { return null; }
   }
   const ve2Loaded = ve2Load();
@@ -109,6 +109,8 @@
   let ve2Assets = $state<Ve2Asset[]>(ve2IsDummy ? [] : (ve2Loaded?.assets ?? []));
   let ve2Out = $state(ve2Loaded?.out || '/Users/mac/Movies/minime-ve2.mp4');
   let ve2Zoom = $state(ve2Loaded?.zoom ?? 1);
+  let ve2PreviewRatio = $state(ve2Loaded?.ratio ?? '9:16');
+  let ve2RatioCss = $derived(ve2PreviewRatio.replace(':', ' / '));
   let ve2Plan = $state(ve2Loaded?.plan ?? '');
   let ve2Snap = $state(ve2Loaded?.snap ?? true);
   if (ve2IsDummy) ve2SaveState();
@@ -221,7 +223,7 @@
     return ve2Clips.find((c) => c.id === ve2SelId);
   }
   function ve2SaveState() {
-    try { localStorage.setItem('minime.ve2', JSON.stringify({ clips: ve2Clips, assets: ve2Assets, out: ve2Out, zoom: ve2Zoom, plan: ve2Plan, snap: ve2Snap })); } catch { /* kuota penuh: abaikan */ }
+    try { localStorage.setItem('minime.ve2', JSON.stringify({ clips: ve2Clips, assets: ve2Assets, out: ve2Out, zoom: ve2Zoom, plan: ve2Plan, snap: ve2Snap, ratio: ve2PreviewRatio })); } catch { /* kuota penuh: abaikan */ }
   }
   function ve2SelectClip(id: string) {
     ve2SelId = id;
@@ -1372,7 +1374,7 @@
           <div class="ve2-preview">
           <video id="ve2Video" bind:this={ve2VideoEl} style="width:100%;background:#000;display:{ve2VideoOn ? 'block' : 'none'};max-height:min(480px, 55vh);object-fit:contain" controls onpause={() => { ve2VideoPaused(); }}></video>
           {#if !ve2VideoOn}
-          <div class="ve2-preview-box">
+          <div class="ve2-preview-box" style="aspect-ratio: {ve2RatioCss}">
             {#if ve2SelClip() && ve2PreviewSrc}
               {#if ve2PreviewKind === 'image'}
                 <img id="ve2PreviewImg" src={ve2PreviewSrc} alt={ve2SelClip()?.name ?? ''} style="width:100%;background:#000;display:block;max-height:min(480px, 55vh);object-fit:contain">
@@ -1391,7 +1393,7 @@
             {/if}
           </div>
           {/if}
-          <div class="ve2-transport"><button onclick={() => { ve2ToStart() }} title={t('title.first', lang)}>⏮</button><button onclick={() => { ve2PlayToggle() }} title={t('title.play', lang)}>{ve2Playing ? t('ve2.stop', lang) : t('ve.play', lang)}</button><button onclick={() => { ve2ToEnd() }} title={t('title.last', lang)}>⏭</button><span id="ve2Time">{ve2TimeText}</span><span style="margin-left:auto">{t('ve.zoom', lang)} <select id="ve2Zoom" value={ve2Zoom} onchange={(e) => { ve2Zoom = Number(e.currentTarget.value); ve2SaveState(); }}><option value={0.5}>50%</option><option value={1}>100%</option><option value={2}>200%</option></select></span></div>
+          <div class="ve2-transport"><button onclick={() => { ve2ToStart() }} title={t('title.first', lang)}>⏮</button><button onclick={() => { ve2PlayToggle() }} title={t('title.play', lang)}>{ve2Playing ? t('ve2.stop', lang) : t('ve.play', lang)}</button><button onclick={() => { ve2ToEnd() }} title={t('title.last', lang)}>⏭</button><span id="ve2Time">{ve2TimeText}</span><span style="margin-left:auto">{t('ve.zoom', lang)} <select id="ve2Zoom" value={ve2Zoom} onchange={(e) => { ve2Zoom = Number(e.currentTarget.value); ve2SaveState(); }}><option value={0.5}>50%</option><option value={1}>100%</option><option value={2}>200%</option></select> {t('ve2.ratio', lang)} <select id="ve2Ratio" value={ve2PreviewRatio} onchange={(e) => { ve2PreviewRatio = e.currentTarget.value; ve2SaveState(); }}><option value="16:9">16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option><option value="4:5">4:5</option></select></span></div>
           </div>
           <div class="ve2-inspector">
           {#if ve2SelClip()}
@@ -1546,7 +1548,7 @@
           {/if}
           {#if videoSpend.videos > 0}
           <div class="bill-card">
-            <div><b>Veo 3.1</b> <span style="color:#a1a1a1">Google</span></div>
+            <div><b>Gemini Omni</b> <span style="color:#a1a1a1">Google</span></div>
             <div>{t('vg.spend', lang, { n: videoSpend.videos })} · ${videoSpend.usd.toFixed(2)} ≈ Rp{videoSpend.idr.toLocaleString('id-ID')}</div>
           </div>
           {/if}

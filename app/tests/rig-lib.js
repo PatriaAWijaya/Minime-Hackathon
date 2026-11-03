@@ -222,6 +222,32 @@ try {
   dom2.window.document.getElementById('libArchiveBtn').click();
   await tick(100);
   check('kembali ke Aktif -> grid menampilkan item pulihan', grid2().includes('Lama') && grid2().includes('Baru'), grid2().slice(0, 200));
+
+  // §arsip-detail: klik 2x kartu arsip -> dialog detail + Pulihkan dari dialog.
+  store2.set('minime.library.archived', JSON.stringify([
+    { o: 'ArsipUji', a: 'Kreatif', s: 'Disetujui', badge: 'b-ok', kind: 'script', content: 'ISI-ARSIP-UJI', proj: '', addedAt: newD, archivedAt: newD },
+  ]));
+  dom2.window.document.getElementById('libArchiveBtn').click();
+  await tick(100);
+  const arcCard = dom2.window.document.querySelector('#libGrid .lib-card[data-lib-detail-arc]');
+  check('arsip: kartu arsip punya atribut detail + hint', !!arcCard && (arcCard.getAttribute('title') || '').includes('Klik dua kali'), arcCard ? arcCard.outerHTML.slice(0, 160) : 'no-card');
+  arcCard.querySelector('.lib-title').dispatchEvent(new dom2.window.MouseEvent('dblclick', { bubbles: true }));
+  await tick(100);
+  const dlgA = dom2.window.document.getElementById('libDetailDlg');
+  const dlgAText = dlgA?.textContent || '';
+  check('arsip: klik 2x membuka dialog detail arsip', dlgA?.style.display === 'block' && dlgAText.includes('ArsipUji') && dlgAText.includes('ISI-ARSIP-UJI'), dlgAText.slice(0, 200));
+  check('arsip: dialog hanya Pulihkan + Tutup (tanpa aksi kartu aktif)', [...dlgA.querySelectorAll('button')].map((b) => b.textContent.trim()).join('|') === 'Pulihkan|Tutup', [...dlgA.querySelectorAll('button')].map((b) => b.textContent.trim()).join('|'));
+  [...dlgA.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Pulihkan').click();
+  await tick(100);
+  const backA = JSON.parse(store2.get('minime.library.added') || '[]');
+  check('arsip: Pulihkan dari dialog -> item kembali aktif + dialog tertutup', backA.some((it) => it.o === 'ArsipUji') && !JSON.parse(store2.get('minime.library.archived') || '[]').some((it) => it.o === 'ArsipUji') && dlgA.style.display === 'none', JSON.stringify(backA.map((it) => it.o)));
+  // §v213: thumbnail Library mengecil 60% (jadi 40%), kartu tetap.
+  const cssMatchV = html.match(/href="([^"]+\.css)"/);
+  let cssTextV = '';
+  if (cssMatchV) { try { cssTextV = fs.readFileSync(path.join(distDir, cssMatchV[1]), 'utf-8'); } catch { cssTextV = ''; } }
+  check('v213: CSS build memuat .lib-thumb width 40%', /\.lib-thumb\{[^}]*width:\s*40%/.test(cssTextV), cssMatchV ? cssMatchV[1] : 'no-css-link');
+  check('v213: .lib-thumb tetap di tengah (margin auto)', /\.lib-thumb\{[^}]*margin:\s*0 auto/.test(cssTextV), '');
+
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));
   failures++;

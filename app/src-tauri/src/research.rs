@@ -312,7 +312,6 @@ fn drop_block(html: &str, tag: &str) -> String {
             }
             None => {
                 rest = "";
-                rest_lower = "";
                 break;
             }
         }

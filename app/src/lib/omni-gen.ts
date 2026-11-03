@@ -1,6 +1,6 @@
 // Generator video Gemini Omni via Interactions API — dipakai tab Video.
-// Menggantikan video-gen.ts (Veo): model preview Veo 3.1 di Gemini API
-// dimatikan Google 22 Okt 2026 (404 untuk semua tier) — bukan bug app.
+// Menggantikan video-gen.ts (Veo, dimatikan Google 22 Okt 2026) —
+// mesin sekarang Gemini Omni, bukan Veo.
 // Kontrak (dok resmi ai.google.dev/gemini-api/docs/omni): POST
 // /v1beta/interactions dengan ?key= (pola yang sama dengan callGemini —
 // header TIDAK dipakai agar kompatibel dengan mekanisme surrogate

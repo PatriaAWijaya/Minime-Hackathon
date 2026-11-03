@@ -629,6 +629,33 @@ try {
   await tick(100);
   check('v198: pause video menghentikan timeline', trans29[1].textContent === '▶ Putar' && doc29.getElementById('ve2BtnPlay').disabled === false, trans29[1].textContent + ' play-disabled:' + doc29.getElementById('ve2BtnPlay').disabled);
 
+  // §v213: rasio preview default 9:16 + picker di kanan bawah preview.
+  const storeV = new Map();
+  storeV.set('minime.cleaned-v84', '1');
+  storeV.set('minime.cleaned-graph-v88', '1');
+  const domV = makeDom(storeV);
+  const docV = domV.window.document;
+  await waitFor(() => docV.querySelector('[data-view="media"]'), 'mountV rail media', 100);
+  docV.querySelector('[data-view="media"]').click();
+  await tick(100);
+  docV.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  const ratioSel = docV.getElementById('ve2Ratio');
+  check('v213: picker rasio ada di bar transport', !!ratioSel, ratioSel ? 'ada' : 'tidak ada');
+  check('v213: rasio default 9:16', ratioSel?.value === '9:16', ratioSel?.value || '');
+  const boxV = docV.querySelector('.ve2-preview-box');
+  const boxStyleV = (boxV?.getAttribute('style') || '').replace(/\s+/g, '');
+  check('v213: kotak preview default 9:16', boxStyleV.includes('9/16'), boxStyleV);
+  check('v213: kotak preview tetap ada saat kosong (tanpa klip)', !!boxV && (boxV.textContent || '').includes('Pilih klip'), boxV?.textContent?.slice(0, 80) || '');
+  ratioSel.value = '16:9';
+  ratioSel.dispatchEvent(new domV.window.Event('change', { bubbles: true }));
+  await tick(100);
+  const boxV2 = docV.querySelector('.ve2-preview-box');
+  const boxStyleV2 = (boxV2?.getAttribute('style') || '').replace(/\s+/g, '');
+  check('v213: ganti picker -> kotak jadi 16:9', boxStyleV2.includes('16/9'), boxStyleV2);
+  const savedV = JSON.parse(storeV.get('minime.ve2') || '{}');
+  check('v213: rasio tersimpan di state ve2', savedV.ratio === '16:9', JSON.stringify(savedV.ratio));
+
 } catch (e) {
   // eslint-disable-next-line no-console
   console.log('FAIL rig-ve2 exception :: ' + (e && e.stack ? e.stack : e));

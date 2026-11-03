@@ -88,7 +88,7 @@ export async function metaGenerateImage(key: string, prompt: string, n: number, 
 // Nano Banana ditagih per token, bukan flat per gambar; GOOGLE_IMG_PRICE_USD
 // = referensi 1K yang diterbitkan ($0,067/gambar) untuk pencatatan spend,
 // tagihan aktual bisa sedikit berbeda. Image output TIDAK ada free tier:
-// kunci Gemini harus milik project dengan billing aktif (sama seperti Veo).
+// kunci Gemini harus milik project dengan billing aktif (sama seperti Omni).
 export const GOOGLE_IMG_MODEL = 'gemini-3.1-flash-image';
 export const GOOGLE_IMG_PRICE_USD = 0.067;
 export const GOOGLE_IMG_ASPECT: Record<string, string> = {
@@ -116,8 +116,7 @@ export async function googleGenerateImage(key: string, prompt: string, aspect: s
 
 // Tebak mime dari prefix base64 (PNG/JPEG/GIF punya magic number yang
 // khas; selain itu asumsikan webp — format bawaan app ini). Dipakai
-// readThumb + referensi Veo agar file PNG/JPG imporan tidak salah
-// dilabeli webp.
+// readThumb agar file PNG/JPG imporan tidak salah dilabeli webp.
 export function mimeFromB64(b64: string): string {
   if (b64.startsWith('iVBORw0KGgo')) return 'image/png';
   if (b64.startsWith('/9j/')) return 'image/jpeg';

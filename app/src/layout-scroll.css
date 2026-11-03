@@ -791,3 +791,7 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 #plan30-main table { border-collapse: collapse; font-size: 13px; width: 100%; }
 #plan30-main th, #plan30-main td { border: 1px solid #444; padding: 4px 6px; text-align: left; }
 #plan30-main label { display: block; margin-top: 8px; }
+
+/* v213: thumbnail Library mengecil 60% (jadi 40% dari lebar kartu),
+   kartu/teks/tombol tetap. Dialog detail (.lib-detail-img) tidak diubah. */
+.lib-thumb { width: 40%; margin: 0 auto 10px; }

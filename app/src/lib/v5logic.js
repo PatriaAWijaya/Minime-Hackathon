@@ -253,8 +253,10 @@ function libWire() {
   if (grid) grid.addEventListener("dblclick", function (e) {
     if (!e.target || !e.target.closest) return;
     if (e.target.closest("button")) return;
-    var card = e.target.closest("[data-lib-detail]"); if (!card || !grid.contains(card)) return;
-    libDetail(parseInt(card.getAttribute("data-lib-detail") || "0", 10));
+    var card = e.target.closest("[data-lib-detail]");
+    if (card && grid.contains(card)) { libDetail(parseInt(card.getAttribute("data-lib-detail") || "0", 10)); return; }
+    var acard = e.target.closest("[data-lib-detail-arc]"); if (!acard || !grid.contains(acard)) return;
+    libDetailArchived(parseInt(acard.getAttribute("data-lib-detail-arc") || "0", 10));
   });
   var dd = document.getElementById("libDetailDlg");
   if (dd) dd.addEventListener("click", function (e) {
@@ -266,6 +268,7 @@ function libWire() {
     else if (act === "lib-planner") { libDetailClose(); socLibToPlanner(libAll()[idx]); showView("planner"); }
     else if (act === "lib-delete") libDelete(idx);
     else if (act === "lib-close-revise") { libDetailClose(); libRevise(idx); }
+    else if (act === "lib-restore") { libDetailClose(); libRestoreArchived(idx); }
   });
   var cd = document.getElementById("libConfirmDlg");
   if (cd) cd.addEventListener("click", function (e) {
@@ -850,7 +853,7 @@ function msgRecsHtml(m, options) {
       return '<button class="rec-btn' + (m.pickedRec === i ? ' done' : '') + '" data-act="msg-rec" data-opt="' + i + '">' + esc(opt) + '</button>';
     }).join('') + '</div>';
   }
-  return '<div class="msg-recs-text">' + esc(tr('chat.recs.label')) + ' ' + options.map(function (opt) { return esc(opt); }).join(' \u2022 ') + '</div>';
+  return '<div class="msg-recs-text">' + esc(tr('chat.recs.label')) + ' ' + options.map(function (opt) { return esc(opt); }).join(' • ') + '</div>';
 }
 function pickRecommendation(el) {
   var st = chatMsgsAndSave();
@@ -1318,7 +1321,7 @@ export function renderGraph() {
           var tt = graphTrigOf(nd);
           var chips = document.createElement("div");
           chips.className = "ntrig-chips";
-          graphTrigSummary(tt).split(" \u2022 ").forEach(function (c) {
+          graphTrigSummary(tt).split(" • ").forEach(function (c) {
             var sp = document.createElement("span"); sp.textContent = c; chips.appendChild(sp);
           });
           el.appendChild(chips);
@@ -1669,7 +1672,7 @@ export function renderLib() {
     if (libView === "archived") {
       // Tampilan arsip terpisah: filter lain diabaikan; tanpa thumbnail (indeks beda).
       var acards = arc.map(function (item, ai) {
-        return "<div class='lib-card'>"
+        return "<div class='lib-card' data-lib-detail-arc='" + ai + "' title='" + esc(tr('lib.detail.hint')) + "'>"
           + "<div class='lib-title'>" + esc(item.o) + "</div>"
           + "<div class='lib-meta'>" + esc(tr('lib.card.agent')) + ": " + esc(item.a) + " • " + esc(tr('lib.card.project')) + ": " + esc(item.proj || "—") + "</div>"
           + "<div class='lib-meta'>" + esc(tr('lib.card.type')) + ": " + esc(libKindLabel(libKindOf(item))) + " • " + esc(tr('lib.card.date')) + ": " + esc(libDateLabel(item)) + " • " + esc(tr('lib.view.archive')) + ": " + esc(item.archivedAt || "—") + "</div>"
@@ -1772,6 +1775,41 @@ export function libDetail(i, ev) {
 export function libDetailClose() {
   var dlg = document.getElementById("libDetailDlg");
   if (dlg) { dlg.style.display = "none"; dlg.innerHTML = ""; }
+}
+
+/* Detail kartu ARSIP (klik 2x): sama seperti detail aktif (judul + meta
+   + pratinjau isi), tapi aksinya hanya Pulihkan + Tutup — aksi kartu
+   aktif (Media/Planner/Hapus/Revisi) memakai indeks libAll() sehingga
+   tidak berlaku untuk item arsip. */
+export function libDetailArchived(ai) {
+  var arc = loadLibArchived();
+  var item = arc[ai];
+  var dlg = document.getElementById("libDetailDlg");
+  if (!item || !dlg) return;
+  var preview = "";
+  if (item.kind === "image" && item.imageFile) {
+    preview = "<img class='lib-detail-img' data-lib-idx='" + ai + "' alt=''><div class='se-note'>" + esc(item.content || "") + "</div>";
+  } else if (item.content) {
+    preview = "<pre class='lib-detail-pre'>" + esc(item.content) + "</pre>";
+  } else {
+    preview = "<div class='se-note'>" + esc(tr('lib.detail.nocontent')) + "</div>";
+  }
+  dlg.innerHTML = "<div class='lib-dialog-backdrop' data-act='lib-close'></div><div class='lib-dialog-card'>"
+    + "<div class='lib-title'>" + esc(item.o) + "</div>"
+    + "<div class='lib-meta'>" + esc(tr('lib.card.agent')) + ": " + esc(item.a) + " • " + esc(item.proj || "—") + "</div>"
+    + "<div class='lib-meta'>" + esc(tr('lib.card.type')) + ": " + esc(libKindLabel(libKindOf(item))) + " • " + esc(tr('lib.card.date')) + ": " + esc(libDateLabel(item)) + " • " + esc(tr('lib.view.archive')) + ": " + esc(item.archivedAt || "—") + "</div>"
+    + preview
+    + "<div class='lib-actions'>"
+    + "<button class='btn btn-sm' data-act='lib-restore' data-idx='" + ai + "'>" + esc(tr('lib.btn.restore')) + "</button>"
+    + "<button class='btn btn-sm' data-act='lib-close'>" + esc(tr('lib.detail.close')) + "</button>"
+    + "</div></div>";
+  dlg.style.display = "block";
+  var img = dlg.querySelector("[data-lib-idx]");
+  if (img && item.imageFile) {
+    readThumb(item.imageFile).then(function (url) {
+      if (url) img.src = url; else img.remove();
+    });
+  }
 }
 
 /* Hapus menyeluruh: Library (persist: splice baris user / tombstone baris
