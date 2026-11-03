@@ -477,6 +477,19 @@ try {
   const usedVal = usedMatch ? parseFloat(usedMatch[1]) : NaN;
   check('v217: Pemakaian memasukkan Wan (0.00295 + 4.62)', Math.abs(usedVal - 4.62295) < 0.001, usedDiv?.textContent?.slice(0, 60) || '');
 
+  // 25. v221: tema terang Glass White — blok light di CSS dist memakai
+  // palet kaca putih + biru-putih pucat, ungu hilang dari blok light,
+  // blok gelap TIDAK berubah, tombol gradien di light bertinta gelap.
+  // (jsdom tidak memuat stylesheet — pola v199: assert teks CSS dist.)
+  const lightBlock = (cssText.match(/\[data-theme=light\]\{([^}]*)\}/) || [])[1] || '';
+  const darkBlock = (cssText.match(/\[data-theme=dark\]\{([^}]*)\}/) || [])[1] || '';
+  check('v221: light bg kaca putih kebiruan', lightBlock.includes('--t-bg: #F4F8FF'), lightBlock.slice(0, 80));
+  check('v221: light aksen bluish white + teks aksen gelap', lightBlock.includes('--t-accent: #8FB8E8') && lightBlock.includes('--t-accent-grad: linear-gradient(135deg, #C9E0F7, #8FB8E8)') && lightBlock.includes('--t-accent-text: #1E3A5F'), lightBlock.slice(0, 200));
+  check('v221: ungu hilang dari blok light', !lightBlock.includes('#9333EA') && !lightBlock.includes('#D946EF') && !lightBlock.includes('#FBF5FF'), lightBlock.slice(0, 120));
+  check('v221: blok gelap TIDAK berubah (violet glass)', darkBlock.includes('--t-bg: #0E0718') && darkBlock.includes('--t-accent: #8E7CC3'), darkBlock.slice(0, 80));
+  check('v221: tombol gradien di light bertinta gelap', /\[data-theme=light\] \.btn:not\(\.btn-done\):not\(\.btn-connected\)[^{]*\{color:var\(--t-accent-text\)\}/.test(cssText), '');
+  check('v221: panah kirim putih di light', /\[data-theme=light\] \.pill-send svg\{stroke:#fff\}/.test(cssText), '');
+
 
 } catch (e) {
   // eslint-disable-next-line no-console

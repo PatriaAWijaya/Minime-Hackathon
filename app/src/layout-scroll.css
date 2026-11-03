@@ -532,16 +532,16 @@ h3 { font-size: 18px; }
   --t-input-bg: rgba(24, 10, 40, 0.75); --t-hover-bg: rgba(162, 28, 175, 0.12);
 }
 [data-theme="light"] {
-  --t-bg: #FBF5FF; --t-bg-soft: #FFFFFF;
-  --t-panel: #FFFFFF; --t-panel2: #F5F0FE;
+  --t-bg: #F4F8FF; --t-bg-soft: #FFFFFF;
+  --t-panel: rgba(255, 255, 255, 0.72); --t-panel2: #EDF3FC;
   --t-glass: rgba(255, 255, 255, 0.72);
-  --t-border: #E9D5FF; --t-border-strong: #D8B4FE;
-  --t-text: #2E1065; --t-muted: #7E5A9B; --t-faint: #A78BFA;
-  --t-accent: #9333EA; --t-accent2: #D946EF; --t-accent-strong: #9333EA; --t-accent-soft: #F5D0FE;
-  --t-accent-grad: linear-gradient(135deg, #9333EA, #D946EF);
-  --t-accent-text: #FFFFFF;
-  --t-canvas-bg: #F3E8FF; --t-dot: rgba(217, 70, 239, 0.28);
-  --t-input-bg: #FFFFFF; --t-hover-bg: #F5D0FE;
+  --t-border: #DCE8F7; --t-border-strong: #B9D2F0;
+  --t-text: #1E2A3A; --t-muted: #5B6B82; --t-faint: #9FB3CC;
+  --t-accent: #8FB8E8; --t-accent2: #C9E0F7; --t-accent-strong: #4A7FC1; --t-accent-soft: #E4EEFB;
+  --t-accent-grad: linear-gradient(135deg, #C9E0F7, #8FB8E8);
+  --t-accent-text: #1E3A5F;
+  --t-canvas-bg: #EAF1FB; --t-dot: rgba(143, 184, 232, 0.28);
+  --t-input-bg: #FFFFFF; --t-hover-bg: #E4EEFB;
 }
 [data-theme="dark"] body { background-image: radial-gradient(700px 320px at 15% -5%, rgba(109, 40, 180, 0.22), transparent 60%), radial-gradient(520px 280px at 95% 0%, rgba(162, 28, 175, 0.16), transparent 60%); }
 body { background: var(--t-bg, #0e0e0e); color: var(--t-text, #ececec); }
@@ -795,3 +795,19 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
 /* v213: thumbnail Library mengecil 60% (jadi 40% dari lebar kartu),
    kartu/teks/tombol tetap. Dialog detail (.lib-detail-img) tidak diubah. */
 .lib-thumb { width: 40%; margin: 0 auto 10px; }
+
+/* v221: tema terang Glass White + aksen bluish white (perintah Patria
+   3 Nov 2026 09:06; tema gelap TIDAK disentuh). Variabel light di blok
+   [data-theme="light"] diganti ke palet kaca putih + biru-putih pucat.
+   Tambahan blok ini WAJIB karena aturan generik memakai color #fff
+   hardcode di atas gradien — di gradien pucat teks putih tak terbaca,
+   jadi tombol-tombol itu dipaksa memakai --t-accent-text (gelap) HANYA
+   di light. Status selesai/aktif (btn-done, btn-connected, .active)
+   DIKECUALIKAN supaya hijau selesai + teks gelapnya tidak berubah.
+   .msg-menu (popup ungu gelap + teks putih) SENGAJA tidak diubah:
+   masih terbaca dan bukan gradien. Panah kirim (SVG stroke #262626)
+   dipaksa putih di light supaya terbaca di atas biru accent-strong. */
+[data-theme="light"] .btn:not(.btn-done):not(.btn-connected), [data-theme="light"] .se-btn, [data-theme="light"] .se-btn2, [data-theme="light"] .filters button:not(.active), [data-theme="light"] [data-kbtab]:not(.active), [data-theme="light"] button[id^="ms-tabbtn-"]:not(.active), [data-theme="light"] button[id^="cp-tabbtn-"]:not(.active), [data-theme="light"] .rec-btn, [data-theme="light"] .chat-act, [data-theme="light"] .img-tab.active { color: var(--t-accent-text); }
+[data-theme="light"] .btn-primary { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 14px rgba(74, 127, 193, 0.30); }
+[data-theme="light"] .soc-composer .btn-primary, [data-theme="light"] #socCreatePost { background: var(--t-accent-strong); border-color: var(--t-accent-strong); color: var(--t-accent-text); }
+[data-theme="light"] .pill-send svg { stroke: #FFFFFF; }
