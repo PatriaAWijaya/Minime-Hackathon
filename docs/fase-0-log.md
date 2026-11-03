@@ -2529,6 +2529,24 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v236 — Provider Anthropic / Claude (perintah Patria 15:05 "tambahkan anthropic pada model, aku sudah punya API key nya"; penomoran: Anthropic mengambil nomor v236, perluasan tombol jalur utama geser ke v237)
+
+Latar: uji live v235 14:35–15:01 — generate soc gagal di semua provider (Meta abort, Gemini 503 lalu abort, Ollama abort). Diagnosis 15:13: timeout jalur Ollama di app 15 detik, sementara generasi IMAGE-PLAN panjang via deepseek-r1:1.5b lokal tidak selesai dalam 300 detik (model r1 berpikir panjang); proxy bersih. Anthropic menjadi jalan keluar praktis.
+
+Isi:
+- Router (src/router.ts): ProviderId + 'anthropic'; RouterConfig + anthropicApiKey/anthropicModel ('claude-sonnet-4-5')/anthropicBaseUrl ('https://api.anthropic.com/v1'); callAnthropic via Messages API (header x-api-key + anthropic-version 2023-06-01, system di field `system`, max_tokens 8192, temperature 0.2); rantai baru meta -> gemini -> anthropic -> ollama (perilaku lama bertahan bila Meta/Gemini jalan; Anthropic menyelamatkan saat keduanya gagal). costUsd = null (aturan audit v66: tarif model lain tidak ditebak); token input/output dicatat.
+- Kunci (chat.ts): localStorage 'minime.anthropicKey'; readKeys + KeyKind + saveKey/keyInputId/renderKeyButtons + connectKey (uji live langsung ke Anthropic tanpa fallback; satu kata, biaya nyaris nol).
+- 12 situs pemakaian kunci: cfg.anthropicApiKey diset di semua tempat yang menyet meta/gemini (chat, creative-brief, hf-gen, image-flow, plan30 x3, research-browser, script-editor x2).
+- Model per-agen: opsi 'claude' di picker agen baru + detail agen lama (v5logic.js) + label i18n 'na.model_claude'; callAgentModel merutekan label mengandung 'claude' ke callAnthropic.
+- Settings (App.svelte): kartu kunci Anthropic sesudah kartu Meta (input apiKeyAnthropic, tombol keyBtnAnthropic, catatan keyNoteAnthropic).
+- i18n 1277 -> 1279 kunci/bahasa (key.anthropic + na.model_claude, 3 bahasa).
+- Rig: stub rig-chat + rig-settings meniru bentuk respons Messages API (content[] + usage input/output); rig-chat §34 (rantai memakai Anthropic saat Meta/Gemini tanpa kunci, footer 'via anthropic claude-sonnet-4-5', tanpa fetch Meta/Gemini); rig-settings §4b (Anthropic TERHUBUNG hijau + tersimpan + tervalidasi) + hitungan kartu kunci 4 -> 5 dan baris input 4 -> 5.
+- Kunci API TIDAK pernah lewat chat: Patria memasukkannya sendiri di Settings app sesudah deploy (penyimpanan lokal perangkat saja).
+- Koreksi tipe saat build: union family di router.ts + provider/family di ledger.ts belum mengenal 'anthropic' (2 error svelte-check) — diperbaiki sebelum gate.
+
+SHA: kode lokal d494659 ↔ remote 44aeb40 (tree identik). Gate 9/9; loop 14 rig exit=0; svelte-check 0 error/21 warning (baseline); i18n 1279/bahasa, 0 duplikat; ledger md5 tidak berubah (d542428fe9901fbd417e098e9249d4b6); cargo 0 warning.
+LIVE 3 Nov ~15:25 WIB: deploy mh-build236.sh — MH_BUILD236_OK; HEAD MacBook <LOG_SHA> (commit log); PID <PID>; md5 dist JS/CSS lokal == MacBook. App LIVE = v236. Konfirmasi live Patria untuk v236 BELUM ada (uji live yang disarankan: Settings -> kartu Anthropic -> tempel key -> Hubungkan API -> TERHUBUNG hijau; lalu ulangi generate soc yang gagal — footer harus menyebut anthropic bila Meta/Gemini masih gagal).
+
 ## v235 — Audit konsistensi cb + alur lain (vonis Patria 13:54 "Bangun v235, semua perbaikan audit" + perluasan 13:55 "cek juga konsistensi alur yang lain"; audit subagent read-only paralel)
 
 Konteks: Patria menguji ulang alur cafe 13:30–13:41 (brief → Prime delegasi Kreatif → cb Sosmed → IG → Image → Promosional → Infografis → Satu per satu → generate BERHASIL via gemini fallback). Vonis audit: alur utama konsisten & on-topic; yang patah hanya cabang brief interaktif (cb) di 3 tempat + 2 cacat nyata di alur lain.
