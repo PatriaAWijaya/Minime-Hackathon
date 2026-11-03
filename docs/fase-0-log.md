@@ -2539,7 +2539,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - Bukti visual: render Chromium headless VM dengan CSS dist asli (mock .app + sidebar + kartu agen/kanban/billing + 2 tombol) — tombol gradien berkilau jelas di atas, kartu-kartu berkilau halus; tangkapan di ~/workspace/riglogs-v229/gloss-check.png. (Mock pertama salah susun karena body app itu kolom — diperbaiki dengan wrapper .app.)
 - Rig: rig-home §28 v229 baru (3 cek teks CSS dist bentuk minify nyata: kilau permukaan, kilau tombol, kilau hanya di light). Loop 14/14 (~/workspace/riglogs-v229/loop.log); gerbang GATE-V229 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1271 — CSS saja); svelte-check 0/21.
 - SHA: kode lokal a883a46 <-> remote 75aac67 (tree identik, pola push_rebased.py).
-- Catatan live: BELUM dikonfirmasi live (uji disarankan: di tema terang, panel/kartu tampak berkilau halus dan tombol gradien berkilau jelas di atas; tema gelap tidak berubah).
+- LIVE 3 Nov 2026 12:31 WIB: MH_BUILD229_OK, HEAD MacBook 1b8b443 (= commit log), PID segar 9935 (sebelumnya 7924), md5 CSS dist lokal == MacBook d052aecaa74a68e349e6616fa8607080 (byte-identik). Tema live tetap light. Konfirmasi live Patria BELUM ada.
 
 ## v228 — Ikon rel terlihat di tema terang (laporan Patria 11:45 + screenshot Settings)
 
