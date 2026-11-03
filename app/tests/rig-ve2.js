@@ -686,6 +686,90 @@ try {
   check('v217: label model 1.1-flash hilang', !(docW.body.textContent || '').includes('Gemini Omni 1.1-flash'), '');
   check('v217: tombol Snap berlabel Snap + ikon svg monochrome', (docW.getElementById('ve2BtnSnap')?.textContent || '').includes('Snap') && !!docW.getElementById('ve2BtnSnap')?.querySelector('svg'), docW.getElementById('ve2BtnSnap')?.textContent || '');
 
+  // §v218: Bridge Movie — veSetMovie parse scene, generate per scene (Omni stub), bersihkan, fallback, gagal jujur.
+  const storeM = new Map();
+  storeM.set('minime.cleaned-v84', '1');
+  storeM.set('minime.cleaned-graph-v88', '1');
+  storeM.set('minime.geminiKey', 'uji');
+  storeM.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1 }));
+  async function invokeStubM(cmd, args) {
+    if (cmd === 'video_probe') return { duration: 8, size: 0, streams: [], format_name: 'mp4' };
+    if (cmd === 'video_save') return { path: '/Users/mac/Movies/minime-veo/omni-uji.mp4' };
+    if (cmd === 'video_read') return { b64: '' };
+    if (cmd === 'open_external_url') return {};
+    throw new Error('unexpected invoke ' + cmd);
+  }
+  async function fetchStubM(url) {
+    if (String(url).includes('/interactions')) return { ok: true, status: 200, headers: { get: () => '' }, json: async () => ({ steps: [{ type: 'model_output', content: [{ type: 'video', data: 'RkFLRS1NUDQ=' }] }] }), text: async () => '' };
+    return { ok: false, status: 0, headers: { get: () => '' }, json: async () => ({}), text: async () => '' };
+  }
+  function makeDomM(st) {
+    const dom = new JSDOM(html, {
+      url: 'file://' + distDir + '/index.html',
+      resources: 'usable',
+      runScripts: 'dangerously',
+      pretendToBeVisual: true,
+      beforeParse(window) {
+        window.__TAURI_INTERNALS__ = { invoke: invokeStubM };
+        window.fetch = fetchStubM;
+        const ls = {
+          getItem: (k) => (st.has(k) ? st.get(k) : null),
+          setItem: (k, v) => st.set(k, String(v)),
+          removeItem: (k) => st.delete(k),
+          clear: () => st.clear(),
+        };
+        Object.defineProperty(window, 'localStorage', { value: ls });
+      },
+    });
+    return dom;
+  }
+  const domM = makeDomM(storeM);
+  const docM = domM.window.document;
+  await waitFor(() => docM.querySelector('[data-view="media"]'), 'mountM rail media', 100);
+  docM.querySelector('[data-view="media"]').click();
+  await tick(100);
+  docM.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  check('v218: tanpa rencana, note kosong tampil', !!docM.getElementById('ve2-movie-empty') && !docM.getElementById('ve2-movie'), '');
+  const scriptM = 'Judul: Kopi Pagi\nScene 1: Kedai buka\nBarista menyeduh kopi susu.\nScene 2: Pelanggan datang\nPelanggan pertama memesan.';
+  domM.window.veSetMovie(scriptM);
+  await tick(100);
+  const scenesM = docM.querySelectorAll('[data-ve2-scene]');
+  check('v218: veSetMovie parse 2 scene ber-heading', scenesM.length === 2, 'n=' + scenesM.length);
+  check('v218: judul rencana tampil', (docM.getElementById('ve2-movie')?.textContent || '').includes('Kopi Pagi'), docM.getElementById('ve2-movie')?.textContent?.slice(0, 60) || '');
+  const savedM = JSON.parse(storeM.get('minime.ve2') || '{}');
+  check('v218: rencana tersimpan di state ve2', savedM.movie && savedM.movie.scenes && savedM.movie.scenes.length === 2 && savedM.movie.title === 'Kopi Pagi', JSON.stringify(savedM.movie || {}).slice(0, 120));
+  check('v218: tombol Generate per scene ada', docM.querySelectorAll('[data-ve2-scene-gen]').length === 2, '');
+  docM.querySelector('[data-ve2-scene-gen="1"]').click();
+  await waitFor(() => (docM.querySelector('[data-ve2-scene="1"]')?.textContent || '').includes('Selesai'), 'scene 1 selesai', 120);
+  const rowM1 = docM.querySelector('[data-ve2-scene="1"]');
+  check('v218: scene 1 selesai + path stub', (rowM1?.textContent || '').includes('omni-uji.mp4'), rowM1?.textContent?.slice(0, 120) || '');
+  const savedM2 = JSON.parse(storeM.get('minime.ve2') || '{}');
+  check('v218: klip hasil masuk timeline', (savedM2.clips || []).length === 1 && (savedM2.clips[0].src || '').includes('omni-uji.mp4'), JSON.stringify(savedM2.clips || []).slice(0, 120));
+  check('v218: aset hasil masuk daftar aset', (savedM2.assets || []).some((a) => (a.src || '').includes('omni-uji.mp4')), '');
+  docM.getElementById('ve2MovieClear').click();
+  await tick(100);
+  check('v218: Bersihkan hapus rencana', !docM.getElementById('ve2-movie') && !!docM.getElementById('ve2-movie-empty'), '');
+  domM.window.veSetMovie('Paragraf pembuka tentang pagi.\n\nParagraf kedua tentang hujan.\n\nParagraf penutup.');
+  await tick(100);
+  check('v218: fallback paragraf jadi 3 scene', docM.querySelectorAll('[data-ve2-scene]').length === 3, 'n=' + docM.querySelectorAll('[data-ve2-scene]').length);
+  const storeN = new Map();
+  storeN.set('minime.cleaned-v84', '1');
+  storeN.set('minime.cleaned-graph-v88', '1');
+  storeN.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1 }));
+  const domN = makeDom(storeN);
+  const docN = domN.window.document;
+  await waitFor(() => docN.querySelector('[data-view="media"]'), 'mountN rail media', 100);
+  docN.querySelector('[data-view="media"]').click();
+  await tick(100);
+  docN.getElementById('ms-tabbtn-video').click();
+  await tick(100);
+  domN.window.veSetMovie('Scene 1: Uji gagal\nTeks scene.');
+  await tick(100);
+  docN.querySelector('[data-ve2-scene-gen="1"]').click();
+  await waitFor(() => (docN.querySelector('[data-ve2-scene="1"]')?.textContent || '').includes('Gagal'), 'scene gagal tanpa kunci', 120);
+  check('v218: tanpa kunci Gemini, scene jadi Gagal (jujur)', (docN.querySelector('[data-ve2-scene="1"]')?.textContent || '').includes('Gagal'), docN.querySelector('[data-ve2-scene="1"]')?.textContent?.slice(0, 120) || '');
+
 
 } catch (e) {
   // eslint-disable-next-line no-console

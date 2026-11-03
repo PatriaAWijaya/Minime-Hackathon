@@ -314,6 +314,19 @@ try {
   await tick(200);
   check('v172: caption video langsung terisi di komposer Planner (tanpa salin-tempel)', (document.getElementById('socCompText')?.value || '').includes('NASKAH-UJI'), (document.getElementById('socCompText')?.value || '').slice(0, 80));
 
+  // §v218: Bridge Movie — tombol Ekspor ke Video Editor.
+  document.querySelector('[data-view="media"]').click();
+  await tick(100);
+  document.getElementById('ms-tabbtn-script').click();
+  await tick(150);
+  check('v218: tombol Ekspor ke Video Editor ada saat output terisi', !!document.getElementById('se-export-video'), '');
+  document.getElementById('se-export-video').click();
+  await tick(150);
+  check('v218: ekspor pindah ke tab Video', document.getElementById('ms-tab-video')?.style.display === 'block', document.getElementById('ms-tab-video')?.style.display || '');
+  check('v218: rencana movie terbentuk dari output', document.querySelectorAll('[data-ve2-scene]').length === 1, 'n=' + document.querySelectorAll('[data-ve2-scene]').length);
+  const savedV218 = JSON.parse(store.get('minime.ve2') || '{}');
+  check('v218: rencana movie tersimpan di state ve2', savedV218.movie && savedV218.movie.scenes && savedV218.movie.scenes.length === 1, JSON.stringify(savedV218.movie || {}).slice(0, 120));
+
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));
   failures.push('rig error');

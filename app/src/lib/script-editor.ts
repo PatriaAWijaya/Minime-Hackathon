@@ -155,7 +155,7 @@ function wField(id: string, key: string, value: string): string {
 
 function outputBlock(): string {
   if (!state.output && !state.note) return '';
-  return `<div class="se-group">${state.output ? `<h4>${esc(tr('se.output.title'))}</h4><textarea id="se-output" rows="10" class="se-field">${esc(state.output)}</textarea>${state.outputMeta ? `<div class="se-note">${esc(state.outputMeta)}</div>` : ''}<button id="se-copy" class="se-btn2${state.copied ? ' done' : ''}">${esc(tr('se.output.copy'))}</button> <button id="se-save" class="se-btn2${state.saved ? ' done' : ''}">${esc(tr('se.btn.save'))}</button> <button id="se-use" class="se-btn2${state.used ? ' done' : ''}">${esc(tr('se.btn.use'))}</button>` : ''}${state.note ? `<div id="se-note" class="se-note">${esc(state.note)}</div>` : ''}</div>`;
+  return `<div class="se-group">${state.output ? `<h4>${esc(tr('se.output.title'))}</h4><textarea id="se-output" rows="10" class="se-field">${esc(state.output)}</textarea>${state.outputMeta ? `<div class="se-note">${esc(state.outputMeta)}</div>` : ''}<button id="se-copy" class="se-btn2${state.copied ? ' done' : ''}">${esc(tr('se.output.copy'))}</button> <button id="se-save" class="se-btn2${state.saved ? ' done' : ''}">${esc(tr('se.btn.save'))}</button> <button id="se-use" class="se-btn2${state.used ? ' done' : ''}">${esc(tr('se.btn.use'))}</button> <button id="se-export-video" class="se-btn2">${esc(tr('se.btn.export_video'))}</button>` : ''}${state.note ? `<div id="se-note" class="se-note">${esc(state.note)}</div>` : ''}</div>`;
 }
 
 function titleFor(st: SeState): string {
@@ -207,6 +207,21 @@ function seUse(): void {
     }
     mediaTab('image');
   }
+}
+
+// v218: Bridge Movie — ekspor naskah (dari chat lewat Approve Studio,
+// maupun hasil generate/perbaikan di Script Editor) ke Video Editor
+// sebagai rencana scene. 'Gunakan' TIDAK diubah: jalur lamanya
+// (caption -> Planner, naskah -> brief Image) tetap berlaku; ekspor
+// movie adalah tombol eksplisit sendiri supaya tidak membajak alur lama.
+function seExportVideo(): void {
+  libAddScript(titleFor(state), state.output);
+  state.note = tr('se.note.movie_exported');
+  saveState();
+  renderSeMain();
+  const w = window as unknown as Record<string, unknown>;
+  if (typeof w.veSetMovie === 'function') (w.veSetMovie as (t: string) => void)(state.output);
+  mediaTab('video');
 }
 
 function paneHtml(): string {
@@ -333,6 +348,8 @@ function renderSeMain(): void {
   if (saveBtn) saveBtn.addEventListener('click', () => seSave());
   const useBtn = document.getElementById('se-use');
   if (useBtn) useBtn.addEventListener('click', () => seUse());
+  const expV = document.getElementById('se-export-video');
+  if (expV) expV.addEventListener('click', () => seExportVideo());
   const copy = document.getElementById('se-copy');
   if (copy) {
     copy.addEventListener('click', async () => {

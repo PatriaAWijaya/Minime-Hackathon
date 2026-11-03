@@ -17,6 +17,7 @@
   import { open as pickFiles } from "@tauri-apps/plugin-dialog";
   import { HF_SAMPLE } from "./lib/hf-sample.js";
   import { hfGenerateHtml } from "./lib/hf-gen.js";
+  import { parseMovieScenes, movieScenePrompt } from "./lib/movie-plan.js";
   import { readKeys } from "./lib/chat.js";
   import { BILLING_HARD_LIMIT, COST_ROWS, COST_TOTAL, fmtIdr, fmtIdrNum, fmtInt, fmtUsd, readLiveCost } from "./lib/cost.js";
   import type { T1Caption, T1Clip, T1Sequence } from "./lib/video.js";
@@ -67,6 +68,15 @@
     (window as unknown as Record<string, unknown>).refreshImgSpend = () => { imgSpend = readImgSpend(); };
     (window as unknown as Record<string, unknown>).refreshLiveCost = () => { liveCost = readLiveCost(); imgSpend = readImgSpend(); videoSpend = readVideoSpend(); };
     (window as unknown as Record<string, unknown>).veSetPlan = (t: string) => { ve2Plan = t; ve2SaveState(); };
+    // v218: bridge ekspor naskah movie -> rencana scene Video Editor.
+    // Dipakai Script Editor (tombol Ekspor ke Video Editor) — naskah dari
+    // chat masuk lewat jalur yang sama (Approve Studio -> Script Editor).
+    (window as unknown as Record<string, unknown>).veSetMovie = (t: string) => {
+      const p = parseMovieScenes(t);
+      ve2Movie = { title: p.title, scenes: p.scenes.map((sc) => ({ n: sc.n, heading: sc.heading, text: sc.text, status: 'idle' as const, path: '', dur: 0, err: '' })) };
+      ve2Plan = t;
+      ve2SaveState();
+    };
     renderKeyButtons();
   });
 
@@ -83,7 +93,11 @@
   // klip gambar berurutan bersama track Video.
   interface Ve2Clip { id: string; name: string; track: 'Video' | 'B-Roll' | 'Audio' | 'Teks'; start: number; dur: number; src: string; effect: 'none' | 'fade' | 'zoom'; }
   interface Ve2Asset { id: string; name: string; icon: string; kind: 'Video' | 'B-Roll' | 'Audio' | 'Teks' | 'Image'; src: string; duration: number; }
-  function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number; plan: string; snap: boolean; ratio: string } | null {
+  // v218: rencana movie — daftar scene hasil ekspor naskah (Script Editor
+  // maupun chat lewat Script Editor), masing-masing bisa digenerate per scene.
+  interface Ve2MovieScene { n: number; heading: string; text: string; status: 'idle' | 'busy' | 'done' | 'fail'; path: string; dur: number; err: string; }
+  interface Ve2Movie { title: string; scenes: Ve2MovieScene[]; }
+  function ve2Load(): { clips: Ve2Clip[]; assets: Ve2Asset[]; out: string; zoom: number; plan: string; snap: boolean; ratio: string; movie: Ve2Movie | null } | null {
     try {
       const raw = localStorage.getItem('minime.ve2');
       if (!raw) return null;
@@ -93,7 +107,12 @@
       const clips: Ve2Clip[] = v.clips.filter((c: any) => c && typeof c.id === 'string' && typeof c.name === 'string' && Number.isFinite(c.start) && Number.isFinite(c.dur)).map((c: any) => ({ id: c.id, name: c.name, track: (tracks.includes(c.track) ? c.track : 'Video') as Ve2Clip['track'], start: Number(c.start), dur: Number(c.dur), src: typeof c.src === 'string' ? c.src : '', effect: (['fade', 'zoom'].includes(c.effect) ? c.effect : 'none') as Ve2Clip['effect'] }));
       const assetKinds = [...tracks, 'Image'];
       const assets: Ve2Asset[] = v.assets.filter((a: any) => a && typeof a.id === 'string' && typeof a.name === 'string').map((a: any) => ({ id: a.id, name: a.name, icon: typeof a.icon === 'string' ? a.icon : '🎬', kind: (assetKinds.includes(a.kind) ? a.kind : 'Video') as Ve2Asset['kind'], src: typeof a.src === 'string' ? a.src : '', duration: Number.isFinite(a.duration) ? Number(a.duration) : 0 }));
-      return { clips, assets, out: typeof v.out === 'string' ? v.out : '', zoom: [0.5, 1, 2].includes(Number(v.zoom)) ? Number(v.zoom) : 1, plan: typeof v.plan === 'string' ? v.plan : '', snap: typeof v.snap === 'boolean' ? v.snap : true, ratio: ['16:9', '9:16', '1:1', '4:5'].includes(v.ratio) ? v.ratio : '9:16' };
+      const movieRaw = v.movie && typeof v.movie === 'object' && Array.isArray((v.movie as { scenes?: unknown }).scenes) ? (v.movie as { title?: unknown; scenes: unknown[] }) : null;
+      const movie: Ve2Movie | null = movieRaw ? { title: typeof movieRaw.title === 'string' ? movieRaw.title : '', scenes: movieRaw.scenes.filter((sc): sc is Record<string, unknown> => !!sc && typeof sc === 'object').map((sc, i) => ({ n: Number.isFinite(Number(sc.n)) ? Number(sc.n) : i + 1, heading: typeof sc.heading === 'string' ? sc.heading : '', text: typeof sc.text === 'string' ? sc.text : '', status: (['idle', 'busy', 'done', 'fail'].includes(String(sc.status)) ? String(sc.status) : 'idle') as Ve2MovieScene['status'], path: typeof sc.path === 'string' ? sc.path : '', dur: Number.isFinite(Number(sc.dur)) ? Number(sc.dur) : 0, err: typeof sc.err === 'string' ? sc.err : '' })).filter((sc) => sc.text) } : null;
+      // Scene yang sedang busy saat app ditutup tidak mungkin masih jalan:
+      // kembalikan ke idle supaya tombol Generate-nya bisa ditekan lagi.
+      if (movie) movie.scenes.forEach((sc) => { if (sc.status === 'busy') sc.status = 'idle'; });
+      return { clips, assets, out: typeof v.out === 'string' ? v.out : '', zoom: [0.5, 1, 2].includes(Number(v.zoom)) ? Number(v.zoom) : 1, plan: typeof v.plan === 'string' ? v.plan : '', snap: typeof v.snap === 'boolean' ? v.snap : true, ratio: ['16:9', '9:16', '1:1', '4:5'].includes(v.ratio) ? v.ratio : '9:16', movie };
     } catch { return null; }
   }
   const ve2Loaded = ve2Load();
@@ -112,6 +131,8 @@
   let ve2PreviewRatio = $state(ve2Loaded?.ratio ?? '9:16');
   let ve2RatioCss = $derived(ve2PreviewRatio.replace(':', ' / '));
   let ve2Plan = $state(ve2Loaded?.plan ?? '');
+  let ve2Movie = $state<Ve2Movie | null>(ve2Loaded?.movie ?? null);
+  let ve2MovieBusy = $state(false);
   let ve2Snap = $state(ve2Loaded?.snap ?? true);
   if (ve2IsDummy) ve2SaveState();
   // v187: klip yang masuk timeline dari generator (HF/Omni) tidak pernah
@@ -223,7 +244,7 @@
     return ve2Clips.find((c) => c.id === ve2SelId);
   }
   function ve2SaveState() {
-    try { localStorage.setItem('minime.ve2', JSON.stringify({ clips: ve2Clips, assets: ve2Assets, out: ve2Out, zoom: ve2Zoom, plan: ve2Plan, snap: ve2Snap, ratio: ve2PreviewRatio })); } catch { /* kuota penuh: abaikan */ }
+    try { localStorage.setItem('minime.ve2', JSON.stringify({ clips: ve2Clips, assets: ve2Assets, out: ve2Out, zoom: ve2Zoom, plan: ve2Plan, snap: ve2Snap, ratio: ve2PreviewRatio, movie: ve2Movie })); } catch { /* kuota penuh: abaikan */ }
   }
   function ve2SelectClip(id: string) {
     ve2SelId = id;
@@ -862,6 +883,73 @@
     ve2SaveState();
     vgStatus = t('vg.added_timeline', lang);
   }
+  // v218: Bridge Movie — generate per scene dari rencana movie.
+  // Kapasitas per generator: Omni = 1 klip per scene (durasi ditentukan
+  // model, 3–10 dtk); Wan = 1 klip per scene sepanjang detik pilihan
+  // (default 10 dtk, field #vg-wan-sec); HyperFrames = 1 komposisi per
+  // scene (HTML dari deskripsi scene, lalu render). Klip hasil masuk
+  // aset + timeline berurutan (start = ujung klip terakhir).
+  function ve2MovieAddClip(name: string, path: string, dur: number) {
+    const start = ve2Clips.reduce((m, c) => Math.max(m, c.start + c.dur), 0);
+    ve2Clips = [...ve2Clips, { id: 'mv' + Date.now(), name, track: 'Video', start, dur, src: path, effect: 'none' }];
+    ve2EnsureAsset(path, name, 'Video', dur);
+    ve2SaveState();
+  }
+  function ve2MovieClear() { ve2Movie = null; ve2SaveState(); }
+  async function ve2MovieGenScene(n: number): Promise<boolean> {
+    if (!ve2Movie) return false;
+    const sc = ve2Movie.scenes.find((s) => s.n === n);
+    if (!sc || sc.status === 'busy') return false;
+    const prompt = movieScenePrompt({ n: sc.n, heading: sc.heading, text: sc.text });
+    if (!prompt) return false;
+    sc.status = 'busy'; sc.err = ''; ve2SaveState();
+    const clipName = `Scene ${sc.n} — ${(sc.heading || sc.text).slice(0, 30)}`;
+    try {
+      if (vgModel === 'wan') {
+        const key = readKeys().classai;
+        if (!key) throw new Error(t('vg.wan.need_key', lang));
+        const sec = Math.min(30, Math.max(2, Math.round(Number(vgWanSec) || 10)));
+        vgWanSec = sec;
+        const r = await wanGenerateClip(key, { prompt, aspect: vgAspect, resolution: vgWanRes, seconds: sec });
+        classaiSpend = readClassaiSpend();
+        sc.path = r.path; sc.dur = r.seconds; sc.status = 'done';
+        ve2MovieAddClip(clipName, r.path, r.seconds);
+        vgStatus = `${t('vg.done', lang)} ${r.path} ($${r.usd.toFixed(2)})`;
+      } else if (vgModel === 'hyperframes') {
+        const r = await hfGenerateHtml(prompt, lang);
+        const rend = await invoke<{ path: string; quality: string; bytes: number }>('hyperframes_render', { req: { html: r.html, quality: hfQuality } });
+        let dur = 0;
+        try { const pr = await invoke<{ duration: number }>('video_probe', { req: { path: rend.path } }); dur = Math.round(pr.duration); } catch { /* fallback ke data-duration di bawah */ }
+        if (!dur) { const m = r.html.match(/data-duration="([\d.]+)"/); dur = m ? Math.round(Number(m[1])) : 0; }
+        sc.path = rend.path; sc.dur = dur; sc.status = 'done';
+        ve2MovieAddClip(clipName, rend.path, dur);
+        hfStatus = t('hf.done', lang, { path: rend.path, s: dur });
+      } else {
+        const key = readKeys().gemini;
+        if (!key) throw new Error(t('vg.need_key', lang));
+        const r = await omniGenerateClip(key, { prompt, aspect: vgAspect, resolution: vgRes });
+        videoSpend = readVideoSpend();
+        sc.path = r.path; sc.dur = r.seconds; sc.status = 'done';
+        ve2MovieAddClip(clipName, r.path, r.seconds);
+        vgStatus = `${t('vg.done', lang)} ${r.path} ($${r.usd.toFixed(2)})`;
+      }
+      ve2SaveState();
+      return true;
+    } catch (e) {
+      sc.status = 'fail'; sc.err = String(e); ve2SaveState();
+      return false;
+    }
+  }
+  async function ve2MovieGenAll() {
+    if (!ve2Movie || ve2MovieBusy) return;
+    ve2MovieBusy = true;
+    try {
+      for (const sc of [...ve2Movie.scenes]) {
+        if (sc.status === 'done') continue;
+        await ve2MovieGenScene(sc.n);
+      }
+    } finally { ve2MovieBusy = false; }
+  }
   function vgCineLoadBeat(b: { n: number; prompt: string }) {
     if (vgModel === 'hyperframes') vgModel = 'omni';
     vgAspect = '9:16';
@@ -1324,6 +1412,21 @@
 </div>
 {/if}
 <div class="se-group"><label>{t('img.plan', lang)}<textarea id="ve-plan" rows="2" class="se-field" value={ve2Plan} oninput={(e) => { ve2Plan = (e.target as HTMLTextAreaElement).value; ve2SaveState(); }}></textarea></label></div>
+{#if ve2Movie}
+<div class="se-group" id="ve2-movie">
+<h4>{t('ve2.movie.title', lang)}{ve2Movie.title ? ` — ${ve2Movie.title}` : ''}</h4>
+{#each ve2Movie.scenes as sc (sc.n)}
+<div class="se-group" data-ve2-scene={sc.n}>
+<div><b>{sc.heading ? sc.heading : t('ve2.movie.scene', lang, { n: sc.n })}</b> — {sc.text.slice(0, 120)}{sc.text.length > 120 ? '…' : ''}</div>
+{#if sc.status !== 'idle'}<div class="se-note">{sc.status === 'done' ? `${t('ve2.movie.done', lang)} ${sc.path} (${sc.dur}s)` : sc.status === 'fail' ? `${t('ve2.movie.fail', lang)}: ${sc.err}` : t('vg.generating', lang)}</div>{/if}
+<button type="button" class="btn btn-sm" data-ve2-scene-gen={sc.n} disabled={sc.status === 'busy' || ve2MovieBusy} onclick={() => { void ve2MovieGenScene(sc.n); }}>{t('ve2.movie.gen', lang)}</button>
+</div>
+{/each}
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button id="ve2MovieGenAll" class="btn btn-primary" disabled={ve2MovieBusy} onclick={() => { void ve2MovieGenAll(); }}>{t('ve2.movie.gen_all', lang)}</button><button id="ve2MovieClear" class="btn btn-sm" onclick={() => { ve2MovieClear(); }}>{t('ve2.movie.clear', lang)}</button></div>
+</div>
+{:else}
+<div class="se-group" id="ve2-movie-empty"><p class="se-note">{t('ve2.movie.empty', lang)}</p></div>
+{/if}
 </div>
           <p id="ve2Status" class="se-note" style="white-space:pre-line">{ve2Status ? ve2Status : t('ve2.ready', lang)}</p>
           {#if ve2Frame}<div><img id="ve2Frame" src={ve2Frame} alt="" style="max-width:100%"></div>{/if}
