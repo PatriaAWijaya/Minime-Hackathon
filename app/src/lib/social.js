@@ -280,12 +280,6 @@ function renderCalendar() {
     + '<div class="soc-cal-grid">' + cells + '</div>';
 }
 
-export function socConnectedChannels() {
-  var s = socStore();
-  return PLATFORMS.filter(function (p) { return tokenValid(s[p.id]); })
-    .map(function (p) { return { id: p.id, name: p.name }; });
-}
-
 export function socQueueAdd(items) {
   var q = queueLoad();
   var ids = [];
