@@ -20,6 +20,9 @@
 //     saat backend mati MEMANGGIL vs_launch dulu (bukan sekadar
 //     periksa) lalu status jadi Terhubung; tick watchdog memanggil
 //     vs_launch bila tab Voice aktif, dan DIAM bila tab tak aktif.
+//  8. v223 (proxy Rust): semua API :3900 lewat invoke vs_api (bukan
+//     fetch WebView yang diblokir CORS VoiceStudio); fetch langsung
+//     :3900 membuat rig GAGAL (tripwire); TTS + Clone lewat proxy.
 // Jalankan: npm run rig:vs (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -51,8 +54,23 @@ function makeResp({ ok = true, status = 200, jsonData = null, blobData = null, c
   };
 }
 
-async function invokeStub(cmd) {
+async function invokeStub(cmd, args) {
   log.push('invoke:' + cmd);
+  if (cmd === 'vs_api') {
+    const req = (args && args.req) || {};
+    const p = String(req.path || '');
+    log.push('vs_api:' + p);
+    if (!backendAlive) throw new Error('backend mati');
+    if (p === '/v1/models') return { ok: true, status: 200, contentType: 'application/json', text: JSON.stringify([{ id: 'tts-1' }, { id: 'tts-1-hd' }]), b64: '' };
+    if (p === '/v1/audio/voices') return { ok: true, status: 200, contentType: 'application/json', text: '[]', b64: '' };
+    if (p === '/health') return { ok: true, status: 200, contentType: 'application/json', text: JSON.stringify({ status: 'ok', device: 'mps', version: '0.5.7' }), b64: '' };
+    if (p === '/v1/audio/speech') {
+      try { const b = JSON.parse(req.body || '{}'); if (b.model) log.push('speech-model:' + b.model); } catch (_) {}
+      return { ok: true, status: 200, contentType: 'audio/wav', text: '', b64: 'UklGRg==' };
+    }
+    if (p === '/generate') return { ok: true, status: 200, contentType: 'audio/wav', text: '', b64: 'UklGRg==' };
+    throw new Error('unexpected vs_api path ' + p);
+  }
   if (cmd === 'vs_launch') {
     backendAlive = true;
     return { backendUp: true, appPath: '/Applications/VoiceStudio.app' };
@@ -72,18 +90,10 @@ async function fetchStub(url, opts) {
   const u = String(url);
   const p = u.replace(/^https?:\/\/127\.0\.0\.1:3900/, '');
   log.push('fetch:' + p);
-  if (p === '/v1/models') {
-    if (!backendAlive) throw new Error('fetch failed');
-    return makeResp({ jsonData: [{ id: 'tts-1' }, { id: 'tts-1-hd' }] });
-  }
-  if (p === '/v1/audio/voices') {
-    if (!backendAlive) throw new Error('fetch failed');
-    return makeResp({ jsonData: [] });
-  }
-  if (p === '/v1/audio/speech') {
-    if (!backendAlive) throw new Error('fetch failed');
-    try { const b = JSON.parse(opts?.body || '{}'); if (b.model) log.push('speech-model:' + b.model); } catch (_) {}
-    return makeResp({ contentType: 'audio/wav' });
+  if (p === '/v1/models' || p === '/v1/audio/voices' || p === '/v1/audio/speech' || p === '/health') {
+    // v223 tripwire: API :3900 TIDAK BOLEH lagi lewat fetch WebView
+    // (CORS VoiceStudio memblokir origin Tauri) — harus via vs_api.
+    throw new Error('fetch langsung :3900 dilarang (v223: pakai vs_api)');
   }
   if (p === '/health') {
     if (!backendAlive) throw new Error('fetch failed');
@@ -167,9 +177,9 @@ try {
   [...panel.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Generate').click();
   await tick(500);
   const launchIdx = log.indexOf('invoke:vs_launch');
-  const speechIdx = log.indexOf('fetch:/v1/audio/speech');
+  const speechIdx = log.indexOf('vs_api:/v1/audio/speech');
   check('Generate memanggil vs_launch saat backend mati', launchIdx >= 0, log.join(','));
-  check('vs_launch SEBELUM fetch speech (urutan agen)', launchIdx >= 0 && speechIdx > launchIdx, log.join(','));
+  check('vs_launch SEBELUM vs_api speech (urutan agen)', launchIdx >= 0 && speechIdx > launchIdx, log.join(','));
   check('audio kembali ke MiniMe (player terisi)', document.getElementById('vsAudio')?.src === 'blob:vs-test', document.getElementById('vsAudio')?.src || '');
   check('note TTS selesai', (document.getElementById('vsNote')?.textContent || '').includes('siap'), document.getElementById('vsNote')?.textContent || '');
 
@@ -188,7 +198,7 @@ try {
   [...panel.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Generate').click();
   await tick(500);
   check('Generate tanpa vs_launch saat backend hidup', !log.includes('invoke:vs_launch'), log.join(','));
-  check('speech tetap terpanggil', log.includes('fetch:/v1/audio/speech'), log.join(','));
+  check('speech tetap terpanggil (via vs_api)', log.includes('vs_api:/v1/audio/speech'), log.join(','));
 
   // Voice Editor v65: elemen statis + daftar aset + transkrip.
   check('editor: kanvas + transport + unggah + panel ada',
@@ -284,6 +294,24 @@ try {
   await dom.window.vsVoiceWatchdogTick();
   await tick(300);
   check('v222: watchdog DIAM bila tab Voice tak aktif', !log.includes('invoke:vs_launch'), log.join(','));
+
+  // v223: TTS + Clone lewat proxy Rust (bukan fetch WebView).
+  backendAlive = true; log.length = 0;
+  document.getElementById('vsText').value = 'Uji suara lewat proxy.';
+  [...panel.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Generate').click();
+  await tick(500);
+  check('v223: TTS speech lewat vs_api (bukan fetch)', log.includes('vs_api:/v1/audio/speech'), log.join(','));
+  check('v223: TTS tidak memakai fetch langsung :3900', !log.some((l) => l.startsWith('fetch:/v1/') || l.startsWith('fetch:/health')), log.join(','));
+  check('v223: audio TTS kembali (player terisi)', document.getElementById('vsAudio')?.src === 'blob:vs-test', document.getElementById('vsAudio')?.src || '');
+  document.getElementById('vsCloneText').value = 'Uji kloning lewat proxy.';
+  Object.defineProperty(document.getElementById('vsRefFile'), 'files', { value: [new dom.window.File(['RIFF....'], 'ref.wav', { type: 'audio/wav' })], configurable: true });
+  log.length = 0;
+  [...panel.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Generate Clone').click();
+  await tick(500);
+  check('v223: Clone menyimpan ref_audio lewat audio_save', log.includes('invoke:audio_save'), log.join(','));
+  check('v223: Clone generate lewat vs_api', log.includes('vs_api:/generate'), log.join(','));
+  check('v223: audio Clone kembali (player terisi)', document.getElementById('vsCloneAudio')?.src === 'blob:vs-test', document.getElementById('vsCloneAudio')?.src || '');
+  check('v223: nota Clone selesai', (document.getElementById('vsCloneNote')?.textContent || '').includes('siap'), document.getElementById('vsCloneNote')?.textContent || '');
 } catch (e) {
   console.log('FAIL rig error: ' + (e && e.message ? e.message : String(e)));
   failures.push('rig error');

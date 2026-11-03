@@ -16,7 +16,8 @@
 // di Model Catalogue sekali untuk voice default — keduanya klik
 // manusia sekali, setelah itu otomatis penuh. NO SHELL — argv only.
 
-use serde::Serialize;
+use base64::Engine as _;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs::File;
 use std::io::Read;
@@ -119,6 +120,113 @@ pub fn vs_launch() -> Result<VsLaunchResult, String> {
     } else {
         Err(LAUNCH_TIMEOUT_NOTE.to_string())
     }
+}
+
+// v223: proxy API VoiceStudio lewat Rust (bukan fetch WebView).
+// ALASAN: VoiceStudio 0.5.7 hanya mengembalikan CORS allow-origin
+// untuk origin UI web-nya sendiri (localhost:3901); origin Tauri
+// (https://tauri.localhost) TIDAK mendapat allow-origin sehingga
+// fetch WebView diblokir browser meski server menjawab 200 — panel
+// live selalu "Belum terhubung" padahal backend hidup, sementara
+// curl + rig jsdom (tanpa CORS) lolos. Lewat curl sisi Rust, CORS
+// tidak berlaku sama sekali. Pola curl argv sama dengan research.rs
+// (tanpa shell; tanpa secret — API lokal tanpa auth). Baris terakhir
+// stdout = pemisah + kode + content-type (dari -w); sisanya = body
+// apa adanya (teks JSON maupun byte audio) — selalu dikembalikan
+// dua-duanya (text lossy + b64 utuh) supaya pemanggil frontend bisa
+// memakai json()/text() untuk JSON dan blob() untuk audio tanpa
+// perlu tahu jenis respons di muka.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VsApiReq {
+    pub method: String,
+    pub path: String,
+    pub body: Option<String>,
+    pub file: Option<String>,
+    pub fields: Option<Vec<(String, String)>>,
+    pub timeout_secs: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VsApiRes {
+    pub ok: bool,
+    pub status: u16,
+    pub content_type: String,
+    pub text: String,
+    pub b64: String,
+}
+
+#[tauri::command]
+pub fn vs_api(req: VsApiReq) -> Result<VsApiRes, String> {
+    if !req.path.starts_with('/') || req.path.contains("..") {
+        return Err("path API VoiceStudio tidak valid".to_string());
+    }
+    let url = format!("http://127.0.0.1:3900{}", req.path);
+    let curl = crate::video::find_tool("curl")
+        .ok_or_else(|| "curl tidak ditemukan di PATH".to_string())?;
+    let mut args: Vec<String> = vec![
+        "-sS".to_string(),
+        "--max-time".to_string(),
+        req.timeout_secs.max(1).to_string(),
+        "-w".to_string(),
+        "\n%{http_code} %{content_type}".to_string(),
+    ];
+    if req.method.to_uppercase() == "POST" {
+        args.push("-X".to_string());
+        args.push("POST".to_string());
+        if let Some(file) = &req.file {
+            if file.contains('/') || file.contains("..") {
+                return Err("nama file referensi tidak valid".to_string());
+            }
+            let full = crate::audio::audio_dir()?.join(file);
+            if !full.exists() {
+                return Err(format!("file referensi tidak ada: {file}"));
+            }
+            args.push("-F".to_string());
+            args.push(format!("ref_audio=@{}", full.to_string_lossy()));
+            if let Some(fields) = &req.fields {
+                for (k, v) in fields {
+                    args.push("-F".to_string());
+                    args.push(format!("{k}={v}"));
+                }
+            }
+        } else if let Some(body) = &req.body {
+            args.push("-H".to_string());
+            args.push("Content-Type: application/json".to_string());
+            args.push("--data".to_string());
+            args.push(body.clone());
+        }
+    }
+    args.push(url);
+    let out = Command::new(curl)
+        .args(&args)
+        .output()
+        .map_err(|e| format!("gagal menjalankan curl: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "curl gagal ({}): {}",
+            out.status,
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    let stdout = out.stdout;
+    let split = stdout
+        .iter()
+        .rposition(|b| *b == b'\n')
+        .ok_or_else(|| "respons curl tanpa baris status".to_string())?;
+    let (body, tail) = stdout.split_at(split);
+    let tail = String::from_utf8_lossy(&tail[1..]);
+    let mut parts = tail.splitn(2, ' ');
+    let status: u16 = parts.next().unwrap_or("").trim().parse().unwrap_or(0);
+    let content_type = parts.next().unwrap_or("").trim().to_string();
+    Ok(VsApiRes {
+        ok: (200..300).contains(&status),
+        status,
+        content_type,
+        text: String::from_utf8_lossy(body).into_owned(),
+        b64: base64::engine::general_purpose::STANDARD.encode(body),
+    })
 }
 
 pub(crate) fn sha256_file(path: &PathBuf) -> Result<String, String> {

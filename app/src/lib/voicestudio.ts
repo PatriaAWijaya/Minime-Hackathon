@@ -54,14 +54,87 @@ export function vsSelectModel(m: string): void {
   vsRenderModels();
 }
 
-async function vsFetch(path: string, init?: RequestInit, timeoutMs = 8000): Promise<Response> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    return await fetch(VS_BASE + path, { ...init, signal: ctrl.signal });
-  } finally {
-    clearTimeout(t);
+// v223: vsFetch LEWAT PROXY RUST (invoke vs_api), BUKAN fetch WebView.
+// Alasan: VoiceStudio 0.5.7 hanya mengembalikan CORS allow-origin
+// untuk origin UI web-nya sendiri (localhost:3901); origin Tauri
+// (https://tauri.localhost) tidak mendapat allow-origin sehingga
+// fetch WebView diblokir browser meski server menjawab 200 — panel
+// live selalu "Belum terhubung" padahal backend hidup. Lewat invoke,
+// CORS tidak berlaku. Bentuk kembalian = shim Response agar semua
+// pemakai lama (r.ok / r.status / r.json() / r.text() / r.blob() /
+// headers.get('content-type')) tetap jalan tanpa diubah. Probe UI
+// :3901 di vsEmbedCheck TETAP memakai fetch no-cors (opaque cukup
+// untuk liveness, dan :3901 memang mengizinkan origin itu).
+interface VsApiRes {
+  ok: boolean;
+  status: number;
+  contentType: string;
+  text: string;
+  b64: string;
+}
+
+interface VsShimResp {
+  ok: boolean;
+  status: number;
+  headers: { get: (name: string) => string | null };
+  json: () => Promise<unknown>;
+  text: () => Promise<string>;
+  blob: () => Promise<Blob>;
+}
+
+function b64ToBlob(b64: string, mime: string): Blob {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+async function blobToB64(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let bin = '';
+  const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + CH));
   }
+  return btoa(bin);
+}
+
+async function vsFetch(path: string, init?: RequestInit, timeoutMs = 8000): Promise<VsShimResp> {
+  const method = (init?.method || 'GET').toUpperCase();
+  const req: Record<string, unknown> = {
+    method,
+    path,
+    timeoutSecs: Math.max(1, Math.ceil(timeoutMs / 1000)),
+  };
+  const body = init?.body;
+  if (typeof body === 'string') {
+    req.body = body;
+  } else if (typeof FormData !== 'undefined' && body instanceof FormData) {
+    // Clone multipart: simpan blob ref_audio lewat audio_save yang
+    // sudah ada, lalu kirim nama file + field teks ke proxy (field
+    // 'ref_audio' dipasang sisi Rust dari file tersebut).
+    const fields: [string, string][] = [];
+    for (const [k, v] of body.entries()) {
+      if (v instanceof Blob) {
+        const saved = await invoke<{ file: string }>('audio_save', {
+          req: { name: 'vs-clone-' + Date.now() + '.wav', b64: await blobToB64(v) },
+        });
+        req.file = saved.file;
+      } else {
+        fields.push([k, String(v)]);
+      }
+    }
+    req.fields = fields;
+  }
+  const r = await invoke<VsApiRes>('vs_api', { req });
+  return {
+    ok: r.ok,
+    status: r.status,
+    headers: { get: (n: string) => (n.toLowerCase() === 'content-type' ? r.contentType || null : null) },
+    json: async () => JSON.parse(r.text) as unknown,
+    text: async () => r.text,
+    blob: async () => b64ToBlob(r.b64, r.contentType || 'audio/wav'),
+  };
 }
 
 function asArray(json: unknown): unknown[] {
@@ -356,7 +429,7 @@ export function showAudio(audioId: string, dlId: string, url: string, filename: 
   }
 }
 
-async function audioBlobToUrl(resp: Response): Promise<string> {
+async function audioBlobToUrl(resp: VsShimResp): Promise<string> {
   const ct = (resp.headers.get('content-type') || '').toLowerCase();
   if (ct.includes('application/json')) {
     const j = (await resp.json()) as Record<string, unknown>;
@@ -370,7 +443,7 @@ async function audioBlobToUrl(resp: Response): Promise<string> {
   return URL.createObjectURL(await resp.blob());
 }
 
-async function readErr(resp: Response): Promise<string> {
+async function readErr(resp: VsShimResp): Promise<string> {
   try {
     const t = await resp.text();
     return t.slice(0, 200) || 'HTTP ' + resp.status;
