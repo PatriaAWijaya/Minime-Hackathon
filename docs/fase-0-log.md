@@ -2545,7 +2545,7 @@ Isi:
 - Koreksi tipe saat build: union family di router.ts + provider/family di ledger.ts belum mengenal 'anthropic' (2 error svelte-check) — diperbaiki sebelum gate.
 
 SHA: kode lokal d494659 ↔ remote 44aeb40 (tree identik). Gate 9/9; loop 14 rig exit=0; svelte-check 0 error/21 warning (baseline); i18n 1279/bahasa, 0 duplikat; ledger md5 tidak berubah (d542428fe9901fbd417e098e9249d4b6); cargo 0 warning.
-LIVE 3 Nov ~15:25 WIB: deploy mh-build236.sh — MH_BUILD236_OK; HEAD MacBook <LOG_SHA> (commit log); PID <PID>; md5 dist JS/CSS lokal == MacBook. App LIVE = v236. Konfirmasi live Patria untuk v236 BELUM ada (uji live yang disarankan: Settings -> kartu Anthropic -> tempel key -> Hubungkan API -> TERHUBUNG hijau; lalu ulangi generate soc yang gagal — footer harus menyebut anthropic bila Meta/Gemini masih gagal).
+LIVE 3 Nov ~15:25 WIB: deploy mh-build236.sh — MH_BUILD236_OK; HEAD MacBook c011001 (commit log); PID 19981; md5 dist JS/CSS lokal == MacBook. App LIVE = v236. Konfirmasi live Patria untuk v236 BELUM ada (uji live yang disarankan: Settings -> kartu Anthropic -> tempel key -> Hubungkan API -> TERHUBUNG hijau; lalu ulangi generate soc yang gagal — footer harus menyebut anthropic bila Meta/Gemini masih gagal).
 
 ## v235 — Audit konsistensi cb + alur lain (vonis Patria 13:54 "Bangun v235, semua perbaikan audit" + perluasan 13:55 "cek juga konsistensi alur yang lain"; audit subagent read-only paralel)
 
