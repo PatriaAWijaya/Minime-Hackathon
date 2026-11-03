@@ -902,3 +902,23 @@ input[type=text], select, textarea { background: var(--t-input-bg, #262626); bor
    railicon, tidak kena. */
 [data-theme="light"] .sidebar img.railicon[src$=".png"] { filter: none !important; }
 [data-theme="light"] .sidebar img.railicon[src^="data:"] { filter: invert(1); }
+
+/* v229: efek glossy di tema terang (perintah Patria 3 Nov 2026
+   12:25: "Tambahkan efek glossynya"). Tema gelap TIDAK disentuh
+   (sudah glossy diredam sejak awal). Kilau kaca klasik: lapisan
+   putih di atas yang memudar ke bawah, di atas warna panel
+   (background-image melapis di atas background-color, tidak
+   menggantikannya), plus garis terang inset di tepi atas.
+   - Grup A: permukaan kaca ber-background var (sidebar, kolom,
+     kartu agen/kanban/media, node graph, notice, kartu billing,
+     komposer) — semuanya terang di light lewat variabel.
+   - Grup B: tombol gradien — kilau dilapis DI ATAS gradien
+     (dua lapis background-image: kilau dulu, gradien sesudahnya);
+     inset diperkuat dari 0.18 (v221) jadi 0.75 untuk btn-primary.
+   Sengaja TIDAK kena: kanvas graph (pola dot-nya background-image
+   sendiri), tabel (struktur baris), gelembung chat (kecil, ramai),
+   tombol rail (datar), banner. */
+[data-theme="light"] .sidebar, [data-theme="light"] .col, [data-theme="light"] #chatCol, [data-theme="light"] .agent, [data-theme="light"] .kcard, [data-theme="light"] .mediacard, [data-theme="light"] .n8n-node, [data-theme="light"] .gnode, [data-theme="light"] .notice, [data-theme="light"] .bill-card, [data-theme="light"] .kcol, [data-theme="light"] .composer { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.70), rgba(255, 255, 255, 0.20) 40%, rgba(255, 255, 255, 0) 65%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85); }
+[data-theme="light"] .btn-primary, [data-theme="light"] .filters button.active, [data-theme="light"] .rec-btn, [data-theme="light"] .chat-act, [data-theme="light"] .img-tab.active { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 55%), var(--t-accent-grad); }
+[data-theme="light"] .btn-primary { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 4px 14px rgba(74, 127, 193, 0.30); }
+[data-theme="light"] .filters button.active, [data-theme="light"] .rec-btn, [data-theme="light"] .chat-act, [data-theme="light"] .img-tab.active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65); }

@@ -510,6 +510,13 @@ try {
   check('v228: ikon rel file hitam di light (filter none)', /\[data-theme=light\] \.sidebar img\.railicon\[src\$="\.png"\]\{filter:none!important\}/.test(cssText), '');
   check('v228: ikon rel data-URI putih di-invert di light', /\[data-theme=light\] \.sidebar img\.railicon\[src\^="data:"\]\{filter:invert\(1\)\}/.test(cssText), '');
 
+  // 28. v229: efek glossy di tema terang — kilau kaca di permukaan
+  // panel/kartu + kilau di atas tombol gradien (bentuk minify nyata:
+  // rgba putih -> hex-alpha, "inset 0 1px 0" -> "inset 0 1px").
+  check('v229: kilau permukaan kaca di light', /\[data-theme=light\] \.sidebar,\[data-theme=light\] \.col,.*background-image:linear-gradient\(180deg,#ffffffb3,#fff3 40%,#fff0 65%\)/.test(cssText), '');
+  check('v229: kilau di atas tombol gradien light', /\[data-theme=light\] \.btn-primary,\[data-theme=light\] \.filters button\.active,.*background-image:linear-gradient\(180deg,#ffffff8c,#fff0 55%\),var\(--t-accent-grad\)/.test(cssText), '');
+  check('v229: kilau HANYA di light (gelap tidak kena)', (cssText.match(/#ffffffb3/g) || []).length === 1 && (cssText.match(/#ffffff8c/g) || []).length === 1, '');
+
 
 } catch (e) {
   // eslint-disable-next-line no-console
