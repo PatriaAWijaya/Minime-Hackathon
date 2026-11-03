@@ -488,14 +488,6 @@
     // v195: ujung konten terakhir (klip apa pun, track apa pun); 0 bila kosong.
     return ve2Clips.length ? Math.max(...ve2Clips.map((c) => c.start + c.dur)) : 0;
   }
-  function ve2ClipKind(c: Ve2Clip): 'Video' | 'Audio' | 'Image' | 'Teks' {
-    if (c.track === 'Teks') return 'Teks';
-    const a = ve2Assets.find((x) => x.src && x.src === c.src);
-    if (a) return a.kind === 'Image' ? 'Image' : a.kind === 'Audio' ? 'Audio' : 'Video';
-    if (ve2IsImage(c.src)) return 'Image';
-    if (ve2IsAudio(c.src)) return 'Audio';
-    return 'Video';
-  }
   function ve2OrigDur(c: Ve2Clip): number | null {
     // v195: null = bebas (gambar/teks, atau tidak ada acuan asli: klip
     // sintetis / asetnya sudah dihapus). Video/Audio ber-aset -> durasi aset.
