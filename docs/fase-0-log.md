@@ -2536,6 +2536,7 @@ LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0
 - i18n tidak berubah (1276/bahasa). Uji: vite build lolos; svelte-check 0 error / 21 warning (baseline); rig-home §v221 (pola v199: assert teks CSS dist, karena jsdom tak memuat stylesheet — light bg + aksen + teks gelap, ungu hilang dari blok light, blok dark utuh, tombol gradien bertinta gelap, panah kirim putih; koreksi saat uji: minifier memendekkan #FFFFFF jadi #fff, regex disesuaikan) ALL PASSED; loop 14 rig ALL PASSED (~/workspace/riglogs-v221/loop.log); gerbang GATE-V221 9/9 (ledger md5 d542428fe9901fbd417e098e9249d4b6, i18n 1276).
 - SHA: kode lokal 1f23ee5 <-> remote 31a0f35 (tree identik, pola push_rebased.py).
 - Catatan live: BELUM dikonfirmasi live (uji disarankan: alihkan tema ke Terang dari Settings dan lihat seluruh app — panel kaca putih, tombol gradien biru-putih pucat bertinta gelap, tombol selesai tetap hijau; alihkan kembali ke Gelap dan pastikan violet glass utuh).
+- LIVE 3 Nov 2026 ~10:30 WIB: deploy mh-build221 OK, HEAD MacBook e7959d5 (= remote log), PID 1266, md5 dist CSS lokal == MacBook (5d9803bfb38c3d13e9e1edd5a8599137, byte-identik), marker light bg #F4F8FF di bundle CSS live. Konfirmasi ketuk live Patria BELUM ada.
 
 ## v215 — 4 item Voice (disetujui Patria 3 Nov 2026 06:40 'Lolos', antre terakhir batch lama)
 
