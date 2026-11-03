@@ -1338,7 +1338,7 @@
           <a id="vsDownload" style="display:none">{t('vs.download', lang)}</a>
           <h4>{t('sherpa.title', lang)}</h4>
           <p><span id="sherpaStatus" class="badge"></span> <button class="btn btn-sm" onclick={() => { sherpaRenderStatus() }}>{t('vs.status.check', lang)}</button> <button class="btn btn-primary" onclick={() => { sherpaSetup() }}>{t('sherpa.setup', lang)}</button> <button class="btn btn-primary" onclick={() => { sherpaTtsFromTab() }}>{t('sherpa.tts', lang)}</button> <span id="sherpaNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span></p>
-          <p style="color:#a1a1a1;font-size:13px">{t('sherpa.note', lang)}</p>
+
           <h4>{t('vs.ref.title', lang)}</h4>
           <label>{t('vs.ref.label', lang)}</label>
           <input id="vsRefFile" type="file" accept="audio/*">
@@ -1351,8 +1351,7 @@
           <span id="vsCloneNote" style="color:#a1a1a1;font-size:13px;margin-left:8px"></span>
           <audio id="vsCloneAudio" controls style="display:none;width:100%;margin-top:8px"></audio>
           <a id="vsCloneDownload" style="display:none">{t('vs.download', lang)}</a>
-          <h4>{t('vs.models.title', lang)}</h4>
-          <ul id="vsModelList" style="font-size:14px;line-height:1.8"><li>{t('vs.models.empty', lang)}</li></ul>
+
           <h4>{t('ved.title', lang)}</h4>
           <p style="color:#a1a1a1;font-size:13px">{t('ved.note', lang)}</p>
           <canvas id="vedCanvas" width="900" height="120" style="width:100%;height:120px;background:#161616;border:1px solid #2a2a2a;cursor:crosshair"></canvas>

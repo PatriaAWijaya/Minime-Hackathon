@@ -24,8 +24,10 @@
 //     fetch WebView yang diblokir CORS VoiceStudio); fetch langsung
 //     :3900 membuat rig GAGAL (tripwire); TTS + Clone lewat proxy.
 //  9. v224 (hapus): judul 'Panel VoiceStudio' + catatan #vsEmbedNote
-//     TIDAK ADA lagi; koneksi dibuktikan badge status + daftar model,
-//     bukan catatan.
+//     TIDAK ADA lagi; koneksi dibuktikan badge status, bukan catatan.
+// 10. v225 (hapus): paragraf sherpa.note + daftar Model lokal TIDAK
+//     ADA lagi; pilihan model mengunci ke default (omnivoice) — cek
+//     §v215 diubah dari klik-pilih menjadi model default.
 // Jalankan: npm run rig:vs (butuh dist ter-build + jsdom devDependency).
 // Keluar 0 bila semua lolos, 1 bila ada yang gagal.
 
@@ -194,7 +196,7 @@ try {
   check('embed: iframe terpasang saat :3901 menjawab', document.getElementById('vsEmbedFrame')?.getAttribute('src') === 'http://localhost:3901', document.getElementById('vsEmbedFrame')?.getAttribute('src') || '');
   check('embed: status Terhubung', (document.getElementById('vsEmbedStatus')?.textContent || '').includes('Terhubung'), document.getElementById('vsEmbedStatus')?.textContent || '');
   check('v224: judul Panel VoiceStudio hilang', ![...panel.querySelectorAll('h4')].some((h) => h.textContent.trim() === 'Panel VoiceStudio'), [...panel.querySelectorAll('h4')].map((h) => h.textContent.trim()).join('|'));
-  check('v224: koneksi dibuktikan daftar model (bukan catatan)', document.querySelectorAll('#vsModelList button').length > 0, String(document.querySelectorAll('#vsModelList button').length));
+  check('v225: daftar Model lokal tidak ada', !document.getElementById('vsModelList') && ![...panel.querySelectorAll('h4')].some((h) => h.textContent.trim() === 'Model lokal'), [...panel.querySelectorAll('h4')].map((h) => h.textContent.trim()).join('|'));
 
   // Backend sudah hidup -> Generate tidak launch lagi.
   log.length = 0;
@@ -230,19 +232,16 @@ try {
   await waitFor(() => document.getElementById('vedAudio')?.currentTime === 2.5, 'seek ke segmen');
   check('klik segmen: seek ke 2.5 dtk', document.getElementById('vedAudio').currentTime === 2.5);
 
-  // v215: (a) daftar model bisa dipilih — klik model lalu Generate
-  // memakai model itu (bukan lagi hardcode 'omnivoice'); (b) transkrip
-  // bisa disimpan sebagai caption ASS (sidecar) lewat video_write_ass.
-  const modelBtns = [...document.querySelectorAll('#vsModelList [data-vs-model]')].map((b) => b.textContent.trim());
-  check('v215: daftar model tampil sebagai tombol pilih', modelBtns.includes('tts-1') && modelBtns.includes('tts-1-hd'), modelBtns.join('|'));
-  document.querySelector('#vsModelList [data-vs-model="tts-1-hd"]').click();
-  await tick(100);
-  check('v215: model terpilih bertanda centang', (document.querySelector('#vsModelList [data-vs-model="tts-1-hd"]')?.textContent || '').startsWith('✓'), document.querySelector('#vsModelList [data-vs-model="tts-1-hd"]')?.textContent || '');
+  // v215 (diubah v225): daftar model DIHAPUS dari UI — pilihan model
+  // mengunci ke default (omnivoice); Generate memakai model itu.
+  // (b) transkrip bisa disimpan sebagai caption ASS (sidecar) lewat
+  // video_write_ass.
+  check('v225: paragraf Sherpa hilang', ![...panel.querySelectorAll('p')].some((p) => (p.textContent || '').includes('Engine native berdampingan')), 'paragraf sherpa.note masih ada');
   log.length = 0;
-  document.getElementById('vsText').value = 'Uji model pilihan.';
+  document.getElementById('vsText').value = 'Uji model default.';
   [...panel.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Generate').click();
   await tick(500);
-  check('v215: sintesis memakai model yang dipilih', log.includes('speech-model:tts-1-hd'), log.join(','));
+  check('v225: sintesis memakai model default omnivoice', log.includes('speech-model:omnivoice'), log.join(','));
   check('v215: tombol Simpan ASS ada di panel transkrip', !!document.getElementById('vedAssBtn'), '');
   log.length = 0;
   document.getElementById('vedAssBtn').click();

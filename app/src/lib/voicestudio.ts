@@ -51,7 +51,7 @@ export function vsSelectModel(m: string): void {
   } catch {
     /* kuota penuh: abaikan */
   }
-  vsRenderModels();
+  // v225: tanpa UI daftar model — hanya state + penyimpanan.
 }
 
 // v223: vsFetch LEWAT PROXY RUST (invoke vs_api), BUKAN fetch WebView.
@@ -190,7 +190,7 @@ export async function vsCheck(): Promise<VsStatus> {
       vsState.voices = [];
     }
     vsRenderVoices();
-    vsRenderModels();
+    // v225: vsRenderModels dihapus (daftar Model lokal dihapus dari UI).
   }
   return vsState.status;
 }
@@ -341,35 +341,15 @@ export function vsRenderVoices(): void {
   }
 }
 
-export function vsRenderModels(): void {
-  const ul = document.getElementById('vsModelList');
-  if (!ul) return;
-  ul.innerHTML = '';
-  if (vsState.models.length === 0) {
-    const li = document.createElement('li');
-    li.textContent = tr('vs.models.empty');
-    ul.appendChild(li);
-    return;
-  }
-  for (const m of vsState.models) {
-    const li = document.createElement('li');
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'btn btn-sm';
-    btn.dataset.vsModel = m;
-    btn.textContent = (m === vsState.selectedModel ? '✓ ' : '') + m;
-    btn.setAttribute('aria-pressed', m === vsState.selectedModel ? 'true' : 'false');
-    btn.addEventListener('click', () => vsSelectModel(m));
-    li.appendChild(btn);
-    ul.appendChild(li);
-  }
-}
+// v225: vsRenderModels DIHAPUS bersama daftar Model lokal di UI
+// (perintah Patria 10:39) — pilihan model mengunci ke default terakhir
+// (vsState.selectedModel, tetap divalidasi vsCheck terhadap daftar
+// backend); vsSelectModel dipertahankan sebagai API programatik.
 
 // Dipanggil applyLanguage: render ulang teks dinamis tab Voice dari state terakhir.
 export function vsRefreshVoiceUI(): void {
   vsRenderStatus();
   vsRenderVoices();
-  vsRenderModels();
 }
 
 function setNote(id: string, text: string): void {
