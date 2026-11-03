@@ -98,8 +98,8 @@ fn main() {
             social::social_meta_pages,
             social::social_meta_ig_id,
             social::social_publish,
-            social::imgur_upload,
-            social::imgur_validate,
+            social::imgbb_upload,
+            social::imgbb_validate,
         ])
         .run(tauri::generate_context!())
     {

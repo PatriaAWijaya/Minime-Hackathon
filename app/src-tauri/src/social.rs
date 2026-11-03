@@ -1951,48 +1951,49 @@ mod tests {
     }
 }
 
-// Unggah gambar ke Imgur untuk URL publik (v243, perintah Patria 3 Nov 20:20:
-// "image di planner selalu punya public url").
+// Unggah gambar ke ImgBB untuk URL publik (v244, menggantikan Imgur:
+// vonis Patria 3 Nov 21:00 "Pakai ImgBB" setelah pendaftaran aplikasi
+// Imgur terbukti tidak tersedia — 3 Nov 20:53 semua rute pendaftaran
+// me-redirect ke beranda, jadi Client-ID Imgur tidak bisa diperoleh).
 // Latar: IG/Threads/TikTok lewat API hanya menerima URL gambar publik —
 // file lokal selalu ditolak (blok v79). Satu-satunya jalan otomatis di
 // dalam app adalah mengunggah dulu ke host publik; host yang dipilih
-// Patria = Imgur, dengan Client-ID per-user (disimpan di Settings
+// Patria = ImgBB, dengan API key per-user (disimpan di Settings
 // Planner, bukan di git — konsisten dengan aturan Minime publik: tiap
-// user mengkonekkan kredensialnya sendiri). Client-ID bukan secret
-// (identifikasi aplikasi untuk rate limit), tapi tetap tidak di-log.
+// user mengkonekkan kredensialnya sendiri). API key tidak di-log.
 // WebP selalu dikonversi dulu di frontend (PNG untuk IG/Threads, JPEG
-// untuk TikTok) karena uploader Imgur menolak .webp (terbukti 3x,
-// 3 Nov 20:16-20:18, anonim maupun login) — perintah ini menerima
-// PNG/JPEG/GIF apa adanya dan meneruskan error Imgur apa adanya.
+// untuk TikTok) karena TikTok foto hanya menerima JPEG/WEBP dan ImgBB
+// tidak mendaftarkan webp — perintah ini menerima PNG/JPEG/GIF apa
+// adanya dan meneruskan error ImgBB apa adanya.
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ImgurUploadReq {
-    pub client_id: String,
+pub struct ImgbbUploadReq {
+    pub key: String,
     pub b64: String,
     pub mime: String,
 }
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ImgurUploadRes {
-    pub link: String,
+pub struct ImgbbUploadRes {
+    pub url: String,
 }
 
 #[tauri::command]
-pub fn imgur_upload(req: ImgurUploadReq) -> Result<ImgurUploadRes, String> {
-    no_crlf(&req.client_id, "Client-ID")?;
+pub fn imgbb_upload(req: ImgbbUploadReq) -> Result<ImgbbUploadRes, String> {
+    no_crlf(&req.key, "API key")?;
     let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &req.b64)
         .map_err(|e| e.to_string())?;
-    if bytes.is_empty() || bytes.len() > 20_000_000 {
-        return Err("gambar kosong atau melebihi 20 MB".into());
+    if bytes.is_empty() || bytes.len() > 32_000_000 {
+        return Err("gambar kosong atau melebihi 32 MB".into());
     }
     let mime = allow_mime(req.mime.as_str());
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
-    let tmp = std::env::temp_dir().join(format!("minime-imgur-{stamp}.bin"));
+    let tmp = std::env::temp_dir().join(format!("minime-imgbb-{stamp}.bin"));
     std::fs::write(&tmp, &bytes).map_err(|e| e.to_string())?;
     let curl = crate::video::find_tool("curl")
         .ok_or_else(|| "curl tidak ditemukan di PATH".to_string())?;
@@ -2001,20 +2002,18 @@ pub fn imgur_upload(req: ImgurUploadReq) -> Result<ImgurUploadRes, String> {
             "-sS",
             "--max-time",
             "120",
-            "-H",
-            &format!("Authorization: Client-ID {}", req.client_id),
             "--form",
             &format!("image=@{};type={}", tmp.to_string_lossy(), mime),
             "-w",
             "\n%{http_code}",
-            "https://api.imgur.com/3/image",
+            &format!("https://api.imgbb.com/1/upload?key={}", req.key),
         ])
         .output()
         .map_err(|e| format!("gagal menjalankan curl: {e}"))?;
     let _ = std::fs::remove_file(&tmp);
     if !out.status.success() {
         return Err(format!(
-            "curl Imgur gagal ({}): {}",
+            "curl ImgBB gagal ({}): {}",
             out.status,
             String::from_utf8_lossy(&out.stderr).trim()
         ));
@@ -2032,82 +2031,39 @@ pub fn imgur_upload(req: ImgurUploadReq) -> Result<ImgurUploadRes, String> {
     let body_text = String::from_utf8_lossy(raw_body).into_owned();
     if !(200..300).contains(&status) {
         let slice: String = body_text.chars().take(300).collect();
-        return Err(format!("Imgur HTTP {status}: {slice}"));
+        return Err(format!("ImgBB HTTP {status}: {slice}"));
     }
     let v: serde_json::Value =
-        serde_json::from_str(&body_text).map_err(|e| format!("respons Imgur bukan JSON: {e}"))?;
-    let link = v["data"]["link"].as_str().unwrap_or("").to_string();
-    if link.is_empty() {
-        return Err("Imgur tidak mengembalikan link".into());
+        serde_json::from_str(&body_text).map_err(|e| format!("respons ImgBB bukan JSON: {e}"))?;
+    let ok = v["success"].as_bool().unwrap_or(false);
+    let url = v["data"]["url"].as_str().unwrap_or("").to_string();
+    if !ok || url.is_empty() {
+        return Err("ImgBB tidak mengembalikan URL".into());
     }
-    Ok(ImgurUploadRes { link })
+    Ok(ImgbbUploadRes { url })
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ImgurValidateReq {
-    pub client_id: String,
+pub struct ImgbbValidateReq {
+    pub key: String,
 }
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ImgurValidateRes {
-    pub remaining: u64,
-    pub limit: u64,
+pub struct ImgbbValidateRes {
+    pub valid: bool,
 }
 
-// Uji Client-ID tanpa mengunggah apa pun: GET /3/credits hanya membaca
-// kuota aplikasi — gagal auth (403) berarti ID salah, 200 berarti valid.
+// Uji API key ImgBB tanpa mengunggah apa pun: ImgBB tidak punya
+// endpoint kuota seperti Imgur, jadi uji ini hanya memeriksa format
+// kunci (32 karakter alfanumerik, sesuai format kunci ImgBB).
+// Bukti penuh kunci valid adalah unggahan pertama yang berhasil.
 #[tauri::command]
-pub fn imgur_validate(req: ImgurValidateReq) -> Result<ImgurValidateRes, String> {
-    no_crlf(&req.client_id, "Client-ID")?;
-    let curl = crate::video::find_tool("curl")
-        .ok_or_else(|| "curl tidak ditemukan di PATH".to_string())?;
-    let out = std::process::Command::new(curl)
-        .args([
-            "-sS",
-            "--max-time",
-            "30",
-            "-H",
-            &format!("Authorization: Client-ID {}", req.client_id),
-            "-w",
-            "\n%{http_code}",
-            "https://api.imgur.com/3/credits",
-        ])
-        .output()
-        .map_err(|e| format!("gagal menjalankan curl: {e}"))?;
-    if !out.status.success() {
-        return Err(format!(
-            "curl Imgur gagal ({}): {}",
-            out.status,
-            String::from_utf8_lossy(&out.stderr).trim()
-        ));
+pub fn imgbb_validate(req: ImgbbValidateReq) -> Result<ImgbbValidateRes, String> {
+    let key = req.key.trim().to_string();
+    if key.len() != 32 || !key.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err("API key ImgBB harus 32 karakter alfanumerik".into());
     }
-    let stdout = out.stdout;
-    let split = stdout
-        .iter()
-        .rposition(|b| *b == b'\n')
-        .ok_or_else(|| "respons curl tanpa baris status".to_string())?;
-    let (raw_body, tail) = stdout.split_at(split);
-    let status: u16 = String::from_utf8_lossy(&tail[1..])
-        .trim()
-        .parse()
-        .map_err(|_| "baris status curl tidak valid".to_string())?;
-    let body_text = String::from_utf8_lossy(raw_body).into_owned();
-    if !(200..300).contains(&status) {
-        let slice: String = body_text.chars().take(300).collect();
-        return Err(format!("Imgur HTTP {status}: {slice}"));
-    }
-    let v: serde_json::Value =
-        serde_json::from_str(&body_text).map_err(|e| format!("respons Imgur bukan JSON: {e}"))?;
-    let data = &v["data"];
-    let remaining = data["UserRemaining"]
-        .as_u64()
-        .or_else(|| data["user_remaining"].as_u64())
-        .unwrap_or(0);
-    let limit = data["UserLimit"]
-        .as_u64()
-        .or_else(|| data["user_limit"].as_u64())
-        .unwrap_or(0);
-    Ok(ImgurValidateRes { remaining, limit })
+    Ok(ImgbbValidateRes { valid: true })
 }

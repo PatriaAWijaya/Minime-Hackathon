@@ -339,13 +339,13 @@ export function socMimeFromExt(f) {
 
 // v243 (perintah Patria 3 Nov 20:20: image Planner selalu punya public
 // url): kanal yang API-nya wajib URL publik. File lokal untuk kanal ini
-// TIDAK LAGI diblokir — diunggah dulu ke Imgur (Client-ID per-user dari
+// TIDAK LAGI diblokir — diunggah dulu ke ImgBB (API key per-user dari
 // sidebar Planner) menjadi URL, lalu diterbitkan/dijadwalkan dengan URL.
-var IMGUR_URL_PLATFORMS = ['threads', 'instagram', 'tiktok'];
-function socImgurClientId() { try { return (socStore().imgurClientId || '').trim(); } catch (_) { return ''; } }
+var IMGBB_URL_PLATFORMS = ['threads', 'instagram', 'tiktok'];
+function socImgbbApiKey() { try { return (socStore().imgbbApiKey || '').trim(); } catch (_) { return ''; } }
 
 // WebP -> raster (PNG untuk IG/Threads, JPEG untuk TikTok): uploader
-// Imgur menolak .webp (terbukti 3x, 3 Nov 20:16-20:18). Canvas hanya
+// TikTok foto hanya menerima JPEG/WEBP dan ImgBB tidak mendaftarkan webp. Canvas hanya
 // menggambar frame pertama webp animasi — batas yang diterima, karena
 // poster Planner adalah gambar diam.
 export function socWebpToRasterB64(b64, format) {
@@ -369,27 +369,27 @@ export function socWebpToRasterB64(b64, format) {
   });
 }
 
-// Inti konversi: b64 (+mime) -> link Imgur. WebP dikonversi dulu
+// Inti konversi: b64 (+mime) -> link ImgBB. WebP dikonversi dulu
 // sesuai format platform; format lain lewat apa adanya.
-async function socUploadB64ToImgur(b64, mime, format, cid) {
+async function socUploadB64ToImgbb(b64, mime, format, cid) {
   var upB64 = b64, upMime = mime || '';
   if (upMime === 'image/webp') {
     upB64 = await socWebpToRasterB64(b64, format);
     upMime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
   }
-  var res = await invoke('imgur_upload', { req: { clientId: cid, b64: upB64, mime: upMime } });
-  var link = (res && res.link) || '';
-  if (!link) throw new Error(tr('soc.imgur.upload_fail'));
+  var res = await invoke('imgbb_upload', { req: { key: cid, b64: upB64, mime: upMime } });
+  var link = (res && res.url) || '';
+  if (!link) throw new Error(tr('soc.imgbb.upload_fail'));
   return link;
 }
 
 // Media komposer (st.media) -> {platform: link} untuk kanal wajib-URL
 // yang ada di plats. Satu unggahan per format (PNG dipakai bersama
-// IG+Threads, JPEG untuk TikTok). Tanpa Client-ID: throw pesan yang
+// IG+Threads, JPEG untuk TikTok). Tanpa API key: throw pesan yang
 // menyebut yang kurang (bukan sekadar "dibatalkan").
-export async function socUploadLocalToImgur(media, plats) {
-  var cid = socImgurClientId();
-  if (!cid) throw new Error(tr('soc.imgur.missing'));
+export async function socUploadLocalToImgbb(media, plats) {
+  var cid = socImgbbApiKey();
+  if (!cid) throw new Error(tr('soc.imgbb.missing'));
   var b64 = '', mime = '';
   if (media && media.kind === 'file') { b64 = media.b64 || ''; mime = media.mime || ''; }
   else if (media && (media.kind === 'lib' || media.kind === 'saved')) {
@@ -399,22 +399,22 @@ export async function socUploadLocalToImgur(media, plats) {
   if (!mime && media && media.imageFile && media.imageFile.toLowerCase().endsWith('.webp')) mime = 'image/webp';
   if (!b64) throw new Error(tr('soc.err.image'));
   var targets = {};
-  (plats || []).forEach(function (pl) { if (IMGUR_URL_PLATFORMS.indexOf(pl) >= 0) targets[pl] = (pl === 'tiktok') ? 'jpeg' : 'png'; });
+  (plats || []).forEach(function (pl) { if (IMGBB_URL_PLATFORMS.indexOf(pl) >= 0) targets[pl] = (pl === 'tiktok') ? 'jpeg' : 'png'; });
   var byFormat = {};
   var formats = Object.keys(targets).map(function (pl) { return targets[pl]; }).filter(function (f, i, a) { return a.indexOf(f) === i; });
-  for (var i = 0; i < formats.length; i++) byFormat[formats[i]] = await socUploadB64ToImgur(b64, mime, formats[i], cid);
+  for (var i = 0; i < formats.length; i++) byFormat[formats[i]] = await socUploadB64ToImgbb(b64, mime, formats[i], cid);
   var links = {};
   Object.keys(targets).forEach(function (pl) { links[pl] = byFormat[targets[pl]]; });
   return links;
 }
 
 // Varian antrean: item hanya punya nama file + mime (tanpa st.media).
-export async function socUploadQueueFileToImgur(imageFile, imageMime, platform, cid) {
+export async function socUploadQueueFileToImgbb(imageFile, imageMime, platform, cid) {
   var rd = await invoke('image_read', { req: { name: imageFile || '' } });
   var b64 = (rd && rd.b64) || '';
   if (!b64) throw new Error(tr('soc.err.image'));
   var fmt = platform === 'tiktok' ? 'jpeg' : 'png';
-  return socUploadB64ToImgur(b64, imageMime || socMimeFromExt(imageFile), fmt, cid);
+  return socUploadB64ToImgbb(b64, imageMime || socMimeFromExt(imageFile), fmt, cid);
 }
 var socCalCursor = null;
 
@@ -470,11 +470,11 @@ function renderSideBar() {
     + '<div class="soc-row"><button id="socAddChannel" class="btn btn-primary" style="width:100%">+ ' + tr('soc.add_channel') + '</button></div>'
     + '<div class="soc-row"><button id="socCreatePost" class="btn" style="width:100%">+ ' + tr('soc.create_post') + '</button></div>'
     + '<div class="soc-side-list">' + rows + '</div><div class="soc-side-detail">' + detail + '</div>'
-    + '<div class="soc-row" style="margin-top:12px"><b>' + tr('soc.imgur.title') + '</b></div>'
-    + '<div class="soc-row"><input type="password" id="socImgurId" placeholder="Client-ID" style="width:100%" value="' + esc(s.imgurClientId || '') + '"></div>'
-    + '<div class="soc-row"><button id="socImgurSave" class="btn btn-sm">' + tr('soc.imgur.save') + '</button> '
-    + '<button id="socImgurTest" class="btn btn-sm">' + tr('soc.imgur.test') + '</button></div>'
-    + '<div class="soc-row"><span id="socImgurNote" class="se-note">' + (s.imgurValidated ? tr('soc.imgur.ok') : tr('soc.imgur.hint')) + '</span></div></div>';
+    + '<div class="soc-row" style="margin-top:12px"><b>' + tr('soc.imgbb.title') + '</b></div>'
+    + '<div class="soc-row"><input type="password" id="socImgbbKey" placeholder="Client-ID" style="width:100%" value="' + esc(s.imgbbApiKey || '') + '"></div>'
+    + '<div class="soc-row"><button id="socImgbbSave" class="btn btn-sm">' + tr('soc.imgbb.save') + '</button> '
+    + '<button id="socImgbbTest" class="btn btn-sm">' + tr('soc.imgbb.test') + '</button></div>'
+    + '<div class="soc-row"><span id="socImgbbNote" class="se-note">' + (s.imgbbValidated ? tr('soc.imgbb.ok') : tr('soc.imgbb.hint')) + '</span></div></div>';
 }
 
 // Popup Tambah Channel gaya Postiz (v72): grid ikon + nama aplikasi
@@ -622,25 +622,25 @@ export function renderNativePlanner() {
     });
   });
   // Bind popup Tambah Channel.
-  // v243: kartu Imgur di sidebar Planner (Client-ID per-user).
-  socBind('socImgurSave', function () {
-    var idEl = document.getElementById('socImgurId');
+  // v244: kartu ImgBB di sidebar Planner (API key per-user).
+  socBind('socImgbbSave', function () {
+    var idEl = document.getElementById('socImgbbKey');
     var cid = idEl ? idEl.value.trim() : '';
-    var ss = socStore(); ss.imgurClientId = cid; ss.imgurValidated = false; socSave(ss);
-    var nn = document.getElementById('socImgurNote'); if (nn) nn.textContent = cid ? tr('soc.imgur.saved') : tr('soc.imgur.hint');
+    var ss = socStore(); ss.imgbbApiKey = cid; ss.imgbbValidated = false; socSave(ss);
+    var nn = document.getElementById('socImgbbNote'); if (nn) nn.textContent = cid ? tr('soc.imgbb.saved') : tr('soc.imgbb.hint');
   });
-  socBind('socImgurTest', async function () {
-    var ss0 = socStore(); var cid0 = (ss0.imgurClientId || '').trim();
-    var nn0 = document.getElementById('socImgurNote');
-    if (!cid0) { if (nn0) nn0.textContent = tr('soc.imgur.missing_short'); return; }
-    if (nn0) nn0.textContent = tr('soc.imgur.testing');
+  socBind('socImgbbTest', async function () {
+    var ss0 = socStore(); var cid0 = (ss0.imgbbApiKey || '').trim();
+    var nn0 = document.getElementById('socImgbbNote');
+    if (!cid0) { if (nn0) nn0.textContent = tr('soc.imgbb.missing_short'); return; }
+    if (nn0) nn0.textContent = tr('soc.imgbb.testing');
     try {
-      var rr = await invoke('imgur_validate', { req: { clientId: cid0 } });
-      var ss1 = socStore(); ss1.imgurValidated = true; socSave(ss1);
-      if (nn0) nn0.textContent = tr('soc.imgur.ok') + ((rr && rr.remaining) ? ' (sisa ' + rr.remaining + ')' : '');
+      var rr = await invoke('imgbb_validate', { req: { key: cid0 } });
+      var ss1 = socStore(); ss1.imgbbValidated = true; socSave(ss1);
+      if (nn0) nn0.textContent = tr('soc.imgbb.ok');
     } catch (e) {
-      var ss2 = socStore(); ss2.imgurValidated = false; socSave(ss2);
-      if (nn0) nn0.textContent = tr('soc.imgur.fail') + ' ' + String((e && e.message) || e || '');
+      var ss2 = socStore(); ss2.imgbbValidated = false; socSave(ss2);
+      if (nn0) nn0.textContent = tr('soc.imgbb.fail') + ' ' + String((e && e.message) || e || '');
     }
   });
   socBind('socAddChannel', function () { socPopOpen = true; socPopForm = null; socPopMsg = ''; socWizStep = 1; renderNativePlanner(); });
@@ -1552,13 +1552,13 @@ async function socComposerSave(status) {
   if ((imageMime || '').indexOf('video/') === 0 && st.plats.some(function (pl) { return pl !== 'youtube'; })) {
     note(tr('soc.err.yt_only')); return;
   }
-  // v243: blok file_url lama DIGANTI konversi Imgur — file lokal untuk
+  // v244: blok file_url lama DIGANTI konversi ImgBB — file lokal untuk
   // kanal wajib-URL menjadi URL publik (per platform: PNG/JPEG);
   // kanal lain tetap memakai file. Tanpa Client-ID: pesan menyebut
   // yang kurang, bukan sekadar "dibatalkan".
-  var imgurLinks = null;
-  if (imageFile && st.plats.some(function (pl) { return IMGUR_URL_PLATFORMS.indexOf(pl) >= 0; })) {
-    try { imgurLinks = await socUploadLocalToImgur(st.media, st.plats); }
+  var imgbbLinks = null;
+  if (imageFile && st.plats.some(function (pl) { return IMGBB_URL_PLATFORMS.indexOf(pl) >= 0; })) {
+    try { imgbbLinks = await socUploadLocalToImgbb(st.media, st.plats); }
     catch (e) { note(String((e && e.message) || e || '')); return; }
   }
   // Edit = ganti item lama (id berubah tidak masalah — id internal).
@@ -1566,8 +1566,8 @@ async function socComposerSave(status) {
     if (!queueSave(queueLoad().filter(function (it) { return String(it.id) !== String(st.editId); }))) { note(tr('soc.err.save')); return; }
   }
   var items = st.plats.map(function (pl) {
-    var useUrl = imgurLinks && imgurLinks[pl];
-    return { platform: pl, text: text, imageFile: useUrl ? '' : imageFile, imageMime: useUrl ? '' : imageMime, imageUrl: useUrl ? imgurLinks[pl] : imageUrl, scheduledAt: st.when, status: status, repeat: st.repeat || '' };
+    var useUrl = imgbbLinks && imgbbLinks[pl];
+    return { platform: pl, text: text, imageFile: useUrl ? '' : imageFile, imageMime: useUrl ? '' : imageMime, imageUrl: useUrl ? imgbbLinks[pl] : imageUrl, scheduledAt: st.when, status: status, repeat: st.repeat || '' };
   });
   try { socQueueAdd(items); } catch (e) { note(String(e || '')); return; }
   socComposer = null; socComposerConfirm = false;
@@ -1588,18 +1588,18 @@ async function socComposerPublishNow() {
     else if (st.media.kind === 'lib' || st.media.kind === 'saved') imageFile = st.media.imageFile || '';
     else if (st.media.kind === 'url') imageUrl = st.media.url || '';
   }
-  // v243: media lokal -> URL Imgur untuk kanal wajib-URL (satu unggahan
+  // v244: media lokal -> URL ImgBB untuk kanal wajib-URL (satu unggahan
   // per format); kanal lain tetap memakai file seperti dulu. Blok
   // file_url di socPublishDirect tetap sebagai jaring pengaman.
-  var imgurLinks = null;
-  if ((img || imageFile) && st.plats.some(function (pl) { return IMGUR_URL_PLATFORMS.indexOf(pl) >= 0; })) {
-    try { imgurLinks = await socUploadLocalToImgur(st.media, st.plats); }
+  var imgbbLinks = null;
+  if ((img || imageFile) && st.plats.some(function (pl) { return IMGBB_URL_PLATFORMS.indexOf(pl) >= 0; })) {
+    try { imgbbLinks = await socUploadLocalToImgbb(st.media, st.plats); }
     catch (e) { note(String((e && e.message) || e || '')); return; }
   }
   var results = [];
   for (var i = 0; i < st.plats.length; i++) {
     var pl = st.plats[i];
-    if (imgurLinks && IMGUR_URL_PLATFORMS.indexOf(pl) >= 0) results.push(await socPublishDirect(pl, text, null, imgurLinks[pl] || '', ''));
+    if (imgbbLinks && IMGBB_URL_PLATFORMS.indexOf(pl) >= 0) results.push(await socPublishDirect(pl, text, null, imgbbLinks[pl] || '', ''));
     else results.push(await socPublishDirect(pl, text, img, imageUrl, imageFile));
   }
   note(results.map(function (r) { return r.msg; }).join(' | '));
@@ -1742,13 +1742,13 @@ export function initSocialScheduler() {
       // token tiap 30 detik selamanya). Simpan SEBELUM continue.
       if (!tokenValid(ch)) { it.status = 'failed'; it.error = tr('soc.err.token'); queueSave(q); continue; }
       // v243: item antrean lama dengan file lokal untuk kanal wajib-URL
-      // dikonversi dulu ke Imgur; gagal konversi = failed dengan alasan
+      // dikonversi dulu ke ImgBB; gagal konversi = failed dengan alasan
       // jelas (bukan loop — tick hanya memproses status 'queued').
-      if (it.imageFile && IMGUR_URL_PLATFORMS.indexOf(it.platform) >= 0) {
-        var qcid = socImgurClientId();
-        if (!qcid) { it.status = 'failed'; it.error = tr('soc.imgur.missing'); queueSave(q); continue; }
+      if (it.imageFile && IMGBB_URL_PLATFORMS.indexOf(it.platform) >= 0) {
+        var qcid = socImgbbApiKey();
+        if (!qcid) { it.status = 'failed'; it.error = tr('soc.imgbb.missing'); queueSave(q); continue; }
         try {
-          it.imageUrl = await socUploadQueueFileToImgur(it.imageFile, it.imageMime || '', it.platform, qcid);
+          it.imageUrl = await socUploadQueueFileToImgbb(it.imageFile, it.imageMime || '', it.platform, qcid);
           it.imageFile = ''; it.imageMime = '';
         } catch (e) {
           it.status = 'failed'; it.error = String((e && e.message) || e || ''); queueSave(q); continue;
