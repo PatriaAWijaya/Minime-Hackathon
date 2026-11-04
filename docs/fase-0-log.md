@@ -2529,6 +2529,15 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v248 — Tombol satu-klik "Buat video dari prompt" (perintah Patria 4 Nov 10:20, lanjutan bukti video-dari-prompt 10:18)
+
+Isi:
+- app/src/App.svelte: tombol #hf-one-click di baris Generate HTML panel HyperFrames (mode model HyperFrames); handler hfOneClick merantai deskripsi -> hfGenerateHtml -> hyperframes_render -> video_probe (fallback data-duration root) -> video_qc opsional -> hfAddToTimeline -> status final berisi path video + durasi + provider/model + teks QC. File hasil render ADALAH video final (tanpa re-encode lewat ekspor ve2 yang landscape 1280x720 dan akan memotong komposisi vertikal); klip tetap masuk timeline agar bisa ditambah VO/scene lain lalu diekspor gabungan. Pengaman: guard hfOneBusy + tombol gen/render ikut nonaktif selama rantai jalan (klik ganda = satu video); deskripsi kosong ditolak tanpa memanggil model; durasi 0 -> status hf.one_no_dur (file tersimpan, klip tidak masuk timeline); error HF_GEN_INVALID dipetakan ke pesan hf.gen_invalid; QC gagal tidak menggagalkan video (file tetap final).
+- app/src/lib/i18n.ts: 4 kunci baru x3 bahasa (hf.one_click, hf.one_running, hf.one_done, hf.one_no_dur); i18n 1295 -> 1299/bahasa, 0 duplikat (check-i18n.py v248 diperbarui ke 1299).
+- app/tests/rig-video.js §v248 (7 cek): tombol ada; deskripsi kosong ditolak; satu klik menghasilkan video final + durasi probe; komposisi terisi; klip masuk timeline (Video, HyperFrames 15s); klik ganda sinkron hanya +1 klip; tombol aktif lagi sesudah rantai.
+- Bukti lokal sebelum gate: build lolos; svelte-check 0 error/21 warning (baseline); rig-video ALL PASSED (7 cek v248 baru + seluruh cek lama); loop 14 rig exit=0 semua; gate 9/9; ledger md5 tidak berubah; tanpa perubahan Rust.
+- Penomoran: pekerjaan ini mengambil nomor v248. DEPLOY MENYUSUL PERINTAH (tidak auto-deploy; 4 Nov hari rekaman video demo). Push: kode lokal 380f78c ↔ remote 39cbdac (tree identik).
+
 ## v247 — Menu hapus konten terjadwal di komposer Planner (perintah Patria 4 Nov 10:04: "tambahkan menu agar konten yang dijadwalkan bisa dihapus oleh user jika dibutuhkan")
 
 Diagnosis (terverifikasi kode): tombol − di chip kalender/draf SUDAH ada dan ter-bind (hapus langsung tanpa konfirmasi, satu item per kanal), tapi tidak ada menu hapus yang mudah ditemukan saat item dibuka — komposer edit hanya punya Draf/Jadwalkan/Terbit. Jadi konten terjadwal secara teknis bisa dihapus lewat −, tapi tidak lewat menu.
