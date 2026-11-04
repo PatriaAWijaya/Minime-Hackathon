@@ -313,6 +313,54 @@ try {
   const tickItem = JSON.parse(store.get('minime.socialQueue') || '[]').find((it) => it.id === 'tick246');
   check('v246: tick menerbitkan item file-lokal via URL publik (tanpa kunci)', !!sent246 && (tickItem?.imageUrl || '').startsWith('https://h.uguu.se/') && !tickItem?.imageFile, JSON.stringify(tickItem || null).slice(0, 220));
 
+  // §v247: menu hapus konten terjadwal di komposer (perintah Patria
+  // 4 Nov 10:04). Temuan: chip kalender/draf SUDAH punya tombol −
+  // (hapus langsung tanpa konfirmasi), tapi tidak ada menu hapus
+  // yang mudah ditemukan saat item dibuka — komposer edit hanya
+  // punya Draf/Jadwalkan/Terbit. v247 menambah tombol Hapus di
+  // komposer mode edit + konfirmasi dua langkah; chip − tetap ada.
+  const q247 = JSON.parse(store.get('minime.socialQueue') || '[]');
+  const besok247 = new Date(Date.now() + 86400000); besok247.setHours(9, 0, 0, 0);
+  q247.push({ id: 'hapus247', platform: 'instagram', text: 'Konten hapus 247', imageFile: '', imageUrl: '', scheduledAt: besok247.getTime(), status: 'queued', error: '', repeat: '' });
+  store.set('minime.socialQueue', JSON.stringify(q247));
+  dom.window.renderPlanner();
+  await tick(100);
+  let chip247 = document.querySelector('[data-soc-edit="hapus247"]');
+  if (!chip247) { document.getElementById('socCalNext')?.click(); await tick(100); chip247 = document.querySelector('[data-soc-edit="hapus247"]'); }
+  check('v247: item terjadwal tampil sebagai chip kalender', !!chip247, chip247 ? chip247.outerHTML.slice(0, 120) : 'no-chip');
+  chip247.click();
+  await tick(100);
+  check('v247: komposer mode edit menampilkan tombol Hapus', !!document.getElementById('socCompDelete'), document.getElementById('socCompDelete')?.outerHTML || 'no-del-btn');
+  document.getElementById('socCompDelete').click();
+  await tick(100);
+  check('v247: klik Hapus membuka konfirmasi (item belum terhapus)', !!document.getElementById('socDelConfirmYes') && JSON.parse(store.get('minime.socialQueue') || '[]').some((it) => it.id === 'hapus247'), document.body.textContent.includes('Hapus postingan ini?') ? 'confirm-shown' : 'no-confirm');
+  document.getElementById('socDelConfirmNo').click();
+  await tick(100);
+  check('v247: Batal menutup konfirmasi, item tetap ada', !document.getElementById('socDelConfirmYes') && JSON.parse(store.get('minime.socialQueue') || '[]').some((it) => it.id === 'hapus247'), 'cancel-ok');
+  document.getElementById('socCompDelete').click();
+  await tick(100);
+  document.getElementById('socDelConfirmYes').click();
+  await tick(100);
+  check('v247: Ya, hapus menutup komposer + item hilang dari antrean', !document.getElementById('socCompText') && !JSON.parse(store.get('minime.socialQueue') || '[]').some((it) => it.id === 'hapus247'), JSON.stringify(JSON.parse(store.get('minime.socialQueue') || '[]').map((it) => it.id)));
+  // Mode buat baru (tanpa editId) TIDAK punya tombol Hapus.
+  document.querySelector('[data-soc-add]')?.click();
+  await tick(100);
+  check('v247: komposer baru tanpa tombol Hapus', !!document.getElementById('socCompText') && !document.getElementById('socCompDelete'), 'create-mode-ok');
+  document.getElementById('socComposerClose')?.click();
+  await tick(100);
+  if (document.getElementById('socConfirmYes')) { document.getElementById('socConfirmYes').click(); await tick(100); }
+  check('v247: komposer baru tertutup kembali', !document.getElementById('socCompText'), 'close-ok');
+  // Regresi: tombol − chip tetap menghapus langsung.
+  const q247b = JSON.parse(store.get('minime.socialQueue') || '[]');
+  q247b.push({ id: 'hapus247b', platform: 'instagram', text: 'Konten hapus 247b', imageFile: '', imageUrl: '', scheduledAt: besok247.getTime(), status: 'queued', error: '', repeat: '' });
+  store.set('minime.socialQueue', JSON.stringify(q247b));
+  dom.window.renderPlanner();
+  await tick(100);
+  let del247b = document.querySelector('[data-soc-del="hapus247b"]');
+  if (!del247b) { document.getElementById('socCalNext')?.click(); await tick(100); del247b = document.querySelector('[data-soc-del="hapus247b"]'); }
+  if (del247b) { del247b.click(); await tick(100); }
+  check('v247: tombol − chip tetap menghapus langsung', !!del247b && !JSON.parse(store.get('minime.socialQueue') || '[]').some((it) => it.id === 'hapus247b'), del247b ? 'del-clicked' : 'no-del-chip');
+
   // §v213: thumbnail Library mengecil 60% (jadi 40%), kartu tetap.
   const cssMatchV = html.match(/href="([^"]+\.css)"/);
   let cssTextV = '';

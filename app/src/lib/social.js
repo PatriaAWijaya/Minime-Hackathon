@@ -1438,6 +1438,7 @@ export function socLibToPlanner(item) {
   return 'composer';
 }
 var socComposerConfirm = false;
+var socComposerDeleteConfirm = false; // v247: konfirmasi hapus item terjadwal di komposer
 
 var SOC_LIMITS = { threads: 500, x: 280, instagram: 2200, tiktok: 2000, linkedin: 3000, facebook_page: 63206, youtube: 5000, facebook: 63206 };
 
@@ -1474,6 +1475,7 @@ function socComposerOpen(dateStr, editId) {
   if (!st.orig) st.orig = { text: '', plats: [], media: 'null', when: base, repeat: '' };
   socComposer = st;
   socComposerConfirm = false;
+  socComposerDeleteConfirm = false;
   renderNativePlanner();
 }
 
@@ -1491,7 +1493,7 @@ function socComposerDirty() {
 function socComposerClose(force) {
   if (!socComposer) return;
   if (!force && socComposerDirty()) { socComposerConfirm = true; renderNativePlanner(); return; }
-  socComposer = null; socComposerConfirm = false;
+  socComposer = null; socComposerConfirm = false; socComposerDeleteConfirm = false;
   renderNativePlanner();
 }
 
@@ -1538,6 +1540,12 @@ function socComposerHTML() {
   var confirm = socComposerConfirm
     ? '<div class="soc-pop-overlay"><div class="soc-pop"><h4>' + tr('soc.confirm_close') + '</h4><p>' + tr('soc.confirm_close_msg') + '</p><div class="soc-row"><button class="btn btn-sm btn-primary" id="socConfirmYes">' + tr('soc.yes_close') + '</button> <button class="btn btn-sm" id="socConfirmNo">' + tr('soc.no_cancel') + '</button></div></div></div>'
     : '';
+  // v247: menu hapus konten terjadwal — tombol Hapus hanya di mode edit
+  // (draf/terjadwal/gagal yang dibuka dari chip kalender); klik pertama
+  // membuka konfirmasi, klik Ya baru menghapus item itu saja.
+  var delConfirm = socComposerDeleteConfirm
+    ? '<div class="soc-pop-overlay"><div class="soc-pop"><h4>' + tr('soc.confirm_delete') + '</h4><p>' + tr('soc.confirm_delete_msg') + '</p><div class="soc-row"><button class="btn btn-sm btn-primary" id="socDelConfirmYes">' + tr('soc.delete') + '</button> <button class="btn btn-sm" id="socDelConfirmNo">' + tr('soc.no_cancel') + '</button></div></div></div>'
+    : '';
   return '<div class="soc-composer-overlay"><div class="soc-composer">'
     + '<button class="soc-pop-x" id="socComposerClose">×</button>'
     + '<div class="soc-composer-main"><h3>' + title + '</h3>'
@@ -1550,10 +1558,11 @@ function socComposerHTML() {
     + '<input type="datetime-local" id="socCompWhen" value="' + socLocalInput(st.when) + '"></div>'
     + '<div class="soc-row"><button id="socCompDraft" class="btn">' + tr('soc.save_draft') + '</button> '
     + '<button id="socCompSave" class="btn btn-primary">' + tr('soc.add_calendar') + '</button> '
-    + '<button id="socCompNow" class="btn">' + tr('soc.publish_now') + '</button></div>'
+    + '<button id="socCompNow" class="btn">' + tr('soc.publish_now') + '</button>'
+    + (st.editId ? ' <button id="socCompDelete" class="btn">' + tr('soc.delete') + '</button>' : '') + '</div>'
     + '<div id="socComposerNote"></div></div>'
     + '<div class="soc-composer-preview"><h3>' + tr('soc.post_preview') + '</h3><div id="socPreviewBody"></div><div id="socPreviewCounts"></div></div>'
-    + '</div>' + confirm + '</div>';
+    + '</div>' + confirm + delConfirm + '</div>';
 }
 
 function socComposerRefreshPreview() {
@@ -1632,7 +1641,7 @@ async function socComposerSave(status) {
     return { platform: pl, text: text, imageFile: useUrl ? '' : imageFile, imageMime: useUrl ? '' : imageMime, imageUrl: useUrl ? imgbbLinks[pl] : imageUrl, scheduledAt: st.when, status: status, repeat: st.repeat || '' };
   });
   try { socQueueAdd(items); } catch (e) { note(String(e || '')); return; }
-  socComposer = null; socComposerConfirm = false;
+  socComposer = null; socComposerConfirm = false; socComposerDeleteConfirm = false;
   renderNativePlanner();
 }
 
@@ -1670,7 +1679,7 @@ async function socComposerPublishNow() {
   var failed = results.some(function (r) { return !r.ok; });
   if (!failed) {
     if (st.editId) queueSave(queueLoad().filter(function (it) { return String(it.id) !== String(st.editId); }));
-    socComposer = null; socComposerConfirm = false;
+    socComposer = null; socComposerConfirm = false; socComposerDeleteConfirm = false;
     renderNativePlanner();
   }
 }
@@ -1755,6 +1764,20 @@ function socBindComposer() {
   socBind('socCompDraft', function () { socComposerSave('draft'); });
   socBind('socCompSave', function () { socComposerSave('queued'); });
   socBind('socCompNow', function () { socComposerPublishNow(); });
+  // v247: hapus item terjadwal dari komposer (mode edit saja).
+  socBind('socCompDelete', function () { socComposerDeleteConfirm = true; renderNativePlanner(); });
+  socBind('socDelConfirmYes', function () {
+    var st = socComposer;
+    if (!st || !st.editId) return;
+    var noteEl = document.getElementById('socComposerNote');
+    if (!queueSave(queueLoad().filter(function (it) { return String(it.id) !== String(st.editId); }))) {
+      if (noteEl) noteEl.textContent = tr('soc.err.save');
+      socComposerDeleteConfirm = false; renderNativePlanner(); return;
+    }
+    socComposer = null; socComposerConfirm = false; socComposerDeleteConfirm = false;
+    renderNativePlanner();
+  });
+  socBind('socDelConfirmNo', function () { socComposerDeleteConfirm = false; renderNativePlanner(); });
   socBind('socComposerClose', function () { socComposerClose(false); });
   socBind('socConfirmYes', function () { socComposerClose(true); });
   socBind('socConfirmNo', function () { socComposerConfirm = false; renderNativePlanner(); });
