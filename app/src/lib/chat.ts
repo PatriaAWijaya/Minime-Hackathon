@@ -435,24 +435,56 @@ function totalSuffix(wallMs: number): string {
    di dalam bubble ack, diperbarui maksimal 2x/detik (bukan per token)
    supaya DOM tidak ditulis ribuan kali. Isi bubble ack tidak diubah;
    span dihapus saat generasi selesai (finally di pemanggil). */
-function makeProgressUpdater(ackEl: Element | null): { update: (chars: number) => void; done: () => void } {
+function makeProgressUpdater(ackIdx: number | null, agentName?: string): { update: (chars: number) => void; stage: (s: 'writing' | 'qc' | 'revise', round?: number) => void; done: () => void } {
   let span: HTMLElement | null = null;
   let lastAt = 0;
+  let lastChars = 0;
+  let mode: 'writing' | 'qc' | 'revise' = 'writing';
+  let revRound = 0;
+  // v249: bubble dicari ULANG per render lewat indeks pesan (bukan elemen
+  // yang ditangkap sekali) — activateAgent/selectAgent memanggil
+  // renderChat() penuh, sehingga elemen ack yang ditangkap di awal fan-out
+  // terlepas dari DOM begitu agen berikutnya diaktifkan (dulu: progres
+  // semua agen kecuali terakhir hilang diam-diam). Nama agen dicocokkan
+  // supaya span tidak menempel ke bubble proyek lain bila user pindah
+  // project di tengah jalan.
+  const resolveBubble = (): HTMLElement | null => {
+    if (ackIdx === null || ackIdx === undefined) return null;
+    const box = document.getElementById('chatBox');
+    if (!box) return null;
+    const msg = box.querySelector('[data-idx="' + ackIdx + '"]');
+    if (!msg) return null;
+    if (agentName && !(msg.textContent || '').includes(agentName)) return null;
+    return msg.querySelector('.bubble') as HTMLElement | null;
+  };
+  const render = () => {
+    const bubble = resolveBubble();
+    if (!bubble) return;
+    if (span && span.parentElement !== bubble) { span.remove(); span = null; }
+    if (!span) {
+      span = document.createElement('span');
+      span.className = 'stream-prog';
+      span.style.cssText = 'display:block;opacity:.6;font-size:.85em;margin-top:4px';
+      bubble.appendChild(span);
+    }
+    if (mode === 'qc') span.textContent = '⏳ ' + tr('chat.stream.qc');
+    else if (mode === 'revise') span.textContent = '⏳ ' + tr('chat.stream.revise', { n: revRound }) + (lastChars ? ' ±' + Math.max(1, Math.round(lastChars / 4)) + ' token' : '…');
+    else span.textContent = '⏳ ' + tr('chat.stream.writing') + (lastChars ? ' ±' + Math.max(1, Math.round(lastChars / 4)) + ' token' : '…');
+  };
   return {
     update(chars: number) {
-      if (!ackEl) return;
+      if (ackIdx === null || ackIdx === undefined) return;
       const now = Date.now();
+      lastChars = chars;
       if (span && now - lastAt < 500) return;
       lastAt = now;
-      const bubble = ackEl.querySelector('.bubble');
-      if (!bubble) return;
-      if (!span) {
-        span = document.createElement('span');
-        span.className = 'stream-prog';
-        span.style.cssText = 'display:block;opacity:.6;font-size:.85em;margin-top:4px';
-        bubble.appendChild(span);
-      }
-      span.textContent = '⏳ ' + tr('chat.stream.writing') + ' ±' + Math.max(1, Math.round(chars / 4)) + ' token';
+      render();
+    },
+    stage(s: 'writing' | 'qc' | 'revise', round?: number) {
+      if (ackIdx === null || ackIdx === undefined) return;
+      mode = s;
+      if (typeof round === 'number') revRound = round;
+      render();
     },
     done() {
       if (span) span.remove();
@@ -467,6 +499,7 @@ async function gatedAgentAnswer(
   taskText: string,
   tracePrefix: string,
   onProgress?: (chars: number) => void,
+  onStage?: (s: 'writing' | 'qc' | 'revise', round?: number) => void,
 ): Promise<{ r: Awaited<ReturnType<typeof callAgentModel>>; text: string; verdictText: string; rounds: number; wallMs: number }> {
   const started = Date.now();
   // v239: isolasi cfg+router per jawaban — fan-out paralel tidak boleh
@@ -480,6 +513,7 @@ async function gatedAgentAnswer(
   const genToken: OnToken | undefined = onProgress
     ? (delta, total, reset) => { void delta; onProgress(reset ? 0 : total.length); }
     : undefined;
+  onStage?.('writing');
   let r = await callAgentModel(router2, agentKey, taskText, tracePrefix + '-0', genToken);
   recordLiveCost(r);
   let text = r.text;
@@ -489,6 +523,7 @@ async function gatedAgentAnswer(
     try {
       cfg2.systemInstruction = QC_INSTRUCTION;
       const qcInput = 'Tugas: ' + taskText + '\n\nHasil agen:\n- ' + ag.name + ': ' + text;
+      onStage?.('qc');
       const q = await router2.callWithFallback(qcInput, tracePrefix + '-qc-' + round);
       recordLiveCost(q);
       verdictText = q.text;
@@ -501,6 +536,7 @@ async function gatedAgentAnswer(
     agentInstruction();
     const revPrompt =
       'Revisi hasil berikut berdasarkan verdict QC Prime di bawah. Pertahankan bagian yang sudah benar, perbaiki hanya yang dikritik.\n\nVerdict QC:\n' + verdictText + '\n\nHasil sebelumnya:\n' + text;
+    onStage?.('revise', rounds);
     r = await callAgentModel(router2, agentKey, revPrompt, tracePrefix + '-rev-' + rounds, genToken);
     recordLiveCost(r);
     text = r.text;
@@ -585,7 +621,27 @@ async function voiceChatRun(text: string): Promise<void> {
   }
 }
 
+// v249: filter kirim ganda — Enter kedua selama split (input baru kosong
+// sesudah split di Alur 1/Prime-direct) tidak boleh memulai fan-out kedua
+// dengan teks yang SAMA. Ini filter duplikat, bukan kunci: teks BERBEDA
+// tetap jalan bersamaan seperti dulu (alur berurutan di rig maupun pesan
+// baru user tidak boleh diblokir hanya karena alur sebelumnya masih
+// menyelesaikan QC/laporan akhirnya). Pembungkus ini satu-satunya gerbang:
+// semua pemicu (Enter, tombol kirim) lewat v5logic sendChat() ->
+// sendChatReal. finally menjamin flag pulih walau alur throw di tengah jalan.
+let sendChatBusyText: string | null = null;
 export async function sendChatReal(): Promise<void> {
+  const input = document.getElementById('chatInput') as HTMLInputElement | null;
+  const text = input ? input.value.trim() : '';
+  if (text && sendChatBusyText !== null && text === sendChatBusyText) return;
+  if (text) sendChatBusyText = text;
+  try {
+    await sendChatRealInner();
+  } finally {
+    if (text && sendChatBusyText === text) sendChatBusyText = null;
+  }
+}
+async function sendChatRealInner(): Promise<void> {
   const input = document.getElementById('chatInput') as HTMLInputElement | null;
   if (!input) return;
   const text = input.value.trim();
@@ -715,22 +771,21 @@ export async function sendChatReal(): Promise<void> {
         postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.delegate.announce', { agent: esc(ag.name), task: esc(taskShort(t.task)) }));
         graphNoteDelegation(t.agent, t.task);
         activateAgent(t.agent);
-        postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
+        const ackIdx = postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
         setAgentPhase(t.agent, 'starting');
         const kbCard = kbTaskStart(ag.name, taskShort(t.task), t.task);
-        const ackEl = document.querySelector('#chatBox > div:last-child');
-        return { t, ag, kbCard, trace: 'trace-flow1-' + t.agent + '-' + Date.now(), ackEl };
+        return { t, ag, kbCard, trace: 'trace-flow1-' + t.agent + '-' + Date.now(), ackIdx };
       });
       const results = await Promise.all(items.map(async (it) => {
-        const { t, ag, kbCard, trace, ackEl } = it;
-        const prog = makeProgressUpdater(ackEl);
+        const { t, ag, kbCard, trace, ackIdx } = it;
+        const prog = makeProgressUpdater(ackIdx, ag.name);
         let resultText: string;
         try {
           setAgentPhase(t.agent, 'busy');
           kbTaskMove(kbCard, 1);
           // v161: gate per-agen (verdict interim internal; verdict set
           // tetap di QC alur di bawah).
-          const g = await gatedAgentAnswer(cfg, t.agent, t.task, trace, (chars) => prog.update(chars));
+          const g = await gatedAgentAnswer(cfg, t.agent, t.task, trace, (chars) => prog.update(chars), (s, r) => prog.stage(s, r));
           const footer =
             ' — ' + tr('chat.footer.via') + ' ' + g.r.provider + ' ' + g.r.model + ' · ' + g.r.latencyMs + 'ms' +
             (g.r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + g.r.fallbackFrom + ')' : '') +
@@ -790,23 +845,22 @@ export async function sendChatReal(): Promise<void> {
       postChat('prime', 'Prime Agent', '#EB87B4', tr('chat.delegate.announce', { agent: esc(ag.name), task: esc(taskShort(t.task)) }));
       graphNoteDelegationForMember(t.agent, t.task);
       activateAgent(t.agent);
-      postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
+      const ackIdx = postChat(t.agent, ag.name, ag.color, tr('chat.delegate.agentack'));
       setAgentPhase(t.agent, 'starting');
       const kbCard = kbTaskStart(ag.name, taskShort(t.task), t.task);
-      const ackEl = document.querySelector('#chatBox > div:last-child');
-      return { t, ag, kbCard, trace: 'trace-flow2-' + t.agent + '-' + Date.now(), ackEl };
+      return { t, ag, kbCard, trace: 'trace-flow2-' + t.agent + '-' + Date.now(), ackIdx };
     });
 
     const results = await Promise.all(items2.map(async (it) => {
-      const { t, ag, kbCard, trace, ackEl } = it;
-      const prog = makeProgressUpdater(ackEl);
+      const { t, ag, kbCard, trace, ackIdx } = it;
+      const prog = makeProgressUpdater(ackIdx, ag.name);
       let resultText: string;
       try {
         setAgentPhase(t.agent, 'busy');
         kbTaskMove(kbCard, 1);
         // v161: gate per-agen (verdict interim internal; verdict set
         // tetap di QC alur di bawah).
-        const g = await gatedAgentAnswer(cfg, t.agent, t.task, trace, (chars) => prog.update(chars));
+        const g = await gatedAgentAnswer(cfg, t.agent, t.task, trace, (chars) => prog.update(chars), (s, r) => prog.stage(s, r));
         const footer =
           ' — ' + tr('chat.footer.via') + ' ' + g.r.provider + ' ' + g.r.model + ' · ' + g.r.latencyMs + 'ms' +
           (g.r.fallbackFrom ? ' (' + tr('chat.footer.fb') + ' ' + g.r.fallbackFrom + ')' : '') +
@@ -891,7 +945,7 @@ export async function sendChatReal(): Promise<void> {
   // atau di Graph-only) dan memindahkannya ke panel detail + list aktif.
   graphNoteDelegation(delegate, text);
   activateAgent(delegate);
-  postChat(delegate, ag.name, ag.color, tr('chat.delegate.agentack'));
+  const ackIdxDel = postChat(delegate, ag.name, ag.color, tr('chat.delegate.agentack'));
   // v138: delegasi eksplisit ke Kreatif dengan brief kreatif masuk alur
   // brief interaktif (bukan model call sekali jalan).
   if (delegate === 'kreatif' && cbIsFlowEntry(text)) {
@@ -909,11 +963,10 @@ export async function sendChatReal(): Promise<void> {
     // v161: gate — jawaban ditahan sampai LOLOS (maks 2 revisi),
     // baru jawaban final + verdict final diposting.
     // v239: progres streaming pada bubble ack delegasi.
-    const ackElDel = document.querySelector('#chatBox > div:last-child');
-    const progDel = makeProgressUpdater(ackElDel);
+    const progDel = makeProgressUpdater(ackIdxDel, ag.name);
     let g: Awaited<ReturnType<typeof gatedAgentAnswer>>;
     try {
-      g = await gatedAgentAnswer(cfg, delegate, text, trace, (chars) => progDel.update(chars));
+      g = await gatedAgentAnswer(cfg, delegate, text, trace, (chars) => progDel.update(chars), (s, r) => progDel.stage(s, r));
     } finally {
       progDel.done();
     }

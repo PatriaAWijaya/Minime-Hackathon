@@ -57,6 +57,7 @@ async function invokeStub(cmd, args) {
 let gagalUji = 0;
 let gagalSoc = 0;
 let gateUji = 0;
+let tahapQc = 0;
 const fetchRecs = [];
 async function fetchStub(url, opts) {
   log.push('fetch:' + String(url));
@@ -90,9 +91,14 @@ async function fetchStub(url, opts) {
   // v242: split ditunda 2000ms agar posting-awal bisa dibedakan dari
   // posting-sesudah-split (laporan live: tekan Enter, bubble tidak muncul).
   if (body.includes('SPLIT-LAMBAT-UJI') && body.includes('Bagi brief')) await new Promise((r) => setTimeout(r, 2000));
+  // v249: TAHAP-UJI — generasi/revisi/QC ditunda 800ms (bukan split) agar
+  // jendela tahap span (Menulis -> QC -> Revisi) bisa diamati stabil.
+  if (body.includes('TAHAP-UJI') && !body.includes('Bagi brief')) await new Promise((r) => setTimeout(r, 800));
   if (body.includes('Bagi brief')) {
     if (body.includes('PARALEL-UJI')) {
       content = '[{"agent":"riset","task":"Riset PARALEL-UJI"},{"agent":"kreatif","task":"Kreatif PARALEL-UJI"}]';
+    } else if (body.includes('TAHAP-UJI')) {
+      content = '[{"agent":"riset","task":"Riset TAHAP-UJI"},{"agent":"kreatif","task":"Kreatif TAHAP-UJI"}]';
     } else {
       content = (body.includes('Halo utama') || body.includes('jadwal posting') || body.includes('halo') || body.includes('brief produk digital')) ? '[]' : (body.includes('Alur 2') ? '[{"agent":"riset","task":"Riset pasar Alur 2"},{"agent":"strategi","task":"Strategi Alur 2"},{"agent":"kreatif","task":"Buat naskah Alur 2"}]' : '[{"agent":"riset","task":"Riset pasar kopi susu"},{"agent":"kreatif","task":"Buat naskah video kopi susu"}]');
     }
@@ -137,6 +143,13 @@ async function fetchStub(url, opts) {
     content = gateUji === 1
       ? 'REVISI \u2014 kriteria grounding gagal (GATE-UJI-MARKER): hasil melebar ke kategori umum.'
       : 'LOLOS \u2014 semua kriteria lolos (GATE-UJI).';
+  } else if (body.includes('QC hasil kerja agen') && body.includes('TAHAP-UJI')) {
+    // v249: QC pertama TAHAP-UJI = REVISI (memicu 1 putaran revisi),
+    // QC berikutnya = LOLOS — agar tahap Revisi ikut teramati.
+    tahapQc++;
+    content = tahapQc === 1
+      ? 'REVISI \u2014 kriteria grounding gagal (TAHAP-UJI): hasil melebar ke kategori umum.'
+      : 'LOLOS \u2014 semua kriteria lolos (TAHAP-UJI).';
   } else if (body.includes('QC hasil kerja agen')) {
     content = 'QC: riset LOLOS, kreatif LOLOS. Semua hasil siap dipakai.';
   } else if (body.includes('PART 1')) {
@@ -526,6 +539,33 @@ try {
   // Alur tetap selesai normal sesudah split kembali.
   await waitFor(() => countOcc('NASKAH-UJI') > naskahBefore242, 'fan-out v242 selesai', 120);
   check('v242: fan-out tetap jalan sesudah posting awal', countOcc('NASKAH-UJI') > naskahBefore242, 'naskah=' + countOcc('NASKAH-UJI'));
+
+  // v249: filter kirim ganda + progres tahap (project pid117 masih aktif).
+  // Kirim ganda memakai brief split-lambat: alur pertama masih di split
+  // (2000ms) saat kirim kedua datang — tanpa penundaan, alur pertama
+  // sudah selesai sebelum kirim kedua sehingga filter tak teruji.
+  const splitsBefore249 = fetchRecs.filter((f) => f.body.includes('Bagi brief')).length;
+  const naskahBefore249 = countOcc('NASKAH-UJI');
+  await sendMsg('Brief SPLIT-LAMBAT-UJI ganda');
+  const inpGanda = document.getElementById('chatInput');
+  inpGanda.value = 'Brief SPLIT-LAMBAT-UJI ganda';
+  dom.window.sendChat();
+  await tick(100);
+  check('v249: kirim ulang teks sama selama alur jalan ditolak (input utuh)', inpGanda.value === 'Brief SPLIT-LAMBAT-UJI ganda', JSON.stringify(inpGanda.value));
+  await waitFor(() => countOcc('NASKAH-UJI') > naskahBefore249, 'fan-out ganda selesai', 200);
+  const splitsAfter249 = fetchRecs.filter((f) => f.body.includes('Bagi brief')).length;
+  check('v249: hanya satu split untuk dua kirim teks sama', splitsAfter249 === splitsBefore249 + 1, splitsBefore249 + ' -> ' + splitsAfter249);
+  const naskahBeforeTahap = countOcc('NASKAH-UJI');
+  await sendMsg('Brief TAHAP-UJI kopi susu');
+  const spanText249 = () => [...document.querySelectorAll('.stream-prog')].map((s) => s.textContent || '').join(' | ');
+  await waitFor(() => spanText249().includes('Menulis'), 'span tahap menulis', 120);
+  check('v249: span tahap menulis tampil selama generasi', spanText249().includes('Menulis'), spanText249());
+  await waitFor(() => spanText249().includes('QC Prime'), 'span tahap QC', 120);
+  check('v249: span tahap QC tampil selama pemeriksaan', spanText249().includes('QC Prime'), spanText249());
+  await waitFor(() => spanText249().includes('Revisi 1'), 'span tahap revisi', 200);
+  check('v249: span tahap revisi tampil selama revisi', spanText249().includes('Revisi 1'), spanText249());
+  await waitFor(() => document.querySelectorAll('.stream-prog').length === 0 && countOcc('NASKAH-UJI') > naskahBeforeTahap, 'fan-out tahap selesai', 200);
+  check('v249: span progres hilang sesudah fan-out selesai', document.querySelectorAll('.stream-prog').length === 0, 'spans=' + document.querySelectorAll('.stream-prog').length);
 
   // 14. v130: standar laporan untuk SEMUA chat, lama maupun baru.
   // (a) Pesan LAMA (tersimpan gaya lama: teks ter-escape + markdown mentah)
