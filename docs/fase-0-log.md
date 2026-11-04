@@ -2529,6 +2529,11 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## log-LIVE v246: deploy 4 Nov ~09:57, HEAD 821d198, PID 59741
+
+- Deploy mencakup v244+v245+v246 sekaligus (MacBook dari v242 langsung ke tree v246). MH_BUILD246_OK; HEAD MacBook = remote commit log 821d198; PID segar 59741 (sebelumnya 30589); md5 dist JS+CSS MacBook == lokal (JS 42bf41f9394968dd8f2055fc8ad344f8, CSS ad29721edcdfa81e303195a5d2f15934).
+- Kendala SSH 09:45–09:47 (koneksi ditutup saat kex) teratasi setelah Patria mengonfirmasi Tailscale nyala + Remote Login siap 09:56; deploy 09:57 langsung berhasil tanpa persetujuan tambahan (tidak ada kartu persetujuan yang pending). Alur Library -> Planner kini LIVE di app (uji live Patria menyusul).
+
 ## v246 — Aset Library masuk Planner tanpa kunci ImgBB (perintah Patria 4 Nov 09:27: "alur untuk membuat aset di library belum bisa langsung di upload ke planner. perbaiki sampai berhasil, apapun caranya")
 
 Diagnosis (terverifikasi kode): simpan Planner menuntut URL publik padahal draf tidak pernah menyentuh API Meta — tanpa kunci ImgBB, aset Library (file lokal) tidak bisa masuk Planner sama sekali, di dua versi: app live v242 memblokir simpan draf/terjadwal untuk kanal wajib-URL (socComposerSave: blok file_url, berlaku juga untuk DRAF); tree v244/v245 mengganti blok dengan konversi ImgBB yang melempar soc.imgbb.missing bila kunci belum diisi; tick antrean pun gagal dengan soc.imgbb.missing. Kunci ImgBB memang belum ada (deploy v244/v245 ditahan salah satunya karena itu). Jalur tombol Masuk Planner sendiri tidak rusak (detail dialog + socLibToPlanner + komposer sudah ter-wire untuk gambar ber-imageFile) — yang macet adalah gerbang URL-publik di simpan/terbit.
