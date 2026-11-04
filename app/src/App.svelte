@@ -766,6 +766,7 @@
   let hfGenBusy = $state(false);
   let hfQuality = $state('draft');
   let hfBusy = $state(false);
+  let hfOneBusy = $state(false);
   let hfStatus = $state('');
   let hfLastPath = $state('');
   let hfLastDur = $state(0);
@@ -1051,6 +1052,48 @@
       `${t('t1.qc.silent', lang)}: ${seg(qc.silent)}`,
       ...qc.notes,
     ].join('\n');
+  }
+  // v248: satu klik prompt -> video (generate HTML -> render -> QC -> timeline).
+  // File hasil render ADALAH video final: tanpa re-encode lewat ekspor ve2
+  // yang landscape 1280x720 dan akan memotong komposisi vertikal. Klip tetap
+  // masuk timeline agar bisa ditambah VO/scene lain lalu diekspor gabungan.
+  async function hfOneClick() {
+    if (hfOneBusy || hfGenBusy || hfBusy) return;
+    if (!hfDesc.trim()) { hfStatus = t('hf.gen_empty', lang); return; }
+    hfOneBusy = true;
+    hfStatus = t('hf.generating', lang);
+    try {
+      const r = await hfGenerateHtml(hfDesc, lang);
+      hfHtml = r.html;
+      hfStatus = t('hf.rendering', lang);
+      const rend = await invoke<{ path: string; quality: string; bytes: number }>('hyperframes_render', { req: { html: r.html, quality: hfQuality } });
+      hfLastPath = rend.path;
+      let dur = 0;
+      try {
+        const pr = await invoke<{ duration: number; size: number }>('video_probe', { req: { path: rend.path } });
+        dur = Math.round(pr.duration);
+      } catch { /* fallback ke data-duration root di bawah */ }
+      if (!dur) {
+        const m = r.html.match(/data-duration="([\d.]+)"/);
+        dur = m ? Math.round(Number(m[1])) : 0;
+      }
+      hfLastDur = dur;
+      let qcNote = '';
+      try {
+        const qc = await invoke<T1QcResult>('video_qc', { req: { path: rend.path, expectedDuration: dur } });
+        qcNote = '\n' + t1QcText(qc);
+      } catch { /* QC opsional: file tetap video final */ }
+      if (dur > 0) {
+        hfAddToTimeline();
+        hfStatus = `${t('hf.one_done', lang, { path: rend.path, s: dur })}\n${t('chat.footer.via', lang)} ${r.provider} ${r.model}${qcNote}`;
+      } else {
+        hfStatus = t('hf.one_no_dur', lang, { path: rend.path });
+      }
+    } catch (e) {
+      hfStatus = (e instanceof Error && e.message === 'HF_GEN_INVALID') ? t('hf.gen_invalid', lang) : String(e);
+    } finally {
+      hfOneBusy = false;
+    }
   }
   async function ve2Export() {
     if (ve2Busy) return;
@@ -1417,14 +1460,14 @@
 {:else}
 <div class="se-group"><h4>{t('hf.title', lang)}</h4>
 <div class="se-group"><label>{t('hf.desc', lang)}<textarea id="hf-desc" rows="3" class="se-field" bind:value={hfDesc}></textarea></label></div>
-<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><button id="hf-gen-html" class="btn btn-primary" disabled={hfGenBusy} onclick={() => hfGen()}>{hfGenBusy ? t('hf.generating', lang) : t('hf.generate', lang)}</button></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><button id="hf-gen-html" class="btn btn-primary" disabled={hfGenBusy || hfOneBusy} onclick={() => hfGen()}>{hfGenBusy ? t('hf.generating', lang) : t('hf.generate', lang)}</button><button id="hf-one-click" class="btn btn-primary" disabled={hfOneBusy || hfGenBusy || hfBusy} onclick={() => hfOneClick()}>{hfOneBusy ? t('hf.one_running', lang) : t('hf.one_click', lang)}</button></div>
 <label for="hf-html">{t('hf.html', lang)}</label>
 <textarea id="hf-html" rows="14" class="se-field" style="font-family:monospace" bind:value={hfHtml}></textarea>
 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
 <button id="hf-sample" class="btn btn-sm" onclick={() => { hfHtml = HF_SAMPLE; }}>{t('hf.sample', lang)}</button>
 <label>{t('hf.quality', lang)} <select id="hf-quality" bind:value={hfQuality}><option value="draft">{t('hf.quality.draft', lang)}</option><option value="looks">{t('hf.quality.looks', lang)}</option><option value="delivery">{t('hf.quality.delivery', lang)}</option></select></label>
 <button id="hf-check" class="btn btn-sm" onclick={() => hfCheck()}>{t('hf.check', lang)}</button>
-<button id="hf-render" class="btn btn-primary" disabled={hfBusy} onclick={() => hfRender()}>{hfBusy ? t('hf.rendering', lang) : t('hf.render', lang)}</button>
+<button id="hf-render" class="btn btn-primary" disabled={hfBusy || hfOneBusy} onclick={() => hfRender()}>{hfBusy ? t('hf.rendering', lang) : t('hf.render', lang)}</button>
 <button id="hf-add-timeline" class="btn btn-sm" disabled={!hfLastPath || !hfLastDur} onclick={() => hfAddToTimeline()}>{t('hf.add_timeline', lang)}</button><button id="hf-clear" class="btn btn-sm" onclick={() => { hfHtml = ''; hfStatus = ''; }}>{t('img.clear', lang)}</button>
 </div>
 <p id="hf-status" class="se-note" style="white-space:pre-line">{hfStatus}</p>

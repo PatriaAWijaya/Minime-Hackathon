@@ -247,6 +247,27 @@ try {
   await waitFor(() => (document.getElementById('hf-html').value || '').includes('data-composition-id'), 'html hasil generate', 100);
   check('v185: Generate HTML mengisi komposisi dari deskripsi', (document.getElementById('hf-html').value || '').includes('data-composition-id="main"') && (document.getElementById('hf-html').value || '').includes('data-duration="15"'), (document.getElementById('hf-html').value || '').slice(0, 120));
   check('v185: generate memanggil model Gemini (bukan Omni)', fetchLog.some((f) => f.url.includes('generativelanguage')), fetchLog.map((f) => f.url).join(' '));
+  // v248: satu klik prompt -> video (generate HTML -> render -> timeline).
+  check('v248: tombol satu-klik ada di form HyperFrames', !!document.getElementById('hf-one-click'));
+  setInput(document.getElementById('hf-desc'), '', 'input');
+  document.getElementById('hf-one-click').click();
+  await tick(100);
+  check('v248: deskripsi kosong ditolak tanpa memanggil model', (document.getElementById('hf-status')?.textContent || '').includes('Tulis dulu deskripsinya'), document.getElementById('hf-status')?.textContent || '');
+  setInput(document.getElementById('hf-desc'), 'judul besar UJI SATU KLIK lalu subtitle muncul', 'input');
+  document.getElementById('hf-one-click').click();
+  await waitFor(() => (document.getElementById('hf-status')?.textContent || '').includes('hf-uji.mp4'), 'status satu-klik done', 200);
+  const oneStatus = document.getElementById('hf-status')?.textContent || '';
+  check('v248: satu klik menghasilkan video final + durasi probe', oneStatus.includes('Video selesai') && oneStatus.includes('15 detik'), oneStatus.slice(0, 200));
+  check('v248: komposisi HTML terisi dari deskripsi', (document.getElementById('hf-html').value || '').includes('data-composition-id="main"'), (document.getElementById('hf-html').value || '').slice(0, 120));
+  const oneClips = ve2State(store).clips || [];
+  check('v248: klip satu-klik masuk timeline (Video, HyperFrames 15s)', oneClips.some((c) => c.src === '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4' && c.track === 'Video' && c.name === 'HyperFrames 15s'), JSON.stringify(oneClips));
+  const oneCount = oneClips.filter((c) => c.src === '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4').length;
+  setInput(document.getElementById('hf-desc'), 'klik ganda harus satu video', 'input');
+  document.getElementById('hf-one-click').click();
+  document.getElementById('hf-one-click').click();
+  await waitFor(() => (ve2State(store).clips || []).filter((c) => c.src === '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4').length === oneCount + 1, 'klip ganda tunggal', 200);
+  check('v248: klik ganda sinkron hanya menambah satu klip', (ve2State(store).clips || []).filter((c) => c.src === '/Users/mac/Movies/minime-hyperframes/hf-uji.mp4').length === oneCount + 1, JSON.stringify((ve2State(store).clips || []).filter((c) => c.src.includes('hf-uji'))));
+  check('v248: tombol aktif lagi sesudah rantai selesai', document.getElementById('hf-one-click').disabled === false);
   setInput(document.getElementById('vg-model'), 'omni', 'change');
   await tick(100);
   // (k) v179: penghapusan + heading Video Editor.
