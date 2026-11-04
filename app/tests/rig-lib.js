@@ -25,8 +25,18 @@ html = html.replace(modMatch[0], '').replace('</body>', `<script src="${modMatch
 const store = new Map();
 const log = [];
 
-async function invokeStub(cmd) {
+const PNG1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=';
+async function invokeStub(cmd, args) {
   log.push('invoke:' + cmd);
+  // §v246: stub jalur Library -> Planner tanpa kunci (ImgBB TIDAK
+  // pernah dipanggil di jalur ini — bila dipanggil, throw = gagal).
+  if (cmd === 'image_read') {
+    const nm = (args && args.req && args.req.name) || '';
+    if (nm === 'poster-uji246.png' || nm === 'poster-uji246b.png') return { b64: PNG1X1 };
+    throw new Error('unexpected invoke ' + cmd);
+  }
+  if (cmd === 'uguu_upload') return { url: 'https://h.uguu.se/UJI246.png' };
+  if (cmd === 'social_publish') return 'ok';
   throw new Error('unexpected invoke ' + cmd);
 }
 
@@ -241,6 +251,68 @@ try {
   await tick(100);
   const backA = JSON.parse(store2.get('minime.library.added') || '[]');
   check('arsip: Pulihkan dari dialog -> item kembali aktif + dialog tertutup', backA.some((it) => it.o === 'ArsipUji') && !JSON.parse(store2.get('minime.library.archived') || '[]').some((it) => it.o === 'ArsipUji') && dlgA.style.display === 'none', JSON.stringify(backA.map((it) => it.o)));
+  // §v246: aset Library -> Planner TANPA kunci ImgBB (perintah Patria
+  // 4 Nov 09:27 "sampai berhasil, apapun caranya"). Akar masalah:
+  // simpan Planner menuntut URL publik padahal draf tidak menyentuh
+  // API Meta; tanpa kunci simpan selalu gagal (v242: blok file_url;
+  // v244/v245: throw soc.imgbb.missing) dan tick selalu failed.
+  // Perilaku baru: simpan draf/terjadwal menyimpan file lokal apa
+  // adanya; konversi URL hanya saat terbit, via ImgBB bila kunci ada,
+  // uguu bila tidak ada. Kanal uji = IG terhubung, TANPA imgbbApiKey.
+  store.set('minime.social', JSON.stringify({ instagram: { accessToken: 'uji246', expiresAt: Date.now() + 86400000 } }));
+  dom.window.libSetFilter('kind', 'all');
+  dom.window.libSetFilter('period', 'all');
+  dom.window.libSetFilter('agent', 'all');
+  dom.window.libSetFilter('proj', 'all');
+  await tick(100);
+  dom.window.libAddImage('Poster Uji 246', 'prompt uji 246', 'poster-uji246.png', 0);
+  await tick(100);
+  const card246 = [...document.querySelectorAll('#libGrid .lib-card')].find((c) => (c.querySelector('.lib-title')?.textContent || '').includes('Poster Uji 246'));
+  check('v246: aset gambar baru masuk Library', !!card246, card246 ? card246.outerHTML.slice(0, 120) : 'no-card');
+  card246.querySelector('.lib-title').dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true }));
+  await tick(100);
+  const dlg246 = document.getElementById('libDetailDlg');
+  const dlg246Btns = [...(dlg246?.querySelectorAll('button') || [])].map((b) => b.textContent.trim());
+  check('v246: detail gambar menampilkan tombol Masuk Planner', dlg246?.style.display === 'block' && dlg246Btns.includes('Masuk Planner'), dlg246Btns.join('|'));
+  [...dlg246.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Masuk Planner').click();
+  await tick(100);
+  const comp246 = document.getElementById('socCompText');
+  const compMedia246 = document.querySelector('.soc-comp-media')?.textContent || '';
+  check('v246: Masuk Planner membuka komposer dengan media Library terpasang', !!comp246 && compMedia246.includes('poster-uji246.png'), compMedia246.slice(0, 160));
+  document.getElementById('socCompText').value = 'Caption uji 246';
+  document.getElementById('socCompDraft').click();
+  await tick(100);
+  const q246 = JSON.parse(store.get('minime.socialQueue') || '[]');
+  const draft246 = q246.find((it) => it.platform === 'instagram' && it.status === 'draft' && it.imageFile === 'poster-uji246.png');
+  check('v246: simpan draf Planner berhasil TANPA kunci (file lokal tersimpan)', !!draft246 && (draft246.text || '').includes('Caption uji 246'), JSON.stringify(q246.map((it) => it.platform + ':' + it.status + ':' + (it.imageFile || it.imageUrl || ''))));
+  check('v246: simpan draf tidak menyentuh ImgBB sama sekali', !log.includes('invoke:imgbb_upload'), log.filter((l) => l.includes('imgbb')).join(',') || 'no-imgbb-call');
+  // Terbit-sekarang dari aset Library kedua (komposer dibuka ulang
+  // lewat tombol Masuk Planner) — harus via uguu, bukan ImgBB.
+  dom.window.libAddImage('Poster Uji 246b', 'prompt uji 246b', 'poster-uji246b.png', 0);
+  await tick(100);
+  const card246b = [...document.querySelectorAll('#libGrid .lib-card')].find((c) => (c.querySelector('.lib-title')?.textContent || '').includes('Poster Uji 246b'));
+  card246b.querySelector('.lib-title').dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true }));
+  await tick(100);
+  [...document.getElementById('libDetailDlg').querySelectorAll('button')].find((b) => b.textContent.trim() === 'Masuk Planner').click();
+  await tick(100);
+  document.getElementById('socCompText').value = 'Caption terbit 246';
+  document.getElementById('socCompNow').click();
+  await tick(100);
+  check('v246: terbit-sekarang dari aset Library berhasil (komposer tertutup = sukses)', !document.getElementById('socCompText'), document.getElementById('socComposerNote')?.textContent || 'composer-closed');
+  check('v246: terbit-sekarang memakai uguu, bukan ImgBB', log.includes('invoke:uguu_upload') && log.includes('invoke:social_publish') && !log.includes('invoke:imgbb_upload'), log.filter((l) => l.startsWith('invoke:')).join(','));
+  // Tick antrean: item terjadwal dengan file lokal harus terbit via
+  // resolver publik (uguu tanpa kunci), bukan failed soc.imgbb.missing.
+  const qTick = JSON.parse(store.get('minime.socialQueue') || '[]');
+  qTick.push({ id: 'tick246', platform: 'instagram', text: 'Caption tick 246', imageFile: 'poster-uji246.png', imageMime: 'image/png', imageUrl: '', scheduledAt: Date.now() - 1000, status: 'queued', error: '', repeat: '' });
+  store.set('minime.socialQueue', JSON.stringify(qTick));
+  let sent246 = null;
+  for (let w = 0; w < 90 && !sent246; w++) {
+    await tick(500);
+    sent246 = (JSON.parse(store.get('minime.socialQueue') || '[]').find((it) => it.id === 'tick246' && it.status === 'sent'));
+  }
+  const tickItem = JSON.parse(store.get('minime.socialQueue') || '[]').find((it) => it.id === 'tick246');
+  check('v246: tick menerbitkan item file-lokal via URL publik (tanpa kunci)', !!sent246 && (tickItem?.imageUrl || '').startsWith('https://h.uguu.se/') && !tickItem?.imageFile, JSON.stringify(tickItem || null).slice(0, 220));
+
   // §v213: thumbnail Library mengecil 60% (jadi 40%), kartu tetap.
   const cssMatchV = html.match(/href="([^"]+\.css)"/);
   let cssTextV = '';

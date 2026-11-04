@@ -100,6 +100,7 @@ fn main() {
             social::social_publish,
             social::imgbb_upload,
             social::imgbb_validate,
+            social::uguu_upload,
         ])
         .run(tauri::generate_context!())
     {

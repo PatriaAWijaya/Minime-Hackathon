@@ -2055,6 +2055,85 @@ pub struct ImgbbValidateRes {
     pub valid: bool,
 }
 
+// Unggah gambar ke uguu.se untuk URL publik TANPA API key (v246:
+// fallback bila kunci ImgBB belum diisi — verifikasi 4 Nov 2026:
+// Catbox sedang pause ("Uploads paused"), 0x0.st menonaktifkan
+// unggahan, tmpfiles hanya melayani halaman HTML (bukan berkas
+// langsung), transfer.sh membalas kosong; uguu.se TERBUKTI: POST
+// anonim mengembalikan URL langsung h.uguu.se yang melayani byte
+// PNG dengan Content-Type image/png. Dipakai HANYA saat terbit
+// (publish-now + tick antrean), bukan saat simpan draf — jadi
+// retensi host anonim tidak relevan (unggah -> terbit dalam
+// hitungan detik). ImgBB tetap primer bila kunci ada (vonis Patria
+// 3 Nov 21:00); uguu hanya fallback tanpa-kunci, bukan pengganti.
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UguuUploadReq {
+    pub b64: String,
+    pub mime: String,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UguuUploadRes {
+    pub url: String,
+}
+
+#[tauri::command]
+pub fn uguu_upload(req: UguuUploadReq) -> Result<UguuUploadRes, String> {
+    let bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &req.b64)
+        .map_err(|e| e.to_string())?;
+    if bytes.is_empty() || bytes.len() > 32_000_000 {
+        return Err("gambar kosong atau melebihi 32 MB".into());
+    }
+    // uguu menurunkan ekstensi URL dari nama berkas yang diunggah,
+    // jadi berkas sementara memakai ekstensi sesuai mime (bukan .bin).
+    let mime = allow_mime(req.mime.as_str());
+    let ext = match mime {
+        "image/png" => "png",
+        "image/gif" => "gif",
+        "image/webp" => "webp",
+        _ => "jpg",
+    };
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let tmp = std::env::temp_dir().join(format!("minime-uguu-{stamp}.{ext}"));
+    std::fs::write(&tmp, &bytes).map_err(|e| e.to_string())?;
+    let curl = crate::video::find_tool("curl")
+        .ok_or_else(|| "curl tidak ditemukan di PATH".to_string())?;
+    let out = std::process::Command::new(curl)
+        .args([
+            "-sS",
+            "--max-time",
+            "120",
+            "--form",
+            &format!("files[]=@{};type={}", tmp.to_string_lossy(), mime),
+            "https://uguu.se/upload.php",
+        ])
+        .output()
+        .map_err(|e| format!("gagal menjalankan curl: {e}"))?;
+    let _ = std::fs::remove_file(&tmp);
+    if !out.status.success() {
+        return Err(format!(
+            "curl uguu gagal ({}): {}",
+            out.status,
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    let body_text = String::from_utf8_lossy(&out.stdout).into_owned();
+    let v: serde_json::Value =
+        serde_json::from_str(&body_text).map_err(|e| format!("respons uguu bukan JSON: {e}"))?;
+    let ok = v["success"].as_bool().unwrap_or(false);
+    let url = v["files"][0]["url"].as_str().unwrap_or("").to_string();
+    if !ok || !url.starts_with("https://") {
+        return Err("uguu tidak mengembalikan URL".into());
+    }
+    Ok(UguuUploadRes { url })
+}
+
 // Uji API key ImgBB tanpa mengunggah apa pun: ImgBB tidak punya
 // endpoint kuota seperti Imgur, jadi uji ini hanya memeriksa format
 // kunci (32 karakter alfanumerik, sesuai format kunci ImgBB).

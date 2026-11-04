@@ -410,6 +410,68 @@ export async function socUploadQueueFileToImgbb(imageFile, imageMime, platform, 
   var fmt = platform === 'tiktok' ? 'jpeg' : 'png';
   return socUploadB64ToImgbb(b64, imageMime || socMimeFromExt(imageFile), fmt, cid);
 }
+
+// v246 (perintah Patria 4 Nov 09:27: aset Library harus bisa masuk
+// Planner "sampai berhasil, apapun caranya"): jalur publik TANPA
+// kunci — ImgBB tetap primer bila kunci ada (vonis 3 Nov 21:00),
+// uguu.se fallback bila kunci belum diisi. Akar masalah yang
+// diperbaiki: simpan Planner menuntut URL publik padahal draf tidak
+// pernah menyentuh API Meta; tanpa kunci, simpan selalu gagal
+// (v242: blok file_url; v244/v245: throw soc.imgbb.missing) dan
+// tick antrean selalu gagal — jadi aset Library (file lokal) tidak
+// bisa masuk Planner sama sekali. Sesudah perbaikan: simpan draf /
+// terjadwal TIDAK butuh kunci (file lokal disimpan apa adanya),
+// konversi ke URL publik hanya terjadi saat TERBIT (publish-now +
+// tick), lewat ImgBB bila kunci ada, uguu bila tidak ada.
+async function socUploadB64ToUguu(b64, mime, format) {
+  var upB64 = b64, upMime = mime || '';
+  if (upMime === 'image/webp') {
+    upB64 = await socWebpToRasterB64(b64, format);
+    upMime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+  }
+  var res = await invoke('uguu_upload', { req: { b64: upB64, mime: upMime } });
+  var link = (res && res.url) || '';
+  if (!link) throw new Error('uguu tidak mengembalikan URL');
+  return link;
+}
+
+async function socUploadLocalToUguu(media, plats) {
+  var b64 = '', mime = '';
+  if (media && media.kind === 'file') { b64 = media.b64 || ''; mime = media.mime || ''; }
+  else if (media && (media.kind === 'lib' || media.kind === 'saved')) {
+    var rd = await invoke('image_read', { req: { name: media.imageFile || '' } });
+    b64 = (rd && rd.b64) || ''; mime = media.mime || socMimeFromExt(media.imageFile || '');
+  }
+  if (!mime && media && media.imageFile && media.imageFile.toLowerCase().endsWith('.webp')) mime = 'image/webp';
+  if (!b64) throw new Error(tr('soc.err.image'));
+  var targets = {};
+  (plats || []).forEach(function (pl) { if (IMGBB_URL_PLATFORMS.indexOf(pl) >= 0) targets[pl] = (pl === 'tiktok') ? 'jpeg' : 'png'; });
+  var byFormat = {};
+  var formats = Object.keys(targets).map(function (pl) { return targets[pl]; }).filter(function (f, i, a) { return a.indexOf(f) === i; });
+  for (var i = 0; i < formats.length; i++) byFormat[formats[i]] = await socUploadB64ToUguu(b64, mime, formats[i]);
+  var links = {};
+  Object.keys(targets).forEach(function (pl) { links[pl] = byFormat[targets[pl]]; });
+  return links;
+}
+
+export async function socUploadLocalToPublic(media, plats) {
+  if (socImgbbApiKey()) return socUploadLocalToImgbb(media, plats);
+  return socUploadLocalToUguu(media, plats);
+}
+
+async function socUploadQueueFileToUguu(imageFile, imageMime, platform) {
+  var rd = await invoke('image_read', { req: { name: imageFile || '' } });
+  var b64 = (rd && rd.b64) || '';
+  if (!b64) throw new Error(tr('soc.err.image'));
+  var fmt = platform === 'tiktok' ? 'jpeg' : 'png';
+  return socUploadB64ToUguu(b64, imageMime || socMimeFromExt(imageFile), fmt);
+}
+
+export async function socUploadQueueFileToPublic(imageFile, imageMime, platform) {
+  var cid = socImgbbApiKey();
+  if (cid) return socUploadQueueFileToImgbb(imageFile, imageMime, platform, cid);
+  return socUploadQueueFileToUguu(imageFile, imageMime, platform);
+}
 var socCalCursor = null;
 
 // Sidebar Planner gaya Postiz (v72, perintah Patria 30 Okt 00:28):
@@ -1550,8 +1612,14 @@ async function socComposerSave(status) {
   // kanal wajib-URL menjadi URL publik (per platform: PNG/JPEG);
   // kanal lain tetap memakai file. Tanpa Client-ID: pesan menyebut
   // yang kurang, bukan sekadar "dibatalkan".
+  // v246: konversi saat simpan HANYA bila kunci ImgBB ada (perilaku
+  // v244 dipertahankan untuk pemegang kunci). Tanpa kunci, file lokal
+  // disimpan apa adanya — draf/terjadwal tidak butuh URL publik, dan
+  // konversi ditunda ke saat terbit (ImgBB bila kunci diisi, uguu
+  // bila tidak). Inilah yang membuat aset Library bisa masuk Planner
+  // tanpa kredensial baru.
   var imgbbLinks = null;
-  if (imageFile && st.plats.some(function (pl) { return IMGBB_URL_PLATFORMS.indexOf(pl) >= 0; })) {
+  if (imageFile && st.plats.some(function (pl) { return IMGBB_URL_PLATFORMS.indexOf(pl) >= 0; }) && socImgbbApiKey()) {
     try { imgbbLinks = await socUploadLocalToImgbb(st.media, st.plats); }
     catch (e) { note(String((e && e.message) || e || '')); return; }
   }
@@ -1585,9 +1653,11 @@ async function socComposerPublishNow() {
   // v244: media lokal -> URL ImgBB untuk kanal wajib-URL (satu unggahan
   // per format); kanal lain tetap memakai file seperti dulu. Blok
   // file_url di socPublishDirect tetap sebagai jaring pengaman.
+  // v246: terbit-sekarang memakai resolver publik (ImgBB bila kunci
+  // ada, uguu bila tidak) sehingga berhasil tanpa kredensial baru.
   var imgbbLinks = null;
   if ((img || imageFile) && st.plats.some(function (pl) { return IMGBB_URL_PLATFORMS.indexOf(pl) >= 0; })) {
-    try { imgbbLinks = await socUploadLocalToImgbb(st.media, st.plats); }
+    try { imgbbLinks = await socUploadLocalToPublic(st.media, st.plats); }
     catch (e) { note(String((e && e.message) || e || '')); return; }
   }
   var results = [];
@@ -1738,11 +1808,12 @@ export function initSocialScheduler() {
       // v243: item antrean lama dengan file lokal untuk kanal wajib-URL
       // dikonversi dulu ke ImgBB; gagal konversi = failed dengan alasan
       // jelas (bukan loop — tick hanya memproses status 'queued').
+      // v246: konversi tick memakai resolver publik (ImgBB bila kunci
+      // ada, uguu bila tidak) — tanpa kunci tidak lagi failed dengan
+      // soc.imgbb.missing; draf Library yang dijadwalkan bisa terbit.
       if (it.imageFile && IMGBB_URL_PLATFORMS.indexOf(it.platform) >= 0) {
-        var qcid = socImgbbApiKey();
-        if (!qcid) { it.status = 'failed'; it.error = tr('soc.imgbb.missing'); queueSave(q); continue; }
         try {
-          it.imageUrl = await socUploadQueueFileToImgbb(it.imageFile, it.imageMime || '', it.platform, qcid);
+          it.imageUrl = await socUploadQueueFileToPublic(it.imageFile, it.imageMime || '', it.platform);
           it.imageFile = ''; it.imageMime = '';
         } catch (e) {
           it.status = 'failed'; it.error = String((e && e.message) || e || ''); queueSave(q); continue;
