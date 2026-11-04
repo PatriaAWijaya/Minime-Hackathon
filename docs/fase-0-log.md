@@ -2529,6 +2529,17 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## v247 — Menu hapus konten terjadwal di komposer Planner (perintah Patria 4 Nov 10:04: "tambahkan menu agar konten yang dijadwalkan bisa dihapus oleh user jika dibutuhkan")
+
+Diagnosis (terverifikasi kode): tombol − di chip kalender/draf SUDAH ada dan ter-bind (hapus langsung tanpa konfirmasi, satu item per kanal), tapi tidak ada menu hapus yang mudah ditemukan saat item dibuka — komposer edit hanya punya Draf/Jadwalkan/Terbit. Jadi konten terjadwal secara teknis bisa dihapus lewat −, tapi tidak lewat menu.
+
+Isi:
+- app/src/lib/social.js: tombol Hapus di komposer HANYA mode edit (draf/terjadwal/gagal yang dibuka dari chip; komposer baru tidak punya tombol Hapus); klik pertama membuka konfirmasi overlay (pola yang sama dengan konfirmasi tutup), klik Ya menghapus item itu saja (filter id + queueSave; gagal simpan = komposer tetap terbuka + pesan soc.err.save) lalu menutup komposer; klik Batal membatalkan tanpa menghapus. Tombol − chip TIDAK diubah (tetap hapus langsung).
+- app/src/lib/i18n.ts: 2 kunci baru ×3 bahasa (soc.confirm_delete, soc.confirm_delete_msg); tombol memakai kunci lama soc.delete; i18n 1293 -> 1295/bahasa, 0 duplikat (check-i18n.py v247 diperbarui ke 1295).
+- app/tests/rig-lib.js §v247 (8 cek): chip terjadwal tampil; komposer edit menampilkan Hapus; klik Hapus membuka konfirmasi dan item belum terhapus; Batal mempertahankan item; Ya menutup komposer + item hilang; komposer baru tanpa Hapus; tombol − chip tetap menghapus langsung. Dua kegagalan rig awal diperbaiki di rig (bukan di app): render ulang Planner sesudah seed antrean langsung (showView tidak me-render ulang bila view sudah Planner).
+- Bukti lokal sebelum gate: build lolos; svelte-check 0 error/21 warning (baseline); rig-lib ALL PASSED (8 cek v247 baru + seluruh cek lama); loop 14 rig exit=0 semua; gate 9/9 (rerun penuh sesudah perbaikan skrip i18n); ledger md5 tidak berubah; tanpa perubahan Rust.
+- Penomoran: pekerjaan ini mengambil nomor v247. DEPLOY MENYUSUL PERINTAH (tidak auto-deploy; 4 Nov hari rekaman video demo). Push: kode lokal df9c30a ↔ remote 3dcc2e2 (tree identik).
+
 ## log-LIVE v246: deploy 4 Nov ~09:57, HEAD 821d198, PID 59741
 
 - Deploy mencakup v244+v245+v246 sekaligus (MacBook dari v242 langsung ke tree v246). MH_BUILD246_OK; HEAD MacBook = remote commit log 821d198; PID segar 59741 (sebelumnya 30589); md5 dist JS+CSS MacBook == lokal (JS 42bf41f9394968dd8f2055fc8ad344f8, CSS ad29721edcdfa81e303195a5d2f15934).
