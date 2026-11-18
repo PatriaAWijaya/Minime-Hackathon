@@ -4,19 +4,18 @@
 //   docs/fase-2-output.json (7-day calendar + 7 briefs)
 //   docs/fase-3-output.json (7 carousels, 21 slides, per-slide QC, imageStatus)
 //   docs/fase-3-postiz-drafts.json (7 real Postiz drafts: postIds + dates)
-//   docs/fase-4-output.json (12 raw TEST leads -> 10 deduped, scores,
-//     pipeline, 6 draft Outreach records; TEST/fictional, draft-only)
 //   gates.ts (GSTP/GKonten approved, GBatch pending)
 // Snapshot honesty: these JSONs are bundled at build time. Re-running
 // Fase 2/3 or creating new drafts does NOT refresh the app until the
-// next build (live refresh is future work, not B4). The TEST Produk
-// Digital project keeps its dummy board — no artifacts exist for it
-// (disclosed in the log/report, not hidden).
+// next build (live refresh is future work, not B4).
+// 19 Nov 2026: data TEST Fase 4 (12 raw TEST leads -> 10 deduped,
+// TEST Kopi Surabaya, fiksi) DIHAPUS dari app atas perintah Patria —
+// Campaign mulai kosong; lead hanya dari yang ditambah pengguna sendiri
+// (localStorage). File docs/fase-4-output.json tidak disentuh (arsip).
 import fase1 from '../../../docs/fase-1-output.json';
 import fase2 from '../../../docs/fase-2-output.json';
 import fase3 from '../../../docs/fase-3-output.json';
 import postizRecord from '../../../docs/fase-3-postiz-drafts.json';
-import fase4 from '../../../docs/fase-4-output.json';
 import { GATES } from './gates.js';
 import { tr } from './i18n.js';
 
@@ -72,11 +71,11 @@ export function kopiKanban(): KanbanCard[] {
   ];
 }
 
-// Campaign tab data, DERIVED from the real Fase 4 artifact (same
-// build-time snapshot honesty as Kanban above). No live
-// campaigns, no sending: Leads Generator holds draft campaign types
-// only; CRM shows the Fase 4 pipeline; Outreach shows its draft
-// batch; Follow Up has no sequences yet (later phase).
+// Campaign tab data. 19 Nov 2026: tidak ada lagi data bawaan —
+// Fase 4 TEST dihapus (lihat atas). No live campaigns, no sending:
+// Leads Generator holds draft campaign types only; CRM, Outreach,
+// dan Follow Up mulai kosong sampai pengguna menambah lead sendiri;
+// Follow Up has no sequences yet (later phase).
 export interface CampaignLead {
   id: string;
   name: string;
@@ -95,25 +94,18 @@ export interface CampaignDraft {
   waLink: string | null;
 }
 
-const f4 = fase4 as {
-  counts: { raw: number; deduped: number; merged: number; candidates: number; drafts: number };
-  leads: Array<{ id: string; name: string; channel: string; score: number; stage: string }>;
-  pipeline: Record<string, string[]>;
-  outreachDrafts: Array<{ leadId: string; leadName: string; stage: string; score: number; channel: string; text: string; waLink: string | null }>;
-};
-
 export function campaignCounts(): { raw: number; deduped: number; merged: number; candidates: number; drafts: number } {
-  return f4.counts;
+  return { raw: 0, deduped: 0, merged: 0, candidates: 0, drafts: 0 };
 }
 
 export function campaignLeads(): CampaignLead[] {
-  return f4.leads.map((l) => ({ id: l.id, name: l.name, channel: l.channel, score: l.score, stage: l.stage }));
+  return [];
 }
 
 export function campaignPipeline(): Array<{ stage: string; ids: string[] }> {
-  return Object.keys(f4.pipeline).map((stage) => ({ stage, ids: f4.pipeline[stage] }));
+  return [];
 }
 
 export function campaignDrafts(): CampaignDraft[] {
-  return f4.outreachDrafts.map((d) => ({ leadId: d.leadId, leadName: d.leadName, stage: d.stage, score: d.score, channel: d.channel, text: d.text, waLink: d.waLink }));
+  return [];
 }
