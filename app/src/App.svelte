@@ -15,7 +15,6 @@
   import { wanGenerateClip, wanPriceUsd, readClassaiSpend } from "./lib/classai-video.js";
   import { CINE_BEATS, CINE_TITLECARD_HTML } from "./lib/cine-title.js";
   import { open as pickFiles } from "@tauri-apps/plugin-dialog";
-  import { HF_SAMPLE } from "./lib/hf-sample.js";
   import { hfGenerateHtml } from "./lib/hf-gen.js";
   import { parseMovieScenes, movieScenePrompt } from "./lib/movie-plan.js";
   import { readKeys } from "./lib/chat.js";
@@ -836,11 +835,6 @@
     if (vgFirst) return 'frames';
     return 'text';
   }
-  function vgLoadSample(portrait: boolean) {
-    vgTab = 'prompt';
-    if (portrait) vgAspect = '9:16';
-    vgPrompt = portrait ? t('vg2.portraittext', lang) : t('vg2.sampletext', lang);
-  }
   async function vgGenerate() {
     const key = readKeys().gemini;
     if (!key) { vgStatus = t('vg.need_key', lang); return; }
@@ -1419,7 +1413,7 @@
 <div class="vg-tabs"><button class="vg-tab {vgTab === 'prompt' ? 'vg-tab-sel' : ''}" data-vg-tab="prompt" onclick={() => { vgTab = 'prompt'; }}>{t('vg2.tab.prompt', lang)}</button><button class="vg-tab {vgTab === 'refs' ? 'vg-tab-sel' : ''}" data-vg-tab="refs" onclick={() => { vgTab = 'refs'; }}>{t('vg2.tab.refs', lang)}</button><button class="vg-tab {vgTab === 'frames' ? 'vg-tab-sel' : ''}" data-vg-tab="frames" onclick={() => { vgTab = 'frames'; }}>{t('vg2.tab.frames', lang)}</button></div>
 {#if vgTab === 'prompt'}
 <label>{t('vg.prompt', lang)}<textarea id="vg-prompt" rows="3" class="se-field" bind:value={vgPrompt}></textarea></label>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button id="vg-sample" class="btn btn-sm" onclick={() => vgLoadSample(false)}>{t('vg2.sample', lang)}</button><button id="vg-portrait" class="btn btn-sm" onclick={() => vgLoadSample(true)}>{t('vg2.portrait', lang)}</button><button id="vg-prompt-clear" class="btn btn-sm" onclick={() => { vgPrompt = ''; vgStatus = ''; }}>{t('img.clear', lang)}</button></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button id="vg-portrait" class="btn btn-sm" onclick={() => { vgTab = 'prompt'; vgAspect = '9:16'; }}>{t('vg2.portrait', lang)}</button><button id="vg-prompt-clear" class="btn btn-sm" onclick={() => { vgPrompt = ''; vgStatus = ''; }}>{t('img.clear', lang)}</button></div>
 {:else if vgTab === 'refs'}
 <p class="se-note">{t('vg2.refs.count', lang, { n: vgRefs.length })}</p>
 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px"><input id="vg-refs-file" type="file" accept="image/*" aria-label={t('vg.ref.file', lang)} onchange={(e) => vgRefsFromFile((e.target as HTMLInputElement).files?.[0] || null)}><button id="vg-refs-lib" class="btn btn-sm" onclick={() => vgLibLoad('refs')}>{t('vg.ref.lib', lang)}</button><button id="vg-refs-clear" class="btn btn-sm" onclick={() => { vgRefs = []; vgStatus = ''; }}>{t('img.clear', lang)}</button></div>
@@ -1464,7 +1458,6 @@
 <label for="hf-html">{t('hf.html', lang)}</label>
 <textarea id="hf-html" rows="14" class="se-field" style="font-family:monospace" bind:value={hfHtml}></textarea>
 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
-<button id="hf-sample" class="btn btn-sm" onclick={() => { hfHtml = HF_SAMPLE; }}>{t('hf.sample', lang)}</button>
 <label>{t('hf.quality', lang)} <select id="hf-quality" bind:value={hfQuality}><option value="draft">{t('hf.quality.draft', lang)}</option><option value="looks">{t('hf.quality.looks', lang)}</option><option value="delivery">{t('hf.quality.delivery', lang)}</option></select></label>
 <button id="hf-check" class="btn btn-sm" onclick={() => hfCheck()}>{t('hf.check', lang)}</button>
 <button id="hf-render" class="btn btn-primary" disabled={hfBusy || hfOneBusy} onclick={() => hfRender()}>{hfBusy ? t('hf.rendering', lang) : t('hf.render', lang)}</button>
