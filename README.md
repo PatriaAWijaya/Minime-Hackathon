@@ -3,6 +3,13 @@
 Demo app built **from scratch** for the **Meta Global AI Developer Hackathon 2026**
 (Indie Developer track, theme: Build for Your World).
 
+## Download (v0.1.0)
+
+- macOS (Apple Silicon): [MiniMe_0.1.0_aarch64.dmg](https://github.com/PatriaAWijaya/Minime-Hackathon/raw/main/installers/MiniMe_0.1.0_aarch64.dmg) (19.1 MB, SHA256 `e49a811215fd0072f4fec36576db89d79b2d5e697c4124b2944b0c692861b64b`)
+- Windows (x64): [MiniMe_0.1.0_x64-setup.exe](https://github.com/PatriaAWijaya/Minime-Hackathon/raw/main/installers/MiniMe_0.1.0_x64-setup.exe) (15.0 MB, SHA256 `c594b63aab3007eead36d064e421f2d8a993b1e8dcaab22d3413cfd0b331e50b`)
+
+Installers built by GitHub Actions, run 44273124888.
+
 ## What it is
 
 A Meta-native agent orchestrator demo: a short brief goes in, Muse models
