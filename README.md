@@ -5,10 +5,10 @@ Demo app built **from scratch** for the **Meta Global AI Developer Hackathon 202
 
 ## Download (v0.1.0)
 
-- macOS (Apple Silicon): [MiniMe_0.1.0_aarch64.dmg](https://github.com/PatriaAWijaya/Minime-Hackathon/raw/main/installers/MiniMe_0.1.0_aarch64.dmg) (19.2 MB, SHA256 `f2d818e176670020b20af338a8e97fe2f1ce945ea5fcfe09493c90fd33a13ed5`)
-- Windows (x64): [MiniMe_0.1.0_x64-setup.exe](https://github.com/PatriaAWijaya/Minime-Hackathon/raw/main/installers/MiniMe_0.1.0_x64-setup.exe) (15.0 MB, SHA256 `35055276f2f3b6a3c770fb13bc9964c56f2dca04bb9900ebe1a3d89ee16fd53b`)
+- macOS (Apple Silicon): [MiniMe_0.1.0_aarch64.dmg](https://github.com/PatriaAWijaya/Minime-Hackathon/raw/main/installers/MiniMe_0.1.0_aarch64.dmg) (19.2 MB, SHA256 `7060590a4f2ce91b29aa80035ffec46e8cf0b00c951a997475a84cbd555686ae`)
+- Windows (x64): [MiniMe_0.1.0_x64-setup.exe](https://github.com/PatriaAWijaya/Minime-Hackathon/raw/main/installers/MiniMe_0.1.0_x64-setup.exe) (15.0 MB, SHA256 `1e08b77e083e2d437f8fa9b38f8df9e5dedf54b35a523505a9af6677fe1cef84`)
 
-Installers built by GitHub Actions, run 44406740879. No dummy TEST data; new "me" app icon.
+Installers built by GitHub Actions, run 44410151751. No dummy TEST data; new "me" app icon.
 
 ## What it is
 
