@@ -122,6 +122,9 @@ pub struct WriteAssResult {
     pub path: String,
 }
 
+// Unix: bit eksekusi dari mode permission. Non-Unix (Windows): tidak ada
+// bit permission Unix, jadi executable dikenali dari ekstensinya.
+#[cfg(unix)]
 fn is_executable(p: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
     match std::fs::metadata(p) {
@@ -130,17 +133,37 @@ fn is_executable(p: &Path) -> bool {
     }
 }
 
+#[cfg(not(unix))]
+fn is_executable(p: &Path) -> bool {
+    match std::fs::metadata(p) {
+        Ok(m) => {
+            if !m.is_file() {
+                return false;
+            }
+            // Non-Unix: file tanpa ekstensi exe/bat/cmd bukan executable.
+            matches!(
+                p.extension()
+                    .and_then(|e| e.to_str())
+                    .map(str::to_lowercase)
+                    .as_deref(),
+                Some("exe") | Some("bat") | Some("cmd")
+            )
+        }
+        Err(_) => false,
+    }
+}
+
 pub(crate) fn find_tool(name: &str) -> Option<PathBuf> {
     let mut dirs: Vec<PathBuf> = Vec::new();
-    if let Ok(path) = std::env::var("PATH") {
-        for d in path.split(':') {
-            if !d.is_empty() {
-                dirs.push(PathBuf::from(d));
-            }
-        }
+    // split_paths menangani pemisah PATH per platform (':' di Unix, ';' di Windows).
+    if let Some(path) = std::env::var_os("PATH") {
+        dirs.extend(std::env::split_paths(&path).filter(|d| !d.as_os_str().is_empty()));
     }
-    dirs.push(PathBuf::from("/opt/homebrew/bin"));
-    dirs.push(PathBuf::from("/usr/local/bin"));
+    #[cfg(unix)]
+    {
+        dirs.push(PathBuf::from("/opt/homebrew/bin"));
+        dirs.push(PathBuf::from("/usr/local/bin"));
+    }
     if let Ok(home) = std::env::var("HOME") {
         dirs.push(PathBuf::from(home).join("bin"));
     }
@@ -148,6 +171,14 @@ pub(crate) fn find_tool(name: &str) -> Option<PathBuf> {
         let cand = d.join(name);
         if is_executable(&cand) {
             return Some(cand);
+        }
+        // Windows: tool bernama "ffmpeg" tersimpan sebagai ffmpeg.exe.
+        #[cfg(not(unix))]
+        for ext in ["exe", "bat", "cmd"] {
+            let cand = d.join(format!("{name}.{ext}"));
+            if is_executable(&cand) {
+                return Some(cand);
+            }
         }
     }
     None
