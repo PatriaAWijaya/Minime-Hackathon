@@ -13,7 +13,9 @@
     "active": true,
     "category": "Productivity",
     "targets": [
-      "app"
+      "app",
+      "dmg",
+      "nsis"
     ]
   },
   "identifier": "com.minime.hackathon",
