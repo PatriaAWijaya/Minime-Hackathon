@@ -53,6 +53,31 @@ jobs:
         with:
           projectPath: app
 
+      # Tauri tidak menyediakan opsi menambah file ke DMG, jadi sisipkan
+      # script fix Gatekeeper (scripts/Perbaiki MiniMe.command) dengan hdiutil:
+      # convert UDZO -> UDRW, attach, salin script + chmod +x, detach,
+      # convert kembali ke UDZO dengan nama file DMG yang sama.
+      # Hanya job macOS; job Windows tidak diubah.
+      - name: Add Gatekeeper fix script to DMG (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          set -euo pipefail
+          DMG=$(ls app/src-tauri/target/release/bundle/dmg/*.dmg | head -n 1)
+          echo "DMG: $DMG"
+          RW_DMG="${DMG%.dmg}-rw.dmg"
+          hdiutil convert "$DMG" -format UDRW -o "$RW_DMG"
+          mkdir -p /tmp/minime-dmg
+          hdiutil attach "$RW_DMG" -mountpoint /tmp/minime-dmg -nobrowse
+          cp "scripts/Perbaiki MiniMe.command" /tmp/minime-dmg/
+          chmod +x "/tmp/minime-dmg/Perbaiki MiniMe.command"
+          ls -l /tmp/minime-dmg
+          hdiutil detach /tmp/minime-dmg || { sleep 5; hdiutil detach /tmp/minime-dmg; }
+          NEW_DMG="${DMG%.dmg}-new.dmg"
+          hdiutil convert "$RW_DMG" -format UDZO -o "$NEW_DMG"
+          mv -f "$NEW_DMG" "$DMG"
+          rm -f "$RW_DMG"
+          ls -l "$DMG"
+
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
         with:
