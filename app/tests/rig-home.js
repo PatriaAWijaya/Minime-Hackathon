@@ -448,17 +448,20 @@ try {
   check('v199: tombol Campaign tetap ada di DOM (disembunyikan, bukan dihapus)', !!document.querySelector('button[data-view="campaign"]'), '');
   check('v199: tetangga Campaign (Planner + Billing) tetap ada', !!document.querySelector('button[data-view="planner"]') && !!document.querySelector('button[data-view="billing"]'), '');
 
-  // 23. v200: Billing tampil sebagai kartu per model.
+  // 23. v200: Billing tampil sebagai kartu per model — 19 Nov 2026
+  // ledger historis DINOLKAN (perintah Patria: kosong seperti baru),
+  // jadi tidak ada lagi kartu per model.
   const billCards = [...document.querySelectorAll('#view-billing .bill-card')];
-  check('v200: kartu Billing per model ada (2 baris ledger)', billCards.length === 2, String(billCards.length));
-  check('v200: kartu pertama muse-spark-1.3', billCards.length === 2 && (billCards[0].querySelector('b') ? billCards[0].querySelector('b').textContent : '') === 'muse-spark-1.3', billCards.length ? billCards[0].textContent.slice(0, 40) : 'no-card');
-  check('v200: kartu kedua gemini-3.1-flash-lite', billCards.length === 2 && (billCards[1].querySelector('b') ? billCards[1].querySelector('b').textContent : '') === 'gemini-3.1-flash-lite', billCards.length > 1 ? billCards[1].textContent.slice(0, 40) : 'no-card');
+  check('v200: kartu Billing per model KOSONG (ledger dinolkan 19 Nov 2026)', billCards.length === 0, String(billCards.length));
   check('v200: grid kartu ada di panel Pemakaian', !!document.querySelector('#view-billing .bill-grid'), '');
 
   // 24. v217: heading Batch hilang + Billing rumah tunggal biaya (kartu per sumber + Pemakaian masukkan Wan).
   const storeW = new Map();
   storeW.set('minime.cleaned-v84', '1');
   storeW.set('minime.cleaned-graph-v88', '1');
+  // 19 Nov 2026 clean-slate: flag juga sudah ada agar
+  // runCleanSlate20261119 tidak mereset seed classaiSpend.
+  storeW.set('minime.cleaned-slate-20261119', '1');
   storeW.set('minime.classaiSpend', JSON.stringify({ videos: 1, usd: 4.62, idr: 83800 }));
   const domW = makeDom(storeW);
   const docW = domW.window.document;
@@ -470,12 +473,12 @@ try {
   docW.querySelector('button[data-view="billing"]').click();
   await tick(100);
   const cardsW = [...docW.querySelectorAll('#view-billing .bill-card')];
-  check('v217: kartu Billing = 2 ledger + 1 Wan', cardsW.length === 3, String(cardsW.length));
+  check('v217: kartu Billing = 0 ledger + 1 Wan (ledger dinolkan 19 Nov 2026)', cardsW.length === 1, String(cardsW.length));
   check('v217: kartu Wan 3.0 ada', cardsW.some((c) => (c.querySelector('b')?.textContent || '') === 'Wan 3.0'), cardsW.map((c) => c.querySelector('b')?.textContent || '').join(','));
   const usedDiv = [...docW.querySelectorAll('#view-billing div')].find((d) => (d.textContent || '').trim().startsWith('Pemakaian:'));
   const usedMatch = (usedDiv?.textContent || '').match(/\$([\d.]+)/);
   const usedVal = usedMatch ? parseFloat(usedMatch[1]) : NaN;
-  check('v217: Pemakaian memasukkan Wan (0.00295 + 4.62)', Math.abs(usedVal - 4.62295) < 0.001, usedDiv?.textContent?.slice(0, 60) || '');
+  check('v217: Pemakaian memasukkan Wan (0 + 4.62)', Math.abs(usedVal - 4.62) < 0.001, usedDiv?.textContent?.slice(0, 60) || '');
 
   // 25. v221: tema terang Glass White — blok light di CSS dist memakai
   // palet kaca putih + biru-putih pucat, ungu hilang dari blok light,

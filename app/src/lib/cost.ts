@@ -1,9 +1,9 @@
-// Cost per model yang tercatat dari pekerjaan hackathon.
-// Sumber: uji live Meta 28 Okt 2026 (1 panggilan, angka aktual) +
-// Fase 1-3 (7 panggilan Gemini, 10.859 token, tertagih $0 karena
-// free tier; rincian input/output TIDAK dapat direkonstruksi —
-// cek dashboard Google Cloud 28 Okt hanya memberi agregat harian
-// UTC-8 proyek, bukan rincian per panggilan).
+// Ledger biaya historis DINOLKAN 19 Nov 2026 (perintah Patria 09:54 WIB:
+// "Bersihkan semua, aku mau semua project kosong seperti baru").
+// Angka lama (uji live Meta 28 Okt 2026: 1 panggilan, 718 token,
+// $0,00295; Fase 1-3: 7 panggilan Gemini, 10.859 token, $0) TETAP
+// tercatat di docs/fase-0-log.md, bukan lagi di UI. Install baru
+// mulai dari NOL; pemakaian berjalan dicatat lewat recordLiveCost.
 // Modul murni: tanpa impor Node, aman di-bundle ke frontend.
 
 export type CostRow = {
@@ -19,32 +19,7 @@ export type CostRow = {
   tokens: number;
 };
 
-export const COST_ROWS: CostRow[] = [
-  {
-    model: 'muse-spark-1.3',
-    provider: 'Meta',
-    calls: 1,
-    input: 34,
-    output: 684,
-    usdMin: 0.00295,
-    usdMax: 0.00295,
-    idrMin: 53.5,
-    idrMax: 53.5,
-    tokens: 718,
-  },
-  {
-    model: 'gemini-3.1-flash-lite',
-    provider: 'Google',
-    calls: 7,
-    input: null,
-    output: null,
-    usdMin: 0,
-    usdMax: 0,
-    idrMin: 0,
-    idrMax: 0,
-    tokens: 10859,
-  },
-];
+export const COST_ROWS: CostRow[] = [];
 
 // Hard limit ledger $5 (satuan tagihan provider). Nilai Rp setara
 // dihitung pada kurs 28 Okt 2026 (Rp18.148/USD) untuk kartu Billing.
@@ -56,12 +31,12 @@ export const BILLING_HARD_LIMIT = {
 };
 
 export const COST_TOTAL = {
-  calls: 8,
-  tokens: 11577,
-  usdMin: 0.00295,
-  usdMax: 0.00295,
-  idrMin: 53.5,
-  idrMax: 53.5,
+  calls: 0,
+  tokens: 0,
+  usdMin: 0,
+  usdMax: 0,
+  idrMin: 0,
+  idrMax: 0,
 };
 
 // Pemakaian live dari app (audit v66 $-B1): setiap callWithFallback

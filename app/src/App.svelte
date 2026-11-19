@@ -55,6 +55,21 @@
 
   onMount(() => {
     initV5();
+    // 19 Nov 2026 clean-slate: state Svelte yang dibaca dari storage
+    // SEBELUM onMount (ve2 + spends, $state di atas) harus dibaca ulang
+    // sesudah migrasi initV5, kalau tidak Billing/Video Editor tetap
+    // menampilkan angka dan klip lama walau storage sudah kosong.
+    const ve2Fresh = ve2Load();
+    ve2Clips = ve2Fresh?.clips ?? [];
+    ve2Assets = ve2Fresh?.assets ?? [];
+    ve2Out = ve2Fresh?.out || '/Users/mac/Movies/minime-ve2.mp4';
+    ve2Zoom = ve2Fresh?.zoom ?? 1;
+    ve2PreviewRatio = ve2Fresh?.ratio ?? '9:16';
+    ve2Plan = ve2Fresh?.plan ?? '';
+    ve2Movie = ve2Fresh?.movie ?? null;
+    ve2Snap = ve2Fresh?.snap ?? true;
+    ve2SelId = ve2Clips[0]?.id ?? '';
+    liveCost = readLiveCost(); imgSpend = readImgSpend(); videoSpend = readVideoSpend(); classaiSpend = readClassaiSpend();
     renderCampaign();
     setSendChatImpl(sendChatReal);
     vsRenderStatus();

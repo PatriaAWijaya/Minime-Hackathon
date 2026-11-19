@@ -94,6 +94,9 @@ const store = new Map();
 store.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
 store.set('minime.cleaned-v84', '1');
 store.set('minime.cleaned-graph-v88', '1');
+// 19 Nov 2026 clean-slate: flag sudah ada agar
+// runCleanSlate20261119 tidak mereset fixture rig.
+store.set('minime.cleaned-slate-20261119', '1');
 store.set('minime.library.added', JSON.stringify(Array.from({ length: 31 }, (_, k) => ({ o: 'Gambar: storyboard uji ' + k, a: 'Kreatif', s: 'Draf', badge: 'b-idle', content: '', kind: 'image', imageFile: 'img-uji' + k + '.webp', proj: '', addedAt: '2026-11-01' }))));
 try {
   const dom = makeDom(store);

@@ -3699,7 +3699,72 @@ function runCleanGraphV88() {
     if (ok) { try { window.localStorage.setItem('minime.cleaned-graph-v88', '1'); } catch (_) {} }
   } catch (_) {}
 }
+/* 19 Nov 2026 (perintah Patria 09:54 WIB: "Bersihkan semua, aku mau
+   semua project kosong seperti baru"): migrasi clean-slate sekali jalan.
+   Menghapus SEMUA kunci localStorage minime.* yang berisi data konten
+   (project, kanban, library, planner, chat, graph, flow, billing/usage,
+   video editor, brand, CRM, dsb) termasuk backup *.pre-v84/*.pre-v88
+   dan *.corrupt yang masih menyimpan data lama. TIDAK menyentuh
+   settings dan kunci API (tema, bahasa, minime.metaKey/geminiKey/
+   anthropicKey/classaiKey, keyValidated, ollamaUrl, vsModel, notify,
+   lebar kolom). Pengecualian: minime.graphState TIDAK dihapus kuncinya
+   — menghapus kuncinya membuat loadGraphState kembali ke template
+   GNODES di kode (9 node) pada luncuran berikut; sebagai gantinya
+   ditulis state kosong {nodes:{}, edges:[], counter:0} seperti pola
+   v88, supaya kanvas Graph benar-benar tanpa node. Sama untuk
+   minime.graphRuns ('[]'). Penulisan state kosong ini HANYA bila ada
+   state graph tersimpan (bukan instalasi baru): instalasi baru TIDAK
+   punya kunci graphState, dan di sana loadGraphState memakai template
+   GNODES sebagai definisi app (analog roster 7 agen; preseden v88
+   "seed kode tetap berlaku untuk instalasi baru"). Menulis state
+   kosong di instalasi baru akan menghilangkan template itu dan
+   merusak rig-graph/rig-audit yang menguji template tersebut.
+   State in-memory yang dimuat saat modul
+   dievaluasi (LIB_ADDED, LIB_DELETED, collapsedGroups, MAINCHAT)
+   ikut direset, kalau tidak render pertama tetap menampilkan data
+   lama dan simpanan berikutnya menulisnya kembali ke storage.
+   Berjalan PALING AWAL di initV5, sebelum loadKanban/loadHomeState/
+   loadGraphState. Flag hanya bila baca-balik sudah kosong. */
+function runCleanSlate20261119() {
+  try {
+    if (window.localStorage.getItem('minime.cleaned-slate-20261119')) return;
+    var CONTENT_KEYS = [
+      'minime.homeState', 'minime.homeState.corrupt', 'minime.homeState.pre-v84',
+      'minime.kanban', 'minime.kanban.corrupt', 'minime.kanban.pre-v84',
+      'minime.library.added', 'minime.library.added.corrupt', 'minime.library.added.pre-v84',
+      'minime.library.archived', 'minime.library.deleted',
+      'minime.graphState.corrupt', 'minime.graphState.pre-v88',
+      'minime.graphRuns.pre-v88',
+      'minime.mainChat',
+      'minime.social', 'minime.socialQueue',
+      'minime.plan30', 'minime.planChat',
+      'minime.scriptEditor', 'minime.creativeBrief', 'minime.imageFlow',
+      'minime.ve2', 'minime.voiceAssets',
+      'minime.costLive', 'minime.imageSpend', 'minime.videoSpend', 'minime.classaiSpend',
+      'minime.brand',
+      'minime.followups', 'minime.crmAdded', 'minime.crmAddedSeq', 'minime.crmStages',
+      'minime.agentMemories', 'minime.agentFiles',
+      'minime.agentGroups'
+    ];
+    CONTENT_KEYS.forEach(function (k) { try { window.localStorage.removeItem(k); } catch (_) {} });
+    var hadGraph = false;
+    try { hadGraph = window.localStorage.getItem('minime.graphState') !== null || window.localStorage.getItem('minime.graphRuns') !== null; } catch (_) {}
+    if (hadGraph) {
+      try { window.localStorage.setItem('minime.graphState', JSON.stringify({ nodes: {}, edges: [], counter: 0 })); } catch (_) {}
+      try { window.localStorage.setItem('minime.graphRuns', '[]'); } catch (_) {}
+    }
+    try { LIB_ADDED = []; } catch (_) {}
+    try { LIB_DELETED = []; } catch (_) {}
+    try { collapsedGroups = {}; } catch (_) {}
+    try { MAINCHAT = null; } catch (_) {}
+    var ok = true;
+    CONTENT_KEYS.forEach(function (k) { try { if (window.localStorage.getItem(k) !== null) ok = false; } catch (_) {} });
+    if (hadGraph) { try { var gs = JSON.parse(window.localStorage.getItem('minime.graphState') || 'null'); if (!gs || !gs.nodes || Object.keys(gs.nodes).length !== 0) ok = false; } catch (_) { ok = false; } }
+    if (ok) { try { window.localStorage.setItem('minime.cleaned-slate-20261119', '1'); } catch (_) {} }
+  } catch (_) {}
+}
 export function initV5() {
+  runCleanSlate20261119();
   runCleanV84();
   runCleanGraphV88();
   libArchiveSweep();

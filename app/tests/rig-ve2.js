@@ -108,6 +108,9 @@ const RIG_HF_COMPOSITION = '<!doctype html><html><head><script src="./gsap.min.j
 const ve2State = (store) => JSON.parse(store.get('minime.ve2') || '{}');
 
 const store = new Map();
+// 19 Nov 2026 clean-slate: flag sudah ada agar
+// runCleanSlate20261119 tidak mereset fixture ve2 rig.
+store.set('minime.cleaned-slate-20261119', '1');
 // v146: fixture pengganti seed bawaan (bentuk sama, id berbeda agar tidak
 // kena migrasi dummy; nama/durasi dipertahankan supaya cek lama tetap jalan).
 store.set('minime.ve2', JSON.stringify({ clips: [
@@ -324,6 +327,9 @@ try {
   await tick(100);
   // (b) Backfill: klip yatim di store lama mendapat asetnya saat muat.
   const store3 = new Map();
+  // 19 Nov 2026 clean-slate: flag sudah ada agar
+  // runCleanSlate20261119 tidak mereset fixture rig.
+  store3.set('minime.cleaned-slate-20261119', '1');
   store3.set('minime.ve2', JSON.stringify({ clips: [{ id: 'orph1', name: 'Klip yatim', track: 'Video', start: 0, dur: 7, src: '/tmp/yatim.mp4', effect: 'none' }], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
   const dom3 = makeDom(store3);
   const doc3 = dom3.window.document;
@@ -337,6 +343,9 @@ try {
   check('v187: aset backfill tampil di list', [...doc3.querySelectorAll('.ve2-thumb')].some((el) => (el.getAttribute('title') || '') === 'Klip yatim'), doc3.querySelector('.ve2-assets')?.textContent?.slice(0, 200));
   // (c) Dedup: klip yang src-nya sudah ada di aset tidak digandakan.
   const store4 = new Map();
+  // 19 Nov 2026 clean-slate: flag sudah ada agar
+  // runCleanSlate20261119 tidak mereset fixture rig.
+  store4.set('minime.cleaned-slate-20261119', '1');
   store4.set('minime.ve2', JSON.stringify({ clips: [{ id: 'dup1', name: 'Klip ganda', track: 'Video', start: 0, dur: 7, src: '/tmp/ganda.mp4', effect: 'none' }], assets: [{ id: 've2a9', name: 'Klip ganda', icon: '🎬', kind: 'Video', src: '/tmp/ganda.mp4', duration: 7 }], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
   const dom4 = makeDom(store4);
   const doc4 = dom4.window.document;
@@ -375,7 +384,8 @@ try {
   // (d) Dialog sumber -> Library: gambar Library masuk daftar aset.
   const store5 = new Map();
   store5.set('minime.cleaned-v84', '1');
-  store5.set('minime.cleaned-graph-v88', '1');
+store5.set('minime.cleaned-graph-v88', '1');
+  store5.set('minime.cleaned-slate-20261119', '1');
   store5.set('minime.library.added', JSON.stringify([{ o: 'Gambar Library Uji', kind: 'image', imageFile: '/tmp/lib-uji.png' }]));
   store5.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
   const dom5 = makeDom(store5);
@@ -464,7 +474,8 @@ try {
   // Putar aktif + Berhenti nonaktif; klik Putar/Berhenti membalik transport.
   const store6 = new Map();
   store6.set('minime.cleaned-v84', '1');
-  store6.set('minime.cleaned-graph-v88', '1');
+store6.set('minime.cleaned-graph-v88', '1');
+  store6.set('minime.cleaned-slate-20261119', '1');
   store6.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
   const dom6 = makeDom(store6);
   const doc6 = dom6.window.document;
@@ -524,7 +535,8 @@ try {
   // tidak bisa dibuktikan jsdom — batas yang sama seperti posisi drop.
   const store7 = new Map();
   store7.set('minime.cleaned-v84', '1');
-  store7.set('minime.cleaned-graph-v88', '1');
+store7.set('minime.cleaned-graph-v88', '1');
+  store7.set('minime.cleaned-slate-20261119', '1');
   store7.set('minime.ve2', JSON.stringify({ clips: [{ id: 'cap1', name: 'Cap Uji', track: 'Video', start: 0, dur: 12.5, src: '/tmp/uji-cap.mp4', effect: 'none' }], assets: [{ id: 'capa1', name: 'uji-cap.mp4', icon: '🎬', kind: 'Video', src: '/tmp/uji-cap.mp4', duration: 12.5 }], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
   const dom7 = makeDom(store7);
   const doc7 = dom7.window.document;
@@ -553,7 +565,8 @@ try {
   check('v195: dur Inspector boleh mengecil', ve2State(store7).clips.find((c) => c.id === 'cap1').dur === 5, String(ve2State(store7).clips.find((c) => c.id === 'cap1').dur));
   const store8 = new Map();
   store8.set('minime.cleaned-v84', '1');
-  store8.set('minime.cleaned-graph-v88', '1');
+store8.set('minime.cleaned-graph-v88', '1');
+  store8.set('minime.cleaned-slate-20261119', '1');
   store8.set('minime.ve2', JSON.stringify({ clips: [{ id: 'stop1', name: 'Stop Uji', track: 'Video', start: 0, dur: 0.3, src: '', effect: 'none' }], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
   const dom8 = makeDom(store8);
   const doc8 = dom8.window.document;
@@ -575,7 +588,8 @@ try {
   // §27 v196: playhead + penggaris segaris bar (offset label 78px).
   const store27 = new Map();
   store27.set('minime.cleaned-v84', '1');
-  store27.set('minime.cleaned-graph-v88', '1');
+store27.set('minime.cleaned-graph-v88', '1');
+  store27.set('minime.cleaned-slate-20261119', '1');
   store27.set('minime.ve2', JSON.stringify({ clips: [{ id: 'al1', name: 'Align Uji', track: 'Video', start: 0, dur: 8, src: '', effect: 'none' }], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
   const dom27 = makeDom(store27);
   const doc27 = dom27.window.document;
@@ -597,7 +611,8 @@ try {
   // §28 v197: play pada monitor pratinjau idle menggerakkan playhead.
   const store28 = new Map();
   store28.set('minime.cleaned-v84', '1');
-  store28.set('minime.cleaned-graph-v88', '1');
+store28.set('minime.cleaned-graph-v88', '1');
+  store28.set('minime.cleaned-slate-20261119', '1');
   store28.set('minime.ve2', JSON.stringify({ clips: [{ id: 'pv1', name: 'Preview Uji', track: 'Video', start: 0, dur: 8, src: 'preview-uji.mp4', effect: 'none' }], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
   const dom28 = makeDom(store28);
   const doc28 = dom28.window.document;
@@ -617,7 +632,8 @@ try {
   // §29 v198: pause video playback menghentikan timeline.
   const store29 = new Map();
   store29.set('minime.cleaned-v84', '1');
-  store29.set('minime.cleaned-graph-v88', '1');
+store29.set('minime.cleaned-graph-v88', '1');
+  store29.set('minime.cleaned-slate-20261119', '1');
   store29.set('minime.ve2', JSON.stringify({ clips: [{ id: 'pp1', name: 'Pause Uji', track: 'Video', start: 0, dur: 8, src: 'preview-uji.mp4', effect: 'none' }], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1, plan: '' }));
   const dom29 = makeDom(store29);
   const doc29 = dom29.window.document;
@@ -637,7 +653,8 @@ try {
   // §v213: rasio preview default 9:16 + picker di kanan bawah preview.
   const storeV = new Map();
   storeV.set('minime.cleaned-v84', '1');
-  storeV.set('minime.cleaned-graph-v88', '1');
+storeV.set('minime.cleaned-graph-v88', '1');
+  storeV.set('minime.cleaned-slate-20261119', '1');
   const domV = makeDom(storeV);
   const docV = domV.window.document;
   await waitFor(() => docV.querySelector('[data-view="media"]'), 'mountV rail media', 100);
@@ -664,7 +681,8 @@ try {
   // §v217: toolbar atas hilang + acts selalu tampil + urutan aset + spend notes hilang.
   const storeW = new Map();
   storeW.set('minime.cleaned-v84', '1');
-  storeW.set('minime.cleaned-graph-v88', '1');
+storeW.set('minime.cleaned-graph-v88', '1');
+  storeW.set('minime.cleaned-slate-20261119', '1');
   storeW.set('minime.videoSpend', JSON.stringify({ videos: 2, usd: 2.02, idr: 36659 }));
   storeW.set('minime.ve2', JSON.stringify({ clips: [
     { id: 'w1', name: 'Klip uji', track: 'Video', start: 0, dur: 8, src: '', effect: 'none' },
@@ -694,7 +712,8 @@ try {
   // §v218: Bridge Movie — veSetMovie parse scene, generate per scene (Omni stub), bersihkan, fallback, gagal jujur.
   const storeM = new Map();
   storeM.set('minime.cleaned-v84', '1');
-  storeM.set('minime.cleaned-graph-v88', '1');
+storeM.set('minime.cleaned-graph-v88', '1');
+  storeM.set('minime.cleaned-slate-20261119', '1');
   storeM.set('minime.geminiKey', 'uji');
   storeM.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1 }));
   async function invokeStubM(cmd, args) {
@@ -760,7 +779,8 @@ try {
   check('v218: fallback paragraf jadi 3 scene', docM.querySelectorAll('[data-ve2-scene]').length === 3, 'n=' + docM.querySelectorAll('[data-ve2-scene]').length);
   const storeN = new Map();
   storeN.set('minime.cleaned-v84', '1');
-  storeN.set('minime.cleaned-graph-v88', '1');
+storeN.set('minime.cleaned-graph-v88', '1');
+  storeN.set('minime.cleaned-slate-20261119', '1');
   storeN.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1 }));
   const domN = makeDom(storeN);
   const docN = domN.window.document;
@@ -780,7 +800,8 @@ try {
   // mesin movie yang sama (Omni stub), lalu Bersihkan.
   const storeR = new Map();
   storeR.set('minime.cleaned-v84', '1');
-  storeR.set('minime.cleaned-graph-v88', '1');
+storeR.set('minime.cleaned-graph-v88', '1');
+  storeR.set('minime.cleaned-slate-20261119', '1');
   storeR.set('minime.geminiKey', 'uji');
   storeR.set('minime.ve2', JSON.stringify({ clips: [], assets: [], out: '/Users/mac/Movies/minime-ve2.mp4', zoom: 1 }));
   const domR = makeDomM(storeR);

@@ -284,6 +284,8 @@ try {
   dom.window.showView('campaign');
   dom.window.renderCampaign();
   await tick(100);
+  // 19 Nov 2026 clean-slate: Campaign mulai kosong (0 lead + 0 draf).
+  check('campaign mulai kosong (0 lead + 0 draf)', !document.querySelector('[data-cp-lead]') && !document.querySelector('[data-cp-copy]'), '');
   document.getElementById('cpLeadName').value = 'Rig Lead';
   document.getElementById('cpLeadContact').value = '0812-rig';
   document.getElementById('cpLeadChannel').value = 'WhatsApp';
@@ -302,17 +304,18 @@ try {
   added = JSON.parse(store.get('minime.crmAdded') || '[]');
   check('ubah stage lead manual tersimpan', added[0].stage === 'Prioritas', JSON.stringify(added));
   check('dialog tertutup setelah simpan', document.getElementById('cpDlg').innerHTML === '', '');
-  document.querySelector('[data-cp-lead="L01"]').click();
-  await tick(100);
-  document.getElementById('cpDlgStage').value = 'Dingin';
-  W.cpLeadSaveStage();
-  await tick(100);
+  // 19 Nov 2026 (A2 + clean-slate): lead snapshot TEST (L01) DIHAPUS dari
+  // app — Campaign mulai kosong; lead hanya dari yang ditambah pengguna.
+  // Jalur override minime.crmStages untuk lead snapshot kini tidak
+  // terjangkau; yang diuji: simpan stage lead manual TIDAK menulis
+  // crmStages, dan draf outreach kosong.
   var stages = JSON.parse(store.get('minime.crmStages') || '{}');
-  check('ubah stage lead snapshot -> override minime.crmStages', stages.L01 === 'Dingin', JSON.stringify(stages));
-  var copyBtn = document.querySelector('[data-cp-copy="0"]');
-  W.cpCopyDraft(0);
+  check('simpan stage lead manual TIDAK menulis minime.crmStages', Object.keys(stages).length === 0, JSON.stringify(stages));
+  check('outreach kosong (tanpa draf bawaan)', !document.querySelector('[data-cp-copy]'), '');
+  var copyThrew = false;
+  try { W.cpCopyDraft(0); } catch (e) { copyThrew = true; }
   await tick(100);
-  check('salin draf -> tombol jadi Tersalin', (copyBtn.textContent || '').includes('Tersalin'), copyBtn.textContent);
+  check('salin draf saat kosong tidak crash', !copyThrew, '');
   document.getElementById('cpFuLead').value = 'M1';
   document.getElementById('cpFuText').value = 'Hubungi Rig Lead';
   W.cpFuAdd();

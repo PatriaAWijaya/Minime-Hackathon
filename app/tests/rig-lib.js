@@ -190,6 +190,9 @@ try {
   const store2 = new Map();
   // Profil pasca-v84: flag sudah ada agar runCleanV84 tidak mereset seed.
   store2.set('minime.cleaned-v84', '1');
+  // 19 Nov 2026 clean-slate: flag juga sudah ada agar
+  // runCleanSlate20261119 tidak mereset seed.
+  store2.set('minime.cleaned-slate-20261119', '1');
   store2.set('minime.library.added', JSON.stringify([
     { o: 'Lama', a: 'Kreatif', s: 'Disetujui', badge: 'b-ok', kind: 'script', content: 'lama', proj: '', addedAt: oldD },
     { o: 'Baru', a: 'Kreatif', s: 'Draf', badge: 'b-idle', kind: 'script', content: 'baru', proj: '', addedAt: newD },
