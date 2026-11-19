@@ -2529,6 +2529,12 @@ LIVE 3 Nov ~01:40 WIB: deploy mh-build209.sh — MH_BUILD209_OK; HEAD MacBook d9
 
 LIVE 3 Nov ~01:47 WIB: deploy mh-build210.sh — MH_BUILD210_OK; HEAD MacBook a0edb10 (commit log); PID 77727; marker 'Batch ke Planner' x1 (JS); md5 dist JS/CSS lokal == MacBook (CSS tak berubah dari v207). App LIVE = v210. Konfirmasi live Patria untuk v210 BELUM ada (uji live yang disarankan: sesudah Gerbang 3 lolos, klik Masukkan Batch ke Planner -> periksa 90 draf bertanggal di Planner -> tunggu H-3 / ubah satu tanggal jadi besok untuk melihat seksi pengingat).
 
+## Perbaikan ikon DMG — field bundle.icon ditambahkan (19 Nov 2026, perintah Patria 08:41 WIB atas screenshot DMG: ikon app masih globe default Tauri, bukan logo pink "me")
+- Akar (terverifikasi): file ikon di repo sudah benar (icon.png 1024x1024 RGBA, piksel sudut 242,13,95; icon.icns 202814 byte; icon.ico valid), tapi app/src-tauri/tauri.conf.json bagian "bundle" tidak punya field "icon" sama sekali di riwayat mana pun, sehingga Tauri memakai ikon default. Bukti langsung: /Volumes/MiniMe 1/MiniMe.app/Contents/ hanya berisi Info.plist + MacOS/minime, tanpa folder Resources dan tanpa kunci ikon di Info.plist.
+- Perbaikan: "bundle" di tauri.conf.json kini punya "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]. Field lain tidak berubah (productName MiniMe, identifier com.minime.hackathon, version tetap 0.1.0, targets app/dmg/nsis). File ikon tidak diubah.
+- Gerbang: JSON tauri.conf.json valid, kelima file ikon ada di repo, cargo check lolos.
+- Push: kode remote 07bb214f1ecdd002fa83f57259b90f74b65d8b9a (tree identik).
+
 ## v249 — Optimasi proses agen chat: progres tahap + filter kirim ganda + span anti-lepas (perintah Patria 4 Nov 14:31: "optimise proses, karena loading proses agen lama"; jawaban Patria 14:32: jalur chat agen/fan-out)
 
 Diagnosis (terverifikasi kode, bukan tebakan):
