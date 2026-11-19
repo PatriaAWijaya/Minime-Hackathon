@@ -80,6 +80,13 @@ function setInput(el, value, evName) {
   el.value = value;
   el.dispatchEvent(new el.ownerDocument.defaultView.Event(evName, { bubbles: true }));
 }
+// Fixture lokal rig (pengganti HF_SAMPLE + contoh prompt app yang dihapus
+// pada bersih-bersih A2/A3/A4, 19 Nov 2026): komposisi probe minimal dan
+// teks prompt contoh. Diisi langsung ke field (setInput), bukan lewat
+// tombol contoh yang sudah tidak ada. Teks diambil dari nilai i18n lama
+// vg2.sampletext; komposisi mengikuti struktur probe 29 Okt 2026.
+const RIG_HF_COMPOSITION = '<!doctype html><html><head><script src="./gsap.min.js"></script></head><body><div id="root" data-composition-id="main" data-start="0" data-duration="15" data-width="1080" data-height="1920"><h1 class="clip" data-start="0" data-duration="15" data-track-index="0">UJI</h1></div><script>const tl = gsap.timeline({paused:true}); window.__timelines["main"] = tl; tl.seek(0);</script></body></html>';
+const RIG_SAMPLE_PROMPT = 'Pengambilan gambar tracking sudut rendah mengikuti mobil sport merah di jalan pesisir saat golden hour, gerakan kamera halus.';
 const ve2State = (store) => JSON.parse(store.get('minime.ve2') || '{}');
 const spendState = (store) => JSON.parse(store.get('minime.videoSpend') || '{}');
 
@@ -173,10 +180,10 @@ try {
   setInput(document.getElementById('vg-model'), 'hyperframes', 'change');
   await tick(100);
   check('v179: model HyperFrames menampilkan form HF, menyembunyikan Omni', !!document.getElementById('hf-html') && !!document.getElementById('hf-render') && !!document.getElementById('hf-quality') && !document.getElementById('vg-prompt'));
-  document.getElementById('hf-sample').click();
+  setInput(document.getElementById('hf-html'), RIG_HF_COMPOSITION, 'input');
   await tick(100);
   const hfHtmlVal = document.getElementById('hf-html').value || '';
-  check('v175: contoh memuat format probe (composition-id + gsap + timeline)', hfHtmlVal.includes('data-composition-id="main"') && hfHtmlVal.includes('gsap.min.js') && hfHtmlVal.includes('window.__timelines'), hfHtmlVal.slice(0, 120));
+  check('v175: komposisi terisi format probe (composition-id + gsap + timeline)', hfHtmlVal.includes('data-composition-id="main"') && hfHtmlVal.includes('gsap.min.js') && hfHtmlVal.includes('window.__timelines'), hfHtmlVal.slice(0, 120));
   document.getElementById('hf-check').click();
   await waitFor(() => (document.getElementById('hf-status')?.textContent || '').includes('0.8.212'), 'status check CLI', 100);
   check('v175: Periksa CLI menampilkan versi + metode', (document.getElementById('hf-status')?.textContent || '').includes('npx'), document.getElementById('hf-status')?.textContent || '');
@@ -208,12 +215,12 @@ try {
   check('v181: input referensi [gambar, gambar, teks], tanpa instances', Array.isArray(refBody?.input) && refBody.input.length === 3 && refBody.input[0]?.type === 'image' && refBody.input[1]?.type === 'image' && refBody.input[2]?.type === 'text' && !refBody?.instances, JSON.stringify(refBody?.input));
   document.querySelector('[data-vg-tab="prompt"]').click();
   await tick(100);
-  document.getElementById('vg-sample').click();
+  setInput(document.getElementById('vg-prompt'), RIG_SAMPLE_PROMPT, 'input');
   await tick(50);
-  check('v178: contoh prompt mengisi kolom', (document.getElementById('vg-prompt').value || '').includes('mobil sport merah'), document.getElementById('vg-prompt').value.slice(0, 120));
+  check('v178: kolom prompt terisi teks contoh', (document.getElementById('vg-prompt').value || '').includes('mobil sport merah'), document.getElementById('vg-prompt').value.slice(0, 120));
   document.getElementById('vg-portrait').click();
   await tick(50);
-  check('v178: portrait set rasio 9:16 + isi prompt vertikal', document.getElementById('vg-aspect').value === '9:16' && (document.getElementById('vg-prompt').value || '').includes('vertikal'), 'aspect=' + document.getElementById('vg-aspect').value);
+  check('v178: portrait set rasio 9:16 tanpa mengubah prompt', document.getElementById('vg-aspect').value === '9:16' && (document.getElementById('vg-prompt').value || '').includes('mobil sport merah'), 'aspect=' + document.getElementById('vg-aspect').value);
   // v184: tombol Bersihkan di tiap form input Omni + HyperFrames.
   document.querySelector('[data-vg-tab="prompt"]').click();
   await tick(50);
