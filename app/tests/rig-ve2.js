@@ -100,6 +100,11 @@ function setInput(el, value, evName) {
   el.value = value;
   el.dispatchEvent(new el.ownerDocument.defaultView.Event(evName, { bubbles: true }));
 }
+// Fixture lokal rig (pengganti HF_SAMPLE app yang dihapus pada
+// bersih-bersih A2/A3/A4, 19 Nov 2026): komposisi probe minimal.
+// Diisi langsung ke #hf-html (setInput), bukan lewat tombol contoh
+// yang sudah tidak ada. Struktur mengikuti probe 29 Okt 2026.
+const RIG_HF_COMPOSITION = '<!doctype html><html><head><script src="./gsap.min.js"></script></head><body><div id="root" data-composition-id="main" data-start="0" data-duration="15" data-width="1080" data-height="1920"><h1 class="clip" data-start="0" data-duration="15" data-track-index="0">UJI</h1></div><script>const tl = gsap.timeline({paused:true}); window.__timelines["main"] = tl; tl.seek(0);</script></body></html>';
 const ve2State = (store) => JSON.parse(store.get('minime.ve2') || '{}');
 
 const store = new Map();
@@ -307,7 +312,7 @@ try {
   // (a) Jalur maju: render HF -> Tambah ke Timeline ikut menambah aset.
   setInput(document.getElementById('vg-model'), 'hyperframes', 'change');
   await tick(100);
-  document.getElementById('hf-sample').click();
+  setInput(document.getElementById('hf-html'), RIG_HF_COMPOSITION, 'input');
   await tick(50);
   document.getElementById('hf-render').click();
   await waitFor(() => !document.getElementById('hf-add-timeline').disabled, 'tombol hf-add-timeline aktif', 100);
