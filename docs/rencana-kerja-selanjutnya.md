@@ -54,9 +54,12 @@ new-work-only; menampilkan fitur pra-event = risiko diskualifikasi).
 ## 6. Submit — 4 Nov sebelum 21:00 ET (5 Nov 09:00 WIB)
 
 Form cerebralvalley.ai (tanpa simpan draf, hanya Submit final).
-Yang masih dibutuhkan: nama tim (saat ini solo), problem statement,
-deskripsi proyek, repo publik, video demo, deskripsi pemakaian
-produk Meta, alasan pentingnya model Meta, checkbox izin publikasi.
+Yang masih dibutuhkan (update 3 Nov 21:38): video demo 3 menit (naskah di
+submission/demo-script-livestream-3min.md); draf siap tempel sudah ada di
+submission/write-up.md (problem statement, deskripsi proyek, pemakaian
+produk Meta, alasan pentingnya model Meta); nama tim = Patria (solo,
+vonis 3 Nov 21:38); repo publik sudah; checkbox izin publikasi dicentang
+saat submit.
 
 ## Jalur tertunda — butuh keputusan Patria, tidak menghambat jalur utama
 
